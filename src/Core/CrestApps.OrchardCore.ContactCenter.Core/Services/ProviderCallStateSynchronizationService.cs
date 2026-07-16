@@ -18,6 +18,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
     private const string ReconciliationLockKey = "ContactCenterProviderCallStateReconciliation";
+    private const int MaxReconciliationBatchSize = 200;
 
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
@@ -183,8 +184,8 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         await using var acquiredLock = locker;
 
         var interactions = string.IsNullOrEmpty(providerName)
-            ? await _interactionManager.ListActiveWithProviderCallIdAsync(cancellationToken)
-            : await _interactionManager.ListActiveWithProviderCallIdAsync(providerName, cancellationToken);
+            ? await _interactionManager.ListActiveWithProviderCallIdAsync(MaxReconciliationBatchSize, cancellationToken)
+            : await _interactionManager.ListActiveWithProviderCallIdAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
         var refreshed = 0;
 
         foreach (var interaction in interactions)

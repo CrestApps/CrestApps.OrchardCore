@@ -153,9 +153,9 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListActiveWithProviderCallIdAsync(cancellationToken);
+        var interactions = await _store.ListActiveWithProviderCallIdAsync(maxCount, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -168,9 +168,10 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
         string providerName,
+        int maxCount,
         CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListActiveWithProviderCallIdAsync(providerName, cancellationToken);
+        var interactions = await _store.ListActiveWithProviderCallIdAsync(providerName, maxCount, cancellationToken);
 
         foreach (var interaction in interactions)
         {

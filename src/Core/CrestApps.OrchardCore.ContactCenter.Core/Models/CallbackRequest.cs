@@ -71,6 +71,21 @@ public sealed class CallbackRequest : CatalogItem, IModifiedUtcAwareModel
     public string Notes { get; set; }
 
     /// <summary>
+    /// Gets or sets the token identifying the worker that currently holds the promotion lease, when claimed.
+    /// </summary>
+    public string OwnerToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the monotonic fence token incremented on every claim to reject stale writers.
+    /// </summary>
+    public long FenceToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the current promotion lease expires, when the callback is claimed.
+    /// </summary>
+    public DateTime? LeaseExpiresUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the callback was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

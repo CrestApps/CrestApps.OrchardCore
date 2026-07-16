@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -11,6 +12,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class CallbackService : ICallbackService
 {
+    /// <summary>
+    /// The maximum number of due callbacks promoted in one background pass.
+    /// </summary>
+    public const int MaxBatchSize = 100;
+
+    private static readonly TimeSpan _promotionLease = TimeSpan.FromMinutes(5);
+
     private readonly ICallbackRequestManager _callbackManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IActivityQueueService _queueService;
@@ -68,15 +76,25 @@ public sealed class CallbackService : ICallbackService
     /// <inheritdoc/>
     public async Task<int> PromoteDueAsync(CancellationToken cancellationToken = default)
     {
-        var due = await _callbackManager.ListDueAsync(_clock.UtcNow, cancellationToken);
+        var now = _clock.UtcNow;
+        var due = await _callbackManager.ListDueAsync(now, MaxBatchSize, cancellationToken);
         var count = 0;
 
         foreach (var callback in due)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!await TryClaimAsync(callback, cancellationToken))
+            {
+                continue;
+            }
+
             var activity = await CreateActivityAsync(callback, cancellationToken);
             callback.ActivityItemId = activity.ItemId;
             callback.Status = CallbackRequestStatus.Scheduled;
             callback.Attempts++;
+            callback.OwnerToken = null;
+            callback.LeaseExpiresUtc = null;
 
             await _callbackManager.UpdateAsync(callback, cancellationToken: cancellationToken);
 
@@ -91,6 +109,32 @@ public sealed class CallbackService : ICallbackService
         }
 
         return count;
+    }
+
+    private async Task<bool> TryClaimAsync(CallbackRequest callback, CancellationToken cancellationToken)
+    {
+        var now = _clock.UtcNow;
+
+        if (callback.Status != CallbackRequestStatus.Pending ||
+            (callback.LeaseExpiresUtc.HasValue && callback.LeaseExpiresUtc.Value > now))
+        {
+            return false;
+        }
+
+        callback.OwnerToken = Guid.NewGuid().ToString("N");
+        callback.FenceToken++;
+        callback.LeaseExpiresUtc = now.Add(_promotionLease);
+
+        try
+        {
+            await _callbackManager.UpdateAsync(callback, cancellationToken: cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private async Task<OmnichannelActivity> CreateActivityAsync(CallbackRequest callback, CancellationToken cancellationToken)

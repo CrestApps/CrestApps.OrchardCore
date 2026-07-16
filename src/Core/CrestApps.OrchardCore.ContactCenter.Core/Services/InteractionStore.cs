@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionIndex>, IInteractionStore
 {
     private const int QueryBatchSize = 500;
+    private const int DefaultReconciliationBatchSize = 200;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionStore"/> class.
@@ -187,23 +188,29 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
     {
+        var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
+
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.Status != InteractionStatus.Ended &&
                 index.Status != InteractionStatus.Failed,
             collection: ContactCenterConstants.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
-            .OrderByDescending(index => index.CreatedUtc)
+            .OrderBy(index => index.CreatedUtc)
+            .Take(take)
             .ListAsync(cancellationToken)).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
         string providerName,
+        int maxCount,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
 
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.ProviderName == providerName &&
@@ -211,7 +218,8 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
                 index.Status != InteractionStatus.Failed,
             collection: ContactCenterConstants.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
-            .OrderByDescending(index => index.CreatedUtc)
+            .OrderBy(index => index.CreatedUtc)
+            .Take(take)
             .ListAsync(cancellationToken)).ToArray();
     }
 }

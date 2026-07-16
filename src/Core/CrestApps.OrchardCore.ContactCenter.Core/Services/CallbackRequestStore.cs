@@ -11,6 +11,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, CallbackRequestIndex>, ICallbackRequestStore
 {
+    private const int DefaultBatchSize = 100;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CallbackRequestStore"/> class.
     /// </summary>
@@ -22,12 +24,16 @@ public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, Call
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
     {
+        var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var callbacks = await Session.Query<CallbackRequest, CallbackRequestIndex>(
-            index => index.Status == CallbackRequestStatus.Pending && index.ScheduledUtc <= utcNow,
+            index => index.Status == CallbackRequestStatus.Pending &&
+                index.ScheduledUtc <= utcNow &&
+                (index.LeaseExpiresUtc == null || index.LeaseExpiresUtc <= utcNow),
             collection: ContactCenterConstants.CollectionName)
             .OrderBy(index => index.ScheduledUtc)
+            .Take(take)
             .ListAsync(cancellationToken);
 
         return callbacks.ToArray();

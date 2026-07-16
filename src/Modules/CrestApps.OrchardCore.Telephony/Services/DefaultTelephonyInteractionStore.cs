@@ -9,6 +9,8 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStore
 {
+    private const int DefaultReconciliationBatchSize = 200;
+
     private readonly ISession _session;
 
     /// <summary>
@@ -109,11 +111,13 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(int maxCount, CancellationToken cancellationToken = default)
     {
+        var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
         var interactions = await _session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.Outcome == CallOutcome.InProgress)
-            .OrderByDescending(x => x.StartedUtc)
+            .OrderBy(x => x.StartedUtc)
+            .Take(take)
             .ListAsync(cancellationToken);
 
         return interactions.ToList();
@@ -122,15 +126,18 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     /// <inheritdoc/>
     public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(
         string providerName,
+        int maxCount,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
+        var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
         var interactions = await _session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
                 x.ProviderName == providerName &&
                 x.Outcome == CallOutcome.InProgress)
-            .OrderByDescending(x => x.StartedUtc)
+            .OrderBy(x => x.StartedUtc)
+            .Take(take)
             .ListAsync(cancellationToken);
 
         return interactions.ToList();

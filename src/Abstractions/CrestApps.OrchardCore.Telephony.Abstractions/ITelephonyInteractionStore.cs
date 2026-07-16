@@ -67,19 +67,21 @@ public interface ITelephonyInteractionStore
     Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all in-progress interactions that can be reconciled against their providers.
+    /// Lists in-progress interactions that can be reconciled against their providers, oldest first and bounded for reconciliation sweeps.
     /// </summary>
+    /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The active interactions.</returns>
-    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(CancellationToken cancellationToken = default);
+    /// <returns>The oldest active interactions bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all in-progress interactions for the specified provider.
+    /// Lists in-progress interactions for the specified provider, oldest first and bounded for reconciliation sweeps.
     /// </summary>
     /// <param name="providerName">The technical provider name.</param>
+    /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The active interactions for the provider.</returns>
-    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(string providerName, CancellationToken cancellationToken = default);
+    /// <returns>The oldest active interactions for the provider bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the most recent interactions for the given user, newest first.

@@ -47,7 +47,7 @@ public sealed class CallbackServiceTests
         };
 
         var callbackManager = new Mock<ICallbackRequestManager>();
-        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
@@ -73,7 +73,7 @@ public sealed class CallbackServiceTests
         var callback = new CallbackRequest { ItemId = "cb1", Destination = "+15551234567", Status = CallbackRequestStatus.Pending };
 
         var callbackManager = new Mock<ICallbackRequestManager>();
-        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
 
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
@@ -88,6 +88,68 @@ public sealed class CallbackServiceTests
         // Assert
         Assert.Equal(1, count);
         queueService.Verify(s => s.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PromoteDueAsync_ClaimsCallbackAndClearsLeaseAfterPromotion()
+    {
+        // Arrange
+        var callback = new CallbackRequest
+        {
+            ItemId = "cb1",
+            Destination = "+15551234567",
+            Status = CallbackRequestStatus.Pending,
+            ScheduledUtc = _now.AddMinutes(-1),
+        };
+
+        var callbackManager = new Mock<ICallbackRequestManager>();
+        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var service = CreateService(callbackManager, activityManager, new Mock<IActivityQueueService>(), new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var count = await service.PromoteDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, count);
+        Assert.Equal(CallbackRequestStatus.Scheduled, callback.Status);
+        Assert.Equal(1, callback.FenceToken);
+        Assert.Null(callback.OwnerToken);
+        Assert.Null(callback.LeaseExpiresUtc);
+    }
+
+    [Fact]
+    public async Task PromoteDueAsync_SkipsCallbackHeldByUnexpiredLease()
+    {
+        // Arrange
+        var callback = new CallbackRequest
+        {
+            ItemId = "cb1",
+            Destination = "+15551234567",
+            Status = CallbackRequestStatus.Pending,
+            ScheduledUtc = _now.AddMinutes(-1),
+            OwnerToken = "other-worker",
+            LeaseExpiresUtc = _now.AddMinutes(5),
+        };
+
+        var callbackManager = new Mock<ICallbackRequestManager>();
+        callbackManager.Setup(m => m.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([callback]);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        var service = CreateService(callbackManager, activityManager, new Mock<IActivityQueueService>(), new Mock<IContactCenterEventPublisher>());
+
+        // Act
+        var count = await service.PromoteDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, count);
+        Assert.Equal(CallbackRequestStatus.Pending, callback.Status);
+        activityManager.Verify(m => m.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        callbackManager.Verify(m => m.UpdateAsync(It.IsAny<CallbackRequest>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static CallbackService CreateService(

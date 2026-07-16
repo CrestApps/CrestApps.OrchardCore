@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 public sealed class TelephonyInteractionSynchronizationService : ITelephonyInteractionSynchronizationService
 {
     private const string ReconciliationLockKey = "TelephonyInteractionStateReconciliation";
+    private const int MaxReconciliationBatchSize = 200;
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan _newInteractionGracePeriod = TimeSpan.FromSeconds(15);
@@ -154,8 +155,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         await using var acquiredLock = locker;
 
         var interactions = string.IsNullOrEmpty(providerName)
-            ? await _interactionStore.ListActiveAsync(cancellationToken)
-            : await _interactionStore.ListActiveAsync(providerName, cancellationToken);
+            ? await _interactionStore.ListActiveAsync(MaxReconciliationBatchSize, cancellationToken)
+            : await _interactionStore.ListActiveAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
         var changed = 0;
 
         foreach (var interaction in interactions)

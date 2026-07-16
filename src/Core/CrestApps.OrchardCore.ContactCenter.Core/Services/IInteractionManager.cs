@@ -100,17 +100,20 @@ public interface IInteractionManager : ICatalogManager<Interaction>
 
     /// <summary>
     /// Lists active interactions that still carry a provider call identifier and therefore can be
-    /// revalidated against the telephony server.
+    /// revalidated against the telephony server, oldest first and bounded for reconciliation sweeps.
     /// </summary>
+    /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The active provider-backed interactions.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(CancellationToken cancellationToken = default);
+    /// <returns>The oldest active provider-backed interactions bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists active interactions for the specified provider that still carry a provider call identifier.
+    /// Lists active interactions for the specified provider that still carry a provider call identifier,
+    /// oldest first and bounded for reconciliation sweeps.
     /// </summary>
     /// <param name="providerName">The provider technical name.</param>
+    /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The active provider-backed interactions.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(string providerName, CancellationToken cancellationToken = default);
+    /// <returns>The oldest active provider-backed interactions bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
 }

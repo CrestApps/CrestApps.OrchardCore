@@ -280,7 +280,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         // Arrange
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(manager => manager.ListActiveWithProviderCallIdAsync("provider-1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.ListActiveWithProviderCallIdAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var service = CreateService(
             interactionManager,
@@ -296,10 +296,10 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         // Assert
         Assert.Equal(0, refreshed);
         interactionManager.Verify(
-            manager => manager.ListActiveWithProviderCallIdAsync("provider-1", It.IsAny<CancellationToken>()),
+            manager => manager.ListActiveWithProviderCallIdAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Once);
         interactionManager.Verify(
-            manager => manager.ListActiveWithProviderCallIdAsync(It.IsAny<CancellationToken>()),
+            manager => manager.ListActiveWithProviderCallIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

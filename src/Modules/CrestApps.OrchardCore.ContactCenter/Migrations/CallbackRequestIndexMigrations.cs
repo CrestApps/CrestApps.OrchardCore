@@ -18,7 +18,8 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<CallbackRequestIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<int>("Status")
-            .Column<DateTime>("ScheduledUtc"),
+            .Column<DateTime>("ScheduledUtc")
+            .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName
         );
 
@@ -27,6 +28,20 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             collection: ContactCenterConstants.CollectionName
         );
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the promotion lease column to existing callback request index tables.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
+            .AddColumn<DateTime>("LeaseExpiresUtc", column => column.Nullable()),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 2;
     }
 }

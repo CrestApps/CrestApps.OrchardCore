@@ -27,9 +27,9 @@ public sealed class CallbackRequestManager : CatalogManager<CallbackRequest>, IC
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
     {
-        var callbacks = await _store.ListDueAsync(utcNow, cancellationToken);
+        var callbacks = await _store.ListDueAsync(utcNow, maxCount, cancellationToken);
 
         foreach (var callback in callbacks)
         {

@@ -22,4 +22,9 @@ public sealed class CallbackRequestIndex : CatalogItemIndex
     /// Gets or sets the UTC time the callback becomes due.
     /// </summary>
     public DateTime ScheduledUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the current promotion lease expires, when the callback is claimed.
+    /// </summary>
+    public DateTime? LeaseExpiresUtc { get; set; }
 }

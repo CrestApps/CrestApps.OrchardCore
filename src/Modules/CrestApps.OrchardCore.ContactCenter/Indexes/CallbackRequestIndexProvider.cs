@@ -27,6 +27,7 @@ public sealed class CallbackRequestIndexProvider : IndexProvider<CallbackRequest
                 ItemId = callback.ItemId,
                 Status = callback.Status,
                 ScheduledUtc = callback.ScheduledUtc,
+                LeaseExpiresUtc = callback.LeaseExpiresUtc,
             });
     }
 }

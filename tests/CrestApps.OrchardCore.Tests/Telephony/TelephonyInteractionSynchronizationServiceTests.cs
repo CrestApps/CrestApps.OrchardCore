@@ -252,7 +252,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         var interaction = CreateInteraction();
         var store = new Mock<ITelephonyInteractionStore>();
         store
-            .Setup(value => value.ListActiveAsync("provider-1", It.IsAny<CancellationToken>()))
+            .Setup(value => value.ListActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
