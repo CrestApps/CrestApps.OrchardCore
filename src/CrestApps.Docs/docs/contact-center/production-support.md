@@ -113,6 +113,26 @@ The supported multi-node real-time topology is:
 
 Single-node production uses the default in-memory backplane and requires neither feature. Multi-node operation without the backplane, or without Redis distributed locking, and multi-region active-active operation are unsupported.
 
+## Retention, legal holds, and replay horizon
+
+The durable interaction event log is the source of truth from which projections (for example the daily metrics projection) are rebuilt. Purging it therefore bounds how far back a projection can be replayed, so retention is aligned with the replay horizon and legal holds rather than deleting events purely by age.
+
+Retention is configured under `CrestApps_ContactCenter:Retention`:
+
+| Setting | Meaning |
+| --- | --- |
+| `InteractionEventRetentionDays` | Days to retain interaction events before purging. `0` disables purging entirely (keep indefinitely). |
+| `ProjectionReplayHorizonDays` | Minimum days the event log must remain rebuildable. Retention never purges events younger than this, guaranteeing projections can be rebuilt for at least this window. |
+| `LegalHoldMinimumDays` | Legal-hold / regulatory floor. Events are never purged below this age regardless of the configured window. |
+
+Both floors can only make retention more conservative: the effective purge cutoff keeps events for `max(InteractionEventRetentionDays, ProjectionReplayHorizonDays, LegalHoldMinimumDays)` days, so raising a floor extends retention and never causes an earlier purge. Purging stays disabled whenever `InteractionEventRetentionDays` is `0`.
+
+Behavior guarantees:
+
+- **Retained snapshot** — the daily metrics projection is a durable aggregate that survives event purge, so reporting figures remain available after the raw events are gone.
+- **Post-purge rebuild** — after a purge, a projection rebuild (`RebuildAsync`) recomputes counts only from the events that remain; the replay-horizon floor guarantees that window is at least `ProjectionReplayHorizonDays`.
+- **Legal hold** — set `LegalHoldMinimumDays` above the retention window to hold events for a case or regulatory obligation without changing the operational retention setting.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:

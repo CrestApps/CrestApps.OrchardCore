@@ -24,17 +24,15 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var options = serviceProvider.GetRequiredService<IOptions<ContactCenterRetentionOptions>>().Value;
+        var clock = serviceProvider.GetRequiredService<IClock>();
 
-        if (options.InteractionEventRetentionDays <= 0)
+        if (!RetentionCutoffCalculator.TryComputeCutoff(clock.UtcNow, options, out var cutoff))
         {
             return;
         }
 
-        var clock = serviceProvider.GetRequiredService<IClock>();
         var retentionService = serviceProvider.GetRequiredService<IContactCenterRetentionService>();
         var logger = serviceProvider.GetRequiredService<ILogger<ContactCenterRetentionBackgroundTask>>();
-
-        var cutoff = clock.UtcNow.AddDays(-options.InteractionEventRetentionDays);
 
         try
         {
