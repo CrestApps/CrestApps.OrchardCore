@@ -37,7 +37,7 @@ public sealed class DefaultDialerAbandonmentPolicyService : IDialerAbandonmentPo
             return DialerAbandonmentEvaluation.Permitted(true, 0, 0, "The abandonment cap is not enforced for this profile.");
         }
 
-        if (!IsAutomatedMode(profile.Mode))
+        if (!profile.Mode.IsAutomated())
         {
             return DialerAbandonmentEvaluation.Permitted(
                 true,
@@ -103,10 +103,5 @@ public sealed class DefaultDialerAbandonmentPolicyService : IDialerAbandonmentPo
         }
 
         return null;
-    }
-
-    private static bool IsAutomatedMode(DialerMode mode)
-    {
-        return mode is DialerMode.Power or DialerMode.Progressive or DialerMode.Predictive;
     }
 }

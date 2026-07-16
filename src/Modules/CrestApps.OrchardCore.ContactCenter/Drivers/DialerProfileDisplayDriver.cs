@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -14,6 +15,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 {
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
 
     internal readonly IStringLocalizer S;
 
@@ -21,12 +23,15 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// Initializes a new instance of the <see cref="DialerProfileDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
+    /// <param name="shellFeaturesManager">The shell features manager used to detect the Automated Dialer feature.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileDisplayDriver(
         ContactCenterAdminFormOptionsProvider optionsProvider,
+        IShellFeaturesManager shellFeaturesManager,
         IStringLocalizer<DialerProfileDisplayDriver> stringLocalizer)
     {
         _optionsProvider = optionsProvider;
+        _shellFeaturesManager = shellFeaturesManager;
         S = stringLocalizer;
     }
 
@@ -72,6 +77,8 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 
         await _optionsProvider.PopulateDialerProfileEditorAsync(viewModel);
 
+        var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerAutomated);
+
         return Initialize<DialerProfileViewModel>("DialerProfileFields_Edit", model =>
         {
             model.Id = viewModel.Id;
@@ -82,6 +89,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.QueueId = viewModel.QueueId;
             model.QueueOptions = viewModel.QueueOptions;
             model.Mode = viewModel.Mode;
+            model.AutomatedDialerEnabled = automatedDialerEnabled;
             model.ProviderName = viewModel.ProviderName;
             model.ProviderOptions = viewModel.ProviderOptions;
             model.CallsPerAgent = viewModel.CallsPerAgent;
@@ -117,6 +125,11 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."]);
         }
+        else if (model.Mode.RequiresAutomatedDialerFeature() &&
+            !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerAutomated))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Enable the Contact Center Automated Dialer feature before using Power or Progressive dialing."]);
+        }
 
         if (model.EnforceCallingWindow && string.IsNullOrWhiteSpace(model.CallingCalendarId))
         {
@@ -133,7 +146,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AbandonmentSampleFloor), S["The abandonment sample floor cannot be negative."]);
         }
 
-        var automatedMode = model.Mode is DialerMode.Power or DialerMode.Progressive or DialerMode.Predictive;
+        var automatedMode = model.Mode.IsAutomated();
 
         if (model.EnforceAbandonmentCap && automatedMode && !model.SafeHarborEnabled)
         {

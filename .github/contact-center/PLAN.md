@@ -1749,7 +1749,7 @@ Changes:
 - [x] Add ambiguous contact resolution and defer contact-bound business actions until resolved.
 - [x] Terminalize or avoid creating active-looking work for closed/unroutable entry points.
 - [x] Reuse business-hours calendars for outbound windows; add minute/day/holiday/regional rules, config validation, abandonment caps, safe-harbor behavior, and AMD outcome mapping.
-- Move Power/Progressive services, settings, profiles, and UI behind `ContactCenter.Dialer.Automated`, which cannot enable without `ContactCenter.Compliance`; keep Manual/Preview on the base Dialer support profile.
+- [x] Move Power/Progressive services, settings, profiles, and UI behind `ContactCenter.Dialer.Automated`, which cannot enable without `ContactCenter.Compliance`; keep Manual/Preview on the base Dialer support profile.
 - Keep automated dialing modes disabled until their specific compliance and pacing tests pass.
 
 Exit: CRM attribution tests and the approved compliance policy suite pass with auditable suppression reasons and no silent fallback.

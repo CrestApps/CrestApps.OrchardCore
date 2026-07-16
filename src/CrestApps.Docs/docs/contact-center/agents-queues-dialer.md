@@ -143,9 +143,11 @@ Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsuppor
 | --- | --- |
 | `Manual` | The agent chooses and places the call. No automated cycle runs. |
 | `Preview` | The agent reviews the activity, then accepts or skips. Accepting the offer starts the outbound attempt through the configured Contact Center voice provider; no automated cycle runs. |
-| `Power` | Reserves agents and places a capped number of calls per cycle. **Calls per agent is hard-capped** (`PowerDialerStrategy.MaxCallsPerAgent`) until predictive pacing exists. |
-| `Progressive` | Places one call per available agent as agents become available. |
+| `Power` | Reserves agents and places a capped number of calls per cycle. **Calls per agent is hard-capped** (`PowerDialerStrategy.MaxCallsPerAgent`) until predictive pacing exists. Requires the **Contact Center Automated Dialer** feature. |
+| `Progressive` | Places one call per available agent as agents become available. Requires the **Contact Center Automated Dialer** feature. |
 | `Predictive` | **Disabled.** The editor hides it, saving it is rejected, and the dialer refuses to run it until answer-rate forecasting exists. |
+
+The Power and Progressive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Automated Dialer** feature, which hard-depends on **Contact Center Outbound Compliance**. When that feature is disabled, the dialer-profile editor only offers Manual and Preview, and saving a Power or Progressive profile is rejected so a profile can never silently fail to pace. Manual and Preview remain on the base **Contact Center Dialer** feature.
 
 ### Outbound compliance gate
 

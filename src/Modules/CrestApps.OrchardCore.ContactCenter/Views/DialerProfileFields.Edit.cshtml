@@ -47,11 +47,21 @@
         <select asp-for="Mode" class="form-select">
             <option value="@DialerMode.Manual">@T["Manual"]</option>
             <option value="@DialerMode.Preview">@T["Preview"]</option>
-            <option value="@DialerMode.Power">@T["Power"]</option>
-            <option value="@DialerMode.Progressive">@T["Progressive"]</option>
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Power)
+            {
+                <option value="@DialerMode.Power">@T["Power"]</option>
+            }
+            @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Progressive)
+            {
+                <option value="@DialerMode.Progressive">@T["Progressive"]</option>
+            }
         </select>
         <span asp-validation-for="Mode" class="text-danger"></span>
-        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting and abandonment controls are available."]</span>
+        @if (!Model.AutomatedDialerEnabled)
+        {
+            <span class="hint">@T["Enable the Contact Center Automated Dialer feature to offer the Power and Progressive automated pacing modes."]</span>
+        }
+        <span class="hint">@T["Predictive dialing is disabled until answer-rate forecasting is available."]</span>
     </div>
 </div>
 

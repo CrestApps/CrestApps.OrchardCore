@@ -52,6 +52,12 @@ public class DialerProfileViewModel
     public DialerMode Mode { get; set; } = DialerMode.Preview;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the Contact Center Automated Dialer feature is enabled, which
+    /// determines whether the Power and Progressive automated pacing modes are offered in the editor.
+    /// </summary>
+    public bool AutomatedDialerEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the Contact Center voice provider technical name.
     /// </summary>
     public string ProviderName { get; set; }
