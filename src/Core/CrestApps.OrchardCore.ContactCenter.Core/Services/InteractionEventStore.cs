@@ -61,4 +61,24 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         return events.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<InteractionEvent>> ListOrderedPageAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var boundedSkip = skip < 0 ? 0 : skip;
+        var boundedTake = take <= 0 ? 100 : take;
+
+        var events = await Session.Query<InteractionEvent, InteractionEventIndex>(
+            collection: ContactCenterConstants.CollectionName)
+            .OrderBy(index => index.OccurredUtc)
+            .ThenBy(index => index.ItemId)
+            .Skip(boundedSkip)
+            .Take(boundedTake)
+            .ListAsync(cancellationToken);
+
+        return events.ToArray();
+    }
 }

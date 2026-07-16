@@ -25,4 +25,12 @@ public interface IContactCenterMetricStore : ICatalog<ContactCenterEventMetric>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The metrics in the range.</returns>
     Task<IReadOnlyCollection<ContactCenterEventMetric>> ListByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists every stored metric. The result set is bounded by the number of distinct day and event-type
+    /// combinations and is used when rebuilding or drift-checking the projection.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>All stored metrics.</returns>
+    Task<IReadOnlyCollection<ContactCenterEventMetric>> ListAllAsync(CancellationToken cancellationToken = default);
 }

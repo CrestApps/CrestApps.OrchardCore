@@ -16,6 +16,19 @@ public static class ContactCenterConstants
     public const int CurrentEventSchemaVersion = 1;
 
     /// <summary>
+    /// The stable, versioned identifier of the daily event-count metrics projection. It namespaces the
+    /// projection's deduplication markers and replay checkpoint, so its value must never change for a given
+    /// projection logic version.
+    /// </summary>
+    public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
+
+    /// <summary>
+    /// The projection logic version of the daily event-count metrics projection. Bumping it forces a full
+    /// replay because the stored checkpoint version no longer matches.
+    /// </summary>
+    public const int MetricsProjectionVersion = 1;
+
+    /// <summary>
     /// Identifies a system actor for events that are not originated by an interactive user.
     /// </summary>
     public const string SystemActor = "system";

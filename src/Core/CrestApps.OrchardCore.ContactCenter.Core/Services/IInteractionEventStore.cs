@@ -32,4 +32,15 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The batch of expired events.</returns>
     Task<IReadOnlyList<InteractionEvent>> ListOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists a page of events ordered deterministically by occurrence time then identifier. It is the
+    /// forward-only enumeration used to replay the entire event log during a projection rebuild or drift
+    /// check; callers page until fewer than <paramref name="take"/> events are returned.
+    /// </summary>
+    /// <param name="skip">The number of events to skip.</param>
+    /// <param name="take">The maximum number of events to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The requested page of events, oldest first.</returns>
+    Task<IReadOnlyList<InteractionEvent>> ListOrderedPageAsync(int skip, int take, CancellationToken cancellationToken = default);
 }

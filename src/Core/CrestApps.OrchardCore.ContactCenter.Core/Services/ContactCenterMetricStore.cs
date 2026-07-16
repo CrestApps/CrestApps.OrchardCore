@@ -44,4 +44,14 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
 
         return metrics.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ContactCenterEventMetric>> ListAllAsync(CancellationToken cancellationToken = default)
+    {
+        var metrics = await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
+            collection: ContactCenterConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return metrics.ToArray();
+    }
 }
