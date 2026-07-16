@@ -9,7 +9,9 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// <summary>
 /// Exposes Asterisk outbound dialing through the Contact Center voice provider boundary.
 /// </summary>
-public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProvider
+public sealed class AsteriskContactCenterVoiceProvider :
+    IContactCenterVoiceProvider,
+    IContactCenterVoiceCallControlProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -37,9 +39,7 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
     public LocalizedString Name { get; }
 
     /// <inheritdoc/>
-    public ContactCenterVoiceProviderCapabilities Capabilities =>
-        ContactCenterVoiceProviderCapabilities.DialerDial |
-        ContactCenterVoiceProviderCapabilities.BidirectionalMedia;
+    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
@@ -118,36 +118,6 @@ public sealed class AsteriskContactCenterVoiceProvider : IContactCenterVoiceProv
             Succeeded = true,
             ProviderCallId = request.ProviderCallId,
         });
-    }
-
-    /// <inheritdoc/>
-    public Task<ContactCenterVoiceProviderResult> AssignCallAsync(
-        ContactCenterCallAssignmentRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
-
-        if (workLease is null)
-        {
-            return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
-        }
-
-        return Task.FromResult(Failure("not_supported", "Asterisk does not support provider-side Contact Center call assignment."));
-    }
-
-    /// <inheritdoc/>
-    public Task<ContactCenterVoiceProviderResult> QueueCallAsync(
-        ContactCenterQueueCallRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
-
-        if (workLease is null)
-        {
-            return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
-        }
-
-        return Task.FromResult(Failure("not_supported", "Asterisk does not support provider-side Contact Center queue placement."));
     }
 
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)

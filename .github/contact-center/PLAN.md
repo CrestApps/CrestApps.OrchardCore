@@ -1734,7 +1734,7 @@ Exit: concurrency tests with multiple service providers/nodes produce exactly on
 
 Changes:
 
-- Split voice capabilities into executable call-control, queue/assignment, transfer/conference, recording, monitoring, and media contracts.
+- [x] Split voice capabilities into executable call-control, queue/assignment, transfer/conference, recording, monitoring, and media contracts.
 - Hide all unavailable controls and make success depend on provider confirmation.
 - Add one listener owner/lease per tenant/provider stream or prove duplicate ingestion harmless; preserve monotonic provider truth.
 - Decouple PBX mutations from SignalR connection cancellation and use bounded server-owned command timeouts.

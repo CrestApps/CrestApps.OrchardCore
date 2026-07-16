@@ -8,13 +8,12 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class ContactCenterVoiceMediaProviderResolverTests
 {
     [Fact]
-    public void Get_WhenProviderAdvertisesBidirectionalMedia_ReturnsMatchingMediaProvider()
+    public void Get_WhenMatchingMediaContractIsRegistered_ReturnsMediaProvider()
     {
         // Arrange
         var voiceProvider = CreateVoiceProvider(
             "asterisk",
-            ContactCenterVoiceProviderCapabilities.DialerDial |
-            ContactCenterVoiceProviderCapabilities.BidirectionalMedia);
+            ContactCenterVoiceProviderCapabilities.DialerDial);
         var mediaProvider = CreateMediaProvider("asterisk");
         var voiceProviderResolver = CreateVoiceProviderResolver(voiceProvider);
         var resolver = new ContactCenterVoiceMediaProviderResolver(
@@ -29,12 +28,12 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
     }
 
     [Fact]
-    public void Get_WhenProviderDoesNotAdvertiseBidirectionalMedia_ReturnsNull()
+    public void Get_WhenMatchingMediaContractIsRegistered_DoesNotRequireBaseProviderCapability()
     {
         // Arrange
         var voiceProvider = CreateVoiceProvider(
             "dialpad",
-            ContactCenterVoiceProviderCapabilities.DialerDial);
+            ContactCenterVoiceProviderCapabilities.None);
         var mediaProvider = CreateMediaProvider("dialpad");
         var voiceProviderResolver = CreateVoiceProviderResolver(voiceProvider);
         var resolver = new ContactCenterVoiceMediaProviderResolver(
@@ -45,16 +44,16 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
         var result = resolver.Get("dialpad");
 
         // Assert
-        Assert.Null(result);
+        Assert.Same(mediaProvider.Object, result);
     }
 
     [Fact]
-    public void Get_WhenProviderAdvertisesCapabilityWithoutImplementation_ReturnsNull()
+    public void Get_WhenMediaContractIsNotRegistered_ReturnsNull()
     {
         // Arrange
         var voiceProvider = CreateVoiceProvider(
             "provider",
-            ContactCenterVoiceProviderCapabilities.BidirectionalMedia);
+            ContactCenterVoiceProviderCapabilities.DialerDial);
         var voiceProviderResolver = CreateVoiceProviderResolver(voiceProvider);
         var resolver = new ContactCenterVoiceMediaProviderResolver(
             voiceProviderResolver.Object,
@@ -68,27 +67,27 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
     }
 
     [Fact]
-    public void GetAll_ReturnsOnlyProvidersWithAdvertisedCapabilityAndImplementation()
+    public void GetAll_ReturnsOnlyMediaContractsWithRegisteredVoiceProviderIdentity()
     {
         // Arrange
-        var supportedVoiceProvider = CreateVoiceProvider(
+        var firstVoiceProvider = CreateVoiceProvider(
             "asterisk",
-            ContactCenterVoiceProviderCapabilities.BidirectionalMedia);
-        var unsupportedVoiceProvider = CreateVoiceProvider(
+            ContactCenterVoiceProviderCapabilities.DialerDial);
+        var secondVoiceProvider = CreateVoiceProvider(
             "dialpad",
             ContactCenterVoiceProviderCapabilities.DialerDial);
-        var supportedMediaProvider = CreateMediaProvider("asterisk");
-        var unsupportedMediaProvider = CreateMediaProvider("dialpad");
+        var firstMediaProvider = CreateMediaProvider("asterisk");
+        var secondMediaProvider = CreateMediaProvider("dialpad");
         var orphanedMediaProvider = CreateMediaProvider("unregistered");
         var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>();
 
         voiceProviderResolver
             .Setup(resolver => resolver.GetAll())
-            .Returns([supportedVoiceProvider.Object, unsupportedVoiceProvider.Object]);
+            .Returns([firstVoiceProvider.Object, secondVoiceProvider.Object]);
 
         var resolver = new ContactCenterVoiceMediaProviderResolver(
             voiceProviderResolver.Object,
-            [supportedMediaProvider.Object, unsupportedMediaProvider.Object, orphanedMediaProvider.Object]);
+            [firstMediaProvider.Object, secondMediaProvider.Object, orphanedMediaProvider.Object]);
 
         // Act
         var results = resolver.GetAll();
@@ -96,7 +95,8 @@ public sealed class ContactCenterVoiceMediaProviderResolverTests
         // Assert
         Assert.Collection(
             results,
-            provider => Assert.Same(supportedMediaProvider.Object, provider));
+            provider => Assert.Same(firstMediaProvider.Object, provider),
+            provider => Assert.Same(secondMediaProvider.Object, provider));
     }
 
     private static Mock<IContactCenterVoiceProviderResolver> CreateVoiceProviderResolver(

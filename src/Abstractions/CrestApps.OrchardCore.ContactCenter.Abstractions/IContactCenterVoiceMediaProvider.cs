@@ -3,8 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Defines the optional live-media operations implemented by voice providers that advertise
-/// <see cref="ContactCenterVoiceProviderCapabilities.BidirectionalMedia"/>.
+/// Defines the optional executable live-media operations implemented by a voice provider.
 /// </summary>
 public interface IContactCenterVoiceMediaProvider
 {

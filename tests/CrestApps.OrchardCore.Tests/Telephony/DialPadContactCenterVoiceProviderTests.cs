@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DialPad;
 using CrestApps.OrchardCore.DialPad.Services;
@@ -12,6 +13,25 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class DialPadContactCenterVoiceProviderTests
 {
     [Fact]
+    public void Capabilities_AdvertiseOnlyExecutableVoiceContracts()
+    {
+        // Arrange
+        var service = CreateService(new Mock<ITelephonyProviderResolver>());
+
+        // Act
+        var capabilities = service.Capabilities;
+
+        // Assert
+        Assert.Equal(ContactCenterVoiceProviderCapabilities.DialerDial, capabilities);
+        Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceTransferProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
+    }
+
+    [Fact]
     public async Task DialAsync_WhenTelephonyOutcomeIsUnknown_PreservesUnknownOutcome()
     {
         // Arrange
@@ -25,14 +45,7 @@ public sealed class DialPadContactCenterVoiceProviderTests
             .Setup(provider => provider.GetAsync(DialPadConstants.ProviderTechnicalName))
             .ReturnsAsync(telephonyProvider.Object);
 
-        var localizer = new Mock<IStringLocalizer<DialPadContactCenterVoiceProvider>>();
-        localizer
-            .Setup(value => value["DialPad"])
-            .Returns(new LocalizedString("DialPad", "DialPad"));
-        var service = new DialPadContactCenterVoiceProvider(
-            resolver.Object,
-            new TestContactCenterFeatureWorkManager(),
-            localizer.Object);
+        var service = CreateService(resolver);
 
         // Act
         var result = await service.DialAsync(new ContactCenterDialRequest
@@ -44,5 +57,18 @@ public sealed class DialPadContactCenterVoiceProviderTests
         Assert.False(result.Succeeded);
         Assert.True(result.OutcomeUnknown);
         Assert.Equal("dial_outcome_unknown", result.ErrorCode);
+    }
+
+    private static DialPadContactCenterVoiceProvider CreateService(Mock<ITelephonyProviderResolver> resolver)
+    {
+        var localizer = new Mock<IStringLocalizer<DialPadContactCenterVoiceProvider>>();
+        localizer
+            .Setup(value => value["DialPad"])
+            .Returns(new LocalizedString("DialPad", "DialPad"));
+
+        return new DialPadContactCenterVoiceProvider(
+            resolver.Object,
+            new TestContactCenterFeatureWorkManager(),
+            localizer.Object);
     }
 }

@@ -78,8 +78,8 @@ public enum ContactCenterVoiceProviderCapabilities
     TakeOver = 1 << 12,
 
     /// <summary>
-    /// The provider can open a bidirectional live media session that receives caller audio and injects
-    /// application-generated audio into the same call.
+    /// Indicates legacy bidirectional-media metadata. Executable media support is determined by a matching
+    /// <see cref="IContactCenterVoiceMediaProvider"/> registration.
     /// </summary>
     BidirectionalMedia = 1 << 13,
 }

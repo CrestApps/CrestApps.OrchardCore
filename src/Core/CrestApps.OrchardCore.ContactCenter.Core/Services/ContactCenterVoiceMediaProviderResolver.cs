@@ -28,8 +28,7 @@ public sealed class ContactCenterVoiceMediaProviderResolver : IContactCenterVoic
     {
         var voiceProvider = _voiceProviderResolver.Get(technicalName);
 
-        if (voiceProvider is null ||
-            !voiceProvider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.BidirectionalMedia))
+        if (voiceProvider is null)
         {
             return null;
         }
@@ -42,7 +41,6 @@ public sealed class ContactCenterVoiceMediaProviderResolver : IContactCenterVoic
     public IEnumerable<IContactCenterVoiceMediaProvider> GetAll()
     {
         var supportedProviderNames = _voiceProviderResolver.GetAll()
-            .Where(provider => provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.BidirectionalMedia))
             .Select(provider => provider.TechnicalName)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

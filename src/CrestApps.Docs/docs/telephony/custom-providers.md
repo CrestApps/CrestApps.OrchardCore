@@ -18,7 +18,11 @@ There are five separate seams, and a provider may implement any combination supp
 | Soft-phone call control | `ITelephonyProvider` | Dial, hang up, hold, resume, mute, transfer, merge, answer, reject, voicemail, and provider capabilities |
 | Agent audio delivery | `ITelephonyAudioProvider` | Advertise browser and/or external-device audio, expose the configured mode, and name an executable browser media adapter |
 | Live call-state lookup | `ITelephonyCallStateProvider` | Query the provider's current server truth for a specific call so Contact Center can revalidate offers and reconcile restarts |
-| Contact Center orchestration | `IContactCenterVoiceProvider` | Dialer dialing, server-side agent bridging, provider-side queue ownership, and other Contact Center voice operations |
+| Contact Center identity | `IContactCenterVoiceProvider` | Stable provider identity, display name, delivery model, and capability metadata |
+| Contact Center call control | `IContactCenterVoiceCallControlProvider` | Dialer dialing and server-side agent bridging |
+| Contact Center queue ownership | `IContactCenterVoiceQueueAssignmentProvider` | Provider-side agent assignment and queue placement |
+| Contact Center transfer and conference | `IContactCenterVoiceTransferProvider`, `IContactCenterVoiceConferenceProvider` | Live-call transfer and conference execution |
+| Contact Center recording and monitoring | `IContactCenterVoiceRecordingProvider`, `IContactCenterVoiceMonitoringProvider` | Recording control and supervisor monitor, whisper, barge, or take-over execution |
 | Bidirectional live media | `IContactCenterVoiceMediaProvider` | Receive caller audio and inject application-generated audio into an existing provider call |
 | Provider event ingestion | `IProviderVoiceEventSink` | Submit normalized provider call-state events without referencing Contact Center persistence models |
 | Inbound provider routing | `IInboundVoiceEventSink` | Route a normalized inbound call into Contact Center work |
@@ -74,31 +78,32 @@ The provider's browser script registers `window.telephonySoftPhone.mediaAdapters
 
 ## 2. Implement the Contact Center voice provider when the backend can do more than keypad calling
 
-If the provider also participates in queue delivery, dialer placement, or server-side bridging, implement `IContactCenterVoiceProvider`.
+If the provider participates in Contact Center voice orchestration, implement `IContactCenterVoiceProvider` for identity and capability metadata. Add only the executable interfaces backed by real provider operations:
 
-Use this interface when the provider can:
+- `IContactCenterVoiceCallControlProvider` for dialer calls and server-side agent connection
+- `IContactCenterVoiceQueueAssignmentProvider` for provider-owned assignment and queue placement
+- `IContactCenterVoiceTransferProvider` for live-call transfer
+- `IContactCenterVoiceConferenceProvider` for conference creation or participant addition
+- `IContactCenterVoiceRecordingProvider` for start, stop, pause, and resume recording
+- `IContactCenterVoiceMonitoringProvider` for monitor, whisper, barge, and take-over
+- `IContactCenterVoiceMediaProvider` for bidirectional live media
 
-- place dialer calls for reserved activities
-- bridge an already-live provider call to the assigned agent
-- assign an existing provider call to an agent
-- place or move a call into a provider-owned queue
-
-This layer is optional for browser-only or device-native flows, but it is required when Contact Center needs the provider to own more than basic soft-phone actions.
+Capability flags are discovery metadata, not executable behavior. Advertise an executable capability only when the corresponding interface is implemented. Contact Center also checks the executable contract before routing or staging provider work, so a flag without an implementation fails closed.
 
 ## 3. Implement bidirectional media only when the provider exposes live audio
 
-Providers that can attach an external media stream to an active call may implement `IContactCenterVoiceMediaProvider`. The matching `IContactCenterVoiceProvider` must also advertise `ContactCenterVoiceProviderCapabilities.BidirectionalMedia`.
+Providers that can attach an external media stream to an active call may implement `IContactCenterVoiceMediaProvider`.
 
 Provider modules should reference `CrestApps.OrchardCore.ContactCenter.Abstractions` only. Do not reference the Contact Center Core or module assemblies to ingest events, route inbound calls, reconcile provider state, or participate in the durable webhook inbox; use the stable provider-facing contracts above.
 
 Installing a provider package does not implicitly install the Contact Center module. Hosts that enable a provider's Contact Center adapter must also install the Contact Center module package; the adapter feature's manifest dependency then enables the required Contact Center Voice feature for that tenant.
 
-Both requirements are intentional. `IContactCenterVoiceMediaProviderResolver` returns a provider only when:
+`IContactCenterVoiceMediaProviderResolver` returns a media provider only when:
 
-1. the voice provider advertises `BidirectionalMedia`
-2. a media implementation with the same technical name is registered
+1. a base voice provider with the same technical name is registered
+2. the media feature registers an `IContactCenterVoiceMediaProvider`
 
-This prevents a capability flag without an implementation from being treated as usable, and it prevents an accidentally registered media service from bypassing the provider's declared capabilities.
+The executable media registration is authoritative so independently enabled Orchard features remain safe. Enabling the base provider adapter alone cannot expose media, while enabling the declared media feature adds the contract without requiring the base singleton to advertise services owned by another feature.
 
 An opened `IContactCenterVoiceMediaSession` exposes:
 
@@ -110,7 +115,7 @@ An opened `IContactCenterVoiceMediaSession` exposes:
 
 The initial shared format vocabulary supports linear PCM, G.711 mu-law, and G.711 A-law, including sample rate, channel count, and preferred frame duration. Provider implementations remain responsible for their native transport, framing, codec negotiation, jitter handling, and bridge attachment.
 
-Do not advertise `BidirectionalMedia` for event-only integrations, recording downloads, post-call transcripts, or providers that can receive audio but cannot inject audio into the same live call.
+Do not register `IContactCenterVoiceMediaProvider` for event-only integrations, recording downloads, post-call transcripts, or providers that can receive audio but cannot inject audio into the same live call.
 
 ## 4. Normalize provider events into `ProviderVoiceEvent`
 
@@ -228,8 +233,8 @@ For a new provider module, the usual registration checklist is:
 
 1. Register the telephony provider implementation and settings UI
 2. Implement `ITelephonyAudioProvider` and a browser media adapter only for executable agent audio modes
-3. Register `IContactCenterVoiceProvider` if the backend supports Contact Center orchestration features
-4. Register `IContactCenterVoiceMediaProvider` and advertise `BidirectionalMedia` only when the backend supports bidirectional live audio
+3. Register `IContactCenterVoiceProvider` for Contact Center identity and capability metadata, then implement only the executable operation interfaces the backend supports
+4. Register `IContactCenterVoiceMediaProvider` only in the feature that supplies bidirectional live audio
 5. Register webhook endpoints or the tenant-safe live-stream listener
 6. Implement `ITelephonyCallStateProvider` when the backend can query the current state of a call by id
 7. Normalize every provider event into `ProviderVoiceEvent`
@@ -238,7 +243,7 @@ For a new provider module, the usual registration checklist is:
    - state mapping
    - idempotency
    - inbound routing
-   - media capability advertisement and resolver matching
+   - capability-to-executable-contract parity and media resolver matching
    - media-session cancellation and cleanup when live media is supported
    - live state updates such as hold, resume, mute, unmute, recording, and multi-party changes
    - call-state lookup and restart reconciliation
@@ -256,6 +261,12 @@ For a new provider module, the usual registration checklist is:
 - `ITelephonyProvider`
 - `ITelephonyCallStateProvider`
 - `IContactCenterVoiceProvider`
+- `IContactCenterVoiceCallControlProvider`
+- `IContactCenterVoiceQueueAssignmentProvider`
+- `IContactCenterVoiceTransferProvider`
+- `IContactCenterVoiceConferenceProvider`
+- `IContactCenterVoiceRecordingProvider`
+- `IContactCenterVoiceMonitoringProvider`
 - `IContactCenterVoiceMediaProvider`
 - `IContactCenterVoiceMediaProviderResolver`
 - `IContactCenterVoiceMediaSession`

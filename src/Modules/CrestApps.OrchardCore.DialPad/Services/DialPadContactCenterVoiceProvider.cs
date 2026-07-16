@@ -10,7 +10,9 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// Implements the Contact Center voice provider boundary over the DialPad telephony provider so the
 /// Contact Center routes voice work while DialPad executes provider-specific call operations.
 /// </summary>
-public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvider
+public sealed class DialPadContactCenterVoiceProvider :
+    IContactCenterVoiceProvider,
+    IContactCenterVoiceCallControlProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -38,7 +40,7 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
     public LocalizedString Name { get; }
 
     /// <inheritdoc/>
-    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial | ContactCenterVoiceProviderCapabilities.CallTransfer;
+    public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
@@ -56,19 +58,6 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
         }
 
         return await DialCoreAsync(request.Destination, request.CallerId, request.Metadata, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task<ContactCenterVoiceProviderResult> AssignCallAsync(ContactCenterCallAssignmentRequest request, CancellationToken cancellationToken = default)
-    {
-        using var workLease = _workManager.TryEnter(DialPadConstants.Feature.ContactCenterVoice);
-
-        if (workLease is null)
-        {
-            return Task.FromResult(Failure("feature_quiescing", "The DialPad Contact Center voice provider is temporarily unavailable."));
-        }
-
-        return Task.FromResult(Failure("not_supported", "DialPad does not support provider-side Contact Center call assignment."));
     }
 
     /// <inheritdoc/>
@@ -91,19 +80,6 @@ public sealed class DialPadContactCenterVoiceProvider : IContactCenterVoiceProvi
             Succeeded = true,
             ProviderCallId = request.ProviderCallId,
         });
-    }
-
-    /// <inheritdoc/>
-    public Task<ContactCenterVoiceProviderResult> QueueCallAsync(ContactCenterQueueCallRequest request, CancellationToken cancellationToken = default)
-    {
-        using var workLease = _workManager.TryEnter(DialPadConstants.Feature.ContactCenterVoice);
-
-        if (workLease is null)
-        {
-            return Task.FromResult(Failure("feature_quiescing", "The DialPad Contact Center voice provider is temporarily unavailable."));
-        }
-
-        return Task.FromResult(Failure("not_supported", "DialPad does not support provider-side Contact Center queue placement."));
     }
 
     private async Task<ContactCenterVoiceProviderResult> DialCoreAsync(

@@ -1173,6 +1173,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Returns(Task.CompletedTask);
 
         var voiceProvider = new Mock<IContactCenterVoiceProvider>(MockBehavior.Strict);
+        var callControlProvider = voiceProvider.As<IContactCenterVoiceCallControlProvider>();
         voiceProvider
             .SetupGet(value => value.Capabilities)
             .Returns(ContactCenterVoiceProviderCapabilities.AgentConnect);
@@ -1291,7 +1292,7 @@ public sealed class ProviderVoiceEventServiceTests
             publishedEvents,
             value => Assert.Equal(ContactCenterConstants.Events.CallSessionUpdated, value.EventType),
             value => Assert.Equal(ContactCenterConstants.Events.CallConnected, value.EventType));
-        voiceProvider.Verify(
+        callControlProvider.Verify(
             value => value.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
         callSessionManager.Verify(
@@ -1391,6 +1392,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Returns(Task.CompletedTask);
 
         var voiceProvider = new Mock<IContactCenterVoiceProvider>(MockBehavior.Strict);
+        var callControlProvider = voiceProvider.As<IContactCenterVoiceCallControlProvider>();
         voiceProvider
             .SetupGet(value => value.Capabilities)
             .Returns(ContactCenterVoiceProviderCapabilities.AgentConnect);
@@ -1489,7 +1491,7 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Contains(
             publishedEvents,
             value => value.EventType == ContactCenterConstants.Events.CallConnected);
-        voiceProvider.Verify(
+        callControlProvider.Verify(
             value => value.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
         processor.Verify(

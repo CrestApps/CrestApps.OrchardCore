@@ -185,7 +185,7 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.VoiceProviderResolver.Verify(
             resolver => resolver.Get("dp"),
             Times.Once);
-        harness.Provider.Verify(
+        harness.CallControlProvider.Verify(
             provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
         harness.ProviderCommandStateService.Verify(
@@ -257,7 +257,7 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.VoiceProviderResolver.Verify(
             resolver => resolver.Get("dp"),
             Times.Once);
-        harness.Provider.Verify(
+        harness.CallControlProvider.Verify(
             provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
         harness.ProviderCommandStateService.Verify(
@@ -412,7 +412,7 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.ReservationService.Verify(
             service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
             Times.Once);
-        harness.Provider.Verify(
+        harness.CallControlProvider.Verify(
             provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
         harness.ScopeExecutor.Verify(
@@ -579,6 +579,11 @@ public sealed class ContactCenterCallCommandServiceTests
 
     private sealed class Harness
     {
+        public Harness()
+        {
+            CallControlProvider = Provider.As<IContactCenterVoiceCallControlProvider>();
+        }
+
         public Mock<IActivityReservationService> ReservationService { get; } = new();
 
         public Mock<IActivityReservationManager> ReservationManager { get; } = new();
@@ -604,6 +609,8 @@ public sealed class ContactCenterCallCommandServiceTests
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new();
 
         public Mock<IContactCenterVoiceProvider> Provider { get; } = new();
+
+        public Mock<IContactCenterVoiceCallControlProvider> CallControlProvider { get; }
 
         public Interaction Interaction { get; } = CreateInteraction();
 

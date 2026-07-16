@@ -157,7 +157,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Equal("command-1", harness.LastCallReference.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
         Assert.Equal("7", harness.LastCallReference.Metadata[ContactCenterConstants.CommandMetadata.FenceToken]);
         Assert.Equal("owner-1", harness.LastCallReference.Metadata[OwnerMetadataKey]);
-        harness.Provider.Verify(
+        harness.CallControlProvider.Verify(
             provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -323,6 +323,11 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
     private sealed class Harness
     {
+        public Harness()
+        {
+            CallControlProvider = Provider.As<IContactCenterVoiceCallControlProvider>();
+        }
+
         public Mock<IContactCenterVoiceProviderResolver> VoiceProviderResolver { get; } = new(MockBehavior.Strict);
 
         public Mock<ITelephonyService> TelephonyService { get; } = new(MockBehavior.Strict);
@@ -334,6 +339,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new(MockBehavior.Strict);
 
         public Mock<IContactCenterVoiceProvider> Provider { get; } = new(MockBehavior.Strict);
+
+        public Mock<IContactCenterVoiceCallControlProvider> CallControlProvider { get; }
 
         public Interaction Interaction { get; } = CreateInteraction();
 
@@ -411,7 +418,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 .SetupGet(provider => provider.TechnicalName)
                 .Returns("provider-a");
 
-            Provider
+            CallControlProvider
                 .Setup(provider => provider.ConnectToAgentAsync(It.IsAny<ContactCenterConnectRequest>(), It.IsAny<CancellationToken>()))
                 .Callback<ContactCenterConnectRequest, CancellationToken>((request, _) => LastConnectRequest = request)
                 .ReturnsAsync(result);

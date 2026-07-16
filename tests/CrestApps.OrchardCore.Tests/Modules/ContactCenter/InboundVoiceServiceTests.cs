@@ -21,6 +21,96 @@ public sealed class InboundVoiceServiceTests
     private static readonly DateTime _now = new(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void CanRouteOutbound_WhenDialCapabilityHasNoExecutableContract_ReturnsFalse()
+    {
+        // Arrange
+        var harness = new Harness();
+        var provider = new Mock<IContactCenterVoiceProvider>();
+        provider
+            .SetupGet(value => value.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.DialerDial);
+        harness.VoiceProviderResolver
+            .Setup(value => value.Get("provider"))
+            .Returns(provider.Object);
+        var service = harness.CreateService();
+
+        // Act
+        var canRoute = service.CanRouteOutbound("provider");
+
+        // Assert
+        Assert.False(canRoute);
+    }
+
+    [Fact]
+    public async Task RouteOutboundAsync_WhenDialCapabilityHasNoExecutableContract_FailsClosed()
+    {
+        // Arrange
+        var harness = new Harness();
+        var provider = new Mock<IContactCenterVoiceProvider>();
+        provider
+            .SetupGet(value => value.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.DialerDial);
+        harness.VoiceProviderResolver
+            .Setup(value => value.Get("provider"))
+            .Returns(provider.Object);
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.RouteOutboundAsync(
+            new ContactCenterDialRequest
+            {
+                Destination = "+15551234567",
+            },
+            "provider",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("dialing_not_supported", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RouteOutboundAsync_WhenDialCapabilityHasExecutableContract_InvokesCallControlProvider()
+    {
+        // Arrange
+        var harness = new Harness();
+        var provider = new Mock<IContactCenterVoiceProvider>();
+        var callControlProvider = provider.As<IContactCenterVoiceCallControlProvider>();
+        provider
+            .SetupGet(value => value.Capabilities)
+            .Returns(ContactCenterVoiceProviderCapabilities.DialerDial);
+        callControlProvider
+            .Setup(value => value.DialAsync(It.IsAny<ContactCenterDialRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult
+            {
+                Succeeded = true,
+                ProviderCallId = "call-1",
+            });
+        harness.VoiceProviderResolver
+            .Setup(value => value.Get("provider"))
+            .Returns(provider.Object);
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.RouteOutboundAsync(
+            new ContactCenterDialRequest
+            {
+                Destination = "+15551234567",
+            },
+            "provider",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("call-1", result.ProviderCallId);
+        callControlProvider.Verify(
+            value => value.DialAsync(
+                It.Is<ContactCenterDialRequest>(request => request.Destination == "+15551234567"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task HandleInboundAsync_WhenAgentAvailable_CreatesInboundActivityAndOffersAgent()
     {
         // Arrange

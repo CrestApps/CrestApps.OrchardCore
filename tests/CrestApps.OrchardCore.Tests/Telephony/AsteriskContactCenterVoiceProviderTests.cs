@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -12,7 +13,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class AsteriskContactCenterVoiceProviderTests
 {
     [Fact]
-    public void Capabilities_WithRtpMediaImplementation_AdvertisesBidirectionalMedia()
+    public void Capabilities_AdvertiseOnlyExecutableVoiceContracts()
     {
         // Arrange
         var resolver = new Mock<ITelephonyProviderResolver>();
@@ -22,7 +23,13 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         var capabilities = service.Capabilities;
 
         // Assert
-        Assert.True(capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.BidirectionalMedia));
+        Assert.Equal(ContactCenterVoiceProviderCapabilities.DialerDial, capabilities);
+        Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceTransferProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
+        Assert.IsNotAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
     }
 
     [Fact]

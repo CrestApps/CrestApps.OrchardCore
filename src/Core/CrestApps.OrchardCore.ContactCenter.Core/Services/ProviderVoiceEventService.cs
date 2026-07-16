@@ -617,7 +617,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         if (provider is null ||
             provider.DeliveryModel != VoiceProviderDeliveryModel.ServerSideAcd ||
-            !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.AgentConnect))
+            !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.AgentConnect) ||
+            provider is not IContactCenterVoiceCallControlProvider)
         {
             return;
         }

@@ -135,10 +135,10 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
 
         var provider = _voiceProviderResolver.Get(command.ProviderName);
 
-        if (provider is not null)
+        if (provider is IContactCenterVoiceCallControlProvider callControlProvider)
         {
             var providerRequest = CreateProviderConnectRequest(request, claim);
-            var providerResult = await provider.ConnectToAgentAsync(providerRequest, cancellationToken);
+            var providerResult = await callControlProvider.ConnectToAgentAsync(providerRequest, cancellationToken);
 
             return NormalizeProviderResult(
                 providerResult,

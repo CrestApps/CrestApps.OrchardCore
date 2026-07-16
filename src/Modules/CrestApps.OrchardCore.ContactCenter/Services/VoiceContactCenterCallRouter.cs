@@ -112,7 +112,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         var provider = _voiceProviderResolver.Get(providerName);
 
-        return provider?.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial) == true;
+        return provider is IContactCenterVoiceCallControlProvider &&
+            provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial);
     }
 
     /// <inheritdoc/>
@@ -149,12 +150,13 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             return Failure("provider_unavailable", "No Contact Center voice provider is registered for outbound voice routing.");
         }
 
-        if (!provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial))
+        if (!provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.DialerDial) ||
+            provider is not IContactCenterVoiceCallControlProvider callControlProvider)
         {
             return Failure("dialing_not_supported", "The Contact Center voice provider does not support outbound dialing.");
         }
 
-        var result = await provider.DialAsync(request, cancellationToken);
+        var result = await callControlProvider.DialAsync(request, cancellationToken);
 
         return result ?? Failure("provider_returned_no_result", "The Contact Center voice provider did not return a result.");
     }
