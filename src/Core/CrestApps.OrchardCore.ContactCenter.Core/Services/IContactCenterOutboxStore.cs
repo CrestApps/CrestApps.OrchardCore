@@ -24,4 +24,21 @@ public interface IContactCenterOutboxStore : ICatalog<ContactCenterOutboxMessage
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due outbox messages.</returns>
     Task<IReadOnlyCollection<ContactCenterOutboxMessage>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the messages currently in the supplied dispatch state.
+    /// </summary>
+    /// <param name="status">The dispatch state to count.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of messages in the supplied state.</returns>
+    Task<int> CountByStatusAsync(OutboxMessageStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the pending or claimed messages whose next attempt is already due at or before the supplied time.
+    /// A sustained non-zero result indicates the dispatcher is not keeping up with the backlog.
+    /// </summary>
+    /// <param name="nowUtc">The current UTC time used to select overdue messages.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of overdue messages.</returns>
+    Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default);
 }

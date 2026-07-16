@@ -49,4 +49,23 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
 
         return due.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<int> CountByStatusAsync(OutboxMessageStatus status, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => index.Status == status,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
 }

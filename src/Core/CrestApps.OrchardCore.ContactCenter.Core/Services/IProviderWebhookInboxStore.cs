@@ -31,4 +31,21 @@ public interface IProviderWebhookInboxStore : ICatalog<ProviderWebhookInboxMessa
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the messages currently in the supplied processing state.
+    /// </summary>
+    /// <param name="status">The processing state to count.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of messages in the supplied state.</returns>
+    Task<int> CountByStatusAsync(ProviderWebhookInboxStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the pending or claimed messages whose next attempt is already due at or before the supplied time.
+    /// A sustained non-zero result indicates provider ingress is not draining fast enough.
+    /// </summary>
+    /// <param name="nowUtc">The current UTC time used to select overdue messages.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of overdue messages.</returns>
+    Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default);
 }

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -72,6 +73,18 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterConstants.CollectionName));
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
+        services.Configure<ContactCenterHealthCheckOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"));
+        services
+            .AddHealthChecks()
+            .AddCheck<ContactCenterStorageHealthCheck>(
+                "contactcenter-storage",
+                tags: ["contactcenter", "ready"])
+            .AddCheck<ContactCenterOutboxHealthCheck>(
+                "contactcenter-outbox",
+                tags: ["contactcenter", "ready"])
+            .AddCheck<ContactCenterProviderIngressHealthCheck>(
+                "contactcenter-provider-ingress",
+                tags: ["contactcenter", "ready"]);
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))

@@ -55,4 +55,23 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
 
         return messages.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<int> CountByStatusAsync(ProviderWebhookInboxStatus status, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
+            index => index.Status == status,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
+            index => (index.Status == ProviderWebhookInboxStatus.Pending || index.Status == ProviderWebhookInboxStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
 }

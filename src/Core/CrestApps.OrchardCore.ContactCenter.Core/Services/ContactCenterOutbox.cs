@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -198,6 +199,8 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
                     ex.GetType().Name);
             }
         }
+
+        ContactCenterDiagnostics.RecordOutboxRedelivered(redelivered);
 
         return redelivered;
     }
@@ -506,6 +509,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         if (message.AttemptCount >= MaxAttempts)
         {
             message.Status = OutboxMessageStatus.DeadLettered;
+            ContactCenterDiagnostics.RecordOutboxDeadLettered("retry_exhausted");
 
             _logger.LogError(
                 "Dead-lettered Contact Center event '{EventType}' ({EventId}) after {Attempts} failed dispatch attempts: {Error}",
@@ -543,6 +547,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         message.LastError = reason;
         message.ModifiedUtc = _clock.UtcNow;
         message.OwnerToken = null;
+        ContactCenterDiagnostics.RecordOutboxDeadLettered("unrecoverable");
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);

@@ -53,6 +53,54 @@ Provider stream correctness uses the supported Redis distributed-lock topology. 
 
 PBX mutations use a tenant-scoped server execution boundary instead of the SignalR connection or HTTP request cancellation token. The default 10-second command deadline is configurable with `CrestApps_Telephony:Commands:Timeout` and accepts values from one second through two minutes. Deadline or host-shutdown cancellation produces an unknown provider outcome rather than a safe-to-retry success or failure. Durable provider commands persist that ambiguity as `OutcomeUnknown`; synchronous Telephony operations return an unknown result. After the provider confirms success, local interaction, transfer, recording, monitoring, and event persistence uses a non-request, non-expiring token so a browser disconnect or exhausted provider deadline cannot discard the confirmed projection. This outer command deadline intentionally supersedes longer provider-specific retry budgets.
 
+## Observability and health
+
+The Contact Center module exposes a stable OpenTelemetry contract and operational health checks so operators can wire dashboards, alerts, and orchestrator probes without depending on private types.
+
+### Telemetry contract
+
+`ContactCenterDiagnostics` publishes a single `Meter` and a single `ActivitySource`, both named `CrestApps.OrchardCore.ContactCenter`. These names are a public integration surface and change only through a documented migration. Register them with any OpenTelemetry exporter:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter("CrestApps.OrchardCore.ContactCenter"))
+    .WithTracing(tracing => tracing.AddSource("CrestApps.OrchardCore.ContactCenter"));
+```
+
+Current instruments:
+
+| Instrument | Kind | Meaning |
+| --- | --- | --- |
+| `contactcenter.outbox.redelivered` | Counter | Domain events successfully redelivered from the durable outbox. |
+| `contactcenter.outbox.dead_lettered` | Counter | Domain events dead-lettered after exhausting their retry budget, tagged by `reason`. |
+
+### Health checks
+
+When the `OrchardCore.HealthChecks` feature is enabled it exposes the standard `/health/live` endpoint that aggregates the tenant-registered checks below. The Contact Center feature registers each check with the `contactcenter` and `ready` tags so a readiness probe can select them:
+
+| Check | Signal | Degraded | Unhealthy |
+| --- | --- | --- | --- |
+| `contactcenter-storage` | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
+| `contactcenter-outbox` | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
+| `contactcenter-provider-ingress` | Provider webhook inbox dead-letter and overdue backlog. A stuck provider stream or an expired listener lease surfaces here as a growing ingress backlog. | Same thresholds as the outbox. | Same thresholds as the outbox. |
+
+Thresholds are configured under `CrestApps_ContactCenter:HealthChecks` and are normalized so an unhealthy bound can never fall below its degraded bound:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "HealthChecks": {
+      "DeadLetterDegradedThreshold": 1,
+      "DeadLetterUnhealthyThreshold": 25,
+      "OverdueBacklogDegradedThreshold": 50,
+      "OverdueBacklogUnhealthyThreshold": 500
+    }
+  }
+}
+```
+
+SignalR backplane health is owned by the backplane provider rather than the Contact Center module: when a Redis backplane is configured, enable the Redis/backplane connectivity health check so its liveness is aggregated by the same `/health/live` endpoint. On a single node the in-memory backplane needs no separate check.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:

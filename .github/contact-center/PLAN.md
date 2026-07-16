@@ -1770,12 +1770,12 @@ Exit: database matrix, query-count/plan budgets, duplicate/crash recovery, repla
 
 Changes:
 
-- Add OpenTelemetry traces/metrics and health endpoints for storage, provider streams, outbox/dead letters, scheduler lag, listener lease, and SignalR backplane.
-- Wire and document the supported multi-node backplane.
-- Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
-- Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
-- Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
-- Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
+- [x] Add OpenTelemetry traces/metrics and health endpoints for storage, provider streams, outbox/dead letters, scheduler lag, listener lease, and SignalR backplane.
+- [ ] Wire and document the supported multi-node backplane.
+- [ ] Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
+- [ ] Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
+- [ ] Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
+- [ ] Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
 
 Exit: health/telemetry contracts, erasure/retention, backup/restore, mixed-version upgrade, and failure-injection tests pass.
 
@@ -1990,6 +1990,8 @@ Ordered by the former design-review execution order. Numbers reference the histo
 - [ ] **G8 — Inbound entry points/IVR (Phase 8), recording/monitoring (Phase 9), compliance hardening (Phase 10), analytics (Phase 12)** per the existing phase plan once G1–G7 are stable.
 
 ### Change log
+
+- 2026-07-17: Started R7 by adding the Contact Center observability and health contract. Published `ContactCenterDiagnostics` — a stable, process-wide OpenTelemetry `Meter` and `ActivitySource` both named `CrestApps.OrchardCore.ContactCenter` — with two outbox instruments (`contactcenter.outbox.redelivered`, `contactcenter.outbox.dead_lettered` tagged by reason) emitted from the durable outbox's redelivery and both dead-letter paths. Added three `IHealthCheck` implementations registered on the standard `/health/live` endpoint with `contactcenter`/`ready` tags: `contactcenter-storage` (cheap store probe proving the tenant database/collection is reachable), `contactcenter-outbox`, and `contactcenter-provider-ingress`. The two queue checks share a pure, unit-testable `BacklogHealthEvaluator` that maps dead-letter and overdue-backlog counts to Healthy/Degraded/Unhealthy; the overdue (past-due pending/claimed) backlog is the scheduler-lag signal, and a stuck provider stream or expired listener lease surfaces as a growing ingress backlog. Added `CountByStatusAsync`/`CountOverdueAsync` to the outbox and provider-inbox stores, a normalized `ContactCenterHealthCheckOptions` bound to `CrestApps_ContactCenter:HealthChecks`, and documented that SignalR backplane liveness is owned by the backplane provider. SignalR-backplane wiring/documentation, per-entity classification/retention/erasure/backup-restore, purge/replay-horizon alignment, expand-migrate-contract, and failure runbooks remain open R7 items. Added pure evaluator tests and real-SQLite outbox count/health tests (11 unit tests) plus documentation under Contact Center production support. Strict build, targeted ContactCenter tests, and ten fresh-tenant activation scenarios pass.
 
 - 2026-07-16: Completed R6 by resolving raw-SQL/enum portability and documenting the supported-database matrix. Audited every Contact Center migration and confirmed the persistence layer is engine-portable by construction: enumerations persist as string names (not ordinals), all raw-SQL identifiers are quoted through the active `ISqlDialect` and honor its index-prefix rule, all backfill/preflight literals are bound command parameters, duplicate-detection uses only ANSI SQL (`UPDATE`/`CASE`/`IN`/`GROUP BY`/`HAVING`/`COUNT`), and case-insensitive matching is normalized in application code (lower-cased keys) rather than depending on database collation. Consolidated the unique-index creation and existence-preflight raw SQL that the `ActivityReservationIndexMigrations` and `QueueItemIndexMigrations` each re-implemented privately into the single dialect-aware `ContactCenterMigrationSql` helper, and extracted a pure `BuildCreateUniqueIndexStatement` so the generated `CREATE UNIQUE INDEX` SQL is unit-testable. Added a portability guard test proving the statement is produced entirely from the dialect (two quoting styles, prefix on/off), and documented the supported engines (SQLite/SQL Server/PostgreSQL/MySQL) and portability guarantees under Contact Center production support, noting per-engine validation of the full surface is a CI/deployment-certification step. Strict build, targeted ContactCenter tests (780), and ten fresh-tenant activation scenarios pass.
 
