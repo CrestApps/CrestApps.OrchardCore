@@ -130,10 +130,11 @@ public sealed class ProviderWebhookInboxTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WhenHandlerSucceeds_DeletesAndCommitsMessage()
+    public async Task DispatchAsync_WhenHandlerSucceeds_TombstonesAndCommitsMessage()
     {
         // Arrange
         var message = CreateMessage();
+        var originalPayload = message.Payload;
         var store = new Mock<IProviderWebhookInboxStore>();
         store
             .Setup(service => service.FindByIdAsync(message.ItemId, It.IsAny<CancellationToken>()))
@@ -146,7 +147,7 @@ public sealed class ProviderWebhookInboxTests
         handler.SetupGet(service => service.TechnicalName).Returns("handler");
         handler.SetupGet(service => service.ReplaySafety).Returns(ContactCenterHandlerReplaySafety.GuardedByDurableStore);
         handler
-            .Setup(service => service.HandleAsync(message.Payload, It.IsAny<CancellationToken>()))
+            .Setup(service => service.HandleAsync(originalPayload, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var inbox = CreateInbox(store, session, [handler.Object]);
 
@@ -155,15 +156,22 @@ public sealed class ProviderWebhookInboxTests
 
         // Assert
         Assert.True(completed);
+        Assert.Equal(ProviderWebhookInboxStatus.Completed, message.Status);
+        Assert.Null(message.Payload);
+        Assert.Equal(_now, message.ProcessedUtc);
+        Assert.Null(message.OwnerToken);
         handler.Verify(
-            service => service.HandleAsync(message.Payload, TestContext.Current.CancellationToken),
+            service => service.HandleAsync(originalPayload, TestContext.Current.CancellationToken),
             Times.Once);
         store.Verify(
-            service => service.DeleteAsync(message, TestContext.Current.CancellationToken),
-            Times.Once);
+            service => service.UpdateAsync(message, TestContext.Current.CancellationToken),
+            Times.Exactly(2));
+        store.Verify(
+            service => service.DeleteAsync(It.IsAny<ProviderWebhookInboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         session.Verify(
             service => service.SaveChangesAsync(TestContext.Current.CancellationToken),
-            Times.Exactly(3));
+            Times.Exactly(2));
     }
 
     [Fact]
@@ -272,6 +280,12 @@ public sealed class ProviderWebhookInboxTests
         var second = CreateMessage("message-2");
         var store = new Mock<IProviderWebhookInboxStore>();
         store
+            .Setup(service => service.ListProcessedBeforeAsync(
+                _now.AddDays(-7),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        store
             .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);
         store
@@ -299,9 +313,12 @@ public sealed class ProviderWebhookInboxTests
         // Assert
         Assert.Equal(1, completed);
         Assert.Equal(1, first.AttemptCount);
+        Assert.Equal(ProviderWebhookInboxStatus.Completed, second.Status);
+        Assert.Null(second.Payload);
+        Assert.Equal(_now, second.ProcessedUtc);
         store.Verify(
-            service => service.DeleteAsync(second, TestContext.Current.CancellationToken),
-            Times.Once);
+            service => service.DeleteAsync(It.IsAny<ProviderWebhookInboxMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -347,6 +364,12 @@ public sealed class ProviderWebhookInboxTests
         var first = CreateMessage("message-1");
         var second = CreateMessage("message-2");
         var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.ListProcessedBeforeAsync(
+                _now.AddDays(-7),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         store
             .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);

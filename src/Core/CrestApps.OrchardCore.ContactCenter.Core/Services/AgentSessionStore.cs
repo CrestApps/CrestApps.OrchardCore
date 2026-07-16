@@ -14,6 +14,13 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
     private const int QueryBatchSize = 500;
 
     /// <summary>
+    /// Gets a value indicating that agent session updates use YesSql document-version concurrency checks so
+    /// concurrent connect, heartbeat, and disconnect operations cannot lose active-session state. A losing
+    /// writer observes a <see cref="ConcurrencyException"/> instead of silently overwriting a newer commit.
+    /// </summary>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="AgentSessionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
@@ -31,6 +38,8 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
         return await Session.Query<AgentSession, AgentSessionIndex>(
             index => index.UserId == userId,
             collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.IsOnline)
+            .ThenByDescending(index => index.LastHeartbeatUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

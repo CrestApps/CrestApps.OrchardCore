@@ -17,6 +17,13 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     private const int DefaultReconciliationBatchSize = 200;
 
     /// <summary>
+    /// Gets a value indicating that interaction updates use YesSql document-version concurrency checks so
+    /// concurrent provider-event ingestion cannot lose or reverse a communication state update. A losing
+    /// writer observes a <see cref="ConcurrencyException"/> instead of silently overwriting a newer commit.
+    /// </summary>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="InteractionStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>

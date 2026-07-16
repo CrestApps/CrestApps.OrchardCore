@@ -173,9 +173,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             throw new JsonException("The provider command request payload could not be deserialized.");
         }
 
-        var now = _clock.UtcNow;
         var providerName = ResolveProviderName(command.ProviderName, result.ProviderName);
-        var providerCallId = ResolveProviderCallId(request.ProviderCallId, result.ProviderCallId);
 
         var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
 
@@ -184,10 +182,6 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             interaction.AgentId = request.AgentId;
             interaction.QueueId = request.QueueId;
             interaction.ProviderName = providerName;
-            interaction.ProviderInteractionId = providerCallId;
-            interaction.Status = InteractionStatus.Connected;
-            interaction.StartedUtc ??= now;
-            interaction.AnsweredUtc = now;
 
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
@@ -199,22 +193,9 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             session.AgentId = request.AgentId;
             session.QueueId = request.QueueId;
             session.ProviderName = providerName;
-            session.ProviderCallId = providerCallId;
-            session.State = ContactCenterCallState.Connected;
-            session.StartedUtc ??= now;
-            session.AnsweredUtc = now;
 
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         }
-
-        await PublishAsync(
-            ContactCenterConstants.Events.CallConnected,
-            nameof(Interaction),
-            command.InteractionId,
-            request.AgentId,
-            command.CommandId,
-            command.InteractionId,
-            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -428,13 +409,6 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         return string.IsNullOrWhiteSpace(resultProviderName)
             ? commandProviderName
             : resultProviderName;
-    }
-
-    private static string ResolveProviderCallId(string requestProviderCallId, string resultProviderCallId)
-    {
-        return string.IsNullOrWhiteSpace(resultProviderCallId)
-            ? requestProviderCallId
-            : resultProviderCallId;
     }
 
     private static ProviderAnswerCommandRequest TryDeserializeRequest(string requestPayload)

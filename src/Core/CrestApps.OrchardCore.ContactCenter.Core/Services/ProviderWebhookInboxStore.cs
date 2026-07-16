@@ -74,4 +74,21 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
             collection: ContactCenterConstants.CollectionName)
             .CountAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(
+        DateTime processedBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? ProviderWebhookInbox.MaxTombstoneCleanupBatchSize : maxCount;
+
+        return (await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
+            index => index.Status == ProviderWebhookInboxStatus.Completed &&
+                index.NextAttemptUtc < processedBeforeUtc,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderBy(index => index.NextAttemptUtc)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
 }

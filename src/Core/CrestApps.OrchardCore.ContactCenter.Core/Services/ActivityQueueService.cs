@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -12,12 +13,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityQueueService : IActivityQueueService
 {
+    private const int MaxEnqueueAttempts = 3;
+
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ISession _session;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
 
     /// <summary>
@@ -29,6 +33,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="businessHours">The business-hours service used to evaluate after-hours overflow.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
+    /// <param name="scopeExecutor">The executor used to retry idempotent enqueue conflicts in a fresh scope.</param>
     /// <param name="clock">The clock used to stamp queue times.</param>
     public ActivityQueueService(
         IQueueItemManager queueItemManager,
@@ -37,6 +42,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
         ISession session,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock)
     {
         _queueItemManager = queueItemManager;
@@ -45,6 +51,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _businessHours = businessHours;
         _publisher = publisher;
         _session = session;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
     }
 
@@ -54,6 +61,22 @@ public sealed class ActivityQueueService : IActivityQueueService
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
+        try
+        {
+            return await EnqueueCoreAsync(activityItemId, queueId, priority, cancellationToken);
+        }
+        catch (Exception exception) when (IsEnqueueConflict(exception))
+        {
+            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, cancellationToken);
+        }
+    }
+
+    private async Task<QueueItem> EnqueueCoreAsync(
+        string activityItemId,
+        string queueId,
+        InteractionPriority? priority,
+        CancellationToken cancellationToken)
+    {
         var existing = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
 
         if (existing is not null && existing.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
@@ -91,6 +114,41 @@ public sealed class ActivityQueueService : IActivityQueueService
         }, cancellationToken);
 
         return item;
+    }
+
+    private async Task<QueueItem> RetryEnqueueInFreshScopeAsync(
+        string activityItemId,
+        string queueId,
+        InteractionPriority? priority,
+        CancellationToken cancellationToken)
+    {
+        Exception lastException = null;
+
+        for (var attempt = 2; attempt <= MaxEnqueueAttempts; attempt++)
+        {
+            QueueItem item = null;
+
+            try
+            {
+                await _scopeExecutor.ExecuteAsync<IActivityQueueService>(async queueService =>
+                {
+                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, cancellationToken);
+                });
+
+                return item;
+            }
+            catch (Exception exception) when (IsEnqueueConflict(exception))
+            {
+                lastException = exception;
+            }
+        }
+
+        throw lastException ?? new ConcurrencyException(new Document());
+    }
+
+    private static bool IsEnqueueConflict(Exception exception)
+    {
+        return exception is ConcurrencyException or DbException;
     }
 
     /// <inheritdoc/>

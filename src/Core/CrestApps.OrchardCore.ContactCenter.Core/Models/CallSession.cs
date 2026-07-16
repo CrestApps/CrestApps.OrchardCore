@@ -52,9 +52,44 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public string AgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the active agent-session identifier that owns the live media leg for this call.
+    /// </summary>
+    public string AgentSessionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue the call was delivered from.
     /// </summary>
     public string QueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider bridge identifier that currently joins the customer and agent media legs.
+    /// </summary>
+    public string BridgeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider conference identifier when the call is represented as a multi-party conference.
+    /// </summary>
+    public string ConferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider recording identifier for the active or retained call recording.
+    /// </summary>
+    public string RecordingId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the supervisor agent identifier when a supervisor monitoring leg is attached.
+    /// </summary>
+    public string SupervisorAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider call-leg identifier used by the active supervisor monitoring leg.
+    /// </summary>
+    public string SupervisorLegId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the durable provider-command identifier that last fenced a topology transition.
+    /// </summary>
+    public string DurableCommandId { get; set; }
 
     /// <summary>
     /// Gets or sets the address of the calling party.

@@ -163,43 +163,44 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     }
 
     [Fact]
-    public async Task ProjectSuccessAsync_WhenAnswerSucceeds_UpdatesInteractionSessionAndPublishesCallConnected()
+    public async Task ProjectSuccessAsync_WhenAnswerSucceeds_UpdatesOwnershipMetadataWithoutAdvancingProviderState()
     {
         // Arrange
         var harness = new Harness();
         harness.SetupActiveState();
         harness.SetupPublisher();
+        harness.Interaction.AgentId = "previous-agent";
+        harness.Interaction.QueueId = "previous-queue";
+        harness.Session.AgentId = "previous-agent";
+        harness.Session.QueueId = "previous-queue";
         var executor = harness.CreateExecutor();
         var command = CreateCommand();
         var result = new ContactCenterVoiceProviderResult
         {
             Succeeded = true,
             ProviderName = "provider-a",
-            ProviderCallId = "call-1",
+            ProviderCallId = "less-authoritative-call-2",
         };
 
         // Act
         await executor.ProjectSuccessAsync(command, result, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(InteractionStatus.Connected, harness.Interaction.Status);
-        Assert.Equal(_now, harness.Interaction.StartedUtc);
-        Assert.Equal(_now, harness.Interaction.AnsweredUtc);
+        Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
+        Assert.Null(harness.Interaction.StartedUtc);
+        Assert.Null(harness.Interaction.AnsweredUtc);
         Assert.Equal("agent-1", harness.Interaction.AgentId);
         Assert.Equal("queue-1", harness.Interaction.QueueId);
-        Assert.Equal(ContactCenterCallState.Connected, harness.Session.State);
-        Assert.Equal(_now, harness.Session.StartedUtc);
-        Assert.Equal(_now, harness.Session.AnsweredUtc);
+        Assert.Equal("provider-a", harness.Interaction.ProviderName);
+        Assert.Equal("call-1", harness.Interaction.ProviderInteractionId);
+        Assert.Equal(ContactCenterCallState.Ringing, harness.Session.State);
+        Assert.Null(harness.Session.StartedUtc);
+        Assert.Null(harness.Session.AnsweredUtc);
         Assert.Equal("agent-1", harness.Session.AgentId);
         Assert.Equal("queue-1", harness.Session.QueueId);
-        Assert.Single(harness.PublishedEvents);
-        var publishedEvent = harness.PublishedEvents[0];
-        Assert.Equal(ContactCenterConstants.Events.CallConnected, publishedEvent.EventType);
-        Assert.Equal(nameof(Interaction), publishedEvent.AggregateType);
-        Assert.Equal("interaction-1", publishedEvent.AggregateId);
-        Assert.Equal("agent-1", publishedEvent.ActorId);
-        Assert.Equal(ContactCenterConstants.Components.Voice, publishedEvent.SourceComponent);
-        Assert.Equal(ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(command.CommandId, ContactCenterConstants.Events.CallConnected), publishedEvent.IdempotencyKey);
+        Assert.Equal("provider-a", harness.Session.ProviderName);
+        Assert.Equal("call-1", harness.Session.ProviderCallId);
+        Assert.Empty(harness.PublishedEvents);
     }
 
     [Fact]

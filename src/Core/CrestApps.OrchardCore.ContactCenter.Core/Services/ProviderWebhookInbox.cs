@@ -28,6 +28,11 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     public const int MaxBatchSize = 100;
 
     /// <summary>
+    /// The maximum number of processed tombstones purged in one cleanup pass.
+    /// </summary>
+    public const int MaxTombstoneCleanupBatchSize = 100;
+
+    /// <summary>
     /// The maximum provider-scoped delivery identifier length supported by the durable index.
     /// </summary>
     public const int MaxDeliveryIdLength = 256;
@@ -38,6 +43,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private static readonly TimeSpan _dispatchLockExpiration = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _claimLease = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _missingHandlerDelay = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan _tombstoneRetention = TimeSpan.FromDays(7);
 
     private const int BaseBackoffSeconds = 15;
     private const int MaxBackoffSeconds = 1800;
@@ -349,11 +355,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         message.Status = ProviderWebhookInboxStatus.Completed;
         message.OwnerToken = null;
-        message.ModifiedUtc = _clock.UtcNow;
+        message.Payload = null;
+        message.LastError = null;
+        message.ProcessedUtc = _clock.UtcNow;
+        message.NextAttemptUtc = message.ProcessedUtc.Value;
+        message.ModifiedUtc = message.ProcessedUtc;
         await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-
-        await _store.DeleteAsync(message, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -362,6 +369,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// <inheritdoc/>
     public async Task<int> DispatchDueAsync(CancellationToken cancellationToken = default)
     {
+        await PurgeExpiredTombstonesAsync(cancellationToken);
+
         var due = await _store.ListDueAsync(_clock.UtcNow, MaxBatchSize, cancellationToken);
         var completed = 0;
 
@@ -406,6 +415,29 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         }
 
         return completed;
+    }
+
+    private async Task<int> PurgeExpiredTombstonesAsync(CancellationToken cancellationToken)
+    {
+        var cutoff = _clock.UtcNow.Subtract(_tombstoneRetention);
+        var tombstones = await _store.ListProcessedBeforeAsync(
+            cutoff,
+            MaxTombstoneCleanupBatchSize,
+            cancellationToken);
+        var count = 0;
+
+        foreach (var tombstone in tombstones)
+        {
+            await _store.DeleteAsync(tombstone, cancellationToken);
+            count++;
+        }
+
+        if (count > 0)
+        {
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+
+        return count;
     }
 
     private async Task<bool> SettleInFreshScopeAsync(

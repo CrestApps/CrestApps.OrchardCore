@@ -16,7 +16,7 @@ public enum ProviderWebhookInboxStatus
     Claimed,
 
     /// <summary>
-    /// The normalized payload completed and the message is safe to remove.
+    /// The normalized payload completed and the message is retained as an idempotency tombstone.
     /// </summary>
     Completed,
 

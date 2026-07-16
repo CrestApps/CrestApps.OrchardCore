@@ -259,6 +259,7 @@ public sealed class ActivityQueueServiceTests
         clock.SetupGet(c => c.UtcNow).Returns(_now);
         session ??= new Mock<ISession>();
         publisher ??= new Mock<IContactCenterEventPublisher>();
+        var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
 
         return new ActivityQueueService(
             queueItemManager.Object,
@@ -267,6 +268,7 @@ public sealed class ActivityQueueServiceTests
             businessHours.Object,
             publisher.Object,
             session.Object,
+            scopeExecutor.Object,
             clock.Object);
     }
 }

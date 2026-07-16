@@ -48,4 +48,16 @@ public interface IProviderWebhookInboxStore : ICatalog<ProviderWebhookInboxMessa
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of overdue messages.</returns>
     Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists processed tombstones that are older than the supplied retention cutoff.
+    /// </summary>
+    /// <param name="processedBeforeUtc">The exclusive UTC cutoff for retained tombstones.</param>
+    /// <param name="maxCount">The maximum number of tombstones to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The processed tombstones eligible for deletion.</returns>
+    Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(
+        DateTime processedBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default);
 }

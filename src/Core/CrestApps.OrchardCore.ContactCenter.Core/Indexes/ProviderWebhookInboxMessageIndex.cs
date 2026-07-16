@@ -32,4 +32,5 @@ public sealed class ProviderWebhookInboxMessageIndex : CatalogItemIndex
     /// Gets or sets the UTC time the next processing attempt is due.
     /// </summary>
     public DateTime NextAttemptUtc { get; set; }
+
 }

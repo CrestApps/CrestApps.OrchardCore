@@ -18,6 +18,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 {
+    private const int MaxIngestionAttempts = 3;
+
     private static readonly TimeSpan _ingestionLockTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _ingestionLockExpiration = TimeSpan.FromMinutes(2);
 
@@ -95,6 +97,22 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
+        var originalEvent = CloneProviderEvent(providerEvent);
+
+        try
+        {
+            return await IngestCoreAsync(CloneProviderEvent(originalEvent), cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            return await RetryInFreshScopeAsync(originalEvent, cancellationToken);
+        }
+    }
+
+    private async Task<CallSession> IngestCoreAsync(
+        ProviderVoiceEvent providerEvent,
+        CancellationToken cancellationToken)
+    {
         // Canonicalize the provider identity before any interaction, call, or event key is built so that
         // provider-contributed aliases (for example "Default Asterisk") collapse to a single stable
         // identity ("Asterisk") instead of mutating the stored provider name.
@@ -296,6 +314,34 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         await _session.SaveChangesAsync(cancellationToken);
 
         return session;
+    }
+
+    private async Task<CallSession> RetryInFreshScopeAsync(
+        ProviderVoiceEvent providerEvent,
+        CancellationToken cancellationToken)
+    {
+        Exception lastException = null;
+
+        for (var attempt = 2; attempt <= MaxIngestionAttempts; attempt++)
+        {
+            CallSession session = null;
+
+            try
+            {
+                await _scopeExecutor.ExecuteAsync<IProviderVoiceEventService>(async service =>
+                {
+                    session = await service.IngestAsync(CloneProviderEvent(providerEvent), cancellationToken);
+                });
+
+                return session;
+            }
+            catch (ConcurrencyException exception)
+            {
+                lastException = exception;
+            }
+        }
+
+        throw lastException ?? new ConcurrencyException(new Document());
     }
 
     private async Task<CallSession> EnsureSessionAsync(
@@ -644,6 +690,29 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
 
         return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
+    }
+
+    private static ProviderVoiceEvent CloneProviderEvent(ProviderVoiceEvent providerEvent)
+    {
+        return new ProviderVoiceEvent
+        {
+            ProviderName = providerEvent.ProviderName,
+            ProviderCallId = providerEvent.ProviderCallId,
+            ProviderLegId = providerEvent.ProviderLegId,
+            State = providerEvent.State,
+            FromAddress = providerEvent.FromAddress,
+            ToAddress = providerEvent.ToAddress,
+            OccurredUtc = providerEvent.OccurredUtc,
+            IdempotencyKey = providerEvent.IdempotencyKey,
+            SequenceNumber = providerEvent.SequenceNumber,
+            IsMuted = providerEvent.IsMuted,
+            RecordingState = providerEvent.RecordingState,
+            RecordingReference = providerEvent.RecordingReference,
+            IsConference = providerEvent.IsConference,
+            ParticipantCount = providerEvent.ParticipantCount,
+            AnswerClassification = providerEvent.AnswerClassification,
+            Metadata = new Dictionary<string, string>(providerEvent.Metadata, StringComparer.Ordinal),
+        };
     }
 
     private static string GetIngestionLockKey(string providerName, string providerCallId)

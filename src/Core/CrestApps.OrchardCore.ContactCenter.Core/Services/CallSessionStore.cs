@@ -17,6 +17,14 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
     /// </summary>
     protected override bool CheckConcurrency => true;
 
+    /// <inheritdoc/>
+    protected override ValueTask SavingAsync(CallSession record)
+    {
+        ValidateTopology(record);
+
+        return ValueTask.CompletedTask;
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CallSessionStore"/> class.
     /// </summary>
@@ -66,5 +74,33 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
             collection: ContactCenterConstants.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private static void ValidateTopology(CallSession record)
+    {
+        if (!string.IsNullOrEmpty(record.AgentSessionId) &&
+            string.IsNullOrEmpty(record.AgentId))
+        {
+            throw new InvalidOperationException("A Contact Center call session cannot claim an agent session without an owning agent.");
+        }
+
+        if (!string.IsNullOrEmpty(record.SupervisorLegId) &&
+            string.IsNullOrEmpty(record.SupervisorAgentId))
+        {
+            throw new InvalidOperationException("A Contact Center call session cannot attach a supervisor leg without a supervisor agent.");
+        }
+
+        if (!string.IsNullOrEmpty(record.SupervisorLegId) &&
+            string.IsNullOrEmpty(record.BridgeId) &&
+            string.IsNullOrEmpty(record.ConferenceId))
+        {
+            throw new InvalidOperationException("A Contact Center call session cannot attach a supervisor leg before the call has a bridge or conference topology.");
+        }
+
+        if (!string.IsNullOrEmpty(record.SupervisorAgentId) &&
+            string.Equals(record.SupervisorAgentId, record.AgentId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("A Contact Center call session supervisor cannot monitor their own agent leg.");
+        }
     }
 }
