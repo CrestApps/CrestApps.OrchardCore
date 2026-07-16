@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -24,6 +25,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     private readonly IActivityReservationService _reservationService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEnumerable<IProviderCommandTypeExecutor> _executors;
+    private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ISession _session;
@@ -38,6 +40,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <param name="reservationService">The reservation service used for definitive-failure compensation.</param>
     /// <param name="voiceProviderResolver">The resolver used to find optional provider reconciliation support.</param>
     /// <param name="executors">The typed executors that handle per-command-type provider dispatch and projections.</param>
+    /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="scopeExecutor">The executor used to isolate each recovery transition in a fresh shell scope.</param>
     /// <param name="workManager">The feature work manager used to fence dispatch during Voice quiescence.</param>
     /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
@@ -49,6 +52,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         IActivityReservationService reservationService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEnumerable<IProviderCommandTypeExecutor> executors,
+        ITelephonyCommandExecutor commandExecutor,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         ISession session,
@@ -60,6 +64,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         _reservationService = reservationService;
         _voiceProviderResolver = voiceProviderResolver;
         _executors = executors;
+        _commandExecutor = commandExecutor;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _session = session;
@@ -391,7 +396,21 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
 
         try
         {
-            result = await executor.ExecuteAsync(command, claim, cancellationToken);
+            result = await _commandExecutor.ExecuteAsync(
+                commandCancellationToken => executor.ExecuteAsync(command, claim, commandCancellationToken));
+        }
+        catch (TimeoutException)
+        {
+            return await SettleDispatchInFreshScopeAsync(
+                command.CommandId,
+                claim,
+                new ContactCenterVoiceProviderResult
+                {
+                    OutcomeUnknown = true,
+                    ErrorCode = "provider_dispatch_timeout",
+                },
+                "Provider dispatch exceeded the server-owned command timeout.",
+                CancellationToken.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -407,6 +426,19 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                 CancellationToken.None);
 
             throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return await SettleDispatchInFreshScopeAsync(
+                command.CommandId,
+                claim,
+                new ContactCenterVoiceProviderResult
+                {
+                    OutcomeUnknown = true,
+                    ErrorCode = "provider_dispatch_cancelled",
+                },
+                "Provider dispatch was interrupted after the command was sent.",
+                CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -424,7 +456,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                     ErrorCode = "provider_dispatch_failed",
                 },
                 "Provider dispatch did not return a reliable result.",
-                cancellationToken);
+                CancellationToken.None);
         }
 
         return await SettleDispatchInFreshScopeAsync(
@@ -434,7 +466,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             result?.Succeeded == true
                 ? "The provider did not return a call identifier."
                 : "The provider could not prove the command outcome.",
-            cancellationToken);
+            CancellationToken.None);
     }
 
     private async Task<ProviderCommand> ReconcileAsync(ProviderCommand command, CancellationToken cancellationToken)

@@ -487,10 +487,45 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             }
 
             var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();
+            var commandExecutor = scope.ServiceProvider.GetRequiredService<ITelephonyCommandExecutor>();
 
             try
             {
-                result = await operation(service, Context.ConnectionAborted);
+                result = await commandExecutor.ExecuteAsync(
+                    commandCancellationToken => operation(service, commandCancellationToken));
+
+                if (result?.Call is not null)
+                {
+                    try
+                    {
+                        await RecordInteractionAsync(
+                            scope.ServiceProvider,
+                            actionName,
+                            result.Call,
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            OperationalLogRedactor.RedactException(ex),
+                            "Telephony provider action {Action} completed for user {UserId}, but local interaction persistence failed.",
+                            actionName,
+                            RedactedUserId());
+
+                        result = TelephonyResult.Unknown(
+                            S["The telephony provider completed the operation, but the local interaction history could not be confirmed."].Value);
+                    }
+                }
+            }
+            catch (TimeoutException)
+            {
+                result = TelephonyResult.Unknown(
+                    S["The telephony provider did not complete the operation within the server timeout."].Value);
+            }
+            catch (OperationCanceledException)
+            {
+                result = TelephonyResult.Unknown(
+                    S["The telephony operation was interrupted before the provider outcome could be confirmed."].Value);
             }
             catch (Exception ex)
             {
@@ -505,11 +540,6 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                     request ?? "(none)");
 
                 result = TelephonyResult.Failed(S["An error occurred while processing your request."].Value);
-            }
-
-            if (result?.Call is not null)
-            {
-                await RecordInteractionAsync(scope.ServiceProvider, actionName, result.Call);
             }
         });
 
@@ -619,7 +649,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             : OperationalLogRedactor.Pseudonymize(Context.UserIdentifier, OperationalLogIdentifierCategory.User);
     }
 
-    private async Task RecordInteractionAsync(IServiceProvider services, string actionName, TelephonyCall call)
+    private async Task RecordInteractionAsync(
+        IServiceProvider services,
+        string actionName,
+        TelephonyCall call,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(actionName, "Dial", StringComparison.Ordinal) ||
             call is null ||
@@ -640,7 +674,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         var now = clock.UtcNow;
         var userName = Context.GetHttpContext()?.User?.Identity?.Name;
 
-        var existing = await store.FindByCallIdAsync(userId, call.CallId, Context.ConnectionAborted);
+        var existing = await store.FindByCallIdAsync(userId, call.CallId, cancellationToken);
 
         if (existing is null)
         {
@@ -663,7 +697,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 StartedUtc = call.StartedUtc?.UtcDateTime ?? now,
             };
 
-            await store.CreateAsync(interaction, Context.ConnectionAborted);
+            await store.CreateAsync(interaction, cancellationToken);
 
             return;
         }
@@ -678,7 +712,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             existing.From = call.From;
         }
 
-        await store.UpdateAsync(existing, Context.ConnectionAborted);
+        await store.UpdateAsync(existing, cancellationToken);
     }
 
     private async Task<bool> AuthorizeAsync(IServiceProvider services)

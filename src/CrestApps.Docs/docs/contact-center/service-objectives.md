@@ -39,6 +39,8 @@ Provider-side ringing, carrier setup, and customer answer time are measured sepa
 
 Retries must be bounded, jittered, idempotent, and included in the caller's end-to-end deadline. A dependency timeout cannot be converted into success-shaped state.
 
+Configure the provider-command boundary with `CrestApps_Telephony:Commands:Timeout`. The default is 10 seconds and startup validation accepts one second through two minutes. This is the end-to-end application observation deadline, including provider retry behavior, not a per-attempt HTTP timeout. SignalR disconnects and request cancellation do not cancel an admitted mutation. If the deadline or host shutdown occurs before confirmation, durable commands enter `OutcomeUnknown` and synchronous commands report an unknown outcome; provider-confirmed local persistence then completes independently of the expired command token.
+
 ## Recovery objectives
 
 | Scope | RPO | RTO |

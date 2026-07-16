@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -20,6 +21,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly ITelephonyCommandExecutor _commandExecutor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMonitoringService"/> class.
@@ -27,14 +29,17 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to check monitoring capabilities.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IContactCenterEventPublisher publisher)
+        IContactCenterEventPublisher publisher,
+        ITelephonyCommandExecutor commandExecutor)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
+        _commandExecutor = commandExecutor;
     }
 
     /// <inheritdoc/>
@@ -92,39 +97,53 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure($"The voice provider does not support the '{mode}' engagement.");
         }
 
-        var providerResult = await monitoringProvider.EngageAsync(new ContactCenterVoiceMonitoringRequest
+        try
         {
-            InteractionId = interaction.ItemId,
-            ProviderCallId = interaction.ProviderInteractionId,
-            SupervisorId = supervisorId,
-            Mode = mode,
-        }, cancellationToken);
+            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+                monitoringProvider.EngageAsync(new ContactCenterVoiceMonitoringRequest
+                {
+                    InteractionId = interaction.ItemId,
+                    ProviderCallId = interaction.ProviderInteractionId,
+                    SupervisorId = supervisorId,
+                    Mode = mode,
+                }, commandCancellationToken));
 
-        if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
-        {
-            return SupervisorEngagementResult.Failure(
-                providerResult?.ErrorMessage ?? $"The voice provider did not confirm the '{mode}' engagement.");
+            if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
+            {
+                return SupervisorEngagementResult.Failure(
+                    providerResult?.ErrorMessage ?? $"The voice provider did not confirm the '{mode}' engagement.");
+            }
+
+            var interactionEvent = new InteractionEvent
+            {
+                EventType = ContactCenterConstants.Events.SupervisorMonitorStarted,
+                InteractionId = interaction.ItemId,
+                AggregateType = nameof(Interaction),
+                AggregateId = interaction.ItemId,
+                ActorId = supervisorId,
+                SourceComponent = ContactCenterConstants.Components.RealTime,
+            };
+
+            interactionEvent.SetData(new Dictionary<string, string>
+            {
+                ["mode"] = mode.ToString(),
+                ["supervisorId"] = supervisorId,
+            });
+
+            await _publisher.PublishAsync(interactionEvent, CancellationToken.None);
+
+            return SupervisorEngagementResult.Success();
         }
-
-        var interactionEvent = new InteractionEvent
+        catch (TimeoutException)
         {
-            EventType = ContactCenterConstants.Events.SupervisorMonitorStarted,
-            InteractionId = interaction.ItemId,
-            AggregateType = nameof(Interaction),
-            AggregateId = interaction.ItemId,
-            ActorId = supervisorId,
-            SourceComponent = ContactCenterConstants.Components.RealTime,
-        };
-
-        interactionEvent.SetData(new Dictionary<string, string>
+            return SupervisorEngagementResult.Unknown(
+                $"The voice provider did not confirm the '{mode}' engagement before the server timeout; the provider outcome is unknown.");
+        }
+        catch (OperationCanceledException)
         {
-            ["mode"] = mode.ToString(),
-            ["supervisorId"] = supervisorId,
-        });
-
-        await _publisher.PublishAsync(interactionEvent, cancellationToken);
-
-        return SupervisorEngagementResult.Success();
+            return SupervisorEngagementResult.Unknown(
+                $"The '{mode}' engagement was interrupted before the provider outcome could be confirmed.");
+        }
     }
 
     private static ContactCenterVoiceProviderCapabilities ResolveCapability(MonitorMode mode)

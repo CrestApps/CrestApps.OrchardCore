@@ -2,6 +2,10 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Services;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -19,7 +23,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
         var publisher = new Mock<IContactCenterEventPublisher>();
 
-        var service = new ContactCenterRecordingService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -50,7 +58,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
         var publisher = new Mock<IContactCenterEventPublisher>();
 
-        var service = new ContactCenterRecordingService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -63,6 +75,62 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.RecordingStarted),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenCallerDisconnectsDuringProviderMutation_CompletesWithServerOwnedToken()
+    {
+        // Arrange
+        using var callerCancellation = new CancellationTokenSource();
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                It.IsAny<Interaction>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Interaction, System.Text.Json.Nodes.JsonNode, CancellationToken>(
+                (_, _, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
+            .Returns(ValueTask.CompletedTask);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(value => value.SetRecordingStateAsync(
+                It.IsAny<ContactCenterVoiceRecordingRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<ContactCenterVoiceRecordingRequest, CancellationToken>((_, cancellationToken) =>
+            {
+                Assert.True(cancellationToken.CanBeCanceled);
+                Assert.False(cancellationToken.IsCancellationRequested);
+                Assert.NotEqual(callerCancellation.Token, cancellationToken);
+                callerCancellation.Cancel();
+
+                return Task.FromResult(new ContactCenterVoiceProviderResult { Succeeded = true });
+            });
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(
+                It.IsAny<InteractionEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>(
+                (_, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
+            .Returns(Task.CompletedTask);
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            CreateCommandExecutor());
+
+        // Act
+        var changed = await service.StartAsync("int1", callerCancellation.Token);
+
+        // Assert
+        Assert.True(changed);
+        Assert.True(callerCancellation.IsCancellationRequested);
+        Assert.Equal(RecordingState.Recording, interaction.RecordingState);
     }
 
     [Fact]
@@ -83,7 +151,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             });
         var resolver = CreateResolver(provider);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ContactCenterRecordingService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -98,6 +170,41 @@ public sealed class ContactCenterRecordingAndMonitoringTests
     }
 
     [Fact]
+    public async Task StartAsync_WhenProviderDeadlineExpires_ReturnsFalseWithoutPublishing()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        _ = provider.As<IContactCenterVoiceRecordingProvider>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            new TimeoutTelephonyCommandExecutor());
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(changed);
+        Assert.Equal(RecordingState.None, interaction.RecordingState);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<Interaction>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenAlreadyRecording_DoesNotInvokeProvider()
     {
         // Arrange
@@ -109,7 +216,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var recordingProvider = provider.As<IContactCenterVoiceRecordingProvider>();
         var resolver = CreateResolver(provider);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ContactCenterRecordingService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -134,7 +245,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
 
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ContactCenterMonitoringService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -166,7 +281,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
 
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ContactCenterMonitoringService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -178,6 +297,90 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.SupervisorMonitorStarted),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task EngageAsync_WhenCallerDisconnectsDuringProviderMutation_PublishesWithServerOwnedToken()
+    {
+        // Arrange
+        using var callerCancellation = new CancellationTokenSource();
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Monitor);
+        provider
+            .As<IContactCenterVoiceMonitoringProvider>()
+            .Setup(value => value.EngageAsync(
+                It.IsAny<ContactCenterVoiceMonitoringRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<ContactCenterVoiceMonitoringRequest, CancellationToken>((_, cancellationToken) =>
+            {
+                Assert.True(cancellationToken.CanBeCanceled);
+                Assert.False(cancellationToken.IsCancellationRequested);
+                Assert.NotEqual(callerCancellation.Token, cancellationToken);
+                callerCancellation.Cancel();
+
+                return Task.FromResult(new ContactCenterVoiceProviderResult { Succeeded = true });
+            });
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(
+                It.IsAny<InteractionEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>(
+                (_, cancellationToken) => Assert.Equal(CancellationToken.None, cancellationToken))
+            .Returns(Task.CompletedTask);
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            CreateCommandExecutor());
+
+        // Act
+        var result = await service.EngageAsync(
+            "int1",
+            "sup1",
+            MonitorMode.Monitor,
+            callerCancellation.Token);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(callerCancellation.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task EngageAsync_WhenProviderDeadlineExpires_ReturnsUnknownWithoutPublishing()
+    {
+        // Arrange
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateInteraction());
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Monitor);
+        _ = provider.As<IContactCenterVoiceMonitoringProvider>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            new TimeoutTelephonyCommandExecutor());
+
+        // Act
+        var result = await service.EngageAsync(
+            "int1",
+            "sup1",
+            MonitorMode.Monitor,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Contains("outcome is unknown", result.Reason, StringComparison.OrdinalIgnoreCase);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -199,7 +402,11 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             });
         var resolver = CreateResolver(provider);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = new ContactCenterMonitoringService(interactionManager.Object, resolver.Object, publisher.Object);
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -225,7 +432,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
             resolver.Object,
-            new Mock<IContactCenterEventPublisher>().Object);
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateCommandExecutor());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -248,7 +456,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
             resolver.Object,
-            new Mock<IContactCenterEventPublisher>().Object);
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateCommandExecutor());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -282,5 +491,20 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         resolver.Setup(r => r.Get("p1")).Returns(provider.Object);
 
         return resolver;
+    }
+
+    private static DefaultTelephonyCommandExecutor CreateCommandExecutor()
+    {
+        return new DefaultTelephonyCommandExecutor(
+            Options.Create(new TelephonyCommandOptions()),
+            Mock.Of<IHostApplicationLifetime>());
+    }
+
+    private sealed class TimeoutTelephonyCommandExecutor : ITelephonyCommandExecutor
+    {
+        public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        {
+            return Task.FromException<TResult>(new TimeoutException());
+        }
     }
 }

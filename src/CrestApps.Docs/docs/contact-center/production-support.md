@@ -39,6 +39,8 @@ Queue and reservation correctness does not depend on Redis lock exclusivity. Yes
 
 Provider stream correctness uses the supported Redis distributed-lock topology. Every canonical provider-call stream is serialized before interaction, call-session, event-log, and outbox changes are read or written, and the YesSql transaction commits before the lock is released. This makes duplicate Asterisk listeners and concurrent DialPad delivery processing harmless across supported nodes without requiring a renewable long-lived socket lease. Lifecycle rank cannot move backward, an established provider sequence high-water cannot be advanced by an unsequenced event, and terminal state remains final.
 
+PBX mutations use a tenant-scoped server execution boundary instead of the SignalR connection or HTTP request cancellation token. The default 10-second command deadline is configurable with `CrestApps_Telephony:Commands:Timeout` and accepts values from one second through two minutes. Deadline or host-shutdown cancellation produces an unknown provider outcome rather than a safe-to-retry success or failure. Durable provider commands persist that ambiguity as `OutcomeUnknown`; synchronous Telephony operations return an unknown result. After the provider confirms success, local interaction, transfer, recording, monitoring, and event persistence uses a non-request, non-expiring token so a browser disconnect or exhausted provider deadline cannot discard the confirmed projection. This outer command deadline intentionally supersedes longer provider-specific retry budgets.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:

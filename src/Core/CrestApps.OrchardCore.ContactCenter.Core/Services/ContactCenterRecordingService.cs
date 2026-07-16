@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -11,6 +12,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly ITelephonyCommandExecutor _commandExecutor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRecordingService"/> class.
@@ -18,14 +20,17 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     public ContactCenterRecordingService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IContactCenterEventPublisher publisher)
+        IContactCenterEventPublisher publisher,
+        ITelephonyCommandExecutor commandExecutor)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
+        _commandExecutor = commandExecutor;
     }
 
     /// <inheritdoc/>
@@ -75,12 +80,26 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             return false;
         }
 
-        var providerResult = await recordingProvider.SetRecordingStateAsync(new ContactCenterVoiceRecordingRequest
+        ContactCenterVoiceProviderResult providerResult;
+
+        try
         {
-            InteractionId = interaction.ItemId,
-            ProviderCallId = interaction.ProviderInteractionId,
-            State = state,
-        }, cancellationToken);
+            providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+                recordingProvider.SetRecordingStateAsync(new ContactCenterVoiceRecordingRequest
+                {
+                    InteractionId = interaction.ItemId,
+                    ProviderCallId = interaction.ProviderInteractionId,
+                    State = state,
+                }, commandCancellationToken));
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
 
         if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
         {
@@ -88,7 +107,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }
 
         interaction.RecordingState = state;
-        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
 
         await _publisher.PublishAsync(new InteractionEvent
         {
@@ -98,7 +117,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             AggregateId = interaction.ItemId,
             ActorId = interaction.AgentId,
             SourceComponent = ContactCenterConstants.Components.Interactions,
-        }, cancellationToken);
+        }, CancellationToken.None);
 
         return true;
     }

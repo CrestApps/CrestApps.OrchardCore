@@ -46,6 +46,26 @@ Real-time voice depends on both **provider-to-Orchard** and **browser-to-Orchard
 | Telephony | Provider resolution, soft-phone hub, call-control execution, provider call-state lookup |
 | Provider | Live call media, native device state, provider webhooks, provider APIs |
 
+## PBX mutation execution boundary
+
+Read-only Telephony operations remain cancellable when the SignalR connection closes. Once a PBX mutation is admitted, however, the server executes it with its own deadline rather than `Context.ConnectionAborted` or an HTTP request token. The same boundary covers durable provider commands and Contact Center recording, monitoring, and transfer.
+
+Configure the deadline in tenant shell configuration:
+
+```json
+{
+  "CrestApps_Telephony": {
+    "Commands": {
+      "Timeout": "00:00:10"
+    }
+  }
+}
+```
+
+The default is 10 seconds; valid values range from one second through two minutes. The boundary returns on time even if a provider implementation fails to observe cancellation, and host shutdown also cancels the owned token. A timeout after provider contact is ambiguous: durable commands persist `OutcomeUnknown` with reconciliation required, while synchronous Telephony commands return an unknown result. The application must never interpret the timeout as proof that the PBX did not execute the command.
+
+Only provider execution consumes this deadline. After provider-confirmed success, Orchard persists interaction history, recording state, monitoring events, and transfer state with a non-request, non-expiring token. A browser disconnect or deadline expiration therefore cannot create a confirmed PBX mutation followed by canceled local persistence.
+
 ## Inbound routing flow
 
 ### 1. A provider event reaches Orchard

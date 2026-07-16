@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -160,6 +161,7 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.NotNull(services.GetRequiredService<IProviderCommandManager>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandStateService>());
             Assert.NotNull(services.GetRequiredService<IProviderCommandProcessor>());
+            Assert.NotNull(services.GetRequiredService<ITelephonyCommandExecutor>());
             var commandExecutors = services.GetServices<IProviderCommandTypeExecutor>().ToArray();
             Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Dial);
             Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Answer);
@@ -172,6 +174,22 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
             Assert.Single(
                 services.GetServices<IDataMigration>(),
                 migration => migration.GetType().Name == "ProviderCommandIndexMigrations");
+
+            return Task.CompletedTask;
+        });
+    }
+
+    public async Task AssertRecordingFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IContactCenterRecordingService>());
+            Assert.NotNull(services.GetRequiredService<ITelephonyCommandExecutor>());
 
             return Task.CompletedTask;
         });

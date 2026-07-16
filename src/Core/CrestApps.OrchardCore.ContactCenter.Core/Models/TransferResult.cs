@@ -11,6 +11,12 @@ public sealed class TransferResult
     public bool Succeeded { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the provider may have executed the transfer but its
+    /// outcome could not be observed.
+    /// </summary>
+    public bool OutcomeUnknown { get; set; }
+
+    /// <summary>
     /// Gets or sets an explanation of the outcome.
     /// </summary>
     public string Reason { get; set; }
@@ -33,5 +39,20 @@ public sealed class TransferResult
     public static TransferResult Failure(string reason)
     {
         return new TransferResult { Succeeded = false, Reason = reason };
+    }
+
+    /// <summary>
+    /// Creates a result for a transfer whose provider outcome could not be determined.
+    /// </summary>
+    /// <param name="reason">The reason the outcome is unknown.</param>
+    /// <returns>An indeterminate <see cref="TransferResult"/>.</returns>
+    public static TransferResult Unknown(string reason)
+    {
+        return new TransferResult
+        {
+            Succeeded = false,
+            OutcomeUnknown = true,
+            Reason = reason,
+        };
     }
 }

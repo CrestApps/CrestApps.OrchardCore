@@ -3,8 +3,12 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -65,6 +69,69 @@ public sealed class ProviderCommandProcessorTests
     }
 
     [Fact]
+    public async Task DispatchAsync_WhenCallerCancelsAfterProviderContact_SettlesWithServerOwnedToken()
+    {
+        // Arrange
+        using var callerCancellation = new CancellationTokenSource();
+        var harness = CreateHarness();
+        harness.Executor
+            .Setup(exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<ProviderCommand, ProviderCommandClaim, CancellationToken>((_, _, cancellationToken) =>
+            {
+                Assert.False(cancellationToken.IsCancellationRequested);
+                callerCancellation.Cancel();
+
+                return Task.FromResult(Success("call-1"));
+            });
+        harness.StateService
+            .Setup(service => service.StageConfirmSentAsync(
+                "command-1",
+                It.IsAny<ProviderCommandClaim>(),
+                "call-1",
+                It.IsAny<CancellationToken>()))
+            .Callback<string, ProviderCommandClaim, string, CancellationToken>(
+                (_, _, _, cancellationToken) => Assert.False(cancellationToken.IsCancellationRequested))
+            .ReturnsAsync(harness.Command);
+
+        // Act
+        var result = await harness.Processor.DispatchAsync("command-1", callerCancellation.Token);
+
+        // Assert
+        Assert.Same(harness.Command, result);
+        Assert.True(callerCancellation.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenServerDeadlineExpires_SettlesOutcomeUnknownWithoutProviderRetry()
+    {
+        // Arrange
+        var harness = CreateHarness(commandExecutor: new TimeoutTelephonyCommandExecutor());
+
+        // Act
+        var result = await harness.Processor.DispatchAsync(
+            "command-1",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.OutcomeUnknown, result.Status);
+        harness.Executor.Verify(
+            exec => exec.ProjectOutcomeUnknownAsync(
+                It.IsAny<ProviderCommand>(),
+                "provider_dispatch_timeout",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.Executor.Verify(
+            exec => exec.ExecuteAsync(
+                It.IsAny<ProviderCommand>(),
+                It.IsAny<ProviderCommandClaim>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenProviderSucceeds_StagesConfirmationAndProjectionsBeforeSingleCommit()
     {
         // Arrange
@@ -103,6 +170,27 @@ public sealed class ProviderCommandProcessorTests
         Assert.Equal(["confirm", "project", "commit"], order);
         harness.Session.Verify(
             session => session.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenServerExecutionIsInterrupted_SettlesCancelledOutcomeUnknown()
+    {
+        // Arrange
+        var harness = CreateHarness(commandExecutor: new CancelledTelephonyCommandExecutor());
+
+        // Act
+        var result = await harness.Processor.DispatchAsync(
+            "command-1",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.OutcomeUnknown, result.Status);
+        harness.Executor.Verify(
+            executor => executor.ProjectOutcomeUnknownAsync(
+                It.IsAny<ProviderCommand>(),
+                "provider_dispatch_cancelled",
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -680,7 +768,8 @@ public sealed class ProviderCommandProcessorTests
         ProviderCommandStatus status = ProviderCommandStatus.Pending,
         bool supportsReconciliation = false,
         bool canDispatch = true,
-        IList<IProviderCommandTypeExecutor> executorsOverride = null)
+        IList<IProviderCommandTypeExecutor> executorsOverride = null,
+        ITelephonyCommandExecutor commandExecutor = null)
     {
         var command = new ProviderCommand
         {
@@ -847,6 +936,9 @@ public sealed class ProviderCommandProcessorTests
             reservationService.Object,
             providerResolver.Object,
             actualExecutors,
+            commandExecutor ?? new DefaultTelephonyCommandExecutor(
+                Options.Create(new TelephonyCommandOptions()),
+                Mock.Of<IHostApplicationLifetime>()),
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
             session.Object,
@@ -874,6 +966,22 @@ public sealed class ProviderCommandProcessorTests
             executor,
             session,
             processor);
+    }
+
+    private sealed class TimeoutTelephonyCommandExecutor : ITelephonyCommandExecutor
+    {
+        public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        {
+            throw new TimeoutException("The test command exceeded its server-owned timeout.");
+        }
+    }
+
+    private sealed class CancelledTelephonyCommandExecutor : ITelephonyCommandExecutor
+    {
+        public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        {
+            throw new OperationCanceledException("The test command was interrupted by server shutdown.");
+        }
     }
 
     private static ContactCenterVoiceProviderResult Failure()

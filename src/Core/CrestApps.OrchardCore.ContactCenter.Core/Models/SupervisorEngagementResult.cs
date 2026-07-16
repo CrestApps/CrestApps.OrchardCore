@@ -11,6 +11,12 @@ public sealed class SupervisorEngagementResult
     public bool Succeeded { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the provider may have executed the engagement but
+    /// its outcome could not be observed.
+    /// </summary>
+    public bool OutcomeUnknown { get; set; }
+
+    /// <summary>
     /// Gets or sets an explanation of the outcome.
     /// </summary>
     public string Reason { get; set; }
@@ -32,5 +38,20 @@ public sealed class SupervisorEngagementResult
     public static SupervisorEngagementResult Failure(string reason)
     {
         return new SupervisorEngagementResult { Succeeded = false, Reason = reason };
+    }
+
+    /// <summary>
+    /// Creates a result for an engagement whose provider outcome could not be determined.
+    /// </summary>
+    /// <param name="reason">The reason the outcome is unknown.</param>
+    /// <returns>An indeterminate <see cref="SupervisorEngagementResult"/>.</returns>
+    public static SupervisorEngagementResult Unknown(string reason)
+    {
+        return new SupervisorEngagementResult
+        {
+            Succeeded = false,
+            OutcomeUnknown = true,
+            Reason = reason,
+        };
     }
 }

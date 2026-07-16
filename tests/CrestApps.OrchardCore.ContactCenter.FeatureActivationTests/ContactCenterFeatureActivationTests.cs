@@ -63,6 +63,28 @@ public sealed class ContactCenterFeatureActivationTests
     }
 
     [Fact]
+    public async Task FreshTenant_RecordingFeatureAlone_ActivatesRecordingServices()
+    {
+        // Arrange
+        var profile = new ContactCenterTenantProfile
+        {
+            Id = "recording-only",
+            ProviderProfile = "none",
+            Features =
+            [
+                "CrestApps.OrchardCore.ContactCenter.Recording",
+            ],
+        };
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        // Act
+        var tenant = await host.CreateTenantAsync(profile);
+
+        // Assert
+        await host.AssertRecordingFeatureAsync(tenant);
+    }
+
+    [Fact]
     public async Task FreshTenant_WorkflowsFeatureAlone_ActivatesReplaySafeWorkflowBridge()
     {
         // Arrange
