@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
@@ -11,6 +12,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ActivityReservationIndexMigrations : DataMigration
 {
+    // YesSql persists the ReservationStatus enum as its underlying integer, so rows written under the former
+    // string column hold that integer as text ("0", "1", ...). These invariant numeric strings match the stored
+    // representation on every provider (comparing against the enum names would never match real rows).
+    private static readonly string PendingStatusValue =
+        ((int)ReservationStatus.Pending).ToString(CultureInfo.InvariantCulture);
+    private static readonly string AcceptedStatusValue =
+        ((int)ReservationStatus.Accepted).ToString(CultureInfo.InvariantCulture);
+
     private readonly IStore _store;
 
     /// <summary>
@@ -100,12 +109,12 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
 
             var pendingStatus = command.CreateParameter();
             pendingStatus.ParameterName = "@PendingStatus";
-            pendingStatus.Value = ReservationStatus.Pending.ToString();
+            pendingStatus.Value = PendingStatusValue;
             command.Parameters.Add(pendingStatus);
 
             var acceptedStatus = command.CreateParameter();
             acceptedStatus.ParameterName = "@AcceptedStatus";
-            acceptedStatus.Value = ReservationStatus.Accepted.ToString();
+            acceptedStatus.Value = AcceptedStatusValue;
             command.Parameters.Add(acceptedStatus);
 
             await command.ExecuteNonQueryAsync();
@@ -159,8 +168,8 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             GROUP BY {activityItemColumn}
             HAVING COUNT(*) > 1
             """,
-            ("@PendingStatus", ReservationStatus.Pending.ToString()),
-            ("@AcceptedStatus", ReservationStatus.Accepted.ToString()));
+            ("@PendingStatus", PendingStatusValue),
+            ("@AcceptedStatus", AcceptedStatusValue));
 
         if (hasDuplicateActivityClaims)
         {
@@ -177,7 +186,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             GROUP BY {agentIdColumn}
             HAVING COUNT(*) > 1
             """,
-            ("@PendingStatus", ReservationStatus.Pending.ToString()));
+            ("@PendingStatus", PendingStatusValue));
 
         if (hasDuplicateAgentClaims)
         {

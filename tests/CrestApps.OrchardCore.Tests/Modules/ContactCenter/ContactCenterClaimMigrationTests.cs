@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
@@ -248,6 +249,8 @@ public sealed class ContactCenterClaimMigrationTests
         string agentId,
         ReservationStatus status)
     {
+        // YesSql persists the enum as its underlying integer, so a real legacy varchar row holds the integer as
+        // text ("0", "1", ...). Seed that representation so the migration's numeric-string comparisons are exercised.
         await ExecuteAsync(
             schemaBuilder,
             $"""
@@ -258,7 +261,7 @@ public sealed class ContactCenterClaimMigrationTests
             ("@ItemId", itemId),
             ("@ActivityItemId", activityId),
             ("@AgentId", agentId),
-            ("@Status", status.ToString()),
+            ("@Status", ((int)status).ToString(CultureInfo.InvariantCulture)),
             ("@ExpiresUtc", new DateTime(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc)));
     }
 
@@ -270,6 +273,8 @@ public sealed class ContactCenterClaimMigrationTests
         string activityId,
         QueueItemStatus status)
     {
+        // YesSql persists the enum as its underlying integer, so a real legacy varchar row holds the integer as
+        // text ("0", "1", ...). Seed that representation so the migration's numeric-string comparisons are exercised.
         await ExecuteAsync(
             schemaBuilder,
             $"""
@@ -280,8 +285,8 @@ public sealed class ContactCenterClaimMigrationTests
             ("@ItemId", itemId),
             ("@QueueId", "queue-1"),
             ("@ActivityItemId", activityId),
-            ("@Status", status.ToString()),
-            ("@Priority", InteractionPriority.Normal.ToString()),
+            ("@Status", ((int)status).ToString(CultureInfo.InvariantCulture)),
+            ("@Priority", ((int)InteractionPriority.Normal).ToString(CultureInfo.InvariantCulture)),
             ("@EnqueuedUtc", new DateTime(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc)));
     }
 

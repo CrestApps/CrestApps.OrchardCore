@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
@@ -11,6 +12,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class QueueItemIndexMigrations : DataMigration
 {
+    // YesSql persists the QueueItemStatus enum as its underlying integer, so rows written under the former string
+    // column hold that integer as text ("0", "1", ...). These invariant numeric strings match the stored
+    // representation on every provider (comparing against the enum names would never match real rows).
+    private static readonly string CompletedStatusValue =
+        ((int)QueueItemStatus.Completed).ToString(CultureInfo.InvariantCulture);
+    private static readonly string RemovedStatusValue =
+        ((int)QueueItemStatus.Removed).ToString(CultureInfo.InvariantCulture);
+
     private readonly IStore _store;
 
     /// <summary>
@@ -89,12 +98,12 @@ internal sealed class QueueItemIndexMigrations : DataMigration
 
             var completedStatus = command.CreateParameter();
             completedStatus.ParameterName = "@CompletedStatus";
-            completedStatus.Value = QueueItemStatus.Completed.ToString();
+            completedStatus.Value = CompletedStatusValue;
             command.Parameters.Add(completedStatus);
 
             var removedStatus = command.CreateParameter();
             removedStatus.ParameterName = "@RemovedStatus";
-            removedStatus.Value = QueueItemStatus.Removed.ToString();
+            removedStatus.Value = RemovedStatusValue;
             command.Parameters.Add(removedStatus);
 
             await command.ExecuteNonQueryAsync();
@@ -140,8 +149,8 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             GROUP BY {activityItemColumn}
             HAVING COUNT(*) > 1
             """,
-            ("@CompletedStatus", QueueItemStatus.Completed.ToString()),
-            ("@RemovedStatus", QueueItemStatus.Removed.ToString()));
+            ("@CompletedStatus", CompletedStatusValue),
+            ("@RemovedStatus", RemovedStatusValue));
 
         if (hasDuplicateActivityClaims)
         {
