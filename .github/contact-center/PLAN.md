@@ -1772,7 +1772,7 @@ Changes:
 
 - [x] Add OpenTelemetry traces/metrics and health endpoints for storage, provider streams, outbox/dead letters, scheduler lag, listener lease, and SignalR backplane.
 - [x] Wire and document the supported multi-node backplane.
-- [ ] Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
+- [x] Define per-entity data classification, retention, erasure, recording access audit, and backup/restore behavior.
 - [x] Align every purge/erasure policy with projection replay horizons, retained snapshots/archives, legal holds, and post-purge rebuild guarantees.
 - [x] Convert incompatible migrations to expand-migrate-contract or document a downtime requirement.
 - [x] Add runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling/blue-green deployment.
@@ -1933,7 +1933,7 @@ This checklist is authoritative for current execution order. Historical phase an
 - [x] **R6 — Persistence, background work, projections, and scale:** indexes, bounded claims/batches, projection replay/checkpoints, supported-database matrix, load budgets.
   - [x] Reporting foundation declares filter dimensions per report instead of classifying reports through hard-coded identifier lists; duplicate report/export names fail activation; table rows distinguish detail, subtotal, and grand-total semantics.
   - [x] Queue groups provide catalog-only organization and current-membership report filtering/aggregation without changing routing, SLA inheritance, entitlements, or queue behavior.
-- [ ] **R7 — Operations, privacy, and upgrades:** OpenTelemetry, health/readiness, SignalR backplane, retention/erasure, backup/restore, expand-contract migrations, failure runbooks.
+- [x] **R7 — Operations, privacy, and upgrades:** OpenTelemetry, health/readiness, SignalR backplane, retention/erasure, backup/restore, expand-contract migrations, failure runbooks.
 - [ ] **R8 — End-to-end production proof:** Orchard Contact Center Playwright, multi-node, load/soak/chaos, security, upgrade, and release-pipeline evidence.
 - [ ] **R9 — Advanced capabilities:** resume IVR, recording/monitoring, quality, workforce, AI, non-voice, and Predictive work only after R0-R8.
 
@@ -1990,6 +1990,8 @@ Ordered by the former design-review execution order. Numbers reference the histo
 - [ ] **G8 — Inbound entry points/IVR (Phase 8), recording/monitoring (Phase 9), compliance hardening (Phase 10), analytics (Phase 12)** per the existing phase plan once G1–G7 are stable.
 
 ### Change log
+
+- 2026-07-17: Completed R7 by defining per-entity data classification, retention, erasure, recording-access-audit, and backup/restore behavior, and flipped the R7 rollup. Added a code-level, single-source-of-truth `ContactCenterDataGovernanceCatalog` (in Core) classifying all fifteen persisted Contact Center data categories — interaction event log, interaction, call session, callback request, agent session/profile, event outbox, provider webhook inbox, provider command, queue item, activity reservation, event metric, projection checkpoint, processed-event ledger, and routing/dialing configuration — each with a `ContactCenterDataSensitivity` (NonPersonal/Personal/SensitivePersonal), a `ContainsRecordingReference` flag, a retention basis, and a `ContactCenterErasureStrategy` (NotApplicable/RetentionExpiry/Anonymize/CascadeWithInteraction/ExternalStore), plus a `TryGet` lookup. Grounded the classification in the real model (Interaction and CallSession carry only an opaque `RecordingReference`/`RecordingState`; Interaction holds `CustomerAddress`; CallSession holds from/to addresses). Documented the authoritative per-entity governance table, the erasure-strategy semantics, the recordings-are-external access-audit and delegated-erasure policy, and the SQL backup/restore + projection-rebuild guidance under Contact Center production support, cross-linked to the failure runbooks. Added eight catalog-integrity unit tests (unique keys, required text, personal↔sensitivity consistency, personal categories define a concrete erasure strategy, non-personal never anonymize, recording-bearing categories are always personal, known-key/unknown-key lookup). Strict build (0/0), the ten catalog tests, and the docs build pass. R7 is complete.
 
 - 2026-07-17: Continued R7 by adding operational failure runbooks covering SQL/primary-datastore, Redis/backplane, provider/telephony, node, and network-partition failures plus rolling and blue-green deployment. Authored `src/CrestApps.Docs/docs/contact-center/runbooks.md`, keyed to the real Contact Center signals (the `contactcenter-storage`/`contactcenter-outbox`/`contactcenter-provider-ingress` health checks, the `contactcenter.outbox.redelivered`/`dead_lettered` counters, and the `CrestApps.OrchardCore.SignalR.Redis` backplane + `OrchardCore.Redis.Lock` requirement), and documenting that fence tokens, leases, the durable outbox/inbox, and additive migrations make single-node loss, lock loss, and rolling/blue-green cutover safe without double-execution or event loss. Cross-linked from Contact Center production support. Docs build passes.
 

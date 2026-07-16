@@ -133,6 +133,37 @@ Behavior guarantees:
 - **Post-purge rebuild** — after a purge, a projection rebuild (`RebuildAsync`) recomputes counts only from the events that remain; the replay-horizon floor guarantees that window is at least `ProjectionReplayHorizonDays`.
 - **Legal hold** — set `LegalHoldMinimumDays` above the retention window to hold events for a case or regulatory obligation without changing the operational retention setting.
 
+## Per-entity data governance
+
+Every persisted Contact Center data category is classified in code by `ContactCenterDataGovernanceCatalog`, the single source of truth this table renders. Each category declares its privacy sensitivity, whether it references call recordings, what governs its retention, and how an erasure (right-to-be-forgotten) request is satisfied. The catalog is unit-tested for integrity — keys are unique, personal categories always declare a concrete erasure strategy, non-personal categories never anonymize, and any recording-bearing category is always classified as personal — so a new persisted entity cannot ship without an explicit classification.
+
+| Data category | Sensitivity | Recording ref | Retention basis | Erasure |
+| --- | --- | --- | --- | --- |
+| Interaction event log | Personal | No | `InteractionEventRetentionDays`, floored by replay-horizon and legal-hold | Retention expiry |
+| Interaction | Sensitive personal | Yes | Life of the interaction record | Anonymize (+ external recording erasure) |
+| Call session | Sensitive personal | Yes | Life of the call-session record | Anonymize (+ external recording erasure) |
+| Callback request | Personal | No | Until promoted or expired | Anonymize |
+| Agent session | Personal | No | Adherence/staffing reporting window | Anonymize |
+| Agent profile | Personal | No | Agent account lifecycle | Anonymize |
+| Event outbox message | Personal | No | Short-lived; deleted on dispatch | Retention expiry |
+| Provider webhook inbox message | Personal | No | Short-lived; deleted on processing | Retention expiry |
+| Provider command | Non-personal | No | Short-lived; deleted on completion | Retention expiry |
+| Queue item | Non-personal | No | Transient; removed when work leaves the queue | Cascade with interaction |
+| Activity reservation | Non-personal | No | Transient; removed on accept/decline/expiry | Retention expiry |
+| Event metric | Non-personal | No | Durable aggregate snapshot | Not applicable |
+| Projection checkpoint | Non-personal | No | Operational; updated in place | Not applicable |
+| Processed-event ledger | Non-personal | No | Idempotency window | Retention expiry |
+| Routing and dialing configuration | Non-personal | No | Administrator-managed | Not applicable |
+
+**Erasure strategies.** *Retention expiry* removes the record automatically when it ages past its window (no per-subject action). *Anonymize* clears the personal fields — the customer/caller addresses and free-text notes — while keeping the record so aggregate metrics and audit history survive. *Cascade with interaction* erases the record together with its parent interaction. *External store* delegates erasure to the system that holds the payload. *Not applicable* means the category holds no personal data.
+
+**Call recordings.** Recordings are never stored inside Contact Center. The `Interaction` and `CallSession` entities hold only a `RecordingReference` (an opaque pointer) and a `RecordingState`; the media itself lives in the telephony provider or a configured media store. Consequently:
+
+- **Access audit** — recording playback and download must be brokered by, and audited in, the system that holds the media. Contact Center exposes the reference under the same permission and content-access-control checks as the owning interaction; every access decision is logged through the operational log with the identifier taxonomy (recordings are treated as sensitive personal data). Wiring a specific media store's access log is a deployment integration.
+- **Recording erasure** — anonymizing an interaction or call session clears the personal fields it holds and issues a delegated erasure request to the external store for the referenced media; Contact Center does not assume it can delete provider-held media directly.
+
+**Backup and restore.** All durable Contact Center state lives in the tenant SQL database (see the [failure runbooks](runbooks.md)); back it up with the engine's native, point-in-time-capable mechanism. Because the interaction event log is the projection-rebuild source, keep `ProjectionReplayHorizonDays` and `LegalHoldMinimumDays` set so a point-in-time restore retains enough history to rebuild projections — after a restore, run the metrics projection rebuild to reconcile any drift. Provider-held recordings are backed up by their owning store, not by the Contact Center database backup, so a full restore must coordinate the database restore with the media store's own retention and restore policy.
+
 ## Upgrade and migration safety
 
 Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:
