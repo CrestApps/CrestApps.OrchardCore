@@ -89,7 +89,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to end.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Hangup(CallReference call)
-        => ExecuteAsync("Hangup", () => DescribeCallReference(call), (service, token) => service.HangupAsync(call, token));
+        => ExecuteAsync("Hangup", () => DescribeCallReference(call), (service, token) => service.HangupAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Places an active call on hold.
@@ -97,7 +97,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to place on hold.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Hold(CallReference call)
-        => ExecuteAsync("Hold", () => DescribeCallReference(call), (service, token) => service.HoldAsync(call, token));
+        => ExecuteAsync("Hold", () => DescribeCallReference(call), (service, token) => service.HoldAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Resumes a call that is on hold.
@@ -105,7 +105,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to resume.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Resume(CallReference call)
-        => ExecuteAsync("Resume", () => DescribeCallReference(call), (service, token) => service.ResumeAsync(call, token));
+        => ExecuteAsync("Resume", () => DescribeCallReference(call), (service, token) => service.ResumeAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Mutes the local audio of an active call.
@@ -113,7 +113,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to mute.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Mute(CallReference call)
-        => ExecuteAsync("Mute", () => DescribeCallReference(call), (service, token) => service.MuteAsync(call, token));
+        => ExecuteAsync("Mute", () => DescribeCallReference(call), (service, token) => service.MuteAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Unmutes the local audio of an active call.
@@ -121,7 +121,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to unmute.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Unmute(CallReference call)
-        => ExecuteAsync("Unmute", () => DescribeCallReference(call), (service, token) => service.UnmuteAsync(call, token));
+        => ExecuteAsync("Unmute", () => DescribeCallReference(call), (service, token) => service.UnmuteAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Transfers an active call to another destination.
@@ -129,7 +129,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The transfer request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Transfer(TransferRequest request)
-        => ExecuteAsync("Transfer", () => DescribeTransferRequest(request), (service, token) => service.TransferAsync(request, token));
+        => ExecuteAsync("Transfer", () => DescribeTransferRequest(request), (service, token) => service.TransferAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Merges two active calls into a conference.
@@ -137,7 +137,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The merge request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Merge(MergeRequest request)
-        => ExecuteAsync("Merge", () => DescribeMergeRequest(request), (service, token) => service.MergeAsync(request, token));
+        => ExecuteAsync("Merge", () => DescribeMergeRequest(request), (service, token) => service.MergeAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Sends DTMF digits to an active call.
@@ -145,7 +145,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The send-digits request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> SendDigits(SendDigitsRequest request)
-        => ExecuteAsync("SendDigits", () => DescribeSendDigitsRequest(request), (service, token) => service.SendDigitsAsync(request, token));
+        => ExecuteAsync("SendDigits", () => DescribeSendDigitsRequest(request), (service, token) => service.SendDigitsAsync(request, token), () => GetCallIds(request));
 
     /// <summary>
     /// Answers a ringing inbound call.
@@ -153,7 +153,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the inbound call to answer.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Answer(CallReference call)
-        => ExecuteAsync("Answer", () => DescribeCallReference(call), (service, token) => service.AnswerAsync(call, token));
+        => ExecuteAsync("Answer", () => DescribeCallReference(call), (service, token) => service.AnswerAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Rejects a ringing inbound call.
@@ -161,7 +161,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the inbound call to reject.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Reject(CallReference call)
-        => ExecuteAsync("Reject", () => DescribeCallReference(call), (service, token) => service.RejectAsync(call, token));
+        => ExecuteAsync("Reject", () => DescribeCallReference(call), (service, token) => service.RejectAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Sends a ringing inbound call to voicemail.
@@ -169,7 +169,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the inbound call to send to voicemail.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Voicemail(CallReference call)
-        => ExecuteAsync("Voicemail", () => DescribeCallReference(call), (service, token) => service.SendToVoicemailAsync(call, token));
+        => ExecuteAsync("Voicemail", () => DescribeCallReference(call), (service, token) => service.SendToVoicemailAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
     /// Issues the bootstrap configuration the soft phone client needs to connect to the provider.
@@ -471,7 +471,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     private async Task<TelephonyResult> ExecuteAsync(
         string actionName,
         Func<string> requestFactory,
-        Func<ITelephonyService, CancellationToken, Task<TelephonyResult>> operation)
+        Func<ITelephonyService, CancellationToken, Task<TelephonyResult>> operation,
+        Func<IEnumerable<string>> callIdsFactory = null)
     {
         TelephonyResult result = null;
         LogHubActionStart(actionName, requestFactory);
@@ -482,6 +483,17 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             {
                 LogHubActionUnauthorized(actionName);
                 result = TelephonyResult.Failed(S["You are not authorized to use the soft phone."].Value);
+
+                return;
+            }
+
+            if (!await AuthorizeReferencedCallsAsync(
+                scope.ServiceProvider,
+                actionName,
+                callIdsFactory?.Invoke(),
+                CancellationToken.None))
+            {
+                result = TelephonyResult.Failed(S["The requested call is not available."].Value);
 
                 return;
             }
@@ -561,6 +573,64 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         return result;
     }
 
+    private async Task<bool> AuthorizeReferencedCallsAsync(
+        IServiceProvider services,
+        string actionName,
+        IEnumerable<string> callIds,
+        CancellationToken cancellationToken)
+    {
+        // A null collection indicates an action that does not operate on an existing call (for
+        // example, Dial), so there is nothing to authorize. Every other action must reference at
+        // least one call owned by the caller; a missing store, an unidentified caller, a blank
+        // identifier, an empty set, or an unmatched call all fail closed.
+        if (callIds is null)
+        {
+            return true;
+        }
+
+        var store = services.GetService<ITelephonyInteractionStore>();
+        var userId = Context.UserIdentifier;
+
+        if (store is null || string.IsNullOrWhiteSpace(userId))
+        {
+            LogHubActionCallUnavailable(actionName);
+
+            return false;
+        }
+
+        var authorizedCallCount = 0;
+
+        foreach (var callId in callIds)
+        {
+            if (string.IsNullOrWhiteSpace(callId))
+            {
+                LogHubActionCallUnavailable(actionName);
+
+                return false;
+            }
+
+            var interaction = await store.FindByCallIdAsync(userId, callId, cancellationToken);
+
+            if (interaction is null)
+            {
+                LogHubActionCallUnavailable(actionName);
+
+                return false;
+            }
+
+            authorizedCallCount++;
+        }
+
+        if (authorizedCallCount == 0)
+        {
+            LogHubActionCallUnavailable(actionName);
+
+            return false;
+        }
+
+        return true;
+    }
+
     private void LogHubActionStart(string actionName)
     {
         if (!_logger.IsEnabled(LogLevel.Information))
@@ -597,6 +667,62 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             actionName,
             RedactedUserId(),
             OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+    }
+
+    private void LogHubActionCallUnavailable(string actionName)
+    {
+        _logger.LogWarning(
+            "Telephony hub action {Action} referenced a call that is not available to user {UserId} on connection {ConnectionId}.",
+            actionName,
+            RedactedUserId(),
+            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+    }
+
+    private static IEnumerable<string> GetCallIds(CallReference call)
+    {
+        if (call is null)
+        {
+            return [];
+        }
+
+        return [call.CallId];
+    }
+
+    private static IEnumerable<string> GetCallIds(TransferRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return [request.CallId];
+    }
+
+    private static IEnumerable<string> GetCallIds(MergeRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return request.GetCallIds()
+            .Concat(
+            [
+                request.PrimaryCallId,
+                request.SecondaryCallId,
+            ])
+            .Where(callId => !string.IsNullOrWhiteSpace(callId))
+            .Distinct(StringComparer.Ordinal);
+    }
+
+    private static IEnumerable<string> GetCallIds(SendDigitsRequest request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        return [request.CallId];
     }
 
     private static string DescribeDialRequest(DialRequest request)

@@ -31,7 +31,7 @@ public sealed class MergeRequest
     /// <returns>The call identifiers to merge.</returns>
     public IReadOnlyList<string> GetCallIds()
     {
-        var callIds = CallIds
+        var callIds = (CallIds ?? [])
             .Where(callId => !string.IsNullOrWhiteSpace(callId))
             .Distinct(StringComparer.Ordinal)
             .ToList();
