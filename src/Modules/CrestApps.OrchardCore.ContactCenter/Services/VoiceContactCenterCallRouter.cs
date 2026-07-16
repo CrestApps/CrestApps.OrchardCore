@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -5,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -19,6 +21,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter, IInboundVoiceService
 {
     private const string ServiceAddressMetadataKey = "serviceAddress";
+    private const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
+    private const string ClosedVoicemailReasonCode = "entry_point_closed_voicemail";
+    private const string ClosedRejectReasonCode = "entry_point_closed_reject";
+    private const string TargetQueueMissingReasonCode = "target_queue_missing";
+    private const string TargetQueueDisabledReasonCode = "target_queue_disabled";
+    private const string InboundQueueUnavailableReasonCode = "inbound_queue_unavailable";
     private const int MaxOfferAttempts = 25;
     private static readonly TimeSpan _inboundLockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _inboundLockExpiration = TimeSpan.FromMinutes(1);
@@ -38,6 +46,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IEnumerable<IEntryPointResolver> _entryPointResolvers;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
+    private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -61,6 +70,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="voiceProviderResolver">The voice provider resolver used for outbound voice calls.</param>
     /// <param name="entryPointResolvers">The optional entry point resolvers used to route inbound calls by dialed number.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
+    /// <param name="providerCommandStateService">The service used to persist provider actions before dispatch.</param>
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
@@ -81,6 +91,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IEnumerable<IEntryPointResolver> entryPointResolvers,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
+        IProviderCommandStateService providerCommandStateService,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
@@ -101,6 +112,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _voiceProviderResolver = voiceProviderResolver;
         _entryPointResolvers = entryPointResolvers;
         _offerSynchronizationService = offerSynchronizationService;
+        _providerCommandStateService = providerCommandStateService;
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
@@ -242,6 +254,11 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             result.Queued = queueItem?.Status == QueueItemStatus.Waiting;
             result.Reason = "The provider call is already tracked by the Contact Center.";
 
+            if (existing.TechnicalMetadata.TryGetValue(RoutingTerminalReasonMetadataKey, out var reasonCode))
+            {
+                result.ReasonCode = reasonCode as string;
+            }
+
             return result;
         }
 
@@ -262,33 +279,96 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         var contactItemIds = await ResolveContactsAsync(fromAddress, cancellationToken);
 
-        var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now);
-        result.ActivityItemId = activity.ItemId;
-
         var entryPointResolver = _entryPointResolvers.FirstOrDefault();
         var plan = entryPointResolver is null
             ? null
             : await entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
+        ActivityQueue queue = null;
+        string unavailableQueueReasonCode = null;
 
-        var queue = plan is not null && !string.IsNullOrEmpty(plan.TargetQueueId)
-            ? await _queueManager.FindByIdAsync(plan.TargetQueueId, cancellationToken)
-            : await ResolveQueueAsync(endpoint, cancellationToken);
+        if (plan is not null)
+        {
+            if (plan.ShouldQueue)
+            {
+                if (string.IsNullOrEmpty(plan.TargetQueueId))
+                {
+                    unavailableQueueReasonCode = TargetQueueMissingReasonCode;
+                }
+                else
+                {
+                    queue = await _queueManager.FindByIdAsync(plan.TargetQueueId, cancellationToken);
+
+                    if (queue is null)
+                    {
+                        unavailableQueueReasonCode = TargetQueueMissingReasonCode;
+                    }
+                    else if (!queue.Enabled)
+                    {
+                        queue = null;
+                        unavailableQueueReasonCode = TargetQueueDisabledReasonCode;
+                    }
+                }
+            }
+        }
+        else
+        {
+            queue = await ResolveQueueAsync(endpoint, cancellationToken);
+
+            if (queue is null)
+            {
+                unavailableQueueReasonCode = InboundQueueUnavailableReasonCode;
+            }
+        }
+
+        var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now);
+        result.ActivityItemId = activity.ItemId;
 
         var interaction = await CreateInteractionAsync(inboundEvent, activity, queue, fromAddress, serviceAddress);
         result.InteractionId = interaction.ItemId;
 
         if (plan is not null && !plan.ShouldQueue)
         {
-            result.Reason = plan.ClosedAction == EntryPointClosedAction.Voicemail
-                ? "The entry point is closed; the caller was routed to voicemail."
-                : "The entry point is closed; the call was rejected.";
+            var isVoicemail = plan.ClosedAction == EntryPointClosedAction.Voicemail;
+            var reasonCode = isVoicemail
+                ? ClosedVoicemailReasonCode
+                : ClosedRejectReasonCode;
+            result.Reason = isVoicemail
+                ? "The entry point is closed and configured for voicemail handling."
+                : "The entry point is closed and configured to reject the call.";
+            result.ReasonCode = reasonCode;
+
+            await TerminalizeInboundAsync(
+                activity,
+                interaction,
+                isVoicemail ? ActivityStatus.Completed : ActivityStatus.Cancelled,
+                InteractionStatus.Ended,
+                reasonCode,
+                isVoicemail ? ProviderCommandType.SendToVoicemail : ProviderCommandType.Reject,
+                now,
+                cancellationToken);
 
             return result;
         }
 
         if (queue is null)
         {
-            result.Reason = "No inbound queue is configured to receive this call.";
+            result.Reason = unavailableQueueReasonCode switch
+            {
+                TargetQueueMissingReasonCode => "The entry point target queue does not exist.",
+                TargetQueueDisabledReasonCode => "The entry point target queue is disabled.",
+                _ => "No inbound queue is configured to receive this call.",
+            };
+            result.ReasonCode = unavailableQueueReasonCode ?? InboundQueueUnavailableReasonCode;
+
+            await TerminalizeInboundAsync(
+                activity,
+                interaction,
+                ActivityStatus.Failed,
+                InteractionStatus.Failed,
+                result.ReasonCode,
+                ProviderCommandType.Reject,
+                now,
+                cancellationToken);
 
             return result;
         }
@@ -315,6 +395,68 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         result.Reason = "Offered to an available agent.";
 
         return result;
+    }
+
+    private async Task TerminalizeInboundAsync(
+        OmnichannelActivity activity,
+        Core.Models.Interaction interaction,
+        ActivityStatus activityStatus,
+        InteractionStatus interactionStatus,
+        string reasonCode,
+        ProviderCommandType providerCommandType,
+        DateTime endedUtc,
+        CancellationToken cancellationToken)
+    {
+        ProviderCommandRegistration providerCommand = null;
+
+        if (!string.IsNullOrWhiteSpace(interaction.ProviderName) &&
+            !string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
+        {
+            var commandId = IdGenerator.GenerateId();
+            interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId] = commandId;
+            providerCommand = new ProviderCommandRegistration
+            {
+                CommandId = commandId,
+                ProviderName = interaction.ProviderName,
+                CommandType = providerCommandType,
+                ActivityItemId = activity.ItemId,
+                InteractionId = interaction.ItemId,
+                RemoveReservationFromQueueOnFailure = false,
+                RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+                {
+                    ActivityItemId = activity.ItemId,
+                    ProviderCallId = interaction.ProviderInteractionId,
+                    ReofferOnFailure = false,
+                    Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["reasonCode"] = reasonCode,
+                    },
+                }),
+            };
+        }
+
+        activity.Status = activityStatus;
+        activity.AssignmentStatus = ActivityAssignmentStatus.Released;
+        activity.TerminalReasonCode = reasonCode;
+        activity.CompletedUtc = endedUtc;
+
+        interaction.Status = providerCommand is null
+            ? interactionStatus
+            : InteractionStatus.Ringing;
+        interaction.EndedUtc = providerCommand is null
+            ? endedUtc
+            : null;
+        interaction.TechnicalMetadata[RoutingTerminalReasonMetadataKey] = reasonCode;
+
+        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        if (providerCommand is not null)
+        {
+            await _providerCommandStateService.RegisterAsync(providerCommand, cancellationToken);
+            _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
+                processor.DispatchAsync(providerCommand.CommandId, CancellationToken.None));
+        }
     }
 
     /// <inheritdoc/>

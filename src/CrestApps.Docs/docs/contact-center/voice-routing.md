@@ -115,9 +115,9 @@ Configure tenant-local limits in shell configuration:
 2. checks for an existing interaction using the same provider-scoped identity
 3. resolves the dialed number (`ToAddress`) to the configured phone channel endpoint
 4. resolves the matching subject flow and optional CRM contact
-5. creates the `OmnichannelActivity`
-6. creates the `Interaction`
-7. resolves the entry-point plan and target queue
+5. resolves the entry-point plan and validates its effective target queue
+6. creates the `OmnichannelActivity`
+7. creates the linked `Interaction`
 
 At this stage:
 
@@ -126,6 +126,12 @@ At this stage:
 - the provider call id is stored on the interaction so later provider truth can find it again
 
 Contact attribution is explicit and auditable. No contact match persists `Unresolved`; one loadable match persists `Resolved`; multiple matches persist `Ambiguous` with a deduplicated, deterministic candidate list and no assigned contact. Ambiguity does not block queueing or an agent offer because those operations are contact-independent. The source-neutral disposition service rejects an ambiguous activity, so alternate completion callers cannot bypass resolution. Before completing it, an agent with resource-scoped completion permission must select one of the persisted candidates on the completion form. The activity records the selected contact, resolving user, and UTC resolution time before disposition processing. Unresolved, ambiguous, and legacy inbound activities without explicit resolution cannot run contact-bound Subject Actions.
+
+Closed or unroutable entry points retain one provider-correlated activity and interaction for idempotency and audit, but never leave routable CRM work. A closed voicemail decision completes the activity; a closed rejection cancels it; and a missing or disabled effective queue fails it. The activity assignment is released and its terminal timestamp is recorded immediately. In the same tenant transaction, Contact Center registers exactly one durable voicemail or rejection command and schedules dispatch only after commit. The interaction remains `Ringing` with no end timestamp while provider truth is pending, then the fenced provider-command state machine ends it after confirmation or records a definitive failure or unknown outcome without returning the activity to routing.
+
+The stable reason code is returned in `ReasonCode`, stored as `TerminalReasonCode` on the activity, included in the provider-command request metadata, and copied to the interaction's `routing_terminal_reason` metadata. These paths create no queue item, reservation, or agent offer, and an entry-point decision never silently falls back to a generic queue.
+
+The activity status records the Contact Center routing decision, while the interaction and durable command metadata record whether the provider mechanically completed, failed, or could not prove the voicemail or rejection action.
 
 ### 3. The activity is queued
 

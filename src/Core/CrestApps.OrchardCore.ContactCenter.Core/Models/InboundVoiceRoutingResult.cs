@@ -39,4 +39,9 @@ public sealed class InboundVoiceRoutingResult
     /// Gets or sets a human-readable explanation of the routing outcome, used for diagnostics.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stable machine-readable reason code for a terminal routing outcome.
+    /// </summary>
+    public string ReasonCode { get; set; }
 }

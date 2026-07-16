@@ -248,6 +248,11 @@ public sealed class OmnichannelActivity : CatalogItem
     public ActivityStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the stable reason code explaining why the activity reached a terminal state.
+    /// </summary>
+    public string TerminalReasonCode { get; set; }
+
+    /// <summary>
     /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.
     /// </summary>
     /// <param name="contact">The contact selected for the activity.</param>

@@ -515,6 +515,15 @@ public sealed class InboundVoiceServiceTests
         // Arrange
         var harness = new Harness();
         harness.SetupNoContext();
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
 
         harness.QueueManager
             .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
@@ -529,11 +538,286 @@ public sealed class InboundVoiceServiceTests
 
         // Assert
         Assert.False(result.Routed);
+        Assert.False(result.Queued);
         Assert.Null(result.QueueId);
         Assert.Equal("int1", result.InteractionId);
+        Assert.Equal("inbound_queue_unavailable", result.ReasonCode);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        Assert.Equal(ActivityAssignmentStatus.Released, activity.AssignmentStatus);
+        Assert.Equal("inbound_queue_unavailable", activity.TerminalReasonCode);
+        Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal("inbound_queue_unavailable", interaction.TechnicalMetadata["routing_terminal_reason"]);
+        Assert.True(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.CommandMetadata.CommandId));
+        harness.ActivityManager.Verify(
+            manager => manager.UpdateAsync(
+                activity,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<InteractionPriority?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration =>
+                    registration.ProviderName == "TestProvider" &&
+                    registration.CommandType == ProviderCommandType.Reject &&
+                    registration.ActivityItemId == "act1" &&
+                    registration.InteractionId == "int1" &&
+                    !registration.RemoveReservationFromQueueOnFailure &&
+                    registration.RequestPayload.Contains("\"ProviderCallId\":\"call-1\"") &&
+                    registration.RequestPayload.Contains("\"ReofferOnFailure\":false") &&
+                    registration.RequestPayload.Contains("\"reasonCode\":\"inbound_queue_unavailable\"")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotNull(harness.ScopeExecutor.ScheduledOperation);
+        await harness.ScopeExecutor.ScheduledOperation();
+        harness.ProviderCommandProcessor.Verify(
+            processor => processor.DispatchAsync(
+                Assert.IsType<string>(interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]),
+                CancellationToken.None),
+            Times.Once);
         harness.OfferSynchronizationService.Verify(
             service => service.ReconcileEndedOfferAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Theory]
+    [InlineData(EntryPointClosedAction.Voicemail, ActivityStatus.Completed, ProviderCommandType.SendToVoicemail, "entry_point_closed_voicemail")]
+    [InlineData(EntryPointClosedAction.Reject, ActivityStatus.Cancelled, ProviderCommandType.Reject, "entry_point_closed_reject")]
+    public async Task HandleInboundAsync_WhenEntryPointIsClosed_TerminalizesWithoutQueueing(
+        EntryPointClosedAction closedAction,
+        ActivityStatus expectedActivityStatus,
+        ProviderCommandType expectedCommandType,
+        string expectedReasonCode)
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        harness.EntryPointResolver
+            .Setup(resolver => resolver.ResolveAsync("+15553334444", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EntryPointRoutingPlan
+            {
+                EntryPoint = new ContactCenterEntryPoint
+                {
+                    ItemId = "entry-point-1",
+                    ClosedAction = closedAction,
+                },
+                ClosedAction = closedAction,
+                IsOpen = false,
+                ShouldQueue = false,
+            });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.False(result.Queued);
+        Assert.Null(result.QueueId);
+        Assert.Equal(expectedReasonCode, result.ReasonCode);
+        Assert.Equal(expectedActivityStatus, activity.Status);
+        Assert.Equal(ActivityAssignmentStatus.Released, activity.AssignmentStatus);
+        Assert.Equal(expectedReasonCode, activity.TerminalReasonCode);
+        Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Null(interaction.QueueId);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal(expectedReasonCode, interaction.TechnicalMetadata["routing_terminal_reason"]);
+        Assert.True(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.CommandMetadata.CommandId));
+        harness.ActivityManager.Verify(
+            manager => manager.UpdateAsync(
+                activity,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.QueueManager.Verify(
+            manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<InteractionPriority?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.AssignmentService.Verify(
+            assignmentService => assignmentService.AssignNextAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration =>
+                    registration.ProviderName == "TestProvider" &&
+                    registration.CommandType == expectedCommandType &&
+                    registration.ActivityItemId == "act1" &&
+                    registration.InteractionId == "int1" &&
+                    !registration.RemoveReservationFromQueueOnFailure &&
+                    registration.RequestPayload.Contains("\"ProviderCallId\":\"call-1\"") &&
+                    registration.RequestPayload.Contains("\"ReofferOnFailure\":false") &&
+                    registration.RequestPayload.Contains($"\"reasonCode\":\"{expectedReasonCode}\"")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotNull(harness.ScopeExecutor.ScheduledOperation);
+        await harness.ScopeExecutor.ScheduledOperation();
+        harness.ProviderCommandProcessor.Verify(
+            processor => processor.DispatchAsync(
+                Assert.IsType<string>(interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]),
+                CancellationToken.None),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, "target_queue_missing")]
+    [InlineData(false, "target_queue_disabled")]
+    public async Task HandleInboundAsync_WhenEntryPointQueueIsUnavailable_FailsWithoutQueueing(
+        bool queueMissing,
+        string expectedReasonCode)
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        harness.EntryPointResolver
+            .Setup(resolver => resolver.ResolveAsync("+15553334444", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EntryPointRoutingPlan
+            {
+                EntryPoint = new ContactCenterEntryPoint
+                {
+                    ItemId = "entry-point-1",
+                    TargetQueueId = "queue-1",
+                },
+                IsOpen = true,
+                ShouldQueue = true,
+                TargetQueueId = "queue-1",
+            });
+        harness.QueueManager
+            .Setup(manager => manager.FindByIdAsync("queue-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(queueMissing
+                ? null
+                : new ActivityQueue
+                {
+                    ItemId = "queue-1",
+                    Enabled = false,
+                });
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent
+            {
+                ProviderName = "TestProvider",
+                ProviderCallId = "call-1",
+                FromAddress = "+15551112222",
+                ToAddress = "+15553334444",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.False(result.Queued);
+        Assert.Null(result.QueueId);
+        Assert.Equal(expectedReasonCode, result.ReasonCode);
+        Assert.Equal(ActivityStatus.Failed, activity.Status);
+        Assert.Equal(ActivityAssignmentStatus.Released, activity.AssignmentStatus);
+        Assert.Equal(expectedReasonCode, activity.TerminalReasonCode);
+        Assert.Equal(_now, activity.CompletedUtc);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Null(interaction.QueueId);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal(expectedReasonCode, interaction.TechnicalMetadata["routing_terminal_reason"]);
+        Assert.True(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.CommandMetadata.CommandId));
+        harness.ActivityManager.Verify(
+            manager => manager.UpdateAsync(
+                activity,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.InteractionManager.Verify(
+            manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<InteractionPriority?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.AssignmentService.Verify(
+            assignmentService => assignmentService.AssignNextAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration =>
+                    registration.ProviderName == "TestProvider" &&
+                    registration.CommandType == ProviderCommandType.Reject &&
+                    registration.ActivityItemId == "act1" &&
+                    registration.InteractionId == "int1" &&
+                    !registration.RemoveReservationFromQueueOnFailure &&
+                    registration.RequestPayload.Contains("\"ProviderCallId\":\"call-1\"") &&
+                    registration.RequestPayload.Contains("\"ReofferOnFailure\":false") &&
+                    registration.RequestPayload.Contains($"\"reasonCode\":\"{expectedReasonCode}\"")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotNull(harness.ScopeExecutor.ScheduledOperation);
+        await harness.ScopeExecutor.ScheduledOperation();
+        harness.ProviderCommandProcessor.Verify(
+            processor => processor.DispatchAsync(
+                Assert.IsType<string>(interaction.TechnicalMetadata[ContactCenterConstants.CommandMetadata.CommandId]),
+                CancellationToken.None),
+            Times.Once);
     }
 
     [Fact]
@@ -585,6 +869,10 @@ public sealed class InboundVoiceServiceTests
                 ActivityItemId = "activity-1",
                 ProviderInteractionId = "call-1",
                 QueueId = "queue-1",
+                TechnicalMetadata = new Dictionary<string, object>
+                {
+                    ["routing_terminal_reason"] = "entry_point_closed_reject",
+                },
             });
         harness.QueueItemManager
             .Setup(manager => manager.FindByActivityIdAsync("activity-1", It.IsAny<CancellationToken>()))
@@ -612,6 +900,7 @@ public sealed class InboundVoiceServiceTests
         Assert.False(result.Queued);
         Assert.Equal("activity-1", result.ActivityItemId);
         Assert.Equal("interaction-1", result.InteractionId);
+        Assert.Equal("entry_point_closed_reject", result.ReasonCode);
         harness.ActivityManager.Verify(
             manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -620,6 +909,11 @@ public sealed class InboundVoiceServiceTests
             Times.Never);
         harness.QueueService.Verify(
             service => service.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            service => service.RegisterAsync(
+                It.IsAny<ProviderCommandRegistration>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -867,10 +1161,23 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IProviderVoiceOfferSynchronizationService> OfferSynchronizationService { get; } = new();
 
+        public Mock<IProviderCommandStateService> ProviderCommandStateService { get; } = new();
+
+        public Mock<IProviderCommandProcessor> ProviderCommandProcessor { get; } = new();
+
         public Mock<IDistributedLock> DistributedLock { get; } = new();
+
+        public TestContactCenterScopeExecutor ScopeExecutor { get; }
 
         public Harness()
         {
+            var services = new ServiceCollection();
+            services.AddSingleton(ProviderCommandProcessor.Object);
+            ScopeExecutor = new TestContactCenterScopeExecutor(services.BuildServiceProvider())
+            {
+                ScheduleAfterCommitResult = true,
+            };
+
             DistributedLock
                 .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
                 .ReturnsAsync((null, true));
@@ -920,8 +1227,9 @@ public sealed class InboundVoiceServiceTests
                 VoiceProviderResolver.Object,
                 [EntryPointResolver.Object],
                 OfferSynchronizationService.Object,
+                ProviderCommandStateService.Object,
                 DistributedLock.Object,
-                new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
+                ScopeExecutor,
                 new TestContactCenterFeatureWorkManager(),
                 clock.Object);
         }
