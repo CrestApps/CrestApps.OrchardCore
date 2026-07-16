@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -67,6 +69,17 @@ public sealed class BuiltInRecipeStepTests
             .ReturnsAsync((Permission)null);
 
         return permissionService.Object;
+    }
+
+    private static IOptions<AIDataSourceSourceOptions> CreateAIDataSourceSourceOptions()
+    {
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("SearchIndexProfile", new("Search Index Profile", "Search Index Profile"), new("Read source documents from an Orchard-managed search index profile.", "Read source documents from an Orchard-managed search index profile."));
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Read source documents from an external Azure AI Search index.", "Read source documents from an external Azure AI Search index."));
+        options.AddOrUpdate("Elasticsearch", new("Elasticsearch", "Elasticsearch"), new("Read source documents from an external Elasticsearch index.", "Read source documents from an external Elasticsearch index."));
+        options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
+
+        return Options.Create(options);
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
@@ -197,6 +210,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(RolesRecipeStep))
         {
             return new RolesRecipeStep(CreatePermissionService());
+        }
+
+        if (stepType == typeof(AIDataSourceRecipeStep))
+        {
+            return new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);

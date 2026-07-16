@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Microsoft.Extensions.Options;
@@ -101,7 +102,7 @@ public sealed class AIProfileRecipeStepTests
             new McpResourceRecipeStep(),
             new McpPromptRecipeStep(),
             new A2AConnectionRecipeStep(),
-            new AIDataSourceRecipeStep(),
+            new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions()),
         };
 
         var json = JsonSerializer.Serialize(await Task.WhenAll(steps.Select(step => step.GetSchemaAsync(TestContext.Current.CancellationToken).AsTask())));
@@ -118,6 +119,26 @@ public sealed class AIProfileRecipeStepTests
     }
 
     [Fact]
+    public async Task AIDataSourceSchema_UsesRegisteredSourceTypesForSourceEnums()
+    {
+        var step = new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions());
+        var json = JsonNode.Parse(JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken)))!;
+        var sourceValues = json["properties"]?["DataSources"]?["items"]?["properties"]?["Source"]?["enum"]?
+            .AsArray()
+            .Select(node => node?.GetValue<string>())
+            .ToArray();
+
+        Assert.Equal(
+            [
+                "AzureAISearch",
+                "Elasticsearch",
+                "PostgreSQL",
+                "SearchIndexProfile",
+            ],
+            sourceValues);
+    }
+
+    [Fact]
     public async Task AIProviderConnectionsSchema_UsesRegisteredProviderNamesForSourceEnums()
     {
         var options = new AIOptions();
@@ -125,7 +146,7 @@ public sealed class AIProfileRecipeStepTests
         connectionSources["OpenAI"] = new AIProviderConnectionOptionsEntry("OpenAI");
         connectionSources["Azure"] = new AIProviderConnectionOptionsEntry("Azure");
         connectionSources["openai"] = new AIProviderConnectionOptionsEntry("OpenAI");
-        var step = new AIProviderConnectionsRecipeStep(Options.Create(options));
+        var step = new AIProviderConnectionsRecipeStep(Microsoft.Extensions.Options.Options.Create(options));
 
         var json = JsonNode.Parse(JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken)))!;
         var sourceValues = json["properties"]?["Connections"]?["items"]?["properties"]?["Source"]?["enum"]?
@@ -139,5 +160,16 @@ public sealed class AIProfileRecipeStepTests
 
         Assert.Equal(["Azure", "OpenAI"], sourceValues);
         Assert.Equal(["Azure", "OpenAI"], clientNameValues);
+    }
+
+    private static IOptions<AIDataSourceSourceOptions> CreateAIDataSourceSourceOptions()
+    {
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("SearchIndexProfile", new("Search Index Profile", "Search Index Profile"), new("Read source documents from an Orchard-managed search index profile.", "Read source documents from an Orchard-managed search index profile."));
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Read source documents from an external Azure AI Search index.", "Read source documents from an external Azure AI Search index."));
+        options.AddOrUpdate("Elasticsearch", new("Elasticsearch", "Elasticsearch"), new("Read source documents from an external Elasticsearch index.", "Read source documents from an external Elasticsearch index."));
+        options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
+
+        return Options.Create(options);
     }
 }
