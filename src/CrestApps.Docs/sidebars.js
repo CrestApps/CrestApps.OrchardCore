@@ -107,6 +107,7 @@ const sidebars = {
             label: 'Contact Center',
             items: [
                 'contact-center/index',
+                'contact-center/single-node-completion',
             ],
         },
         {

@@ -9,6 +9,7 @@
 > - Keep the **Progress status** section current after each meaningful change (what shipped, what is in progress, decisions made).
 > - Never write competitor product names in code, comments, public docs, or identifiers. Adopt only the industry-standard concepts and terminology captured in the **Standard contact center terminology and metrics** section.
 > - Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item. `Interaction` is communication history for one attempt and never owns workflow or disposition.
+> - **Companion plan:** [`PLAN-2-SINGLE-NODE-COMPLETION.md`](PLAN-2-SINGLE-NODE-COMPLETION.md) tracks the functional-completion and credibility work (real browser audio, inbound routing, supervisor monitoring, recording) on a **single node first**. It is ratified by a two-model consensus review and is the immediate source of truth for execution capability work. Its distributed phase (Part 8) feeds this document's **R8** release gate and does not supersede it.
 
 ## Problem statement
 
