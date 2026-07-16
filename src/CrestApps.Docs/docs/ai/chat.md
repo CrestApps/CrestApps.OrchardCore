@@ -53,7 +53,9 @@ When the AI Documents features are enabled, the **Knowledge** tab for **AI Profi
 
 When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
 
-If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
+If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. The initial prompt is now saved lazily: Orchard creates and persists the chat session only after the visitor sends the first real message, then the configured assistant **Initial prompt** is inserted ahead of that first user prompt in the stored conversation history.
+
+This avoids creating empty anonymous chat sessions just because a page or widget loaded.
 
 ### Chat Mode
 
@@ -213,6 +215,13 @@ When the response contains references, the widget also renders `[doc:N]` markers
 
 The frontend widget also normalizes theme paragraph spacing inside rendered chat messages so theme-level `p` margins and padding do not add extra blank space above or below each response.
 
+Frontend widgets now also work with the shared anonymous-visitor protection flow:
+
+- Anonymous visitors receive a stable first-party visitor cookie for more accurate unique-visitor analytics.
+- Chat message throttling and anonymous session-start throttling use that visitor identity together with the configured remote-address mode.
+- Widgets no longer auto-create sessions on page load just because a profile has an initial prompt.
+- **Settings → Artificial Intelligence** now includes **Prompt security** and **Anonymous visitor identity** sections so operators can tune rate limits, prompt filtering, and remote-address handling.
+
 #### Adding the Frontend Widget
 
 1. Ensure the **Widgets** feature (`OrchardCore.Widgets`) is enabled.
@@ -223,6 +232,69 @@ The frontend widget also normalizes theme paragraph spacing inside rendered chat
 #### Frontend Widget Screen Cast
 
 ![Screen cast of the frontend widget](/img/docs/widget-ui-sample.gif)
+
+---
+
+### Security and Visitor Identity Settings
+
+Both the admin widget and the frontend widget share a common protection layer that guards against prompt injection, prompt leakage, abusive traffic, and anonymous session churn. These options are configured per tenant under **Settings** > **Artificial Intelligence**, and require the **Manage AI Profiles** permission.
+
+Saving either section may restart the tenant so the updated options take effect.
+
+#### Prompt Security
+
+The **Prompt Security** section tunes the shared AI chat protections.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Enable injection detection | Enabled | Blocks known prompt-injection and instruction-override patterns before they reach the model. |
+| Enable output filtering | Enabled | Filters generated responses for leaked system prompts, tool details, and unsafe disclosures. |
+| Enable security preamble | Enabled | Prepends a hardened security instruction to chat system prompts. |
+| Enable input delimiters | Enabled | Wraps user input with clear boundaries so the model can distinguish user text from system instructions. |
+| Enable audit logging | Enabled | Records prompt security decisions for diagnostics and abuse investigations. |
+| Maximum prompt length | `8000` | Prompts longer than this character count are rejected. Must be between `1` and `100000`. |
+| Blocking threshold | `High` | Prompts classified at or above this risk level (`None`, `Low`, `Medium`, `High`, `Critical`) are blocked. |
+| Maximum messages per window | `20` | How many chat messages one rate-limit partition can send within the message window. Set to `0` to disable message throttling. |
+| Message rate-limit window (seconds) | `60` | Duration of the shared chat message rate-limit window. Must be between `1` and `86400`. |
+| Maximum anonymous sessions per window | `5` | Limits how many new anonymous chat sessions can be started within the anonymous session window. Set to `0` to disable anonymous session-start throttling. |
+| Anonymous session window (seconds) | `600` | Duration of the anonymous chat session-start rate-limit window. Must be between `1` and `86400`. |
+
+Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below.
+
+##### Per-profile throttle overrides
+
+The four anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
+
+| Override | Behavior |
+| --- | --- |
+| Maximum messages per window | When left blank, inherits the site default. Set to `0` to disable message throttling for this profile only. |
+| Message rate-limit window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Maximum anonymous sessions per window | When left blank, inherits the site default. Set to `0` to disable anonymous session-start throttling for this profile only. |
+| Anonymous session window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+
+Each override is optional and independent: an unset field always falls back to the corresponding site-wide default, so a profile can override only the message limit while still inheriting the anonymous session limits. Overrides are stored on the profile settings and applied by the chat message and session-start rate limiters. When a profile is created from a profile-source template, the template's throttle overrides are copied onto the new profile. The higher-level prompt-injection, output-filtering, and prompt-length guards remain site-wide only and cannot be overridden per profile.
+
+#### Anonymous Visitor Identity
+
+The **Visitor Identity** section controls how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage. Anonymous visitors receive a stable first-party cookie during page load so repeat visits are recognized as the same visitor instead of a new one for each chat session.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Visitor cookie name | `crestapps-ai-visitor` | Stable first-party cookie used to identify anonymous visitors across chat sessions. |
+| Cookie lifetime (days) | `180` | How long the anonymous visitor cookie remains valid before a new visitor identity is issued. Must be between `1` and `3650`. |
+| Remote address storage mode | `Hashed` | How the remote address is captured. See the modes below. |
+| Remote address hash salt | `CrestApps.Core.AI.VisitorIdentity` | Application-specific salt used when hashing remote addresses for abuse controls. Required for the `Hashed` and `Encrypted` modes. |
+
+The **Remote address storage mode** supports the following values:
+
+- **Disabled** &mdash; do not capture or persist any remote-address data.
+- **Hashed** (recommended) &mdash; store only a salted hash of the remote address for privacy-first abuse controls.
+- **Plain text** &mdash; store the remote address in plain text for operational controls such as blocklists.
+- **Encrypted** &mdash; store the remote address encrypted at rest with Data Protection while still using a salted hash for throttling keys.
+
+:::info
+The remote-address value is read from the `X-Forwarded-For` header when present, otherwise from the connection remote IP address. When running behind a reverse proxy, make sure forwarded headers are configured so the correct visitor address is captured.
+:::
 
 ---
 

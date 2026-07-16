@@ -1,11 +1,9 @@
 @using CrestApps.Core
-@using CrestApps.Core.AI
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.Core.AI.Models
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.Core.SignalR.Services
 @using OrchardCore.Entities
 @using OrchardCore.Environment.Shell
@@ -247,7 +245,7 @@
             inputElementSelector = $"#{userPromptHtmlId}",
             sendButtonElementSelector = $"#{buttonHtmlId}",
             placeholderElementSelector = $"#{placeholderHtmlId}",
-            autoCreateSession = addInitialPrompt,
+            autoCreateSession = false,
             initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
             messages = Array.Empty<object>(),
             metricsEnabled,

@@ -4,6 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Security;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 {
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
+    private readonly IAIVisitorIdentityResolver _visitorIdentityResolver;
     private readonly ISession _session;
     private readonly IAIChatSessionPromptStore _promptStore;
 
@@ -38,7 +39,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     /// </summary>
     /// <param name="clock">The clock for UTC timestamps.</param>
     /// <param name="httpContextAccessor">The accessor for the current HTTP context.</param>
-    /// <param name="clientIPAddressAccessor">The accessor for deriving client identifiers.</param>
+    /// <param name="visitorIdentityResolver">The resolver for stable visitor identity data.</param>
     /// <param name="session">The YesSql session used for persistence.</param>
     /// <param name="promptStore">The store for chat session prompts.</param>
     /// <param name="handlers">The chat session lifecycle handlers.</param>
@@ -46,7 +47,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     public DefaultAIChatSessionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
-        IClientIPAddressAccessor clientIPAddressAccessor,
+        IAIVisitorIdentityResolver visitorIdentityResolver,
         ISession session,
         IAIChatSessionPromptStore promptStore,
         IEnumerable<IAIChatSessionHandler> handlers,
@@ -55,7 +56,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
-        _clientIPAddressAccessor = clientIPAddressAccessor;
+        _visitorIdentityResolver = visitorIdentityResolver;
         _session = session;
         _promptStore = promptStore;
         _handlers = handlers;
@@ -71,7 +72,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     /// <param name="context">The context containing options for the new session.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The newly created <see cref="AIChatSession"/>.</returns>
-    public async Task<AIChatSession> NewAsync(
+    public Task<AIChatSession> NewAsync(
         AIProfile profile,
         NewAIChatSessionContext context,
         CancellationToken cancellationToken = default)
@@ -88,41 +89,21 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         };
 
         var user = _httpContextAccessor.HttpContext?.User;
+        var visitorIdentity = _visitorIdentityResolver.Resolve();
+        chatSession.RemoteAddress = visitorIdentity.RemoteAddress;
+        chatSession.RemoteAddressHash = visitorIdentity.RemoteAddressHash;
 
         if (user.Identity?.IsAuthenticated == true)
         {
             chatSession.UserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         }
-        else if (!context.AllowRobots)
+        else if (!string.IsNullOrWhiteSpace(visitorIdentity.VisitorId))
         {
-            var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
-
-            if (string.IsNullOrEmpty(clientId))
-            {
-                throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
-            }
-
-            chatSession.ClientId = clientId;
+            chatSession.ClientId = visitorIdentity.VisitorId;
         }
 
         if (profile.Type == AIProfileType.Chat)
         {
-            var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
-            var initialPrompt = profileMetadata.InitialPrompt;
-
-            if (!string.IsNullOrEmpty(initialPrompt))
-            {
-                await _promptStore.CreateAsync(new AIChatSessionPrompt
-                {
-                    ItemId = IdGenerator.GenerateId(),
-                    SessionId = chatSession.SessionId,
-                    Role = ChatRole.Assistant,
-                    Title = profile.PromptSubject,
-                    Content = initialPrompt,
-                    CreatedUtc = _clock.UtcNow,
-                }, cancellationToken);
-            }
-
             // Set the initial response handler from profile settings.
             var handlerSettings = profile.GetSettings<ResponseHandlerProfileSettings>();
 
@@ -132,7 +113,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
         }
 
-        return chatSession;
+        return Task.FromResult(chatSession);
     }
 
     /// <summary>
@@ -242,17 +223,17 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         }
         else
         {
-            var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
+            var visitorId = _visitorIdentityResolver.Resolve().VisitorId;
 
-            if (string.IsNullOrEmpty(clientId))
+            if (string.IsNullOrWhiteSpace(visitorId))
             {
-                throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
+                return null;
             }
 
             var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: _yesSqlStoreOptions.AICollectionName)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (chatSession?.UserId is not null || chatSession?.ClientId != clientId)
+            if (chatSession?.UserId is not null || chatSession?.ClientId != visitorId)
             {
                 return null;
             }

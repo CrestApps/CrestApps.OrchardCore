@@ -17,9 +17,10 @@
 @using Microsoft.Extensions.Options
 @using System.Text.Json
 @using CrestApps.Core.AI.Profiles
+@using CrestApps.OrchardCore.AI.Chat.Core.Services
 
 @inject IAIProfileStore ProfileCatalog
-@inject IAuthorizationService AuthorizationService
+@inject AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
 @inject IAIDeploymentManager AIDeploymentManager
@@ -40,7 +41,7 @@
         return;
     }
 
-    if (!await AuthorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+    if (!await AIChatProfileAccessEvaluator.CanAccessProfileAsync(User, profile))
     {
         return;
     }
@@ -331,7 +332,7 @@
             inputElementSelector = $"#{userPromptHtmlId}",
             sendButtonElementSelector = $"#{buttonHtmlId}",
             placeholderElementSelector = $"#{placeholderHtmlId}",
-            autoCreateSession = addInitialPrompt,
+            autoCreateSession = false,
             initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
             messages = Array.Empty<object>(),
             metricsEnabled,
