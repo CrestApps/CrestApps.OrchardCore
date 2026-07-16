@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -5,7 +7,9 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -14,6 +18,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 {
+    private static readonly TimeSpan _ingestionLockTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan _ingestionLockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -24,6 +31,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly ISession _session;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -40,6 +49,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying.</param>
     /// <param name="providerCommandStateService">The service used to persist outbound bridge intent.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
+    /// <param name="session">The YesSql session used to commit provider truth before releasing the ingestion lock.</param>
+    /// <param name="distributedLock">The tenant-scoped distributed lock used to serialize each provider call stream.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
@@ -53,6 +64,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IProviderIdentityResolver providerIdentityResolver,
         IProviderCommandStateService providerCommandStateService,
         IContactCenterScopeExecutor scopeExecutor,
+        ISession session,
+        IDistributedLock distributedLock,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger)
     {
@@ -66,6 +79,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _providerIdentityResolver = providerIdentityResolver;
         _providerCommandStateService = providerCommandStateService;
         _scopeExecutor = scopeExecutor;
+        _session = session;
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
     }
@@ -94,6 +109,17 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             providerEvent.ProviderName,
             legacyIdempotencyKey);
 
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetIngestionLockKey(providerEvent.ProviderName, providerEvent.ProviderCallId),
+            _ingestionLockTimeout,
+            _ingestionLockExpiration);
+
+        if (!locked)
+        {
+            throw new TimeoutException("The provider call event could not acquire its ingestion lock.");
+        }
+
+        await using var acquiredLock = locker;
         Interaction interaction = null;
         var matchedByCallIdOnly = false;
 
@@ -139,6 +165,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
+        var providerNameCanonicalized = false;
+
         if (!string.IsNullOrWhiteSpace(providerEvent.ProviderName) &&
             !string.Equals(interaction.ProviderName, providerEvent.ProviderName, StringComparison.Ordinal))
         {
@@ -149,6 +177,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 interaction.ProviderName);
 
             interaction.ProviderName = providerEvent.ProviderName;
+            providerNameCanonicalized = true;
         }
 
         var duplicateEvent = !string.IsNullOrEmpty(providerEvent.IdempotencyKey) &&
@@ -170,6 +199,11 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 _logger.LogDebug(
                     "Skipping duplicate provider voice event with idempotency key '{IdempotencyKey}'.",
                     OperationalLogRedactor.Pseudonymize(providerEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event));
+            }
+
+            if (providerNameCanonicalized)
+            {
+                await _session.SaveChangesAsync(cancellationToken);
             }
 
             return (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
@@ -197,6 +231,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                     session.LastProviderEventUtc,
                     now);
             }
+
+            await _session.SaveChangesAsync(cancellationToken);
 
             return session;
         }
@@ -257,6 +293,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             await StageAnsweredOutboundBridgeAsync(session, interaction, cancellationToken);
         }
 
+        await _session.SaveChangesAsync(cancellationToken);
+
         return session;
     }
 
@@ -310,32 +348,29 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private static bool ShouldIgnoreEvent(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
     {
-        // When the provider supplies a monotonic sequence, it is the authoritative order. Reject stale or
-        // equal-order deliveries against the persisted high-water mark.
-        if (providerEvent.SequenceNumber.HasValue && session.HighWaterSequence.HasValue)
+        if (IsTerminalState(session.State) ||
+            GetLifecycleRank(providerEvent.State) < GetLifecycleRank(session.State))
         {
-            if (providerEvent.SequenceNumber.Value <= session.HighWaterSequence.Value)
-            {
-                return true;
-            }
+            return true;
         }
-        else if (session.LastProviderEventUtc.HasValue)
-        {
-            if (occurredUtc < session.LastProviderEventUtc.Value)
-            {
-                return true;
-            }
 
-            // For providers that only supply timestamps, an equal-timestamp delivery must not regress the
-            // normalized lifecycle (for example a late Ringing arriving after Connected).
-            if (occurredUtc == session.LastProviderEventUtc.Value &&
-                GetLifecycleRank(providerEvent.State) < GetLifecycleRank(session.State))
+        // Once a provider establishes a sequence domain, unsequenced deliveries cannot safely advance it.
+        if (session.HighWaterSequence.HasValue)
+        {
+            if (!providerEvent.SequenceNumber.HasValue ||
+                providerEvent.SequenceNumber.Value <= session.HighWaterSequence.Value)
             {
                 return true;
             }
         }
 
-        return IsTerminalState(session.State);
+        if (session.LastProviderEventUtc.HasValue &&
+            occurredUtc < session.LastProviderEventUtc.Value)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static int GetLifecycleRank(ContactCenterCallState state)
@@ -601,6 +636,13 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
 
         return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
+    }
+
+    private static string GetIngestionLockKey(string providerName, string providerCallId)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{providerName}\n{providerCallId}"));
+
+        return $"ContactCenterProviderVoiceEvent:{Convert.ToHexString(bytes)}";
     }
 
     private async Task StageAnsweredOutboundBridgeAsync(

@@ -355,7 +355,7 @@ This catches cases where:
 
 Bulk reconciliation is serialized by a distributed lock. A provider live-stream reconnect requests a provider-scoped pass, so reconnecting one Asterisk endpoint does not repeatedly query unrelated providers or overlap another full reconciliation sweep.
 
-The Asterisk live event listener is hardened so a single bad event can never silence the stream. Each received event is dispatched in isolation: a malformed payload, an unroutable event, or a transient tenant-scope failure while the shell is reloading is logged and skipped instead of tearing down the WebSocket and forcing a reconnect storm. The listener also subscribes to **all** application events (`subscribeAll`), so every channel state change reaches provider-truth ingest rather than only the events for channels the app happens to own. Any event genuinely missed during a reconnect is still repaired by the periodic sweep above.
+The Asterisk live event listener is hardened so a single bad event can never silence the stream. Each received event is dispatched in isolation: a malformed payload, an unroutable event, or a transient tenant-scope failure while the shell is reloading is logged and skipped instead of tearing down the WebSocket and forcing a reconnect storm. The listener also subscribes to **all** application events (`subscribeAll`), so every channel state change reaches provider-truth ingest rather than only the events for channels the app happens to own. In a supported Redis-locked multi-node deployment, more than one node may hold an Asterisk socket during startup or rolling deployment; ingestion serializes the canonical provider-call stream, commits before releasing the lock, and suppresses the duplicate against the committed provider event. Any event genuinely missed during a reconnect is still repaired by the periodic sweep above.
 
 ### Re-offer and reconnect recovery
 
@@ -373,7 +373,7 @@ The current voice flow stays consistent because it combines these protections:
 2. **Provider-scoped inbound locks and lookups** prevent duplicate work and cross-provider call-id collisions.
 3. **Reservations** make offers explicit and auditable.
 4. **Provider call ids** let Contact Center correlate server truth back to local interactions.
-5. **Ordered, terminal-safe provider-event ingestion** prevents stale or duplicate deliveries from corrupting state.
+5. **Tenant-scoped provider-call locking plus monotonic lifecycle and sequence guards** prevents concurrent, stale, timestampless, mixed-order, or duplicate deliveries from corrupting state.
 6. **Durable per-handler outbox delivery** prevents events from disappearing across handler failures or restarts.
 7. **Pre-accept provider refresh** stops agents from accepting already-ended calls.
 8. **Ended-offer reconciliation** clears stale queue and agent state immediately.

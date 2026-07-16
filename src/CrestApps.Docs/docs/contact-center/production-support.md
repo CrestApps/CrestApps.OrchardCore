@@ -37,6 +37,8 @@ Configure the tenant drain timeout under `CrestApps_ContactCenter:FeatureLifecyc
 
 Queue and reservation correctness does not depend on Redis lock exclusivity. YesSql document versions provide compare-and-set updates, and portable unique claim keys enforce active queue-item and reservation ownership in the relational database. Upgrade migrations reject missing identifiers or duplicate legacy active claims with explicit repair guidance instead of failing later with an opaque unique-index error. SQLite regression tests force overlapping lock holders and synchronized stale reads and retain exactly one reservation; production certification still requires the planned database matrix to repeat the invariant on PostgreSQL and any subsequently supported database.
 
+Provider stream correctness uses the supported Redis distributed-lock topology. Every canonical provider-call stream is serialized before interaction, call-session, event-log, and outbox changes are read or written, and the YesSql transaction commits before the lock is released. This makes duplicate Asterisk listeners and concurrent DialPad delivery processing harmless across supported nodes without requiring a renewable long-lived socket lease. Lifecycle rank cannot move backward, an established provider sequence high-water cannot be advanced by an unsequenced event, and terminal state remains final.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:
@@ -58,7 +60,7 @@ R0 records the distributed evidence that cannot be produced honestly by an in-pr
 | --- | --- | --- |
 | Redis backplane with two Orchard shells | R1 | R8 |
 | Duplicate/reordered provider stream across two processes | R3 | R4 |
-| Provider-listener lease loss and ownership transfer | R4 | R4 |
+| Provider-listener lease loss and ownership transfer | Alternative not used; duplicate listeners are safe | R4 |
 | Application-node failure during active work | R3 | R8 |
 | Redis network partition | R7 | R8 |
 | Database network partition | R7 | R8 |

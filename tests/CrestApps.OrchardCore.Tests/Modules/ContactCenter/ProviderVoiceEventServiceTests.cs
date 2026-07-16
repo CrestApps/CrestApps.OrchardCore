@@ -1,5 +1,6 @@
 #nullable enable annotations
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -10,12 +11,236 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ProviderVoiceEventServiceTests
 {
+    [Fact]
+    public async Task IngestAsync_WhenProviderCallLockIsUnavailable_ThrowsBeforeReadingState()
+    {
+        // Arrange
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(service => service.TryAcquireLockAsync(
+                It.Is<string>(key =>
+                    key.StartsWith("ContactCenterProviderVoiceEvent:", StringComparison.Ordinal) &&
+                    !key.Contains("call-1", StringComparison.Ordinal)),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, false));
+        var service = CreateService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>(MockBehavior.Strict).Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            new Mock<IInteractionEventStore>(MockBehavior.Strict).Object,
+            new Mock<IContactCenterEventPublisher>(MockBehavior.Strict).Object,
+            new Mock<IAgentPresenceManager>(MockBehavior.Strict).Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            session: new Mock<ISession>(MockBehavior.Strict).Object,
+            distributedLock: distributedLock.Object);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<TimeoutException>(() => service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ringing,
+            IdempotencyKey = "event-1",
+        }, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains("provider call", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenEventIsHandled_CommitsBeforeReleasingProviderCallLock()
+    {
+        // Arrange
+        var endedUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Ended,
+            EndedUtc = endedUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            EndedUtc = endedUtc,
+            LastProviderEventUtc = endedUtc,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var saveCompleted = false;
+        var yesSqlSession = new Mock<ISession>();
+        yesSqlSession
+            .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => saveCompleted = true)
+            .Returns(Task.CompletedTask);
+        var locker = new TestLocker(() => Assert.True(saveCompleted));
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(service => service.TryAcquireLockAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((locker, true));
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            session: yesSqlSession.Object,
+            distributedLock: distributedLock.Object);
+
+        // Act
+        var result = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            IdempotencyKey = "late-connected",
+            OccurredUtc = endedUtc.AddSeconds(-1),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(session, result);
+        Assert.True(locker.IsDisposed);
+        yesSqlSession.Verify(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenTwoNodesReceiveSameEvent_SerializesAndPublishesOnce()
+    {
+        // Arrange
+        var ringingUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Ringing,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ringing,
+            LastProviderEventUtc = ringingUtc,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventPublished = 0;
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Volatile.Read(ref eventPublished) != 0);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback(() => Interlocked.Exchange(ref eventPublished, 1))
+            .Returns(Task.CompletedTask);
+        var distributedLock = new TestDistributedLock();
+        var nodeA = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            session: new Mock<ISession>().Object,
+            distributedLock: distributedLock);
+        var nodeB = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            session: new Mock<ISession>().Object,
+            distributedLock: distributedLock);
+
+        ProviderVoiceEvent CreateEvent()
+        {
+            return new ProviderVoiceEvent
+            {
+                ProviderName = "ProviderA",
+                ProviderCallId = "call-1",
+                State = ContactCenterCallState.Connected,
+                IdempotencyKey = "connected-event",
+                OccurredUtc = ringingUtc.AddSeconds(1),
+            };
+        }
+
+        // Act
+        var results = await Task.WhenAll(
+            nodeA.IngestAsync(CreateEvent(), TestContext.Current.CancellationToken),
+            nodeB.IngestAsync(CreateEvent(), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.All(results, result => Assert.Same(session, result));
+        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<CallSession>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        publisher.Verify(
+            value => value.PublishAsync(
+                It.Is<InteractionEvent>(interactionEvent =>
+                    interactionEvent.EventType == ContactCenterConstants.Events.CallConnected),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task IngestAsync_WhenProviderNameIsAnAlias_ResolvesCanonicalIdentityWithoutMutatingStoredProvider()
     {
@@ -577,6 +802,165 @@ public sealed class ProviderVoiceEventServiceTests
     }
 
     [Fact]
+    public async Task IngestAsync_WhenTimestamplessLateRingingArrivesAfterConnected_DoesNotRegressCall()
+    {
+        // Arrange
+        var connectedUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = connectedUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            AnsweredUtc = connectedUtc,
+            LastProviderEventUtc = connectedUtc,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("late-ringing", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(connectedUtc.AddMinutes(1));
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ringing,
+            IdempotencyKey = "late-ringing",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(InteractionStatus.Connected, interaction.Status);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<CallSession>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<Interaction>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenHighWaterExistsAndIncomingEventHasNoSequence_DoesNotRegressCall()
+    {
+        // Arrange
+        var connectedUtc = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = connectedUtc,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Connected,
+            AnsweredUtc = connectedUtc,
+            LastProviderEventUtc = connectedUtc,
+            HighWaterSequence = 6,
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("unsequenced-ringing", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            publisher.Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ringing,
+            IdempotencyKey = "unsequenced-ringing",
+            OccurredUtc = connectedUtc.AddMinutes(1),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(InteractionStatus.Connected, interaction.Status);
+        Assert.Equal(6, session.HighWaterSequence);
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<CallSession>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(
+                It.IsAny<Interaction>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task IngestAsync_WhenSequenceIsAtOrBelowHighWater_IgnoresStaleEvent()
     {
         // Arrange
@@ -829,6 +1213,83 @@ public sealed class ProviderVoiceEventServiceTests
 
         // Assert
         Assert.Same(session, result);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenDuplicateCanonicalizesInteraction_CommitsBeforeReleasingProviderCallLock()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "LegacyProvider",
+            ProviderInteractionId = "call-1",
+        };
+        var callSession = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callSession);
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(
+                ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("ProviderA", "duplicate"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var saveCompleted = false;
+        var yesSqlSession = new Mock<ISession>();
+        yesSqlSession
+            .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => saveCompleted = true)
+            .Returns(Task.CompletedTask);
+        var locker = new TestLocker(() => Assert.True(saveCompleted));
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(service => service.TryAcquireLockAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((locker, true));
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            new Mock<IClock>().Object,
+            NullLogger<ProviderVoiceEventService>.Instance,
+            session: yesSqlSession.Object,
+            distributedLock: distributedLock.Object);
+
+        // Act
+        var result = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "duplicate",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(callSession, result);
+        Assert.Equal("ProviderA", interaction.ProviderName);
+        Assert.True(locker.IsDisposed);
+        yesSqlSession.Verify(
+            value => value.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -1515,10 +1976,14 @@ public sealed class ProviderVoiceEventServiceTests
         IClock clock,
         ILogger<ProviderVoiceEventService> logger,
         IProviderCommandStateService? providerCommandStateService = null,
-        IContactCenterScopeExecutor? scopeExecutor = null)
+        IContactCenterScopeExecutor? scopeExecutor = null,
+        ISession? session = null,
+        IDistributedLock? distributedLock = null)
     {
         providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict).Object;
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict).Object;
+        session ??= new Mock<ISession>().Object;
+        distributedLock ??= CreateDistributedLock();
 
         return new ProviderVoiceEventService(
             interactionManager,
@@ -1531,7 +1996,85 @@ public sealed class ProviderVoiceEventServiceTests
             providerIdentityResolver,
             providerCommandStateService,
             scopeExecutor,
+            session,
+            distributedLock,
             clock,
             logger);
+    }
+
+    private static IDistributedLock CreateDistributedLock()
+    {
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(service => service.TryAcquireLockAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, true));
+
+        return distributedLock.Object;
+    }
+
+    private sealed class TestLocker(Action onDispose) : ILocker
+    {
+        private readonly Action _onDispose = onDispose;
+
+        public bool IsDisposed { get; private set; }
+
+        public void Dispose()
+        {
+            DisposeCore();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCore();
+
+            return ValueTask.CompletedTask;
+        }
+
+        private void DisposeCore()
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            _onDispose();
+            IsDisposed = true;
+        }
+    }
+
+    private sealed class TestDistributedLock : IDistributedLock
+    {
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
+
+        public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        {
+            var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync();
+
+            return new TestLocker(() => semaphore.Release());
+        }
+
+        public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(
+            string key,
+            TimeSpan timeout,
+            TimeSpan? expiration = null)
+        {
+            var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+            var locked = await semaphore.WaitAsync(timeout);
+
+            return locked
+                ? (new TestLocker(() => semaphore.Release()), true)
+                : (null, false);
+        }
+
+        public Task<bool> IsLockAcquiredAsync(string key)
+        {
+            return Task.FromResult(
+                _locks.TryGetValue(key, out var semaphore) &&
+                semaphore.CurrentCount == 0);
+        }
     }
 }
