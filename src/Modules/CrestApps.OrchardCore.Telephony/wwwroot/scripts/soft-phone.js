@@ -33,7 +33,6 @@
     Browser: 1,
     ExternalDevice: 2
   };
-  var mediaAdapters = {};
   var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
   function normalizeState(state) {
     if (typeof state === 'number') {
@@ -70,6 +69,224 @@
     var element = document.createElement('div');
     element.textContent = value == null ? '' : String(value);
     return element.innerHTML;
+  }
+  function buildRegistrationConfigUrl(config) {
+    if (config.registrationConfigUrl) {
+      return config.registrationConfigUrl;
+    }
+    var parts = window.location.pathname.split('/').filter(function (part) {
+      return !!part;
+    });
+    var adminPrefix = parts.length ? parts[0] : 'Admin';
+    return '/' + adminPrefix + '/contact-center/agent/soft-phone/registration-config';
+  }
+  function fetchRegistrationConfig(config) {
+    return fetch(buildRegistrationConfigUrl(config), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json'
+      }
+    }).then(function (response) {
+      if (!response.ok) {
+        throw new Error('The browser media registration configuration is unavailable.');
+      }
+      return response.json();
+    });
+  }
+  function createRemoteStreamSink(setRemoteStream) {
+    var remoteStream = new MediaStream();
+    return {
+      stream: remoteStream,
+      addTrack: function addTrack(track) {
+        remoteStream.addTrack(track);
+        setRemoteStream(remoteStream);
+      },
+      clear: function clear() {
+        remoteStream.getTracks().forEach(function (track) {
+          remoteStream.removeTrack(track);
+          track.stop();
+        });
+        setRemoteStream(null);
+      }
+    };
+  }
+  function createBrowserMediaAdapterRegistry(rootElement, config) {
+    var adapters = {};
+
+    /*
+     * IBrowserMediaAdapter contract:
+     *   adapter(context) -> Promise/session
+     *   context: { config, credentials, localStream, remoteAudioElement, setRemoteStream, showError }
+     *   session: { handleCallState(call), dispose() }
+     *
+     * The registry is intentionally scoped to this soft-phone instance/page. Providers add server
+     * contributors through shell DI; the browser does not expose a global adapter registry.
+     */
+    adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
+    return adapters;
+  }
+  function createSipJsBrowserMediaAdapter(rootElement, widgetConfig) {
+    return function (context) {
+      var sip = window.SIP;
+      if (!sip || typeof sip.UserAgent !== 'function') {
+        return Promise.reject(new Error('SIP.js is required for the configured browser audio adapter.'));
+      }
+      return fetchRegistrationConfig(widgetConfig).then(function (registrationConfig) {
+        return createSipJsSession(sip, context, registrationConfig);
+      });
+    };
+  }
+  function createSipJsSession(sip, context, registrationConfig) {
+    var signaling = registrationConfig.signaling || {};
+    var credential = registrationConfig.credential || {};
+    var ice = registrationConfig.ice || {};
+    var media = registrationConfig.media || {};
+    var remoteSink = createRemoteStreamSink(context.setRemoteStream);
+    var peerConnection = null;
+    var activeSession = null;
+    var registerer = null;
+    var disposed = false;
+    if (!signaling.webSocketUrl || !signaling.sipUri || !signaling.authorizationUser || !credential.value) {
+      return Promise.reject(new Error('The browser media registration configuration is incomplete.'));
+    }
+    function getSessionDescriptionHandler(session) {
+      return session && session.sessionDescriptionHandler ? session.sessionDescriptionHandler : null;
+    }
+    function attachPeerConnection(session) {
+      var handler = getSessionDescriptionHandler(session);
+      if (!handler || !handler.peerConnection || peerConnection === handler.peerConnection) {
+        return;
+      }
+      peerConnection = handler.peerConnection;
+      context.localStream.getTracks().forEach(function (track) {
+        var alreadyAdded = peerConnection.getSenders().some(function (sender) {
+          return sender.track === track;
+        });
+        if (!alreadyAdded) {
+          peerConnection.addTrack(track, context.localStream);
+        }
+      });
+      peerConnection.getReceivers().forEach(function (receiver) {
+        if (receiver.track) {
+          remoteSink.addTrack(receiver.track);
+        }
+      });
+      peerConnection.addEventListener('track', function (event) {
+        if (event.track) {
+          remoteSink.addTrack(event.track);
+        }
+      });
+    }
+    function wireSession(session) {
+      activeSession = session;
+      attachPeerConnection(session);
+      if (session.stateChange && typeof session.stateChange.addListener === 'function') {
+        session.stateChange.addListener(function () {
+          attachPeerConnection(session);
+        });
+      }
+    }
+    function setMicrophoneEnabled(enabled) {
+      context.localStream.getAudioTracks().forEach(function (track) {
+        track.enabled = enabled;
+      });
+    }
+    function requestHold(hold) {
+      if (!activeSession || typeof activeSession.invite !== 'function') {
+        return Promise.resolve();
+      }
+      var modifiers = hold && sip.Web && sip.Web.holdModifier ? [sip.Web.holdModifier] : [];
+      return Promise.resolve(activeSession.invite({
+        requestDelegate: {},
+        sessionDescriptionHandlerModifiers: modifiers
+      }))["catch"](function () {});
+    }
+    function terminateSession() {
+      if (!activeSession) {
+        return Promise.resolve();
+      }
+      if (typeof activeSession.bye === 'function') {
+        return Promise.resolve(activeSession.bye())["catch"](function () {});
+      }
+      if (typeof activeSession.dispose === 'function') {
+        return Promise.resolve(activeSession.dispose())["catch"](function () {});
+      }
+      return Promise.resolve();
+    }
+    var userAgent = new sip.UserAgent({
+      uri: sip.UserAgent.makeURI(signaling.sipUri),
+      displayName: signaling.displayName || '',
+      authorizationUsername: signaling.authorizationUser,
+      authorizationPassword: credential.value,
+      transportOptions: {
+        server: signaling.webSocketUrl
+      },
+      sessionDescriptionHandlerFactoryOptions: {
+        constraints: {
+          audio: true,
+          video: false
+        },
+        peerConnectionConfiguration: {
+          iceServers: ice.iceServers || [],
+          iceTransportPolicy: ice.iceTransportPolicy || 'all'
+        }
+      },
+      delegate: {
+        onInvite: function onInvite(invitation) {
+          wireSession(invitation);
+          Promise.resolve(invitation.accept({
+            sessionDescriptionHandlerOptions: {
+              constraints: {
+                audio: true,
+                video: false
+              }
+            }
+          })).then(function () {
+            attachPeerConnection(invitation);
+          })["catch"](function (error) {
+            context.showError(error && error.message ? error.message : String(error));
+          });
+        }
+      }
+    });
+    registerer = new sip.Registerer(userAgent, {
+      expires: Math.max(30, Math.floor((Date.parse(credential.expiresAtUtc) - Date.now()) / 1000))
+    });
+    return userAgent.start().then(function () {
+      return registerer.register();
+    }).then(function () {
+      return {
+        providerConfig: registrationConfig,
+        mediaCodecs: media.codecs || [],
+        handleCallState: function handleCallState(call) {
+          var stateName = normalizeState(call && call.state);
+          if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
+            return terminateSession();
+          }
+          setMicrophoneEnabled(stateName === 'Connected' && !call.isMuted);
+          if (stateName === 'OnHold') {
+            return requestHold(true);
+          }
+          if (stateName === 'Connected') {
+            return requestHold(false);
+          }
+          return Promise.resolve();
+        },
+        dispose: function dispose() {
+          if (disposed) {
+            return Promise.resolve();
+          }
+          disposed = true;
+          remoteSink.clear();
+          return terminateSession().then(function () {
+            return registerer ? registerer.unregister()["catch"](function () {}) : null;
+          }).then(function () {
+            return userAgent.stop()["catch"](function () {});
+          });
+        }
+      };
+    });
   }
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -138,6 +355,7 @@
     var strings = config.strings || {};
     var capabilities = config.capabilities || 0;
     var storageKey = (config.storageKey || 'telephony-soft-phone') + '-layout';
+    var mediaAdapters = createBrowserMediaAdapterRegistry(rootElement, config);
     var signalRFactory = options.signalRFactory || (typeof signalR !== 'undefined' ? signalR : null);
     var dom = {
       toggle: rootElement.querySelector('[data-telephony-toggle]'),
@@ -1811,7 +2029,6 @@
         context.startOAuth();
       }
     },
-    mediaAdapters: mediaAdapters,
     dial: function dial(number) {
       var instance = getInstance();
       if (instance) {

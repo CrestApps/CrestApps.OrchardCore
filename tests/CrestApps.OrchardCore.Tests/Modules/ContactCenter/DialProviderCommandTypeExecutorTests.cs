@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -352,9 +353,223 @@ public sealed class DialProviderCommandTypeExecutorTests
         Assert.Equal(ActivityStatus.Dialing, harness.Activity.Status);
     }
 
+    // ProjectSuccessAsync — call session hydration
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_HydratesProviderCallIdFromResult()
+    {
+        // Arrange
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = ContactCenterCallState.Planned };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-99",
+            ProviderName = "provider",
+        };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("call-99", harness.Session.ProviderCallId);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsSessionStateToRinging()
+    {
+        // Arrange
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = ContactCenterCallState.Planned };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1" };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ContactCenterCallState.Ringing, harness.Session.State);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsProviderNameFromResult()
+    {
+        // Arrange
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = ContactCenterCallState.Planned };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderName = "result-provider",
+        };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("result-provider", harness.Session.ProviderName);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsProviderNameFromCommandWhenResultProviderNameIsEmpty()
+    {
+        // Arrange
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = ContactCenterCallState.Planned };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderName = string.Empty,
+        };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("provider", harness.Session.ProviderName);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionAlreadyHasProviderCallId_DoesNotOverwriteExistingId()
+    {
+        // Arrange
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            State = ContactCenterCallState.Ringing,
+            ProviderCallId = "existing-call-id",
+        };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "new-call-id" };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("existing-call-id", harness.Session.ProviderCallId);
+        harness.CallSessionManager.Verify(
+            m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasDifferentProviderCallId_DoesNotRewriteInteractionOrSession()
+    {
+        // Arrange — session already bound to "call-old", result carries "call-new"
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            State = ContactCenterCallState.Ringing,
+            ProviderCallId = "call-old",
+        };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-new",
+            ProviderName = "provider",
+        };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert — the interaction must NOT be repointed at the new call id
+        Assert.True(
+            string.IsNullOrEmpty(harness.Interaction.ProviderInteractionId) ||
+            !string.Equals("call-new", harness.Interaction.ProviderInteractionId, StringComparison.Ordinal),
+            "Interaction.ProviderInteractionId must not be repointed when the session already owns a different call id.");
+
+        // Assert — the session's call id must remain unchanged
+        Assert.Equal("call-old", harness.Session.ProviderCallId);
+
+        // Assert — no mutation was persisted to the session
+        harness.CallSessionManager.Verify(
+            m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenResultHasNoProviderCallId_DoesNotUpdateSession()
+    {
+        // Arrange
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = ContactCenterCallState.Planned };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = string.Empty };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(string.IsNullOrEmpty(harness.Session.ProviderCallId));
+        harness.CallSessionManager.Verify(
+            m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenCallSessionManagerIsNull_DoesNotThrow()
+    {
+        // Arrange
+        var harness = CreateHarness();
+        var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1" };
+
+        // Act / Assert — no exception when callSessionManager is null
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_CallControlAuthorizationNowAuthorizes()
+    {
+        // Arrange
+        var agentId = "agent-1";
+        var userId = "user-1";
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            AgentId = agentId,
+            State = ContactCenterCallState.Planned,
+        };
+        var harness = CreateHarness(callSession: session);
+        var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-99", ProviderName = "provider" };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = agentId, UserId = userId });
+
+        var sessionManagerForAuth = new Mock<ICallSessionManager>();
+        sessionManagerForAuth
+            .Setup(m => m.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var authService = new CallControlAuthorizationService(
+            agentManager.Object,
+            sessionManagerForAuth.Object,
+            Mock.Of<ISupervisorQueueAuthorizationService>());
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        var authResult = await authService.AuthorizeAsync(
+            new CallControlAuthorizationContext
+            {
+                UserId = userId,
+                InteractionId = "interaction-1",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(authResult.Succeeded);
+    }
+
     private static TestHarness CreateHarness(
         bool canDispatch = true,
-        IList<IProviderCommandDispatchValidator> validators = null)
+        IList<IProviderCommandDispatchValidator> validators = null,
+        CallSession callSession = null)
     {
         var command = new ProviderCommand
         {
@@ -389,14 +604,29 @@ public sealed class DialProviderCommandTypeExecutorTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
         var actualValidators = validators ?? [validator.Object];
+
+        Mock<ICallSessionManager> callSessionManager = null;
+
+        if (callSession is not null)
+        {
+            callSessionManager = new Mock<ICallSessionManager>();
+            callSessionManager
+                .Setup(m => m.FindByInteractionIdAsync(command.InteractionId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(callSession);
+            callSessionManager
+                .Setup(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+                .Returns(ValueTask.CompletedTask);
+        }
+
         var executor = new DialProviderCommandTypeExecutor(
             actualValidators,
             router.Object,
             interactionManager.Object,
             activityManager.Object,
-            clock.Object);
+            clock.Object,
+            callSessionManager?.Object);
 
-        return new TestHarness(command, claim, interaction, activity, validator, router, executor);
+        return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
     }
 
     private sealed record TestHarness(
@@ -406,5 +636,7 @@ public sealed class DialProviderCommandTypeExecutorTests
         OmnichannelActivity Activity,
         Mock<IProviderCommandDispatchValidator> Validator,
         Mock<IVoiceContactCenterCallRouter> Router,
-        DialProviderCommandTypeExecutor Executor);
+        DialProviderCommandTypeExecutor Executor,
+        Mock<ICallSessionManager> CallSessionManager,
+        CallSession Session);
 }

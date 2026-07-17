@@ -67,4 +67,71 @@ public class AsteriskSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets the secure WebSocket URL used by browser SIP user agents.
+    /// </summary>
+    public string WebSocketUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SIP domain used to compose browser agent addresses of record.
+    /// </summary>
+    public string SipDomain { get; set; }
+
+    /// <summary>
+    /// Gets or sets the STUN/TURN URLs advertised to browser agents.
+    /// </summary>
+    public string TurnUrls { get; set; }
+
+    /// <summary>
+    /// Gets or sets the coturn REST shared secret.
+    /// </summary>
+    public string TurnSharedSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ICE transport policy sent to browsers.
+    /// </summary>
+    public string IceTransportPolicy { get; set; } = AsteriskConstants.DefaultIceTransportPolicy;
+
+    /// <summary>
+    /// Gets or sets the browser audio codec preference list.
+    /// </summary>
+    public string WebRtcCodecs { get; set; } = AsteriskConstants.DefaultWebRtcCodecs;
+
+    /// <summary>
+    /// Gets or sets the short-lived PJSIP credential lifetime, in minutes.
+    /// </summary>
+    public int PjsipCredentialLifetimeMinutes { get; set; } = AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+
+    /// <summary>
+    /// Gets or sets the PJSIP contact expiration, in seconds.
+    /// </summary>
+    public int PjsipContactExpirationSeconds { get; set; } = AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a TURN shared secret has already been saved.
+    /// </summary>
+    [BindNever]
+    public bool HasTurnSharedSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ADO.NET provider invariant name used for PJSIP Realtime writes.
+    /// </summary>
+    public string PjsipRealtimeProviderInvariantName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PJSIP Realtime connection string.
+    /// </summary>
+    public string PjsipRealtimeConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional PJSIP Realtime table prefix.
+    /// </summary>
+    public string PjsipRealtimeTablePrefix { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a PJSIP Realtime connection string has already been saved.
+    /// </summary>
+    [BindNever]
+    public bool HasPjsipRealtimeConnectionString { get; set; }
 }

@@ -41,6 +41,15 @@ The Asterisk provider currently advertises support for:
 Voicemail routing still depends on your dialplan design, but the provider can now expose the soft-phone
 voicemail button when you configure a voicemail dialplan target for the integration.
 
+:::note
+The Contact Center voice provider advertises the **server-side ACD** delivery model, but connecting a
+parked call to a browser-media agent requires a .NET-side ARI originate/bridge because WebRTC PJSIP
+endpoints are provisioned just in time per browser session and are not addressable from a static
+Asterisk queue or dialplan. That ARI originate/bridge is scheduled for a later wave, so the connect-to-agent
+operation currently **fails closed** (it returns a clear `agent_bridge_unavailable` failure) rather than
+reporting a false success for a call whose media was never bridged.
+:::
+
 ## Tenant-configured Asterisk settings
 
 Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab under **Settings → Communication → Telephony**. The Telephony settings UI creates that tab from the site-settings display driver, and the Asterisk editor itself only renders the provider fields inside the tab. You need the `Manage telephony settings` permission.
@@ -58,6 +67,17 @@ Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab unde
 | **Voicemail context** | Optional. The dialplan context Orchard continues a ringing call into when the agent chooses **Send to voicemail**. |
 | **Voicemail extension template** | Optional. Resolves the dialplan extension used for voicemail routing. It can reference provider-neutral call metadata such as `{voicemailRecipientUserName}`, `{voicemailRecipientUserId}`, `{calledAddress}`, or `{queueName}`. |
 | **Voicemail priority** | Optional. The dialplan priority to start at when the provider continues the call to voicemail. |
+| **SIP WebSocket URL** | Required for browser audio. The secure `wss://` endpoint exposed by Asterisk `chan_pjsip` for browser SIP user agents. |
+| **SIP domain** | Required for browser audio. Used to compose tenant/session-scoped browser SIP addresses of record. |
+| **ICE server URLs** | Optional STUN/TURN URLs sent to the browser. TURN URLs use coturn REST credentials when a shared secret is configured. |
+| **TURN shared secret** | Optional coturn REST shared secret. Stored encrypted and used to issue time-limited TURN credentials. |
+| **ICE transport policy** | Browser ICE transport policy. Use `all` for normal direct ICE or `relay` for forced-TURN validation. |
+| **Browser audio codecs** | Comma- or newline-delimited codec preference list, typically `opus,g722,ulaw`. |
+| **PJSIP credential lifetime (minutes)** | Short-lived browser SIP credential lifetime. Credentials are tenant-, session-, and expiry-bound. |
+| **PJSIP contact expiration (seconds)** | Asterisk registration contact expiration. Revocation also explicitly removes contacts and terminates existing dialogs; credential expiry alone is not treated as a dialog teardown. |
+| **PJSIP Realtime provider** | Required for browser audio. ADO.NET provider invariant name used to write Asterisk Realtime endpoint/auth/AOR rows. |
+| **PJSIP Realtime connection string** | Required for browser audio. Stored encrypted in tenant settings. The database must be the same source configured by Asterisk `sorcery.conf`/`extconfig.conf`. |
+| **PJSIP Realtime table prefix** | Optional prefix for `ps_endpoints`, `ps_auths`, and `ps_aors`. Because the prefix is concatenated into SQL table names, it must be a strict SQL identifier — only letters, digits, and underscores, optionally qualified with a single `schema.` component. Invalid prefixes are rejected when you save the settings, and the Realtime store refuses to run a query with an invalid stored prefix as defense-in-depth. |
 
 When you enable **Asterisk** and no default telephony provider is set yet, **Asterisk** becomes the default automatically. When you disable **Asterisk** while it is the default, the default provider is cleared and the soft phone is disabled until another provider is selected.
 
@@ -106,6 +126,16 @@ OrchardCore__CrestApps__Asterisk__Default__VoicemailPriority=1
 ```
 
 The provider becomes available only when `BaseUrl`, `UserName`, `Password`, and `ApplicationName` are all configured.
+
+## Browser WebRTC media
+
+The Asterisk adapter uses `chan_pjsip` WebRTC and a browser SIP user agent. Agent media flows directly between the browser and Asterisk over WSS, DTLS-SRTP, and ICE; Orchard/.NET does not relay agent RTP. The existing ARI External Media RTP/UDP adapter remains a separate development foundation for server-side media taps and AI scenarios.
+
+Browser audio is advertised only when the tenant or default provider has executable WebRTC settings: a `wss://` SIP WebSocket URL, SIP domain, codec list, positive PJSIP credential lifetime, positive contact expiration, and PJSIP Realtime provider/connection settings. Missing settings fail closed by making browser audio unavailable instead of crashing host startup.
+
+The credential lifecycle uses PJSIP Realtime rather than static pre-provisioning. ARI cannot create endpoint, auth, or AOR objects, and static pre-provisioning cannot bind every browser registration to a tenant, session, and expiry. Orchard issues short-lived PJSIP credentials through a scoped issuer, persists a durable per-tenant credential **lease** in the tenant's own YesSql store as the single source of truth for ownership and expiry, materializes endpoint/auth/AOR rows through the Realtime store seam, rotates by revoking the prior session credential, and cleans up expired or revoked registrations. The reference templates live under `src/Startup/CrestApps.Aspire.AppHost/Asterisk/pjsip-webrtc-realtime.conf.template` and `src/Startup/CrestApps.Aspire.AppHost/Coturn/turnserver-webrtc.conf.template`.
+
+Each credential is bound to an authoritative, server-owned media session. The issuer derives ownership from the authenticated user, generates the session id itself, and never trusts a caller-supplied identifier (such as an interaction id) to authorize issuance — an interaction id may still travel as non-authoritative metadata. Every issue, rotate, revoke, and cleanup state transition runs under a tenant-qualified `IDistributedLock`. Ownership, expiry, the per-user cap, and revocation are all resolved from the durable lease store, which is inherently isolated to the current tenant because each query runs through the tenant's own YesSql session — there is no `LIKE` prefix scan over the shared Realtime tables, so one tenant can never observe or delete another tenant's rows. Issuance writes the durable lease **first**, then the Realtime SIP row, then the cache, so a Realtime row can never exist without a lease the current tenant owns; if the Realtime write fails, the lease is marked revoked and cleanup reclaims any partial row by exact authorization user. The distributed cache is only a read-through performance cache: a cache miss is reconciled against the durable lease (expiry is read from the lease and is never inferred from a cache miss). Cleanup queries only the current tenant's expired or revoked leases and deletes each corresponding Realtime row by its exact authorization user. Authorization-user identifiers additionally incorporate a fixed-width stable hash of the raw tenant name so tenants that share one Realtime database and whose sanitized names would otherwise collide (for example `acme`, `acme-east`, and `Acme`) receive distinct identifier namespaces. Each authenticated user is capped at a small number of concurrent live browser credentials; issuing beyond the cap revokes the oldest session first so the newest browser session wins. Signing out of the soft phone (or terminating the agent session) revokes all of the user's live credentials immediately instead of waiting for natural expiry.
 
 ## How call control works
 

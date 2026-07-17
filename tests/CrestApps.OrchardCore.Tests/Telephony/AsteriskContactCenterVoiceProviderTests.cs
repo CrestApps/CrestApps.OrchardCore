@@ -24,6 +24,7 @@ public sealed class AsteriskContactCenterVoiceProviderTests
 
         // Assert
         Assert.Equal(ContactCenterVoiceProviderCapabilities.DialerDial, capabilities);
+        Assert.Equal(VoiceProviderDeliveryModel.ServerSideAcd, service.DeliveryModel);
         Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceTransferProvider>(service);
@@ -126,6 +127,26 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         Assert.False(result.Succeeded);
         Assert.True(result.OutcomeUnknown);
         Assert.Equal("dial_outcome_unknown", result.ErrorCode);
+        Assert.Equal(AsteriskConstants.ProviderTechnicalName, result.ProviderName);
+    }
+
+    [Fact]
+    public async Task ConnectToAgentAsync_FailsClosedUntilAriBridgeIsImplemented()
+    {
+        // Arrange
+        var resolver = new Mock<ITelephonyProviderResolver>();
+        var service = CreateService(resolver);
+
+        // Act
+        var result = await service.ConnectToAgentAsync(new ContactCenterConnectRequest
+        {
+            ProviderCallId = "call-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal("agent_bridge_unavailable", result.ErrorCode);
+        Assert.Equal("call-1", result.ProviderCallId);
         Assert.Equal(AsteriskConstants.ProviderTechnicalName, result.ProviderName);
     }
 

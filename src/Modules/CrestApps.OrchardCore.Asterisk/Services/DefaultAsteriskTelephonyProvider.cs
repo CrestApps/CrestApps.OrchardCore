@@ -40,6 +40,24 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
     public override TelephonyCapabilities Capabilities
         => GetCapabilities(_options.EndpointTemplate, AsteriskSettingsUtilities.HasVoicemailConfiguration(_options));
 
+    /// <inheritdoc/>
+    public override TelephonyAudioCapabilities AudioCapabilities
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_options)
+            ? TelephonyAudioCapabilities.Browser
+            : TelephonyAudioCapabilities.None;
+
+    /// <inheritdoc/>
+    public override TelephonyAudioMode ConfiguredAudioMode
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_options)
+            ? TelephonyAudioMode.Browser
+            : TelephonyAudioMode.None;
+
+    /// <inheritdoc/>
+    public override string BrowserMediaAdapterName
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_options)
+            ? AsteriskConstants.BrowserMediaAdapterName
+            : null;
+
     protected override string ProviderName
         => AsteriskConstants.DefaultProviderTechnicalName;
 
@@ -58,5 +76,16 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
             VoicemailContext = _options.VoicemailContext,
             VoicemailExtensionTemplate = _options.VoicemailExtensionTemplate,
             VoicemailPriority = _options.VoicemailPriority,
+            WebSocketUrl = _options.WebSocketUrl,
+            SipDomain = _options.SipDomain,
+            TurnUrls = _options.TurnUrls,
+            TurnSharedSecret = _options.TurnSharedSecret,
+            IceTransportPolicy = _options.IceTransportPolicy,
+            WebRtcCodecs = _options.WebRtcCodecs,
+            PjsipCredentialLifetimeMinutes = _options.PjsipCredentialLifetimeMinutes,
+            PjsipContactExpirationSeconds = _options.PjsipContactExpirationSeconds,
+            PjsipRealtimeProviderInvariantName = _options.PjsipRealtimeProviderInvariantName,
+            PjsipRealtimeConnectionString = _options.PjsipRealtimeConnectionString,
+            PjsipRealtimeTablePrefix = _options.PjsipRealtimeTablePrefix,
         });
 }

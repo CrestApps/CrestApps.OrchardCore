@@ -24,4 +24,30 @@ public sealed class TelephonyAudioModeResolverTests
         // Assert
         Assert.Equal(expected, result);
     }
+
+    [Fact]
+    public void Resolve_WhenAsteriskBrowserAdapterConfigured_ReturnsBrowser()
+    {
+        // Act
+        var result = TelephonyAudioModeResolver.Resolve(
+            TelephonyAudioCapabilities.Browser,
+            TelephonyAudioMode.Browser,
+            "sipjs");
+
+        // Assert
+        Assert.Equal(TelephonyAudioMode.Browser, result);
+    }
+
+    [Fact]
+    public void Resolve_WhenAsteriskBrowserAdapterMissing_FailsClosed()
+    {
+        // Act
+        var result = TelephonyAudioModeResolver.Resolve(
+            TelephonyAudioCapabilities.Browser,
+            TelephonyAudioMode.Browser,
+            null);
+
+        // Assert
+        Assert.Equal(TelephonyAudioMode.None, result);
+    }
 }

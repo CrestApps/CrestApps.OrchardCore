@@ -26,6 +26,11 @@ public sealed class ContactCenterDialRequest
     public string AgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the Orchard user identifier represented by the reserved agent.
+    /// </summary>
+    public string AgentUserId { get; set; }
+
+    /// <summary>
     /// Gets or sets the queue identifier the activity belongs to.
     /// </summary>
     public string QueueId { get; set; }

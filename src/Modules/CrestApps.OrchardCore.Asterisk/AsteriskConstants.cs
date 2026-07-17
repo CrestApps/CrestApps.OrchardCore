@@ -36,6 +36,31 @@ public static class AsteriskConstants
     public const int DefaultTimeoutSeconds = 30;
 
     /// <summary>
+    /// The browser media adapter name implemented by the Telephony soft-phone client for SIP.js.
+    /// </summary>
+    public const string BrowserMediaAdapterName = "sipjs";
+
+    /// <summary>
+    /// The default short-lived PJSIP credential lifetime, in minutes.
+    /// </summary>
+    public const int DefaultPjsipCredentialLifetimeMinutes = 15;
+
+    /// <summary>
+    /// The default PJSIP contact expiration, in seconds.
+    /// </summary>
+    public const int DefaultPjsipContactExpirationSeconds = 120;
+
+    /// <summary>
+    /// The default browser audio codec preference list.
+    /// </summary>
+    public const string DefaultWebRtcCodecs = "opus,g722,ulaw";
+
+    /// <summary>
+    /// The default ICE transport policy.
+    /// </summary>
+    public const string DefaultIceTransportPolicy = "all";
+
+    /// <summary>
     /// The media-session metadata key containing the host or IP address Asterisk can reach for RTP.
     /// </summary>
     public const string ExternalMediaHostMetadataKey = "externalHost";

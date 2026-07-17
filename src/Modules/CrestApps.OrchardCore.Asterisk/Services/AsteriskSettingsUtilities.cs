@@ -25,6 +25,25 @@ internal static class AsteriskSettingsUtilities
         settings.VoicemailPriority = settings.VoicemailPriority > 0
             ? settings.VoicemailPriority
             : 1;
+        settings.WebSocketUrl = settings.WebSocketUrl?.Trim();
+        settings.SipDomain = settings.SipDomain?.Trim();
+        settings.TurnUrls = settings.TurnUrls?.Trim();
+        settings.TurnSharedSecret = settings.TurnSharedSecret?.Trim();
+        settings.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy)
+            ? AsteriskConstants.DefaultIceTransportPolicy
+            : settings.IceTransportPolicy.Trim();
+        settings.WebRtcCodecs = string.IsNullOrWhiteSpace(settings.WebRtcCodecs)
+            ? AsteriskConstants.DefaultWebRtcCodecs
+            : settings.WebRtcCodecs.Trim();
+        settings.PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes > 0
+            ? settings.PjsipCredentialLifetimeMinutes
+            : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+        settings.PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds > 0
+            ? settings.PjsipContactExpirationSeconds
+            : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+        settings.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName?.Trim();
+        settings.PjsipRealtimeConnectionString = settings.PjsipRealtimeConnectionString?.Trim();
+        settings.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix?.Trim();
     }
 
     public static void ApplyDefaults(AsteriskResolvedSettings settings)
@@ -47,6 +66,25 @@ internal static class AsteriskSettingsUtilities
         settings.VoicemailPriority = settings.VoicemailPriority > 0
             ? settings.VoicemailPriority
             : 1;
+        settings.WebSocketUrl = settings.WebSocketUrl?.Trim();
+        settings.SipDomain = settings.SipDomain?.Trim();
+        settings.TurnUrls = settings.TurnUrls?.Trim();
+        settings.TurnSharedSecret = settings.TurnSharedSecret?.Trim();
+        settings.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy)
+            ? AsteriskConstants.DefaultIceTransportPolicy
+            : settings.IceTransportPolicy.Trim();
+        settings.WebRtcCodecs = string.IsNullOrWhiteSpace(settings.WebRtcCodecs)
+            ? AsteriskConstants.DefaultWebRtcCodecs
+            : settings.WebRtcCodecs.Trim();
+        settings.PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes > 0
+            ? settings.PjsipCredentialLifetimeMinutes
+            : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+        settings.PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds > 0
+            ? settings.PjsipContactExpirationSeconds
+            : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+        settings.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName?.Trim();
+        settings.PjsipRealtimeConnectionString = settings.PjsipRealtimeConnectionString?.Trim();
+        settings.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix?.Trim();
     }
 
     public static bool HasRequiredConfiguration(AsteriskConnectionSettings settings, string password)
@@ -62,6 +100,33 @@ internal static class AsteriskSettingsUtilities
             !string.IsNullOrWhiteSpace(settings.UserName) &&
             !string.IsNullOrWhiteSpace(settings.Password) &&
             !string.IsNullOrWhiteSpace(settings.ApplicationName);
+
+    public static bool HasRequiredWebRtcConfiguration(AsteriskConnectionSettings settings)
+        => settings is not null &&
+            (settings is not AsteriskSettings tenantSettings || tenantSettings.IsEnabled) &&
+            (settings is not DefaultAsteriskOptions defaultOptions || defaultOptions.IsEnabled) &&
+            !string.IsNullOrWhiteSpace(settings.WebSocketUrl) &&
+            Uri.TryCreate(settings.WebSocketUrl, UriKind.Absolute, out var webSocketUri) &&
+            string.Equals(webSocketUri.Scheme, "wss", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(settings.SipDomain) &&
+            ParseDelimitedValues(settings.WebRtcCodecs).Count > 0 &&
+            settings.PjsipCredentialLifetimeMinutes > 0 &&
+            settings.PjsipContactExpirationSeconds > 0 &&
+            !string.IsNullOrWhiteSpace(settings.PjsipRealtimeProviderInvariantName) &&
+            !string.IsNullOrWhiteSpace(settings.PjsipRealtimeConnectionString);
+
+    public static bool HasRequiredWebRtcConfiguration(AsteriskResolvedSettings settings)
+        => settings is not null &&
+            settings.IsEnabled &&
+            !string.IsNullOrWhiteSpace(settings.WebSocketUrl) &&
+            Uri.TryCreate(settings.WebSocketUrl, UriKind.Absolute, out var webSocketUri) &&
+            string.Equals(webSocketUri.Scheme, "wss", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(settings.SipDomain) &&
+            ParseDelimitedValues(settings.WebRtcCodecs).Count > 0 &&
+            settings.PjsipCredentialLifetimeMinutes > 0 &&
+            settings.PjsipContactExpirationSeconds > 0 &&
+            !string.IsNullOrWhiteSpace(settings.PjsipRealtimeProviderInvariantName) &&
+            !string.IsNullOrWhiteSpace(settings.PjsipRealtimeConnectionString);
 
     public static string ResolveEndpoint(string endpointTemplate, string destination)
     {
@@ -216,4 +281,17 @@ internal static class AsteriskSettingsUtilities
             !string.IsNullOrWhiteSpace(settings.VoicemailContext) &&
             !string.IsNullOrWhiteSpace(settings.VoicemailExtensionTemplate) &&
             settings.VoicemailPriority > 0;
+
+    public static IReadOnlyList<string> ParseDelimitedValues(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return value.Split([',', '\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(entry => !string.IsNullOrWhiteSpace(entry))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 }

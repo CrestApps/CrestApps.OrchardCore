@@ -13,6 +13,7 @@ internal sealed class ContactCenterHubScopeContext
         IAuthorizationService authorizationService,
         IAgentSessionService sessionService,
         IAgentPresenceManager presenceManager,
+        ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
@@ -21,6 +22,7 @@ internal sealed class ContactCenterHubScopeContext
         AuthorizationService = authorizationService;
         SessionService = sessionService;
         PresenceManager = presenceManager;
+        SupervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
         UserManager = userManager;
         DisplayNameProvider = displayNameProvider;
         QueuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
@@ -32,6 +34,8 @@ internal sealed class ContactCenterHubScopeContext
     public IAgentSessionService SessionService { get; }
 
     public IAgentPresenceManager PresenceManager { get; }
+
+    public ISupervisorQueueAuthorizationService SupervisorQueueAuthorizationService { get; }
 
     public UserManager<IUser> UserManager { get; }
 

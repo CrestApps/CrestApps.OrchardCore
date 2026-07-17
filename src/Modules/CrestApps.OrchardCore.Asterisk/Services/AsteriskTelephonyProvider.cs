@@ -50,6 +50,24 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
             _siteService.GetSettings<AsteriskSettings>()?.EndpointTemplate,
             AsteriskSettingsUtilities.HasVoicemailConfiguration(_siteService.GetSettings<AsteriskSettings>()));
 
+    /// <inheritdoc/>
+    public override TelephonyAudioCapabilities AudioCapabilities
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_siteService.GetSettings<AsteriskSettings>())
+            ? TelephonyAudioCapabilities.Browser
+            : TelephonyAudioCapabilities.None;
+
+    /// <inheritdoc/>
+    public override TelephonyAudioMode ConfiguredAudioMode
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_siteService.GetSettings<AsteriskSettings>())
+            ? TelephonyAudioMode.Browser
+            : TelephonyAudioMode.None;
+
+    /// <inheritdoc/>
+    public override string BrowserMediaAdapterName
+        => AsteriskSettingsUtilities.HasRequiredWebRtcConfiguration(_siteService.GetSettings<AsteriskSettings>())
+            ? AsteriskConstants.BrowserMediaAdapterName
+            : null;
+
     protected override string ProviderName
         => AsteriskConstants.ProviderTechnicalName;
 
@@ -70,6 +88,17 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
             VoicemailContext = settings.VoicemailContext,
             VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate,
             VoicemailPriority = settings.VoicemailPriority,
+            WebSocketUrl = settings.WebSocketUrl,
+            SipDomain = settings.SipDomain,
+            TurnUrls = settings.TurnUrls,
+            TurnSharedSecret = UnprotectPassword(settings.TurnSharedSecret),
+            IceTransportPolicy = settings.IceTransportPolicy,
+            WebRtcCodecs = settings.WebRtcCodecs,
+            PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes,
+            PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds,
+            PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName,
+            PjsipRealtimeConnectionString = settings.PjsipRealtimeConnectionString,
+            PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix,
         };
 
         AsteriskSettingsUtilities.ApplyDefaults(new AsteriskConnectionSettingsAdapter(resolved));
@@ -157,6 +186,72 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         {
             get => _settings.VoicemailPriority;
             set => _settings.VoicemailPriority = value;
+        }
+
+        public override string WebSocketUrl
+        {
+            get => _settings.WebSocketUrl;
+            set => _settings.WebSocketUrl = value;
+        }
+
+        public override string SipDomain
+        {
+            get => _settings.SipDomain;
+            set => _settings.SipDomain = value;
+        }
+
+        public override string TurnUrls
+        {
+            get => _settings.TurnUrls;
+            set => _settings.TurnUrls = value;
+        }
+
+        public override string TurnSharedSecret
+        {
+            get => _settings.TurnSharedSecret;
+            set => _settings.TurnSharedSecret = value;
+        }
+
+        public override string IceTransportPolicy
+        {
+            get => _settings.IceTransportPolicy;
+            set => _settings.IceTransportPolicy = value;
+        }
+
+        public override string WebRtcCodecs
+        {
+            get => _settings.WebRtcCodecs;
+            set => _settings.WebRtcCodecs = value;
+        }
+
+        public override int PjsipCredentialLifetimeMinutes
+        {
+            get => _settings.PjsipCredentialLifetimeMinutes;
+            set => _settings.PjsipCredentialLifetimeMinutes = value;
+        }
+
+        public override int PjsipContactExpirationSeconds
+        {
+            get => _settings.PjsipContactExpirationSeconds;
+            set => _settings.PjsipContactExpirationSeconds = value;
+        }
+
+        public override string PjsipRealtimeProviderInvariantName
+        {
+            get => _settings.PjsipRealtimeProviderInvariantName;
+            set => _settings.PjsipRealtimeProviderInvariantName = value;
+        }
+
+        public override string PjsipRealtimeConnectionString
+        {
+            get => _settings.PjsipRealtimeConnectionString;
+            set => _settings.PjsipRealtimeConnectionString = value;
+        }
+
+        public override string PjsipRealtimeTablePrefix
+        {
+            get => _settings.PjsipRealtimeTablePrefix;
+            set => _settings.PjsipRealtimeTablePrefix = value;
         }
     }
 }

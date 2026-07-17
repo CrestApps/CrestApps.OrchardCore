@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
@@ -28,6 +30,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     private readonly ITelephonyService _telephonyService;
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
 
@@ -40,18 +43,21 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     /// <param name="callSessionManager">The manager used to load and update the call session projection.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp UTC projections.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService = null)
     {
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
+        _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
         _clock = clock;
     }
@@ -100,7 +106,21 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             return false;
         }
 
-        return true;
+        if (_callControlAuthorizationService is null)
+        {
+            return true;
+        }
+
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            UserId = request.AgentUserId,
+            Verb = CallControlVerb.Accept,
+            InteractionId = request.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+
+        return authorization.Succeeded;
     }
 
     /// <inheritdoc/>
@@ -134,6 +154,29 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         }
 
         var provider = _voiceProviderResolver.Get(command.ProviderName);
+        if (_callControlAuthorizationService is not null)
+        {
+            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            {
+                UserId = request.AgentUserId,
+                Verb = CallControlVerb.Accept,
+                InteractionId = request.InteractionId,
+                ProviderName = command.ProviderName,
+                ProviderCallId = request.ProviderCallId,
+            }, cancellationToken);
+
+            if (!authorization.Succeeded)
+            {
+                return new ContactCenterVoiceProviderResult
+                {
+                    Succeeded = false,
+                    OutcomeUnknown = true,
+                    ProviderName = command.ProviderName,
+                    ProviderCallId = request.ProviderCallId,
+                    ErrorMessage = authorization.FailureReason,
+                };
+            }
+        }
 
         if (provider is IContactCenterVoiceCallControlProvider callControlProvider)
         {

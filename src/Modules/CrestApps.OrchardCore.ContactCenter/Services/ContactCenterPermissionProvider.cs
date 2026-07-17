@@ -21,6 +21,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageDialer,
         ContactCenterPermissions.SignIntoQueues,
         ContactCenterPermissions.MonitorContactCenter,
+        ContactCenterPermissions.TransferExternally,
         ContactCenterPermissions.ViewReports,
     ];
 
@@ -49,6 +50,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                 [
                     ContactCenterPermissions.ViewInteractions,
                     ContactCenterPermissions.MonitorContactCenter,
+                    ContactCenterPermissions.TransferExternally,
                     ContactCenterPermissions.ViewReports,
                 ],
             },

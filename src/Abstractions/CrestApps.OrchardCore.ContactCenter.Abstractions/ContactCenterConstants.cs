@@ -197,6 +197,19 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains site-settings configuration identifiers used by the Contact Center module set.
+    /// </summary>
+    public static class Settings
+    {
+        /// <summary>
+        /// The site settings group identifier used for Contact Center administrative configuration.
+        /// Every Contact Center settings display driver must use this group identifier so all
+        /// Contact Center settings appear together on the same settings screen.
+        /// </summary>
+        public const string GroupId = "contactcenter";
+    }
+
+    /// <summary>
     /// Contains stable metadata keys written to call sessions and interactions for provider-reported telephony details.
     /// </summary>
     public static class TelephonyMetadata
@@ -252,6 +265,11 @@ public static class ContactCenterConstants
         /// Raised when an interaction is transferred.
         /// </summary>
         public const string InteractionTransferred = "InteractionTransferred";
+
+        /// <summary>
+        /// Raised when an interaction transfer is denied by authorization or destination policy.
+        /// </summary>
+        public const string InteractionTransferDenied = "InteractionTransferDenied";
 
         /// <summary>
         /// Raised when the communication session for an interaction ends.

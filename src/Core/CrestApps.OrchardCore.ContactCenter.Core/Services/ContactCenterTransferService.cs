@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -13,6 +15,8 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     private readonly IInteractionManager _interactionManager;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
+    private readonly ITransferDestinationResolver _transferDestinationResolver;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IClock _clock;
@@ -26,17 +30,23 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="clock">The clock used to stamp transfer times.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
+    /// <param name="transferDestinationResolver">The typed transfer destination resolver.</param>
     public ContactCenterTransferService(
         IInteractionManager interactionManager,
         IActivityQueueService queueService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
-        IClock clock)
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService = null,
+        ITransferDestinationResolver transferDestinationResolver = null)
     {
         _interactionManager = interactionManager;
         _queueService = queueService;
         _voiceProviderResolver = voiceProviderResolver;
+        _callControlAuthorizationService = callControlAuthorizationService;
+        _transferDestinationResolver = transferDestinationResolver;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
         _clock = clock;
@@ -57,6 +67,11 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Failure("A transfer requires a destination.");
         }
 
+        if (_callControlAuthorizationService is not null && string.IsNullOrEmpty(request.InitiatedByUserId))
+        {
+            return TransferResult.Failure("The requested call is not available.");
+        }
+
         var interaction = await _interactionManager.FindByIdAsync(request.InteractionId, cancellationToken);
 
         if (interaction is null)
@@ -64,11 +79,43 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Failure("The interaction could not be found.");
         }
 
+        var providerCallId = interaction.ProviderInteractionId;
+
+        if (_callControlAuthorizationService is not null)
+        {
+            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            {
+                Principal = request.Principal,
+                UserId = request.InitiatedByUserId,
+                Verb = CallControlVerb.Transfer,
+                InteractionId = interaction.ItemId,
+                ProviderName = interaction.ProviderName,
+            }, cancellationToken);
+
+            if (!authorization.Succeeded)
+            {
+                return TransferResult.Failure(authorization.FailureReason);
+            }
+
+            providerCallId = authorization.ProviderCallId;
+        }
+
+        var destination = _transferDestinationResolver is null
+            ? TransferDestinationResolutionResult.Success(request.TargetType, request.TargetId)
+            : await _transferDestinationResolver.ResolveAsync(request, request.Principal, cancellationToken);
+
+        if (!destination.Succeeded)
+        {
+            await PublishTransferDeniedAsync(request, interaction, destination.FailureReason, cancellationToken);
+
+            return TransferResult.Failure(destination.FailureReason);
+        }
+
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
 
         if (provider is not IContactCenterVoiceTransferProvider transferProvider ||
             !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.CallTransfer) ||
-            string.IsNullOrEmpty(interaction.ProviderInteractionId))
+            string.IsNullOrEmpty(providerCallId))
         {
             return TransferResult.Failure("The voice provider does not support call transfer.");
         }
@@ -79,10 +126,10 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
                 transferProvider.TransferAsync(new ContactCenterVoiceTransferRequest
                 {
                     InteractionId = interaction.ItemId,
-                    ProviderCallId = interaction.ProviderInteractionId,
+                    ProviderCallId = providerCallId,
                     TransferType = request.Type,
-                    TargetType = request.TargetType,
-                    Target = request.TargetId,
+                    TargetType = destination.TargetType,
+                    Target = destination.ResolvedTarget,
                 }, commandCancellationToken));
 
             if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
@@ -95,12 +142,12 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             var entry = new InteractionTransferHistoryEntry
             {
                 FromParticipantId = request.InitiatedByAgentId ?? interaction.AgentId,
-                ToParticipantId = request.TargetId,
-                TargetType = request.TargetType.ToString(),
+                ToParticipantId = destination.ResolvedTarget,
+                TargetType = destination.TargetType.ToString(),
                 RequestedUtc = now,
             };
 
-            var reason = await ApplyTargetAsync(request, interaction, CancellationToken.None);
+            var reason = await ApplyTargetAsync(request, interaction, destination, CancellationToken.None);
 
             entry.CompletedUtc = now;
             entry.Result = reason;
@@ -135,14 +182,18 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         }
     }
 
-    private async Task<string> ApplyTargetAsync(TransferRequest request, Interaction interaction, CancellationToken cancellationToken)
+    private async Task<string> ApplyTargetAsync(
+        TransferRequest request,
+        Interaction interaction,
+        TransferDestinationResolutionResult destination,
+        CancellationToken cancellationToken)
     {
-        switch (request.TargetType)
+        switch (destination.TargetType)
         {
             case InteractionTransferTargetType.Queue:
                 if (!string.IsNullOrEmpty(interaction.ActivityItemId))
                 {
-                    await _queueService.EnqueueAsync(interaction.ActivityItemId, request.TargetId, priority: null, cancellationToken);
+                    await _queueService.EnqueueAsync(interaction.ActivityItemId, destination.ResolvedTarget, priority: null, cancellationToken);
 
                     return "Re-queued to the target queue.";
                 }
@@ -157,5 +208,30 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             default:
                 return "Transfer requested.";
         }
+    }
+
+    private Task PublishTransferDeniedAsync(
+        TransferRequest request,
+        Interaction interaction,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.InteractionTransferDenied,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(Interaction),
+            AggregateId = interaction.ItemId,
+            ActorId = request.InitiatedByAgentId ?? interaction.AgentId,
+            SourceComponent = ContactCenterConstants.Components.Interactions,
+        };
+
+        interactionEvent.SetData(new Dictionary<string, string>
+        {
+            ["targetType"] = request.TargetType.ToString(),
+            ["reason"] = reason ?? string.Empty,
+        });
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 }

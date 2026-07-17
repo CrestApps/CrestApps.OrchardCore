@@ -58,6 +58,11 @@ public static class ContactCenterPermissions
     public static readonly Permission MonitorContactCenter = new("MonitorContactCenter", "Monitor the Contact Center in real time", [ManageContactCenter]);
 
     /// <summary>
+    /// Grants permission to transfer live interactions to approved external destinations.
+    /// </summary>
+    public static readonly Permission TransferExternally = new("ContactCenterTransferExternally", "Transfer Contact Center calls externally", [MonitorContactCenter, ManageContactCenter]);
+
+    /// <summary>
     /// Grants read-only access to the Contact Center historical reports and their exports.
     /// </summary>
     public static readonly Permission ViewReports = new("ViewContactCenterReports", "View Contact Center reports", [MonitorContactCenter, ManageContactCenter]);

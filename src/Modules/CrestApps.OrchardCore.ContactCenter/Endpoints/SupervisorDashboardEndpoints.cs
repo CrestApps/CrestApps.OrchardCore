@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -43,6 +46,7 @@ internal static class SupervisorDashboardEndpoints
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
+        ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
@@ -63,9 +67,27 @@ internal static class SupervisorDashboardEndpoints
         var agents = await ListAgentsAsync(agentManager, httpContext.RequestAborted);
         var queues = await queueManager.ListEnabledAsync(httpContext.RequestAborted);
         var monitoringService = monitoringServices.FirstOrDefault();
+        var supervisorId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var authorizedQueueIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (string.IsNullOrEmpty(supervisorId))
+        {
+            return TypedResults.Forbid();
+        }
 
         foreach (var queue in queues)
         {
+            if (!await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+                httpContext.User,
+                supervisorId,
+                queue.ItemId,
+                httpContext.RequestAborted))
+            {
+                continue;
+            }
+
+            authorizedQueueIds.Add(queue.ItemId);
+
             var waitingCount = await queueItemManager.CountWaitingAsync(queue.ItemId, httpContext.RequestAborted);
             var longestWaiting = await queueItemManager.FindLongestWaitingAsync(queue.ItemId, httpContext.RequestAborted);
             var signedInAgents = agents
@@ -100,9 +122,22 @@ internal static class SupervisorDashboardEndpoints
 
         foreach (var agent in agents)
         {
-            var activeInteractions = await interactionManager.CountActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
+            if (!agent.QueueIds.Any(authorizedQueueIds.Contains))
+            {
+                continue;
+            }
+
             var activeInteraction = await interactionManager.FindActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
-            var availableMonitoringModes = activeInteraction is null || monitoringService is null
+            var canMonitorActiveInteraction = activeInteraction is not null &&
+                await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+                    httpContext.User,
+                    supervisorId,
+                    activeInteraction.QueueId,
+                    httpContext.RequestAborted);
+            var activeInteractions = canMonitorActiveInteraction
+                ? await interactionManager.CountActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted)
+                : 0;
+            var availableMonitoringModes = activeInteraction is null || monitoringService is null || !canMonitorActiveInteraction
                 ? []
                 : await monitoringService.GetAvailableModesAsync(activeInteraction.ItemId, httpContext.RequestAborted);
 
@@ -115,7 +150,7 @@ internal static class SupervisorDashboardEndpoints
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
                 ActiveInteractions = activeInteractions,
-                ActiveInteractionId = activeInteraction?.ItemId,
+                ActiveInteractionId = canMonitorActiveInteraction ? activeInteraction?.ItemId : null,
                 AvailableMonitoringModes = availableMonitoringModes
                     .Select(mode => mode.ToString())
                     .ToArray(),
@@ -156,6 +191,8 @@ internal static class SupervisorDashboardEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
+        IInteractionManager interactionManager,
+        ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -187,7 +224,24 @@ internal static class SupervisorDashboardEndpoints
             return TypedResults.Forbid();
         }
 
-        var result = await monitoringService.EngageAsync(request.InteractionId, supervisorId, request.Mode, httpContext.RequestAborted);
+        var interaction = await interactionManager.FindByIdAsync(request.InteractionId, httpContext.RequestAborted);
+
+        if (interaction is null ||
+            !await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+                httpContext.User,
+                supervisorId,
+                interaction.QueueId,
+                httpContext.RequestAborted))
+        {
+            return TypedResults.NotFound();
+        }
+
+        var result = await monitoringService.EngageAsync(
+            request.InteractionId,
+            supervisorId,
+            httpContext.User,
+            request.Mode,
+            httpContext.RequestAborted);
 
         return TypedResults.Ok(new
         {

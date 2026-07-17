@@ -15,7 +15,14 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
     public void Configure_RegistersTenantAsteriskProvider_WithEnabledStateFromSettings(bool enabled)
     {
         // Arrange
-        var siteService = SiteServiceFactory.Create(new AsteriskSettings { IsEnabled = enabled });
+        var siteService = SiteServiceFactory.Create(new AsteriskSettings
+        {
+            IsEnabled = enabled,
+            BaseUrl = "http://localhost:8088/ari/",
+            UserName = "ari-user",
+            Password = "protected-password",
+            ApplicationName = "crestapps-telephony",
+        });
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
             Options.Create(new DefaultAsteriskOptions()));
@@ -30,6 +37,23 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
         var typeOptions = options.Providers[AsteriskConstants.ProviderTechnicalName];
         Assert.Equal(typeof(AsteriskTelephonyProvider), typeOptions.Type);
         Assert.Equal(enabled, typeOptions.IsEnabled);
+    }
+
+    [Fact]
+    public void Configure_WhenTenantAsteriskSettingsAreIncomplete_DisablesTenantProvider()
+    {
+        // Arrange
+        var siteService = SiteServiceFactory.Create(new AsteriskSettings { IsEnabled = true });
+        var configuration = new AsteriskProviderOptionsConfigurations(
+            siteService,
+            Options.Create(new DefaultAsteriskOptions()));
+        var options = new TelephonyProviderOptions();
+
+        // Act
+        configuration.Configure(options);
+
+        // Assert
+        Assert.False(options.Providers[AsteriskConstants.ProviderTechnicalName].IsEnabled);
     }
 
     [Fact]

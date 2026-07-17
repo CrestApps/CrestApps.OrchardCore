@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
@@ -26,6 +28,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
     private readonly ITelephonyService _telephonyService;
     private readonly IInteractionManager _interactionManager;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterEventPublisher _publisher;
@@ -40,16 +43,19 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// <param name="activityManager">The CRM activity manager used to restore live work after a definitive action failure.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp projections.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     protected ProviderCallActionCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
         IActivityQueueService queueService,
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService = null)
     {
         _telephonyService = telephonyServices.FirstOrDefault();
         _interactionManager = interactionManager;
+        _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
         _activityManager = activityManager;
         _publisher = publisher;
@@ -72,7 +78,9 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         var request = DeserializeRequest(command.RequestPayload);
 
-        if (request is null || string.IsNullOrWhiteSpace(request.ProviderCallId) || string.IsNullOrWhiteSpace(command.InteractionId))
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.ProviderCallId) ||
+            string.IsNullOrWhiteSpace(command.InteractionId))
         {
             return false;
         }
@@ -90,7 +98,28 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return false;
         }
 
-        return true;
+        if (_callControlAuthorizationService is null)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.AgentUserId))
+        {
+            return false;
+        }
+
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            UserId = request.AgentUserId,
+            Verb = CommandType == ProviderCommandType.SendToVoicemail
+                ? CallControlVerb.Voicemail
+                : CallControlVerb.Decline,
+            InteractionId = command.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+
+        return authorization.Succeeded;
     }
 
     /// <inheritdoc/>
@@ -104,7 +133,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         var request = DeserializeRequest(command.RequestPayload);
 
-        if (request is null || string.IsNullOrWhiteSpace(request.ProviderCallId))
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.ProviderCallId))
         {
             return CreateUnknownResult(command, request?.ProviderCallId, "invalid_request", "The provider call action request could not be deserialized.");
         }
@@ -114,9 +144,37 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("unavailable"), "No telephony service is registered.");
         }
 
+        var resolvedProviderCallId = request.ProviderCallId;
+
+        if (_callControlAuthorizationService is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.AgentUserId))
+            {
+                return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), "The requested call is not available.");
+            }
+
+            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            {
+                UserId = request.AgentUserId,
+                Verb = CommandType == ProviderCommandType.SendToVoicemail
+                    ? CallControlVerb.Voicemail
+                    : CallControlVerb.Decline,
+                InteractionId = command.InteractionId,
+                ProviderName = command.ProviderName,
+                ProviderCallId = request.ProviderCallId,
+            }, cancellationToken);
+
+            if (!authorization.Succeeded)
+            {
+                return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), authorization.FailureReason);
+            }
+
+            resolvedProviderCallId = authorization.ProviderCallId;
+        }
+
         var call = new CallReference
         {
-            CallId = request.ProviderCallId,
+            CallId = resolvedProviderCallId,
             Metadata = NormalizeMetadata(request.Metadata),
         };
 

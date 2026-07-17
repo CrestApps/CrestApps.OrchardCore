@@ -22,6 +22,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IDialerAttemptCompensationService _compensationService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IAgentProfileManager _agentManager;
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -36,6 +37,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="compensationService">The service used to release failed or suppressed attempts.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
@@ -47,6 +49,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IDialerAttemptCompensationService compensationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IAgentProfileManager agentManager,
         IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterEventPublisher publisher,
         IContactCenterScopeExecutor scopeExecutor,
@@ -58,6 +61,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _compensationService = compensationService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _agentManager = agentManager;
         _voiceCallRouter = voiceCallRouter;
         _publisher = publisher;
         _scopeExecutor = scopeExecutor;
@@ -93,6 +97,18 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return false;
         }
 
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+        if (agent is null || string.IsNullOrWhiteSpace(agent.UserId))
+        {
+            _logger.LogWarning(
+                "The dialer attempt for activity '{ActivityItemId}' failed closed because reserved agent '{AgentId}' could not be resolved to an Orchard user.",
+                OperationalLogRedactor.Pseudonymize(reservation.ActivityItemId, OperationalLogIdentifierCategory.Activity),
+                OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent));
+
+            return false;
+        }
+
         var acceptedReservation = await _reservationService.AcceptAsync(reservation.ItemId, cancellationToken);
 
         if (acceptedReservation is null)
@@ -116,6 +132,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             InteractionId = interaction.ItemId,
             CommandId = interaction.ItemId,
             AgentId = reservation.AgentId,
+            AgentUserId = agent.UserId,
             QueueId = profile.QueueId,
             CampaignId = profile.CampaignId,
             Destination = activity.PreferredDestination,

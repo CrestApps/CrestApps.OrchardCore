@@ -11,9 +11,24 @@ public sealed class ProviderCallActionCommandRequest
     public string ActivityItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the Contact Center interaction identifier.
+    /// </summary>
+    public string InteractionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the queue identifier that owned the unanswered offer.
     /// </summary>
     public string QueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assigned agent profile identifier.
+    /// </summary>
+    public string AgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Orchard user identifier represented by the assigned agent profile.
+    /// </summary>
+    public string AgentUserId { get; set; }
 
     /// <summary>
     /// Gets or sets the provider call identifier.

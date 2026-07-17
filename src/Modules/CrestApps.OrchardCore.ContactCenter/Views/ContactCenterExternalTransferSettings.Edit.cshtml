@@ -1,0 +1,122 @@
+@model ContactCenterExternalTransferSettingsViewModel
+
+<p class="alert alert-info">
+    @T["Approved external transfer destinations are resolved exclusively server-side. Callers supply only a destination identifier; the canonical phone number is always taken from this catalog. Only enabled entries are reachable."]
+</p>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Approved destinations"]</label>
+    <div class="ocat-end">
+        <table class="table table-sm align-middle" id="cc-ext-dest-table">
+            <thead>
+                <tr>
+                    <th>@T["Display name"]</th>
+                    <th>@T["E.164 address"]</th>
+                    <th>@T["Identifier"]</th>
+                    <th>@T["Enabled"]</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cc-ext-dest-tbody">
+                @for (var i = 0; i < Model.Destinations.Count; i++)
+                {
+                    <tr class="cc-dest-row">
+                        <td>
+                            <input type="hidden" asp-for="Destinations[i].Id" />
+                            <input asp-for="Destinations[i].DisplayName"
+                                   class="form-control form-control-sm"
+                                   placeholder="@T["Display name"]" />
+                            <span asp-validation-for="Destinations[i].DisplayName" class="text-danger"></span>
+                        </td>
+                        <td>
+                            <input asp-for="Destinations[i].E164Address"
+                                   class="form-control form-control-sm"
+                                   placeholder="+15551234567"
+                                   autocomplete="off" />
+                            <span asp-validation-for="Destinations[i].E164Address" class="text-danger"></span>
+                        </td>
+                        <td>
+                            <code class="text-muted small">@Model.Destinations[i].Id</code>
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" asp-for="Destinations[i].Enabled" class="form-check-input" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger cc-remove-dest"
+                                    title="@T["Remove destination"]">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <button type="button" id="cc-add-dest" class="btn btn-sm btn-outline-secondary mt-1">
+            <i class="fa-solid fa-plus"></i> @T["Add destination"]
+        </button>
+
+        <span class="hint d-block mt-2">
+            @T["Each destination must have a unique E.164 address (e.g. +15551234567) that begins with + and contains only digits. Emergency numbers (911, 112, 999) and premium-rate numbers are not permitted. The identifier shown for each entry is the opaque key callers supply to request the transfer."]
+        </span>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var tbody = document.getElementById('cc-ext-dest-tbody');
+        var addBtn = document.getElementById('cc-add-dest');
+        var rowIndex = @Model.Destinations.Count;
+
+        function renumberRows() {
+            var rows = tbody.querySelectorAll('tr.cc-dest-row');
+            rows.forEach(function (row, idx) {
+                row.querySelectorAll('[name]').forEach(function (el) {
+                    el.name = el.name.replace(/Destinations\[\d+\]/, 'Destinations[' + idx + ']');
+                    el.id = el.id.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
+                    if (el.htmlFor) {
+                        el.htmlFor = el.htmlFor.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
+                    }
+                });
+            });
+            rowIndex = rows.length;
+        }
+
+        addBtn.addEventListener('click', function () {
+            var idx = rowIndex;
+            var tr = document.createElement('tr');
+            tr.className = 'cc-dest-row';
+            tr.innerHTML =
+                '<td>' +
+                    '<input type="hidden" name="Destinations[' + idx + '].Id" value="" />' +
+                    '<input name="Destinations[' + idx + '].DisplayName" id="Destinations_' + idx + '__DisplayName"' +
+                        ' class="form-control form-control-sm" placeholder="Display name" />' +
+                '</td>' +
+                '<td>' +
+                    '<input name="Destinations[' + idx + '].E164Address" id="Destinations_' + idx + '__E164Address"' +
+                        ' class="form-control form-control-sm" placeholder="+15551234567" autocomplete="off" />' +
+                '</td>' +
+                '<td><code class="text-muted small">&mdash;</code></td>' +
+                '<td class="text-center">' +
+                    '<input type="checkbox" name="Destinations[' + idx + '].Enabled" id="Destinations_' + idx + '__Enabled"' +
+                        ' class="form-check-input" value="true" checked />' +
+                '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger cc-remove-dest"' +
+                        ' title="Remove destination"><i class="fa-solid fa-trash-can"></i></button>' +
+                '</td>';
+            tbody.appendChild(tr);
+            rowIndex++;
+        });
+
+        tbody.addEventListener('click', function (e) {
+            var btn = e.target.closest('.cc-remove-dest');
+            if (!btn) return;
+            var row = btn.closest('tr.cc-dest-row');
+            if (row) {
+                row.remove();
+                renumberRows();
+            }
+        });
+    }());
+</script>

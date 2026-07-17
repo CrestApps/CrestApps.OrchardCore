@@ -53,4 +53,59 @@ public class AsteriskConnectionSettings
     /// Gets or sets the dialplan priority to use when continuing a call to voicemail.
     /// </summary>
     public virtual int VoicemailPriority { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the secure WebSocket URL used by browser SIP user agents.
+    /// </summary>
+    public virtual string WebSocketUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SIP domain used to compose browser agent addresses of record.
+    /// </summary>
+    public virtual string SipDomain { get; set; }
+
+    /// <summary>
+    /// Gets or sets the comma- or newline-delimited STUN/TURN URLs advertised to browser agents.
+    /// </summary>
+    public virtual string TurnUrls { get; set; }
+
+    /// <summary>
+    /// Gets or sets the coturn REST shared secret used to issue time-limited TURN credentials.
+    /// </summary>
+    public virtual string TurnSharedSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ICE transport policy sent to the browser.
+    /// </summary>
+    public virtual string IceTransportPolicy { get; set; } = AsteriskConstants.DefaultIceTransportPolicy;
+
+    /// <summary>
+    /// Gets or sets the comma- or newline-delimited browser audio codec preference list.
+    /// </summary>
+    public virtual string WebRtcCodecs { get; set; } = AsteriskConstants.DefaultWebRtcCodecs;
+
+    /// <summary>
+    /// Gets or sets the short-lived PJSIP credential lifetime, in minutes.
+    /// </summary>
+    public virtual int PjsipCredentialLifetimeMinutes { get; set; } = AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+
+    /// <summary>
+    /// Gets or sets the PJSIP contact expiration, in seconds.
+    /// </summary>
+    public virtual int PjsipContactExpirationSeconds { get; set; } = AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+
+    /// <summary>
+    /// Gets or sets the ADO.NET provider invariant name used to write PJSIP Realtime rows.
+    /// </summary>
+    public virtual string PjsipRealtimeProviderInvariantName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PJSIP Realtime database connection string.
+    /// </summary>
+    public virtual string PjsipRealtimeConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional PJSIP Realtime table prefix.
+    /// </summary>
+    public virtual string PjsipRealtimeTablePrefix { get; set; }
 }

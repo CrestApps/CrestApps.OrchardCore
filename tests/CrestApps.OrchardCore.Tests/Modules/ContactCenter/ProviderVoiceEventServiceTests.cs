@@ -2040,6 +2040,172 @@ public sealed class ProviderVoiceEventServiceTests
             Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task IngestAsync_WhenDialCreatedSessionHasBlankProviderCallId_ReconcilesToEventProviderCallId()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-outbound-1",
+            Direction = InteractionDirection.Outbound,
+            Status = InteractionStatus.Ringing,
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = null,
+            Direction = InteractionDirection.Outbound,
+            State = ContactCenterCallState.Planned,
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(m => m.FindByProviderInteractionIdAsync("ProviderA", "call-outbound-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(m => m.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(m => m.FindByProviderCallIdAsync("ProviderA", "call-outbound-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        callSessionManager
+            .Setup(m => m.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        callSessionManager
+            .Setup(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(s => s.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        var ingestResult = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-outbound-1",
+            State = ContactCenterCallState.Ringing,
+            IdempotencyKey = "ringing-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert — reconciliation must populate the blank ProviderCallId
+        Assert.Equal("call-outbound-1", session.ProviderCallId);
+        Assert.NotNull(ingestResult);
+        callSessionManager.Verify(
+            m => m.UpdateAsync(session, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenSessionFoundByInteractionIdAlreadyHasProviderCallId_DoesNotOverwriteExistingId()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-new",
+            Direction = InteractionDirection.Outbound,
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
+        };
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-existing",
+            Direction = InteractionDirection.Outbound,
+            State = ContactCenterCallState.Connected,
+            AnsweredUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
+            LastProviderEventUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(m => m.FindByProviderInteractionIdAsync("ProviderA", "call-new", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(m => m.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(m => m.FindByProviderCallIdAsync("ProviderA", "call-new", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+        callSessionManager
+            .Setup(m => m.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        callSessionManager
+            .Setup(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(s => s.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act — event for "call-new" finds session bound to "call-existing"
+        var ingestResult = await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-new",
+            State = ContactCenterCallState.Ended,
+            IdempotencyKey = "ended-new",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert — event must be refused (mis-binding prevented)
+        Assert.Null(ingestResult);
+
+        // Assert — existing ProviderCallId must not be overwritten
+        Assert.Equal("call-existing", session.ProviderCallId);
+
+        // Assert — session state must not be mutated by the mis-bound event
+        Assert.Equal(ContactCenterCallState.Connected, session.State);
+
+        // Assert — no mutation was persisted to the wrong session
+        callSessionManager.Verify(
+            m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static ProviderVoiceEventService CreateService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,

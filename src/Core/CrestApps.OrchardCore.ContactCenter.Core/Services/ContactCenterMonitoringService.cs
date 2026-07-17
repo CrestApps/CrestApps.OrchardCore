@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -20,6 +23,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
 
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
 
@@ -30,14 +34,17 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     /// <param name="voiceProviderResolver">The voice provider resolver used to check monitoring capabilities.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
-        ITelephonyCommandExecutor commandExecutor)
+        ITelephonyCommandExecutor commandExecutor,
+        ICallControlAuthorizationService callControlAuthorizationService = null)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
+        _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
     }
@@ -73,7 +80,12 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     }
 
     /// <inheritdoc/>
-    public async Task<SupervisorEngagementResult> EngageAsync(string interactionId, string supervisorId, MonitorMode mode, CancellationToken cancellationToken = default)
+    public async Task<SupervisorEngagementResult> EngageAsync(
+        string interactionId,
+        string supervisorId,
+        ClaimsPrincipal principal,
+        MonitorMode mode,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(interactionId))
         {
@@ -87,12 +99,35 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure("The interaction could not be found.");
         }
 
+        var providerCallId = interaction.ProviderInteractionId;
+
+        if (_callControlAuthorizationService is not null)
+        {
+            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            {
+                Principal = principal,
+                UserId = supervisorId,
+                Verb = CallControlVerb.SupervisorEngage,
+                InteractionId = interaction.ItemId,
+                ProviderName = interaction.ProviderName,
+                ProviderCallId = interaction.ProviderInteractionId,
+                SupervisorOperation = true,
+            }, cancellationToken);
+
+            if (!authorization.Succeeded)
+            {
+                return SupervisorEngagementResult.Failure(authorization.FailureReason);
+            }
+
+            providerCallId = authorization.ProviderCallId;
+        }
+
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
         var capability = ResolveCapability(mode);
 
         if (provider is not IContactCenterVoiceMonitoringProvider monitoringProvider ||
             !provider.Capabilities.HasFlag(capability) ||
-            string.IsNullOrEmpty(interaction.ProviderInteractionId))
+            string.IsNullOrEmpty(providerCallId))
         {
             return SupervisorEngagementResult.Failure($"The voice provider does not support the '{mode}' engagement.");
         }
@@ -103,7 +138,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                 monitoringProvider.EngageAsync(new ContactCenterVoiceMonitoringRequest
                 {
                     InteractionId = interaction.ItemId,
-                    ProviderCallId = interaction.ProviderInteractionId,
+                    ProviderCallId = providerCallId,
                     SupervisorId = supervisorId,
                     Mode = mode,
                 }, commandCancellationToken));
@@ -144,6 +179,23 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Unknown(
                 $"The '{mode}' engagement was interrupted before the provider outcome could be confirmed.");
         }
+    }
+
+    /// <summary>
+    /// Engages a live interaction as a supervisor using the requested mode when the provider supports it.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="supervisorId">The supervisor performing the engagement.</param>
+    /// <param name="mode">The engagement mode.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The engagement result.</returns>
+    public Task<SupervisorEngagementResult> EngageAsync(
+        string interactionId,
+        string supervisorId,
+        MonitorMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        return EngageAsync(interactionId, supervisorId, null, mode, cancellationToken);
     }
 
     private static ContactCenterVoiceProviderCapabilities ResolveCapability(MonitorMode mode)

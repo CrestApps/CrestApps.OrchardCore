@@ -1,10 +1,17 @@
+using CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 using CrestApps.OrchardCore.Asterisk.Drivers;
+using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.OrchardCore.Asterisk.Migrations;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -38,7 +45,18 @@ public sealed class Startup : StartupBase
         services
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
-            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>();
+            .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
+            .AddScoped<IAsteriskPjsipCredentialIssuer, AsteriskPjsipCredentialIssuer>()
+            .AddScoped<IAsteriskPjsipRealtimeCredentialStore, AsteriskPjsipRealtimeCredentialStore>()
+            .AddScoped<IAsteriskPjsipCredentialLeaseStore, AsteriskPjsipCredentialLeaseStore>()
+            .AddScoped<IAsteriskPjsipDialogTerminator, AsteriskPjsipDialogTerminator>()
+            .AddScoped<ISoftPhoneRegistrationConfigContributor, AsteriskSoftPhoneRegistrationConfigContributor>()
+            .AddScoped<ISoftPhoneCredentialRevoker, AsteriskSoftPhoneCredentialRevoker>();
+
+        services.AddIndexProvider<AsteriskPjsipCredentialLeaseIndexProvider>();
+        services.AddDataMigration<AsteriskPjsipCredentialLeaseMigrations>();
+
+        services.AddSingleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>();
 
         services
             .AddSingleton<AsteriskRealtimeVoiceListener>()

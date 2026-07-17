@@ -42,7 +42,7 @@ public sealed class AsteriskContactCenterVoiceProvider :
     public ContactCenterVoiceProviderCapabilities Capabilities => ContactCenterVoiceProviderCapabilities.DialerDial;
 
     /// <inheritdoc/>
-    public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.AgentDeviceNative;
+    public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.ServerSideAcd;
 
     /// <inheritdoc/>
     public async Task<ContactCenterVoiceProviderResult> DialAsync(
@@ -99,7 +99,21 @@ public sealed class AsteriskContactCenterVoiceProvider :
         };
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Connects a live, server-side-parked provider call to the selected agent.
+    /// </summary>
+    /// <remarks>
+    /// The Asterisk adapter delivers agent media through dynamically provisioned WebRTC PJSIP endpoints
+    /// (see <see cref="IAsteriskPjsipRealtimeCredentialStore"/>). Those endpoints are created just in time
+    /// per browser session and are not addressable from a static Asterisk queue or dialplan, so bridging a
+    /// parked call to the agent legitimately requires a .NET-side ARI originate/bridge rather than
+    /// delegation to Asterisk's own ACD. That ARI originate/bridge implementation is scheduled for
+    /// Plan-2 Part 3. Until it lands, this method fails closed so the orchestration layer never records a
+    /// false success for a call whose media was never bridged to the agent.
+    /// </remarks>
+    /// <param name="request">The connect request.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A failed provider result indicating browser-media agent bridging is not yet available.</returns>
     public Task<ContactCenterVoiceProviderResult> ConnectToAgentAsync(
         ContactCenterConnectRequest request,
         CancellationToken cancellationToken = default)
@@ -113,10 +127,16 @@ public sealed class AsteriskContactCenterVoiceProvider :
             return Task.FromResult(Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable."));
         }
 
+        // Part 3: Replace this fail-closed guard with a real ARI originate/bridge that rings the agent's
+        // WebRTC PJSIP endpoint and bridges it to the parked provider call. Returning a bare success here
+        // would silently report a connected agent while no media is bridged.
         return Task.FromResult(new ContactCenterVoiceProviderResult
         {
-            Succeeded = true,
+            Succeeded = false,
+            ErrorCode = "agent_bridge_unavailable",
+            ErrorMessage = "Browser-media agent bridging is not yet available for the Asterisk Contact Center voice provider.",
             ProviderCallId = request.ProviderCallId,
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
         });
     }
 

@@ -107,6 +107,119 @@
             <span class="hint">@T["The dialplan priority Asterisk should start at when the soft phone routes a call to voicemail."]</span>
         </div>
     </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="WebSocketUrl">
+        <label asp-for="WebSocketUrl" class="ocat-label">@T["SIP WebSocket URL"]</label>
+        <div class="ocat-end">
+            <input asp-for="WebSocketUrl" class="form-control" autocomplete="off" />
+            <span asp-validation-for="WebSocketUrl"></span>
+            <span class="hint">@T["Enter the WSS endpoint exposed by Asterisk for browser SIP user agents, for example wss://localhost:8089/ws."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="SipDomain">
+        <label asp-for="SipDomain" class="ocat-label">@T["SIP domain"]</label>
+        <div class="ocat-end">
+            <input asp-for="SipDomain" class="form-control" autocomplete="off" />
+            <span asp-validation-for="SipDomain"></span>
+            <span class="hint">@T["The SIP domain used in browser agent addresses of record."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TurnUrls">
+        <label asp-for="TurnUrls" class="ocat-label">@T["ICE server URLs"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="TurnUrls" class="form-control" rows="3" autocomplete="off"></textarea>
+            <span asp-validation-for="TurnUrls"></span>
+            <span class="hint">@T["Enter STUN or TURN URLs separated by commas or new lines. TURN entries use time-limited coturn REST credentials when a shared secret is configured."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TurnSharedSecret">
+        <label asp-for="TurnSharedSecret" class="ocat-label">@T["TURN shared secret"]</label>
+        <div class="ocat-end">
+            <input asp-for="TurnSharedSecret" class="form-control" type="password" autocomplete="off" />
+            <span asp-validation-for="TurnSharedSecret"></span>
+            @if (Model.HasTurnSharedSecret)
+            {
+                <span class="hint">@T["A TURN shared secret is already saved. Leave this empty to keep the existing value, or enter a new value to replace it."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Optional. Enter the coturn REST shared secret used to issue time-limited relay credentials."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="IceTransportPolicy">
+        <label asp-for="IceTransportPolicy" class="ocat-label">@T["ICE transport policy"]</label>
+        <div class="ocat-end">
+            <input asp-for="IceTransportPolicy" class="form-control" autocomplete="off" />
+            <span asp-validation-for="IceTransportPolicy"></span>
+            <span class="hint">@T["Use all for normal direct-ICE behavior or relay for forced-TURN validation."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="WebRtcCodecs">
+        <label asp-for="WebRtcCodecs" class="ocat-label">@T["Browser audio codecs"]</label>
+        <div class="ocat-end">
+            <input asp-for="WebRtcCodecs" class="form-control" autocomplete="off" />
+            <span asp-validation-for="WebRtcCodecs"></span>
+            <span class="hint">@T["Enter codecs in provider preference order, for example opus,g722,ulaw."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipCredentialLifetimeMinutes">
+        <label asp-for="PjsipCredentialLifetimeMinutes" class="ocat-label">@T["PJSIP credential lifetime (minutes)"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipCredentialLifetimeMinutes" class="form-control" type="number" min="1" />
+            <span asp-validation-for="PjsipCredentialLifetimeMinutes"></span>
+            <span class="hint">@T["Short-lived browser SIP credentials are bound to tenant, session, and expiry."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipContactExpirationSeconds">
+        <label asp-for="PjsipContactExpirationSeconds" class="ocat-label">@T["PJSIP contact expiration (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipContactExpirationSeconds" class="form-control" type="number" min="1" />
+            <span asp-validation-for="PjsipContactExpirationSeconds"></span>
+            <span class="hint">@T["Asterisk registration contacts expire independently from credential rotation; revocation also tears down existing contacts and dialogs."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeProviderInvariantName">
+        <label asp-for="PjsipRealtimeProviderInvariantName" class="ocat-label">@T["PJSIP Realtime provider"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeProviderInvariantName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="PjsipRealtimeProviderInvariantName"></span>
+            <span class="hint">@T["The ADO.NET provider invariant name used to write Asterisk PJSIP Realtime endpoint, auth, and AOR rows."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeConnectionString">
+        <label asp-for="PjsipRealtimeConnectionString" class="ocat-label">@T["PJSIP Realtime connection string"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeConnectionString" class="form-control" type="password" autocomplete="off" />
+            <span asp-validation-for="PjsipRealtimeConnectionString"></span>
+            @if (Model.HasPjsipRealtimeConnectionString)
+            {
+                <span class="hint">@T["A PJSIP Realtime connection string is already saved. Leave this empty to keep the existing value, or enter a new value to replace it."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Required for browser audio. This database must be the PJSIP Realtime source configured in Asterisk sorcery/extconfig."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeTablePrefix">
+        <label asp-for="PjsipRealtimeTablePrefix" class="ocat-label">@T["PJSIP Realtime table prefix"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeTablePrefix" class="form-control" autocomplete="off" />
+            <span asp-validation-for="PjsipRealtimeTablePrefix"></span>
+            <span class="hint">@T["Optional. Prefix added before ps_endpoints, ps_auths, and ps_aors when your Realtime schema uses tenant-specific table names."]</span>
+        </div>
+    </div>
 </div>
 
 <script at="Foot">

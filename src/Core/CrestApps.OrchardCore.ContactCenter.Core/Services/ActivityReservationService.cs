@@ -590,7 +590,10 @@ public sealed class ActivityReservationService : IActivityReservationService
                     RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
                     {
                         ActivityItemId = reservation.ActivityItemId,
+                        InteractionId = interaction.ItemId,
                         QueueId = reservation.QueueId,
+                        AgentId = reservation.AgentId,
+                        AgentUserId = agent?.UserId,
                         ProviderCallId = interaction.ProviderInteractionId,
                         ReofferOnFailure = true,
                         Metadata = BuildOfferTimeoutMetadata(queue, agent),

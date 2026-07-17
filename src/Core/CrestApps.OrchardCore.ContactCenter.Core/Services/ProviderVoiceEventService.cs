@@ -236,6 +236,17 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
         var session = await EnsureSessionAsync(interaction, providerEvent, now, cancellationToken);
 
+        if (session is null)
+        {
+            _logger.LogWarning(
+                "Refused provider voice event for call '{ProviderCallId}' because the interaction-matched session is already bound to a different call.",
+                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return null;
+        }
+
         if (ShouldIgnoreEvent(session, providerEvent, now))
         {
             if (_logger.IsEnabled(LogLevel.Debug))
@@ -360,6 +371,28 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         if (session is not null)
         {
+            if (string.IsNullOrWhiteSpace(session.ProviderCallId) &&
+                !string.IsNullOrWhiteSpace(providerEvent.ProviderCallId))
+            {
+                session.ProviderCallId = providerEvent.ProviderCallId;
+
+                if (string.IsNullOrWhiteSpace(session.ProviderName))
+                {
+                    session.ProviderName = providerEvent.ProviderName;
+                }
+
+                await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+            }
+            else if (!string.IsNullOrWhiteSpace(session.ProviderCallId) &&
+                     !string.IsNullOrWhiteSpace(providerEvent.ProviderCallId) &&
+                     !string.Equals(session.ProviderCallId, providerEvent.ProviderCallId, StringComparison.Ordinal))
+            {
+                // The interaction-matched session is bound to a DIFFERENT call id.
+                // Returning null causes IngestCoreAsync to refuse this event rather
+                // than mis-applying it to the wrong session.
+                return null;
+            }
+
             return session;
         }
 

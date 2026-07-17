@@ -43,7 +43,7 @@ public sealed class AsteriskProviderOptionsConfigurations : IConfigureOptions<Te
 
         var typeOptions = new TelephonyProviderTypeOptions(typeof(AsteriskTelephonyProvider))
         {
-            IsEnabled = settings.IsEnabled,
+            IsEnabled = settings.IsEnabled && AsteriskSettingsUtilities.HasRequiredConfiguration(settings, settings.Password),
         };
 
         options.TryAddProvider(AsteriskConstants.ProviderTechnicalName, typeOptions);

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -31,4 +32,14 @@ public sealed class TransferRequest
     /// Gets or sets the identifier of the agent who initiated the transfer.
     /// </summary>
     public string InitiatedByAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Orchard user identifier of the agent who initiated the transfer.
+    /// </summary>
+    public string InitiatedByUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the authenticated principal used for transfer-destination RBAC.
+    /// </summary>
+    public ClaimsPrincipal Principal { get; set; }
 }

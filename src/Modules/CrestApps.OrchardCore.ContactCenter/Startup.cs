@@ -134,7 +134,10 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ICallSessionStore, CallSessionStore>()
-            .AddScoped<ICallSessionManager, CallSessionManager>();
+            .AddScoped<ICallSessionManager, CallSessionManager>()
+            .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
+            .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
+            .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>();
 
         services
             .AddIndexProvider<InteractionIndexProvider>()
@@ -155,6 +158,10 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
+
+        services
+            .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
+            .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 }
 
@@ -263,6 +270,9 @@ public sealed class AvailabilityStartup : StartupBase
             var presenceManager = context.RequestServices.GetRequiredService<IAgentPresenceManager>();
             await presenceManager.SignOutAsync(userId, context.RequestAborted);
 
+            var revokers = context.RequestServices.GetServices<ISoftPhoneCredentialRevoker>();
+            await RevokeCredentialsOnSignOutAsync(revokers, userId, logger, context.RequestAborted);
+
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation(
@@ -282,6 +292,41 @@ public sealed class AvailabilityStartup : StartupBase
 
         return string.Equals(httpContext.Request.Path.Value, "/Users/Account/LogOff", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(httpContext.Request.Path.Value, "/Users/Account/Logout", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Iterates every registered <see cref="ISoftPhoneCredentialRevoker"/> and revokes the browser SIP
+    /// credentials for the signed-out user. Failures are caught and logged individually so a single
+    /// revoker error cannot break the logout response.
+    /// </summary>
+    /// <param name="revokers">The credential revokers to invoke.</param>
+    /// <param name="userId">The authenticated user identifier whose credentials must be revoked.</param>
+    /// <param name="logger">The logger used to record revocation failures.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static async Task RevokeCredentialsOnSignOutAsync(
+        IEnumerable<ISoftPhoneCredentialRevoker> revokers,
+        string userId,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        foreach (var revoker in revokers)
+        {
+            try
+            {
+                await revoker.RevokeForUserAsync(userId, "signed-out", cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                        "Soft-phone credential revocation failed for provider '{ProviderName}' and user '{UserId}'. Error type: {ErrorType}.",
+                        revoker.ProviderName,
+                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
+                        ex.GetType().Name);
+                }
+            }
+        }
     }
 }
 

@@ -81,7 +81,26 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             model.VoicemailPriority = settings.VoicemailPriority > 0
                 ? settings.VoicemailPriority
                 : 1;
+            model.WebSocketUrl = settings.WebSocketUrl;
+            model.SipDomain = settings.SipDomain;
+            model.TurnUrls = settings.TurnUrls;
+            model.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy)
+                ? AsteriskConstants.DefaultIceTransportPolicy
+                : settings.IceTransportPolicy;
+            model.WebRtcCodecs = string.IsNullOrWhiteSpace(settings.WebRtcCodecs)
+                ? AsteriskConstants.DefaultWebRtcCodecs
+                : settings.WebRtcCodecs;
+            model.PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes > 0
+                ? settings.PjsipCredentialLifetimeMinutes
+                : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+            model.PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds > 0
+                ? settings.PjsipContactExpirationSeconds
+                : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+            model.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName;
+            model.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix;
             model.HasPassword = !string.IsNullOrEmpty(settings.Password);
+            model.HasTurnSharedSecret = !string.IsNullOrEmpty(settings.TurnSharedSecret);
+            model.HasPjsipRealtimeConnectionString = !string.IsNullOrEmpty(settings.PjsipRealtimeConnectionString);
         }).Location("Content:10#Asterisk")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
@@ -130,6 +149,18 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             var voicemailPriority = model.VoicemailPriority > 0
                 ? model.VoicemailPriority
                 : 1;
+            var iceTransportPolicy = string.IsNullOrWhiteSpace(model.IceTransportPolicy)
+                ? AsteriskConstants.DefaultIceTransportPolicy
+                : model.IceTransportPolicy.Trim();
+            var webRtcCodecs = string.IsNullOrWhiteSpace(model.WebRtcCodecs)
+                ? AsteriskConstants.DefaultWebRtcCodecs
+                : model.WebRtcCodecs.Trim();
+            var pjsipCredentialLifetimeMinutes = model.PjsipCredentialLifetimeMinutes > 0
+                ? model.PjsipCredentialLifetimeMinutes
+                : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+            var pjsipContactExpirationSeconds = model.PjsipContactExpirationSeconds > 0
+                ? model.PjsipContactExpirationSeconds
+                : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
 
             hasChanges |= settings.BaseUrl != normalizedBaseUrl;
             hasChanges |= settings.UserName != model.UserName?.Trim();
@@ -140,6 +171,15 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             hasChanges |= settings.VoicemailContext != model.VoicemailContext?.Trim();
             hasChanges |= settings.VoicemailExtensionTemplate != model.VoicemailExtensionTemplate?.Trim();
             hasChanges |= settings.VoicemailPriority != voicemailPriority;
+            hasChanges |= settings.WebSocketUrl != model.WebSocketUrl?.Trim();
+            hasChanges |= settings.SipDomain != model.SipDomain?.Trim();
+            hasChanges |= settings.TurnUrls != model.TurnUrls?.Trim();
+            hasChanges |= settings.IceTransportPolicy != iceTransportPolicy;
+            hasChanges |= settings.WebRtcCodecs != webRtcCodecs;
+            hasChanges |= settings.PjsipCredentialLifetimeMinutes != pjsipCredentialLifetimeMinutes;
+            hasChanges |= settings.PjsipContactExpirationSeconds != pjsipContactExpirationSeconds;
+            hasChanges |= settings.PjsipRealtimeProviderInvariantName != model.PjsipRealtimeProviderInvariantName?.Trim();
+            hasChanges |= settings.PjsipRealtimeTablePrefix != model.PjsipRealtimeTablePrefix?.Trim();
 
             settings.BaseUrl = normalizedBaseUrl;
             settings.UserName = model.UserName?.Trim();
@@ -150,6 +190,15 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             settings.VoicemailContext = model.VoicemailContext?.Trim();
             settings.VoicemailExtensionTemplate = model.VoicemailExtensionTemplate?.Trim();
             settings.VoicemailPriority = voicemailPriority;
+            settings.WebSocketUrl = model.WebSocketUrl?.Trim();
+            settings.SipDomain = model.SipDomain?.Trim();
+            settings.TurnUrls = model.TurnUrls?.Trim();
+            settings.IceTransportPolicy = iceTransportPolicy;
+            settings.WebRtcCodecs = webRtcCodecs;
+            settings.PjsipCredentialLifetimeMinutes = pjsipCredentialLifetimeMinutes;
+            settings.PjsipContactExpirationSeconds = pjsipContactExpirationSeconds;
+            settings.PjsipRealtimeProviderInvariantName = model.PjsipRealtimeProviderInvariantName?.Trim();
+            settings.PjsipRealtimeTablePrefix = model.PjsipRealtimeTablePrefix?.Trim();
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl) || !Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out _))
             {
@@ -169,6 +218,51 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             if (settings.TimeoutSeconds <= 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.TimeoutSeconds), S["Enter a timeout greater than zero."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.WebSocketUrl) &&
+                (!Uri.TryCreate(settings.WebSocketUrl, UriKind.Absolute, out var webSocketUri) ||
+                !string.Equals(webSocketUri.Scheme, "wss", StringComparison.OrdinalIgnoreCase)))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.WebSocketUrl), S["Enter a valid secure WebSocket URL that starts with wss://."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.WebSocketUrl) && string.IsNullOrWhiteSpace(settings.SipDomain))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SipDomain), S["Enter the SIP domain for browser registrations."]);
+            }
+
+            if (AsteriskSettingsUtilities.ParseDelimitedValues(settings.WebRtcCodecs).Count == 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.WebRtcCodecs), S["Enter at least one browser audio codec."]);
+            }
+
+            if (settings.PjsipCredentialLifetimeMinutes <= 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PjsipCredentialLifetimeMinutes), S["Enter a credential lifetime greater than zero."]);
+            }
+
+            if (settings.PjsipContactExpirationSeconds <= 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PjsipContactExpirationSeconds), S["Enter a contact expiration greater than zero."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.WebSocketUrl) && string.IsNullOrWhiteSpace(settings.PjsipRealtimeProviderInvariantName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PjsipRealtimeProviderInvariantName), S["Enter the PJSIP Realtime ADO.NET provider invariant name."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.WebSocketUrl) &&
+                string.IsNullOrEmpty(settings.PjsipRealtimeConnectionString) &&
+                string.IsNullOrWhiteSpace(model.PjsipRealtimeConnectionString))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PjsipRealtimeConnectionString), S["Enter the PJSIP Realtime connection string."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.PjsipRealtimeTablePrefix) &&
+                !AsteriskPjsipRealtimeTablePrefixValidator.IsValid(settings.PjsipRealtimeTablePrefix))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PjsipRealtimeTablePrefix), S["Enter a valid PJSIP Realtime table prefix using only letters, digits, or underscores, optionally qualified with a single schema name."]);
             }
 
             if (string.IsNullOrWhiteSpace(settings.VoicemailContext) != string.IsNullOrWhiteSpace(settings.VoicemailExtensionTemplate))
@@ -197,6 +291,26 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
                 hasChanges |= settings.Password != protectedPassword;
 
                 settings.Password = protectedPassword;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.TurnSharedSecret))
+            {
+                var protector = _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName);
+                var protectedTurnSharedSecret = protector.Protect(model.TurnSharedSecret);
+
+                hasChanges |= settings.TurnSharedSecret != protectedTurnSharedSecret;
+
+                settings.TurnSharedSecret = protectedTurnSharedSecret;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.PjsipRealtimeConnectionString))
+            {
+                var protector = _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName);
+                var protectedConnectionString = protector.Protect(model.PjsipRealtimeConnectionString);
+
+                hasChanges |= settings.PjsipRealtimeConnectionString != protectedConnectionString;
+
+                settings.PjsipRealtimeConnectionString = protectedConnectionString;
             }
         }
 

@@ -20,14 +20,16 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
     /// <param name="activityManager">The CRM activity manager used to restore live work after a definitive action failure.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp projections.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     public SendToVoicemailProviderCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
         IActivityQueueService queueService,
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
-        IClock clock)
-        : base(telephonyServices, interactionManager, queueService, activityManager, publisher, clock)
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService = null)
+        : base(telephonyServices, interactionManager, queueService, activityManager, publisher, clock, callControlAuthorizationService)
     {
     }
 

@@ -192,6 +192,10 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal(reservation.ItemId, registration.ReservationId);
         Assert.Equal("profile1", registration.DialerProfileId);
         Assert.False(string.IsNullOrWhiteSpace(registration.RequestPayload));
+        var request = System.Text.Json.JsonSerializer.Deserialize<ContactCenterDialRequest>(registration.RequestPayload);
+
+        Assert.Equal("user-a1", request?.AgentUserId);
+
         var eventRecord = Assert.IsType<InteractionEvent>(publishedEvent);
         Assert.Equal(ContactCenterConstants.Events.DialerAttemptStarted, eventRecord.EventType);
         Assert.Equal(nameof(DialerProfile), eventRecord.AggregateType);
@@ -526,11 +530,13 @@ public sealed class DialerAttemptServiceTests
         Mock<IContactCenterEventPublisher>? publisher = null,
         Mock<IContactCenterScopeExecutor>? scopeExecutor = null,
         Mock<IProviderCommandStateService>? providerCommandStateService = null,
+        Mock<IAgentProfileManager>? agentManager = null,
         IDialerAttemptCompensationService? compensationService = null)
     {
         publisher ??= new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
         providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict);
+        agentManager ??= CreateAgentManager();
         compensationService ??= new DialerAttemptCompensationService(reservationService.Object);
 
         return new DialerAttemptService(
@@ -539,11 +545,26 @@ public sealed class DialerAttemptServiceTests
             compensationService,
             interactionManager.Object,
             activityManager.Object,
+            agentManager.Object,
             voiceCallRouter.Object,
             publisher.Object,
             scopeExecutor.Object,
             providerCommandStateService.Object,
             new Mock<ILogger<DialerAttemptService>>().Object);
+    }
+
+    private static Mock<IAgentProfileManager> CreateAgentManager()
+    {
+        var agentManager = new Mock<IAgentProfileManager>(MockBehavior.Strict);
+        agentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "user-a1",
+            });
+
+        return agentManager;
     }
 
     private static void VerifyNoOutboundRouting(Mock<IVoiceContactCenterCallRouter> service)

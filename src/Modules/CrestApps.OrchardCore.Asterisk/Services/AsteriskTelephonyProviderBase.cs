@@ -43,13 +43,13 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         => GetCapabilities(null, false);
 
     /// <inheritdoc/>
-    public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.ExternalDevice;
+    public virtual TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.None;
 
     /// <inheritdoc/>
-    public TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.ExternalDevice;
+    public virtual TelephonyAudioMode ConfiguredAudioMode => TelephonyAudioMode.None;
 
     /// <inheritdoc/>
-    public string BrowserMediaAdapterName => null;
+    public virtual string BrowserMediaAdapterName => null;
 
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {

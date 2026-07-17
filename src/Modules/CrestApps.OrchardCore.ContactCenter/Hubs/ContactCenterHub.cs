@@ -255,7 +255,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            if (await AuthorizeAsync(services, ContactCenterPermissions.MonitorContactCenter))
+            if (await services.SupervisorQueueAuthorizationService.IsAuthorizedAsync(
+                Context.User,
+                Context.UserIdentifier,
+                queueId,
+                Context.ConnectionAborted))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
             }
