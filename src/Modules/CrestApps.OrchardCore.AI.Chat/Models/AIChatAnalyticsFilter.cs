@@ -11,12 +11,22 @@ namespace CrestApps.OrchardCore.AI.Chat.Models;
 public sealed class AIChatAnalyticsFilter : Entity
 {
     /// <summary>
-    /// Gets or sets the start date for the report range.
+    /// Gets or sets the start date in local time as entered by the user.
+    /// </summary>
+    public DateTime? StartDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the end date in local time as entered by the user.
+    /// </summary>
+    public DateTime? EndDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the start date converted to UTC for querying.
     /// </summary>
     public DateTime? StartDateUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the end date for the report range.
+    /// Gets or sets the end date converted to UTC for querying.
     /// </summary>
     public DateTime? EndDateUtc { get; set; }
 

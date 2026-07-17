@@ -54,6 +54,7 @@ public sealed class ChatConversionGoalsControllerTests
             new Mock<YSession>().Object,
             authorizationService.Object,
             yesSqlStoreOptions.Object,
+            new Mock<ILocalClock>().Object,
             new Mock<IClock>().Object)
         {
             ControllerContext = new ControllerContext
