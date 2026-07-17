@@ -215,6 +215,10 @@
         }
     }
 
+    var profileId = Model.Profile?.ItemId ?? Model.Session.ProfileId;
+    var sessionUrlTemplate = Url.RouteUrl("AIChatSessionsIndex", new { profileId, sessionId = "__SESSION_ID__" })
+        ?.Replace("__SESSION_ID__", "{sessionId}");
+
     var chatConfigJson = JsonSerializer.Serialize(new
     {
         signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
@@ -225,6 +229,7 @@
         placeholderElementSelector = $"#{placeholderHtmlId}",
         autoCreateSession = false,
         initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+        sessionUrlTemplate,
         messages = prompts,
         metricsEnabled,
         chatMode = effectiveChatMode.ToString(),

@@ -347,6 +347,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         assistantMessage.References = references;
 
         await promptStore.CreateAsync(assistantMessage, cancellationToken);
-        await SaveChatSessionAsync(sessionManager, chatSession);
+        await SaveChatSessionAsync(services, sessionManager, chatSession);
     }
 }
