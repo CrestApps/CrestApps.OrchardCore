@@ -21,6 +21,7 @@ public sealed class ChatExtractedDataController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionExtractedDataStore _extractedDataStore;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ILocalClock _localClock;
     private readonly IClock _clock;
 
     /// <summary>
@@ -29,16 +30,19 @@ public sealed class ChatExtractedDataController : Controller
     /// <param name="profileManager">The profile manager.</param>
     /// <param name="extractedDataStore">The extracted data store.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="localClock">The local clock for timezone conversions.</param>
     /// <param name="clock">The clock.</param>
     public ChatExtractedDataController(
         IAIProfileManager profileManager,
         IAIChatSessionExtractedDataStore extractedDataStore,
         IAuthorizationService authorizationService,
+        ILocalClock localClock,
         IClock clock)
     {
         _profileManager = profileManager;
         _extractedDataStore = extractedDataStore;
         _authorizationService = authorizationService;
+        _localClock = localClock;
         _clock = clock;
     }
 
@@ -81,7 +85,15 @@ public sealed class ChatExtractedDataController : Controller
             return View("Index", model);
         }
 
-        var records = await _extractedDataStore.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
+        // Convert local dates to UTC before querying.
+        DateTime? startDateUtc = model.StartDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.StartDate.Value)
+            : null;
+        DateTime? endDateUtc = model.EndDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.EndDate.Value)
+            : null;
+
+        var records = await _extractedDataStore.GetAsync(model.ProfileId, startDateUtc, endDateUtc);
         ApplyReport(model, records);
 
         return View("Index", model);
@@ -104,7 +116,15 @@ public sealed class ChatExtractedDataController : Controller
             return BadRequest();
         }
 
-        var records = await _extractedDataStore.GetAsync(model.ProfileId, model.StartDateUtc, model.EndDateUtc);
+        // Convert local dates to UTC before querying.
+        DateTime? startDateUtc = model.StartDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.StartDate.Value)
+            : null;
+        DateTime? endDateUtc = model.EndDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.EndDate.Value)
+            : null;
+
+        var records = await _extractedDataStore.GetAsync(model.ProfileId, startDateUtc, endDateUtc);
         var rows = BuildRows(records);
         var columns = rows
             .SelectMany(row => row.Values.Keys)
