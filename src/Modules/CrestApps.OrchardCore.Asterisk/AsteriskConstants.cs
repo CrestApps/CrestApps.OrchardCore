@@ -26,9 +26,12 @@ public static class AsteriskConstants
     public const string ProtectorName = "Asterisk";
 
     /// <summary>
-    /// The default ARI application name used when one is not supplied explicitly.
+    /// A suggested ARI Stasis application name shown as a placeholder in the settings UI.
+    /// This value is never applied automatically; each tenant must configure an explicit,
+    /// unique application name so that tenants sharing an Asterisk server never receive each
+    /// other's Stasis events. When no application name is configured the provider fails closed.
     /// </summary>
-    public const string DefaultApplicationName = "crestapps-telephony";
+    public const string SuggestedApplicationName = "crestapps-telephony";
 
     /// <summary>
     /// The default outbound call timeout, in seconds.
@@ -89,6 +92,26 @@ public static class AsteriskConstants
     /// The channel variable used to track the provider-owned conference bridge for cleanup.
     /// </summary>
     public const string ConferenceBridgeVariableName = "CRESTAPPS_CONFERENCE_BRIDGE_ID";
+
+    /// <summary>
+    /// The channel variable and Stasis application argument stamped on channels the Contact Center
+    /// originates itself (outbound calls, agent legs, supervisor legs). Its presence on a
+    /// <c>StasisStart</c> event identifies a channel this tenant originated; its absence identifies a
+    /// fresh inbound external call that must flow through the inbound offer path.
+    /// </summary>
+    public const string OriginationMarkerVariableName = "CRESTAPPS_ORIGINATED";
+
+    /// <summary>
+    /// The channel variable stamped on originated channels carrying the owning interaction identifier so
+    /// realtime events can be correlated back to the originating interaction without a lookup round-trip.
+    /// </summary>
+    public const string InteractionChannelVariableName = "CRESTAPPS_INTERACTION_ID";
+
+    /// <summary>
+    /// The identifier prefix used for provider-owned holding bridges that park inbound callers with
+    /// media (ringback or music-on-hold) until an agent accepts the offered work.
+    /// </summary>
+    public const string HoldingBridgePrefix = "crestapps-holding-";
 
     /// <summary>
     /// The shell configuration section used for the configuration-backed default provider.

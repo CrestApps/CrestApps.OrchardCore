@@ -96,7 +96,22 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
                     dialMode);
             }
 
-            using var response = await SendAsync(settings, HttpMethod.Post, "channels", query, request.Metadata, cancellationToken);
+            var originateVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (request.Metadata is { Count: > 0 })
+            {
+                foreach (var entry in request.Metadata)
+                {
+                    originateVariables[entry.Key] = entry.Value;
+                }
+            }
+
+            // Stamp the origination marker so the realtime voice mapper attributes this module-originated
+            // outbound channel to an owned origination rather than misclassifying its StasisStart as a fresh
+            // inbound contact-center call.
+            originateVariables[AsteriskConstants.OriginationMarkerVariableName] = AsteriskAriConstants.OriginationMarkerValue;
+
+            using var response = await SendAsync(settings, HttpMethod.Post, "channels", query, originateVariables, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1242,6 +1257,12 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         };
 
         query["app"] = settings.ApplicationName;
+
+        // Pass the origination marker as a Stasis application argument so the realtime voice mapper can
+        // attribute this module-originated channel as an owned origination directly from the StasisStart
+        // payload. Channel variables only surface in ARI events when the server is explicitly configured with
+        // a matching 'channelvars', so the marker must also travel in appArgs to classify ownership reliably.
+        query["appArgs"] = AsteriskConstants.OriginationMarkerVariableName;
 
         return query;
     }

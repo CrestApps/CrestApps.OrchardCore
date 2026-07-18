@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -19,13 +20,15 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// <summary>
 /// Opens bidirectional RTP media sessions for Asterisk calls through ARI External Media channels.
 /// </summary>
-public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoiceMediaProvider
+internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoiceMediaProvider
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly DefaultAsteriskOptions _defaultOptions;
+    private readonly ShellSettings _shellSettings;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly IAsteriskAriApplicationGate _applicationGate;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,22 +37,28 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
     /// <param name="siteService">The site service used to read tenant Asterisk settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to unprotect the tenant password.</param>
     /// <param name="defaultOptions">The configuration-backed default Asterisk options.</param>
+    /// <param name="shellSettings">The current tenant shell settings used to scope the host-default fallback.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="workManager">The feature work manager.</param>
+    /// <param name="applicationGate">The gate that enforces single-tenant ownership of each ARI application.</param>
     /// <param name="logger">The logger instance.</param>
     public AsteriskContactCenterVoiceMediaProvider(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DefaultAsteriskOptions> defaultOptions,
+        ShellSettings shellSettings,
         IHttpClientFactory httpClientFactory,
         IContactCenterFeatureWorkManager workManager,
+        IAsteriskAriApplicationGate applicationGate,
         ILogger<AsteriskContactCenterVoiceMediaProvider> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _defaultOptions = defaultOptions.Value;
+        _shellSettings = shellSettings;
         _httpClientFactory = httpClientFactory;
         _workManager = workManager;
+        _applicationGate = applicationGate;
         _logger = logger;
     }
 
@@ -192,7 +201,29 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
 
             AsteriskSettingsUtilities.ApplyDefaults(settings);
 
+            // Fail closed before any External Media side effect when this tenant does not own the ARI application, so a
+            // misconfigured shared app cannot create channels that Asterisk would deliver into another tenant's Stasis app.
+            if (!_applicationGate.TryAcquire(settings))
+            {
+                return new AsteriskResolvedSettings
+                {
+                    IsEnabled = false,
+                    ProviderName = AsteriskConstants.ProviderTechnicalName,
+                };
+            }
+
             return settings;
+        }
+
+        // The host-level default ARI application is shared by the host, so non-default tenants without their own
+        // Asterisk settings must remain unavailable instead of crossing tenant boundaries through the default app.
+        if (!_shellSettings.IsDefaultShell())
+        {
+            return new AsteriskResolvedSettings
+            {
+                IsEnabled = false,
+                ProviderName = AsteriskConstants.ProviderTechnicalName,
+            };
         }
 
         var defaultSettings = new AsteriskResolvedSettings
@@ -207,6 +238,15 @@ public sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVoic
         };
 
         AsteriskSettingsUtilities.ApplyDefaults(defaultSettings);
+
+        if (!_applicationGate.TryAcquire(defaultSettings))
+        {
+            return new AsteriskResolvedSettings
+            {
+                IsEnabled = false,
+                ProviderName = AsteriskConstants.ProviderTechnicalName,
+            };
+        }
 
         return defaultSettings;
     }

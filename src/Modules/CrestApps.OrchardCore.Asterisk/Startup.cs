@@ -59,6 +59,8 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>();
 
         services
+            .AddSingleton<IAsteriskAriApplicationOwnershipRegistry, AsteriskAriApplicationOwnershipRegistry>()
+            .AddSingleton<IAsteriskAriApplicationGate, AsteriskAriApplicationGate>()
             .AddSingleton<AsteriskRealtimeVoiceListener>()
             .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskTelephonyProviderStateReconciler>()
@@ -77,13 +79,25 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
         services
             .AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()
             .AddSingleton<IProviderIdentityProvider, AsteriskProviderIdentityProvider>()
+            .AddSingleton<IAsteriskAgentChannelReadySignal, AsteriskAgentChannelReadySignal>()
+            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskAgentChannelReadyBridge>()
+            .AddScoped<IAsteriskCallTeardownService, AsteriskCallTeardownService>()
+            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskInboundCallOfferBridge>()
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskInboundReconciler>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()
+            .AddScoped<IAsteriskAriClient, AsteriskAriClient>()
+            .AddScoped<IAsteriskChannelTenantBindingStore, AsteriskChannelTenantBindingStore>()
+            .AddScoped<IAsteriskChannelOwnershipGuard, AsteriskChannelOwnershipGuard>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
                     AsteriskConstants.Feature.ContactCenterVoice,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        services.AddIndexProvider<AsteriskChannelTenantBindingIndexProvider>();
+        services.AddDataMigration<AsteriskChannelTenantBindingMigrations>();
+        services.AddSingleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>();
     }
 }
 

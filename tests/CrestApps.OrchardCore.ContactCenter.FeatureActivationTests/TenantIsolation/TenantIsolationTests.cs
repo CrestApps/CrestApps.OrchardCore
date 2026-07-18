@@ -75,8 +75,8 @@ public sealed class TenantIsolationTests
         var tenantB = AsteriskTenantAriNamespace.ForTenant("tenant-b");
 
         // Act & Assert
-        Assert.NotEqual(AsteriskConstants.DefaultApplicationName, tenantA.ApplicationName);
-        Assert.NotEqual(AsteriskConstants.DefaultApplicationName, tenantB.ApplicationName);
+        Assert.NotEqual(AsteriskConstants.SuggestedApplicationName, tenantA.ApplicationName);
+        Assert.NotEqual(AsteriskConstants.SuggestedApplicationName, tenantB.ApplicationName);
         Assert.NotEqual(tenantA.ApplicationName, tenantB.ApplicationName);
         Assert.NotEqual(tenantA.ContextName, tenantB.ContextName);
         Assert.NotEqual(tenantA.EndpointNamespace, tenantB.EndpointNamespace);

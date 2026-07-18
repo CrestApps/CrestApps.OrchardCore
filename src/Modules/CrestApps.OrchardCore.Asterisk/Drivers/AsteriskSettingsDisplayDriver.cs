@@ -21,13 +21,14 @@ namespace CrestApps.OrchardCore.Asterisk.Drivers;
 /// <summary>
 /// Display driver that renders the tenant-configured Asterisk provider settings tab on the telephony settings screen.
 /// </summary>
-public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSettings>
+internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSettings>
 {
     private readonly IShellReleaseManager _shellReleaseManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly INotifier _notifier;
+    private readonly IAsteriskChannelTenantBindingStore _channelTenantBindingStore;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -43,6 +44,7 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="channelTenantBindingStore">The channel tenant binding store used to detect live calls before an ARI identity change.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AsteriskSettingsDisplayDriver(
@@ -51,6 +53,7 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         INotifier notifier,
+        IAsteriskChannelTenantBindingStore channelTenantBindingStore,
         IHtmlLocalizer<AsteriskSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<AsteriskSettingsDisplayDriver> stringLocalizer)
     {
@@ -59,6 +62,7 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _notifier = notifier;
+        _channelTenantBindingStore = channelTenantBindingStore;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -122,6 +126,15 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
         var hasChanges = settings.IsEnabled != model.IsEnabled;
         var telephonySettings = site.GetOrCreate<TelephonySettings>();
 
+        // Capture the tenant's current ARI identity BEFORE it is mutated in place below. Abandoning that identity —
+        // disabling the provider, or repointing it at a different ARI base URL or Stasis application — releases the
+        // ownership of the old (base URL, application) pair, after which a different tenant could claim it. If live
+        // channels are still bound to the old identity that would let another tenant subscribe to this tenant's
+        // in-flight calls, so the abandonment is rejected while any binding still exists.
+        var previousBaseUrl = settings.BaseUrl;
+        var previousApplicationName = settings.ApplicationName;
+        var previousIsEnabled = settings.IsEnabled;
+
         if (!model.IsEnabled)
         {
             if (hasChanges && telephonySettings.DefaultProviderName == AsteriskConstants.ProviderTechnicalName)
@@ -140,9 +153,7 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             settings.IsEnabled = true;
 
             var normalizedBaseUrl = AsteriskSettingsUtilities.NormalizeBaseUrl(model.BaseUrl);
-            var applicationName = string.IsNullOrWhiteSpace(model.ApplicationName)
-                ? AsteriskConstants.DefaultApplicationName
-                : model.ApplicationName.Trim();
+            var applicationName = model.ApplicationName?.Trim();
             var timeoutSeconds = model.TimeoutSeconds > 0
                 ? model.TimeoutSeconds
                 : AsteriskConstants.DefaultTimeoutSeconds;
@@ -314,6 +325,20 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
             }
         }
 
+        // Reject abandoning the tenant's live ARI identity while calls are still bound to it. This runs after the
+        // in-place mutation so it compares the freshly-applied identity against the captured prior identity using the
+        // same normalization the ownership registry applies. Disabling the provider, repointing its base URL, or
+        // renaming its Stasis application all abandon the old identity; while any binding still exists the change is
+        // refused so another tenant cannot claim the old identity and observe this tenant's in-flight channels.
+        if (previousIsEnabled &&
+            IsAriIdentityAbandoned(previousBaseUrl, previousApplicationName, settings) &&
+            await _channelTenantBindingStore.HasAnyAsync())
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                S["This Asterisk endpoint still owns one or more live call channels. End or reconcile those calls before you disable the provider or change its ARI URL or Stasis application name."]);
+        }
+
         if (context.Updater.ModelState.IsValid && settings.IsEnabled && string.IsNullOrEmpty(telephonySettings.DefaultProviderName))
         {
             telephonySettings.DefaultProviderName = AsteriskConstants.ProviderTechnicalName;
@@ -329,5 +354,23 @@ public sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<AsteriskSe
         }
 
         return Edit(site, settings, context);
+    }
+
+    private static bool IsAriIdentityAbandoned(string previousBaseUrl, string previousApplicationName, AsteriskSettings settings)
+    {
+        if (!settings.IsEnabled)
+        {
+            return true;
+        }
+
+        var previousNormalizedBaseUrl = AsteriskSettingsUtilities.NormalizeBaseUrl(previousBaseUrl);
+        var currentNormalizedBaseUrl = AsteriskSettingsUtilities.NormalizeBaseUrl(settings.BaseUrl);
+
+        if (!string.Equals(previousNormalizedBaseUrl, currentNormalizedBaseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !string.Equals(previousApplicationName?.Trim(), settings.ApplicationName?.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 }

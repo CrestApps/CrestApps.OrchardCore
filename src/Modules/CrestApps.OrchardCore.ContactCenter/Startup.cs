@@ -597,6 +597,7 @@ public sealed class VoiceStartup : StartupBase
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()
             .AddScoped<IInboundVoiceEventSink, InboundVoiceEventSink>()
+            .AddScoped<IInboundVoiceInteractionProbe, InboundVoiceInteractionProbe>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()

@@ -55,6 +55,7 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
             [],
+            [],
             store.Object,
             hubContext.Object,
             clock.Object,
@@ -110,6 +111,7 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
 
         var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
             [voiceEventBridge],
+            [],
             store.Object,
             hubContext.Object,
             clock.Object,
@@ -129,5 +131,46 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
         // Assert
         store.Verify(value => value.FindByProviderCallIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         hubContext.VerifyGet(value => value.Clients, Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenBridgeThrows_StillRunsTerminalTeardown()
+    {
+        // Arrange
+        var store = new Mock<ITelephonyInteractionStore>();
+        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
+        var clock = new Mock<IClock>();
+
+        var throwingBridge = new Mock<IAsteriskRealtimeVoiceEventBridge>();
+        throwingBridge
+            .Setup(bridge => bridge.TryHandleAsync(It.IsAny<AsteriskRealtimeVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("bridge failure"));
+
+        var teardownService = new Mock<IAsteriskCallTeardownService>();
+
+        var dispatcher = new AsteriskRealtimeVoiceEventDispatcher(
+            [throwingBridge.Object],
+            [teardownService.Object],
+            store.Object,
+            hubContext.Object,
+            clock.Object,
+            NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance,
+            _shellSettings);
+        var voiceEvent = new AsteriskRealtimeVoiceEvent
+        {
+            ProviderName = "Asterisk",
+            CallId = "call-1",
+            EventType = "ChannelDestroyed",
+            State = CallState.Disconnected,
+        };
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken));
+
+        // Assert
+        teardownService.Verify(
+            service => service.ReleaseAsync(voiceEvent, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

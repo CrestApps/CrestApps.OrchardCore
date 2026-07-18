@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Asterisk
 @model AsteriskSettingsViewModel
 
 <div class="ocat-wrapper">
@@ -48,9 +49,9 @@
     <div class="ocat-wrapper" asp-validation-class-for="ApplicationName">
         <label asp-for="ApplicationName" class="ocat-label">@T["Stasis application name"]</label>
         <div class="ocat-end">
-            <input asp-for="ApplicationName" class="form-control" autocomplete="off" />
+            <input asp-for="ApplicationName" class="form-control" autocomplete="off" placeholder="@AsteriskConstants.SuggestedApplicationName" />
             <span asp-validation-for="ApplicationName"></span>
-            <span class="hint">@T["The ARI Stasis application name that receives originated channels. Use the same application name that your Asterisk server is configured to allow."]</span>
+            <span class="hint">@T["The ARI Stasis application name that receives originated channels. Use the same application name that your Asterisk server is configured to allow. This value is required. When multiple tenants share one Asterisk server, each tenant must use a unique application name so that tenants never receive each other's Stasis events."]</span>
         </div>
     </div>
 

@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 internal sealed class AsteriskRealtimeVoiceEventDispatcher
 {
     private readonly IEnumerable<IAsteriskRealtimeVoiceEventBridge> _voiceEventBridges;
+    private readonly IEnumerable<IAsteriskCallTeardownService> _callTeardownServices;
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IClock _clock;
@@ -21,6 +22,7 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
 
     public AsteriskRealtimeVoiceEventDispatcher(
         IEnumerable<IAsteriskRealtimeVoiceEventBridge> voiceEventBridges,
+        IEnumerable<IAsteriskCallTeardownService> callTeardownServices,
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IClock clock,
@@ -28,6 +30,7 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         ShellSettings shellSettings)
     {
         _voiceEventBridges = voiceEventBridges;
+        _callTeardownServices = callTeardownServices;
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
         _clock = clock;
@@ -44,12 +47,35 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
-        foreach (var voiceEventBridge in _voiceEventBridges)
+        var handledByBridge = false;
+
+        try
         {
-            if (await voiceEventBridge.TryHandleAsync(voiceEvent, cancellationToken))
+            foreach (var voiceEventBridge in _voiceEventBridges)
             {
-                return;
+                if (await voiceEventBridge.TryHandleAsync(voiceEvent, cancellationToken))
+                {
+                    handledByBridge = true;
+
+                    break;
+                }
             }
+        }
+        finally
+        {
+            // Terminal resource cleanup runs in a finally so it happens regardless of which bridge (if any)
+            // claimed the event and even if a bridge throws, because releasing ARI bridges, channels, and
+            // ownership bindings is orthogonal to projecting call status. Each service is a no-op for
+            // non-terminal events and for channels the current tenant does not own.
+            foreach (var callTeardownService in _callTeardownServices)
+            {
+                await callTeardownService.ReleaseAsync(voiceEvent, cancellationToken);
+            }
+        }
+
+        if (handledByBridge)
+        {
+            return;
         }
 
         var interaction = await _telephonyInteractionStore.FindByProviderCallIdAsync(voiceEvent.ProviderName, voiceEvent.CallId, cancellationToken);

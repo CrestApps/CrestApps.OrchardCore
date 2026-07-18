@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading.Channels;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,8 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 {
+    private const int MaxBufferedRealtimeEvents = 1000;
+
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
     private readonly ILogger<AsteriskRealtimeVoiceListener> _logger;
@@ -157,53 +160,91 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
 
         await ReconcileAsync(settings.ProviderName, cancellationToken);
 
+        var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(MaxBufferedRealtimeEvents)
+        {
+            SingleReader = true,
+            SingleWriter = true,
+            FullMode = BoundedChannelFullMode.Wait,
+        });
+
+        var worker = ProcessBufferedPayloadsAsync();
         var buffer = new byte[8 * 1024];
 
-        while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+        try
         {
-            using var message = new MemoryStream();
-            WebSocketReceiveResult result;
-
-            do
+            while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
-                result = await socket.ReceiveAsync(buffer, cancellationToken);
+                using var message = new MemoryStream();
+                WebSocketReceiveResult result;
 
-                if (result.MessageType == WebSocketMessageType.Close)
+                do
+                {
+                    result = await socket.ReceiveAsync(buffer, cancellationToken);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        _logger.LogWarning(
+                            "The Asterisk real-time voice listener for provider {ProviderName} received a close frame. Status={Status}, Description={Description}.",
+                            settings.ProviderName,
+                            result.CloseStatus,
+                            OperationalLogRedactor.Redact(result.CloseStatusDescription, OperationalLogFieldKind.FreeText));
+
+                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
+
+                        return;
+                    }
+
+                    await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken);
+                }
+                while (!result.EndOfMessage);
+
+                var payload = Encoding.UTF8.GetString(message.ToArray());
+
+                if (!channel.Writer.TryWrite(payload))
                 {
                     _logger.LogWarning(
-                        "The Asterisk real-time voice listener for provider {ProviderName} received a close frame. Status={Status}, Description={Description}.",
-                        settings.ProviderName,
-                        result.CloseStatus,
-                        OperationalLogRedactor.Redact(result.CloseStatusDescription, OperationalLogFieldKind.FreeText));
+                        "The Asterisk real-time ingestion buffer for provider {ProviderName} is saturated; the listener will reconnect to recover and reconcile state.",
+                        settings.ProviderName);
 
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
-
-                    return;
+                    break;
                 }
-
-                await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken);
             }
-            while (!result.EndOfMessage);
+        }
+        finally
+        {
+            channel.Writer.TryComplete();
 
-            var payload = Encoding.UTF8.GetString(message.ToArray());
-
-            // A single malformed or unroutable event, or a transient tenant-scope failure while the shell is
-            // reloading, must never tear down the live event stream. Isolate each dispatch so the socket keeps
-            // receiving; any missed state change is still reconciled by the periodic provider-truth sweep.
             try
             {
-                await DispatchAsync(settings.ProviderName, payload, cancellationToken);
+                await worker;
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
-                throw;
             }
-            catch (Exception ex)
+        }
+
+        async Task ProcessBufferedPayloadsAsync()
+        {
+            await foreach (var payload in channel.Reader.ReadAllAsync(cancellationToken))
             {
-                _logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
-                    "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
-                    settings.ProviderName);
+                // A single malformed or unroutable event, or a transient tenant-scope failure while the shell is
+                // reloading, must never tear down the live event stream. Isolate each dispatch so the socket keeps
+                // receiving; any missed state change is still reconciled by the periodic provider-truth sweep.
+                try
+                {
+                    await DispatchAsync(settings.ProviderName, payload, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        OperationalLogRedactor.RedactException(ex),
+                        "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
+                        settings.ProviderName);
+                }
             }
         }
     }

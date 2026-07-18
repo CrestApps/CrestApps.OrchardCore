@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -32,7 +34,7 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.Equal(CallDirection.Outbound, result.Call.Direction);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest.Method);
-        Assert.Equal($"{BaseUrl}channels?endpoint=PJSIP%2F%2B15551234567@phones&timeout=30&app=crestapps-telephony&callerId=%2B15550000000", handler.LastRequest.RequestUri.AbsoluteUri);
+        Assert.Equal($"{BaseUrl}channels?endpoint=PJSIP%2F%2B15551234567@phones&timeout=30&app=crestapps-telephony&appArgs=CRESTAPPS_ORIGINATED&callerId=%2B15550000000", handler.LastRequest.RequestUri.AbsoluteUri);
         Assert.Equal("Basic", handler.LastRequest.Headers.Authorization.Scheme);
         Assert.Equal(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"ari-user:{PlainPassword}")), handler.LastRequest.Headers.Authorization.Parameter);
     }
@@ -52,7 +54,7 @@ public sealed class AsteriskTelephonyProviderTests
         Assert.NotNull(result.Call);
         Assert.Equal(CallState.Connecting, result.Call.State);
         Assert.Equal(
-            $"{BaseUrl}channels?endpoint=Local%2F1000@default&timeout=30&app=crestapps-telephony&callerId=%2B15550000000",
+            $"{BaseUrl}channels?endpoint=Local%2F1000@default&timeout=30&app=crestapps-telephony&appArgs=CRESTAPPS_ORIGINATED&callerId=%2B15550000000",
             handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
@@ -99,6 +101,58 @@ public sealed class AsteriskTelephonyProviderTests
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\":\"call-1\"}");
         var provider = CreateProvider(handler, out _, isEnabled: false);
+
+        // Act
+        var result = await provider.DialAsync(new DialRequest { To = "+15551234567" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task DialAsync_WhenAnotherTenantOwnsTheAriApplication_ReturnsFailedAndDoesNotCallApi()
+    {
+        // Arrange
+        // Even a fully configured tenant must fail closed when another tenant already owns the same ARI application,
+        // because originating a call would place channels into the owning tenant's Stasis application.
+        var baseUrl = $"http://asterisk-{Guid.NewGuid():N}.test:8088/ari/";
+        const string applicationName = "shared-ari-app";
+
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+            .TryClaim(baseUrl, applicationName, "OwnerTenant", Guid.NewGuid().ToString("N")));
+
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedPassword = dataProtectionProvider
+            .CreateProtector(AsteriskConstants.ProtectorName)
+            .Protect(PlainPassword);
+        var settings = new AsteriskSettings
+        {
+            IsEnabled = true,
+            BaseUrl = baseUrl,
+            UserName = "ari-user",
+            Password = protectedPassword,
+            ApplicationName = applicationName,
+            EndpointTemplate = "PJSIP/{number}@phones",
+            OutboundCallerId = "+15550000000",
+            TimeoutSeconds = 30,
+        };
+
+        var shellSettings = new ShellSettings { Name = "TenantB" };
+        var gate = new AsteriskAriApplicationGate(
+            new AsteriskAriApplicationOwnershipRegistry(),
+            shellSettings,
+            Options.Create(new DefaultAsteriskOptions()));
+
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\":\"call-1\"}");
+        var provider = new AsteriskTelephonyProvider(
+            SiteServiceFactory.Create(settings),
+            dataProtectionProvider,
+            new StubHttpClientFactory(handler),
+            gate,
+            new StubClock(),
+            NullLogger<AsteriskTelephonyProvider>.Instance,
+            new PassThroughStringLocalizer<AsteriskTelephonyProvider>());
 
         // Act
         var result = await provider.DialAsync(new DialRequest { To = "+15551234567" }, TestContext.Current.CancellationToken);
@@ -594,10 +648,17 @@ public sealed class AsteriskTelephonyProviderTests
             VoicemailPriority = 1,
         };
 
+        var shellSettings = new ShellSettings { Name = "Default" };
+        var gate = new AsteriskAriApplicationGate(
+            new AsteriskAriApplicationOwnershipRegistry(),
+            shellSettings,
+            Options.Create(new DefaultAsteriskOptions()));
+
         return new AsteriskTelephonyProvider(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
             new StubHttpClientFactory(handler),
+            gate,
             new StubClock(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());

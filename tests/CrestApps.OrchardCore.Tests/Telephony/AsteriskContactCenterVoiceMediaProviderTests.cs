@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -278,7 +279,79 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         Assert.IsType<InvalidOperationException>(exception);
     }
 
-    private static AsteriskContactCenterVoiceMediaProvider CreateProvider(StubHttpMessageHandler handler)
+    [Fact]
+    public async Task OpenSessionAsync_OnNonDefaultShellWithoutTenantSettings_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        // A non-default tenant with no Asterisk settings of its own must not borrow the shared host-default ARI
+        // application. The media provider resolves as disabled, so opening a session fails closed instead of
+        // crossing tenant boundaries through the shared connection.
+        var provider = CreateProviderWithoutTenantSettings(
+            new StubHttpMessageHandler(HttpStatusCode.OK),
+            shellName: "TenantA");
+        var request = CreateRequest();
+
+        // Act
+        var exception = await Record.ExceptionAsync(() =>
+            provider.OpenSessionAsync(request, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
+    }
+
+    [Fact]
+    public async Task OpenSessionAsync_WhenAnotherTenantOwnsTheAriApplication_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        // A tenant with its own enabled Asterisk settings must still fail closed when another tenant has already
+        // claimed the same ARI application. Creating an external-media channel would otherwise let Asterisk deliver
+        // this tenant's media into the owning tenant's Stasis application.
+        var baseUrl = $"http://asterisk-{Guid.NewGuid():N}.example/ari/";
+        const string applicationName = "shared-ari-app";
+
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+            .TryClaim(baseUrl, applicationName, "OwnerTenant", Guid.NewGuid().ToString("N")));
+
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedPassword = dataProtectionProvider
+            .CreateProtector(AsteriskConstants.ProtectorName)
+            .Protect(PlainPassword);
+        var settings = new AsteriskSettings
+        {
+            IsEnabled = true,
+            BaseUrl = baseUrl,
+            UserName = "ari-user",
+            Password = protectedPassword,
+            ApplicationName = applicationName,
+            TimeoutSeconds = 30,
+        };
+
+        var shellSettings = new ShellSettings { Name = "TenantB" };
+        var options = Options.Create(new DefaultAsteriskOptions());
+        var gate = new AsteriskAriApplicationGate(
+            new AsteriskAriApplicationOwnershipRegistry(),
+            shellSettings,
+            options);
+
+        var provider = new AsteriskContactCenterVoiceMediaProvider(
+            SiteServiceFactory.Create(settings),
+            dataProtectionProvider,
+            options,
+            shellSettings,
+            new StubHttpClientFactory(new StubHttpMessageHandler(HttpStatusCode.OK)),
+            new TestContactCenterFeatureWorkManager(),
+            gate,
+            NullLogger<AsteriskContactCenterVoiceMediaProvider>.Instance);
+
+        // Act
+        var exception = await Record.ExceptionAsync(() =>
+            provider.OpenSessionAsync(CreateRequest(), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
+    }
+
+    private static AsteriskContactCenterVoiceMediaProvider CreateProvider(StubHttpMessageHandler handler, string shellName = "Default")
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
         var protectedPassword = dataProtectionProvider
@@ -294,12 +367,51 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
             TimeoutSeconds = 30,
         };
 
+        var shellSettings = new ShellSettings { Name = shellName };
+        var options = Options.Create(new DefaultAsteriskOptions());
+        var gate = new AsteriskAriApplicationGate(
+            new AsteriskAriApplicationOwnershipRegistry(),
+            shellSettings,
+            options);
+
         return new AsteriskContactCenterVoiceMediaProvider(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
-            Options.Create(new DefaultAsteriskOptions()),
+            options,
+            shellSettings,
             new StubHttpClientFactory(handler),
             new TestContactCenterFeatureWorkManager(),
+            gate,
+            NullLogger<AsteriskContactCenterVoiceMediaProvider>.Instance);
+    }
+
+    private static AsteriskContactCenterVoiceMediaProvider CreateProviderWithoutTenantSettings(StubHttpMessageHandler handler, string shellName)
+    {
+        var defaultOptions = new DefaultAsteriskOptions
+        {
+            IsEnabled = true,
+            BaseUrl = BaseUrl,
+            UserName = "ari-user",
+            Password = PlainPassword,
+            ApplicationName = "crestapps-telephony",
+            TimeoutSeconds = 30,
+        };
+
+        var shellSettings = new ShellSettings { Name = shellName };
+        var options = Options.Create(defaultOptions);
+        var gate = new AsteriskAriApplicationGate(
+            new AsteriskAriApplicationOwnershipRegistry(),
+            shellSettings,
+            options);
+
+        return new AsteriskContactCenterVoiceMediaProvider(
+            SiteServiceFactory.Create(new AsteriskSettings()),
+            new EphemeralDataProtectionProvider(),
+            options,
+            shellSettings,
+            new StubHttpClientFactory(handler),
+            new TestContactCenterFeatureWorkManager(),
+            gate,
             NullLogger<AsteriskContactCenterVoiceMediaProvider>.Instance);
     }
 

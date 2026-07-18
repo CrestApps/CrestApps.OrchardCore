@@ -54,7 +54,8 @@ internal static class AsteriskAriConnectionUtilities
             {
                 ["app"] = options.AsteriskApplicationName,
                 ["api_key"] = $"{options.AsteriskUserName}:{options.AsteriskPassword}",
-                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+                // Keep the listener scoped to its configured ARI app instead of the global PBX event stream.
+                ["subscribeAll"] = bool.FalseString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;
@@ -76,7 +77,8 @@ internal static class AsteriskAriConnectionUtilities
             new Dictionary<string, string>
             {
                 ["app"] = options.AsteriskApplicationName,
-                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+                // Keep logging output aligned with the tenant-scoped ARI app subscription used at runtime.
+                ["subscribeAll"] = bool.FalseString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;

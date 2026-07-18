@@ -12,7 +12,8 @@ public interface IInboundVoiceEventSink
     /// </summary>
     /// <param name="inboundEvent">The normalized inbound voice event.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task RouteAsync(
+    /// <returns>The routing outcome, exposing the durable interaction created for the call when one was produced.</returns>
+    Task<InboundVoiceRouteOutcome> RouteAsync(
         InboundVoiceEvent inboundEvent,
         CancellationToken cancellationToken = default);
 }

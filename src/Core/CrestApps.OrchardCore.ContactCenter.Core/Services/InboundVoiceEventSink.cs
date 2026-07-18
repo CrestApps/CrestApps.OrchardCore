@@ -19,12 +19,17 @@ public sealed class InboundVoiceEventSink : IInboundVoiceEventSink
     }
 
     /// <inheritdoc/>
-    public async Task RouteAsync(
+    public async Task<InboundVoiceRouteOutcome> RouteAsync(
         InboundVoiceEvent inboundEvent,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
 
-        await _voiceCallRouter.RouteInboundAsync(inboundEvent, cancellationToken);
+        var result = await _voiceCallRouter.RouteInboundAsync(inboundEvent, cancellationToken);
+
+        return new InboundVoiceRouteOutcome
+        {
+            InteractionId = result?.InteractionId,
+        };
     }
 }

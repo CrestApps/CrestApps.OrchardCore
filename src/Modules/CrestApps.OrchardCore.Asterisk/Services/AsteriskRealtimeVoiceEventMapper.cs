@@ -37,14 +37,29 @@ internal static class AsteriskRealtimeVoiceEventMapper
 
         var occurredUtc = TryReadDateTime(root, "timestamp");
         var metadata = BuildMetadata(root, channel, eventType);
+        var callerNumber = ReadNestedString(channel, "caller", "number");
+        var dialedNumber = ReadNestedString(channel, "dialplan", "exten") ?? ReadNestedString(channel, "connected", "number");
+        var interactionCorrelationId = ReadChannelVariable(root, channel, AsteriskConstants.InteractionChannelVariableName);
+        var isStasisStart = string.Equals(eventType, "StasisStart", StringComparison.OrdinalIgnoreCase);
+        var isOwnedOrigination = isStasisStart &&
+            (ContainsStasisArgument(root, AsteriskConstants.OriginationMarkerVariableName) ||
+            !string.IsNullOrWhiteSpace(ReadChannelVariable(root, channel, AsteriskConstants.OriginationMarkerVariableName)));
+        var isInbound = isStasisStart && !isOwnedOrigination;
 
         voiceEvent = new AsteriskRealtimeVoiceEvent
         {
             ProviderName = providerName,
             CallId = callId,
             EventType = eventType,
-            FromAddress = ReadNestedString(channel, "caller", "number"),
+            FromAddress = callerNumber,
             ToAddress = ReadNestedString(channel, "connected", "number") ?? ReadNestedString(channel, "dialplan", "exten"),
+            ChannelId = callId,
+            ParentChannelId = ReadParentChannelId(root, channel),
+            IsInbound = isInbound,
+            IsOwnedOrigination = isOwnedOrigination,
+            DialedNumber = dialedNumber,
+            CallerNumber = callerNumber,
+            InteractionCorrelationId = interactionCorrelationId,
             State = state,
             IsMuted = isMuted,
             IsOnHold = isOnHold,
@@ -117,6 +132,81 @@ internal static class AsteriskRealtimeVoiceEventMapper
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
 
         return $"{providerName}:{Convert.ToHexString(hash)}";
+    }
+
+    private static bool ContainsStasisArgument(JsonElement root, string argumentName)
+    {
+        if (!root.TryGetProperty("args", out var args) ||
+            args.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var argument in args.EnumerateArray())
+        {
+            if (argument.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var value = argument.GetString();
+
+            if (string.Equals(value, argumentName, StringComparison.OrdinalIgnoreCase) ||
+                value?.StartsWith($"{argumentName}=", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ReadParentChannelId(JsonElement root, JsonElement channel)
+        => ReadString(channel, "parent_channel_id") ??
+            ReadString(channel, "parentChannelId") ??
+            ReadString(root, "parent_channel_id") ??
+            ReadString(root, "parentChannelId");
+
+    private static string ReadChannelVariable(JsonElement root, JsonElement channel, string variableName)
+        => ReadVariable(channel, "variables", variableName) ??
+            ReadVariable(root, "variables", variableName) ??
+            ReadVariable(root, "channelvars", variableName) ??
+            ReadVariable(root, "channel_variables", variableName) ??
+            ReadRootChannelVarset(root, variableName);
+
+    private static string ReadVariable(JsonElement element, string variablesPropertyName, string variableName)
+    {
+        if (!element.TryGetProperty(variablesPropertyName, out var variables) ||
+            variables.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        foreach (var property in variables.EnumerateObject())
+        {
+            if (!string.Equals(property.Name, variableName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return property.Value.ValueKind == JsonValueKind.String
+                ? property.Value.GetString()
+                : property.Value.ToString();
+        }
+
+        return null;
+    }
+
+    private static string ReadRootChannelVarset(JsonElement root, string variableName)
+    {
+        var variable = ReadString(root, "variable");
+
+        if (!string.Equals(variable, variableName, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return ReadString(root, "value");
     }
 
     private static bool TryResolveChannel(JsonElement root, out JsonElement channel)

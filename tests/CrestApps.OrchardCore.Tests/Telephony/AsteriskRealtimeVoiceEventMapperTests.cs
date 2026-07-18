@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 
@@ -139,5 +140,70 @@ public sealed class AsteriskRealtimeVoiceEventMapperTests
         Assert.True(voiceEvent.IsConference);
         Assert.Equal(2, voiceEvent.ParticipantCount);
         Assert.False(voiceEvent.IsOnHold);
+    }
+
+    [Fact]
+    public void TryMap_WhenStasisStartCarriesOriginationMarkerInAppArgsOnly_ClassifiesAsOwnedOrigination()
+    {
+        // Arrange
+        var payload =
+            $$"""
+            {
+              "type": "StasisStart",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "args": ["{{AsteriskConstants.OriginationMarkerVariableName}}", "interaction-1", "outbound"],
+              "channel": {
+                "id": "call-1",
+                "state": "Up",
+                "caller": {
+                  "number": "+15550001000"
+                },
+                "connected": {
+                  "number": "+15550002000"
+                }
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.True(mapped);
+        Assert.NotNull(voiceEvent);
+        Assert.True(voiceEvent.IsOwnedOrigination);
+        Assert.False(voiceEvent.IsInbound);
+    }
+
+    [Fact]
+    public void TryMap_WhenStasisStartHasNoOriginationMarker_ClassifiesAsInbound()
+    {
+        // Arrange
+        const string payload =
+            """
+            {
+              "type": "StasisStart",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "args": [],
+              "channel": {
+                "id": "call-1",
+                "state": "Ring",
+                "caller": {
+                  "number": "+15550001000"
+                }
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.True(mapped);
+        Assert.NotNull(voiceEvent);
+        Assert.False(voiceEvent.IsOwnedOrigination);
+        Assert.True(voiceEvent.IsInbound);
     }
 }

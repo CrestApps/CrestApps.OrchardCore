@@ -8,9 +8,7 @@ internal static class AsteriskSettingsUtilities
 {
     public static void ApplyDefaults(AsteriskConnectionSettings settings)
     {
-        settings.ApplicationName = string.IsNullOrWhiteSpace(settings.ApplicationName)
-            ? AsteriskConstants.DefaultApplicationName
-            : settings.ApplicationName.Trim();
+        settings.ApplicationName = settings.ApplicationName?.Trim();
 
         settings.TimeoutSeconds = settings.TimeoutSeconds > 0
             ? settings.TimeoutSeconds
@@ -48,9 +46,7 @@ internal static class AsteriskSettingsUtilities
 
     public static void ApplyDefaults(AsteriskResolvedSettings settings)
     {
-        settings.ApplicationName = string.IsNullOrWhiteSpace(settings.ApplicationName)
-            ? AsteriskConstants.DefaultApplicationName
-            : settings.ApplicationName.Trim();
+        settings.ApplicationName = settings.ApplicationName?.Trim();
 
         settings.TimeoutSeconds = settings.TimeoutSeconds > 0
             ? settings.TimeoutSeconds
@@ -92,6 +88,56 @@ internal static class AsteriskSettingsUtilities
             !string.IsNullOrWhiteSpace(settings.UserName) &&
             !string.IsNullOrWhiteSpace(password) &&
             !string.IsNullOrWhiteSpace(settings.ApplicationName);
+
+    /// <summary>
+    /// Determines whether <paramref name="resolved"/> collides with the host default ARI application.
+    /// </summary>
+    /// <param name="resolved">The tenant's resolved Asterisk settings to check.</param>
+    /// <param name="defaultOptions">The host default Asterisk options to compare against.</param>
+    public static bool CollidesWithHostDefaultApplication(
+        AsteriskResolvedSettings resolved,
+        DefaultAsteriskOptions defaultOptions)
+    {
+        if (resolved is null)
+        {
+            return false;
+        }
+
+        return CollidesWithHostDefaultApplication(resolved.BaseUrl, resolved.ApplicationName, defaultOptions);
+    }
+
+    /// <summary>
+    /// Determines whether <paramref name="baseUrl"/> and <paramref name="applicationName"/> collide with
+    /// the host default ARI application, normalizing <paramref name="baseUrl"/> internally before the
+    /// comparison. A non-default tenant that resolves to the same ARI application on the same server as
+    /// the host default connection would cross-deliver Stasis events with the default shell's listener;
+    /// the tenant must configure a unique application name instead. A blank application starts no listener
+    /// and the host default must be enabled for a collision to exist, so neither is treated as a collision.
+    /// </summary>
+    /// <param name="baseUrl">The ARI base URL to check; normalized internally before comparison.</param>
+    /// <param name="applicationName">The Stasis application name to check.</param>
+    /// <param name="defaultOptions">The host default Asterisk options to compare against.</param>
+    public static bool CollidesWithHostDefaultApplication(
+        string baseUrl,
+        string applicationName,
+        DefaultAsteriskOptions defaultOptions)
+    {
+        if (defaultOptions is null ||
+            !defaultOptions.IsEnabled ||
+            string.IsNullOrWhiteSpace(applicationName))
+        {
+            return false;
+        }
+
+        return string.Equals(
+                NormalizeBaseUrl(baseUrl),
+                NormalizeBaseUrl(defaultOptions.BaseUrl),
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(
+                applicationName.Trim(),
+                defaultOptions.ApplicationName?.Trim(),
+                StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool HasRequiredConfiguration(AsteriskResolvedSettings settings)
         => settings is not null &&
@@ -234,7 +280,8 @@ internal static class AsteriskSettingsUtilities
             {
                 ["app"] = settings.ApplicationName,
                 ["api_key"] = $"{settings.UserName}:{settings.Password}",
-                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+                // Keep each tenant listener scoped to its configured ARI app instead of the global PBX event stream.
+                ["subscribeAll"] = bool.FalseString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;
@@ -261,7 +308,8 @@ internal static class AsteriskSettingsUtilities
             new Dictionary<string, string>
             {
                 ["app"] = settings.ApplicationName,
-                ["subscribeAll"] = bool.TrueString.ToLowerInvariant(),
+                // Keep logging output aligned with the tenant-scoped ARI app subscription used at runtime.
+                ["subscribeAll"] = bool.FalseString.ToLowerInvariant(),
             }).TrimStart('?');
 
         return builder.Uri;

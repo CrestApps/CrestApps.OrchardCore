@@ -16,6 +16,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IAsteriskAriApplicationGate _applicationGate;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,6 +25,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
     /// <param name="siteService">The site service used to read the tenant-configured Asterisk settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to unprotect the stored password.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="applicationGate">The gate that enforces single-tenant ownership of each ARI application.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -31,6 +33,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IHttpClientFactory httpClientFactory,
+        IAsteriskAriApplicationGate applicationGate,
         IClock clock,
         ILogger<AsteriskTelephonyProvider> logger,
         IStringLocalizer<AsteriskTelephonyProvider> stringLocalizer)
@@ -38,6 +41,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
+        _applicationGate = applicationGate;
         _logger = logger;
     }
 
@@ -102,6 +106,14 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         };
 
         AsteriskSettingsUtilities.ApplyDefaults(new AsteriskConnectionSettingsAdapter(resolved));
+
+        // Every telephony operation resolves settings through this method before it originates into the configured
+        // Stasis application, so enforcing ownership here fails closed for a tenant that does not own the application:
+        // the base provider then reports the provider as not configured instead of originating into a shared app.
+        if (resolved.IsEnabled && !_applicationGate.TryAcquire(resolved))
+        {
+            resolved.IsEnabled = false;
+        }
 
         return ValueTask.FromResult(resolved);
     }

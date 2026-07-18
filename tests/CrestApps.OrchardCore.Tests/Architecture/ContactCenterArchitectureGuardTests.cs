@@ -49,26 +49,15 @@ public sealed class ContactCenterArchitectureGuardTests
             "src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/ContentTransferPermissions.cs",
             "_permissionsByType",
             "Global Orchard permission-template cache; it does not hold tenant data."),
+        new ArchitectureAllowlistEntry(
+            StaticMutableStateRule,
+            "src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriApplicationOwnershipRegistry.cs",
+            "_ownership",
+            "Process-wide ARI (BaseUrl, ApplicationName) to owning-tenant guard on a single node; prevents cross-tenant Stasis event delivery and holds no tenant data."),
     ];
 
-    // TECH DEBT (Part 3 removal): pre-existing ARI subscribeAll=true occurrences.
-    // Removed by the CC-1 7-step tenant event-ownership fix in Part 3, which deletes both the code AND these baseline entries.
-    // This baseline keeps the guard green today while still failing on any NEW subscribeAll=true.
     private static readonly ArchitectureKnownBaselineEntry[] _subscribeAllKnownBaseline =
-    [
-        new ArchitectureKnownBaselineEntry(
-            "src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskSettingsUtilities.cs",
-            "[\"subscribeAll\"] = bool.TrueString"),
-        new ArchitectureKnownBaselineEntry(
-            "src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskSettingsUtilities.cs",
-            "[\"subscribeAll\"] = bool.TrueString"),
-        new ArchitectureKnownBaselineEntry(
-            "src/Startup/CrestApps.OrchardCore.Asterisk.Web/Services/AsteriskAriConnectionUtilities.cs",
-            "[\"subscribeAll\"] = bool.TrueString"),
-        new ArchitectureKnownBaselineEntry(
-            "src/Startup/CrestApps.OrchardCore.Asterisk.Web/Services/AsteriskAriConnectionUtilities.cs",
-            "[\"subscribeAll\"] = bool.TrueString"),
-    ];
+    [];
 
     /// <summary>
     /// Ensures application code does not bypass Orchard Core Redis primitives.

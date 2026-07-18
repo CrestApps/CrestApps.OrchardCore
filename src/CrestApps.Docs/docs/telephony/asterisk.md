@@ -60,7 +60,7 @@ Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab unde
 | **ARI base URL** | The base ARI endpoint, for example `http://localhost:8088/ari/`. If you omit `/ari`, it is added automatically. |
 | **ARI user name** | The Asterisk ARI user name used for HTTP basic authentication. |
 | **ARI password** | The ARI password. Stored encrypted with the data protection provider. |
-| **Stasis application name** | The ARI application name that receives originated channels. |
+| **Stasis application name** | Required. The ARI application name that receives originated channels. It must match the `Stasis()` application your dialplan hands calls to. This value is not defaulted for you: if it is left blank the provider fails closed (no inbound listener starts and outbound origination is unavailable) rather than silently sharing a well-known name. When several tenants share one Asterisk server, give each tenant a **unique** application name so a tenant never receives another tenant's Stasis events. |
 | **Endpoint template** | Optional. Use `{number}` to convert the dialed destination into an Asterisk endpoint, for example `PJSIP/{number}@phones` or `Local/{number}@default`. The admin hint now renders that token literally, so the settings screen remains stable while showing the exact placeholder to enter. When empty, the dialed destination is sent to Asterisk as-is. |
 | **Outbound caller id** | Optional caller identifier presented on outbound calls. |
 | **Dial timeout (seconds)** | How long Asterisk keeps trying to originate the call before timing out. |

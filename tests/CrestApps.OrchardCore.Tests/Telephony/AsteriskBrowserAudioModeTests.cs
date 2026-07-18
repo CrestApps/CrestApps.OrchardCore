@@ -67,6 +67,7 @@ public sealed class AsteriskBrowserAudioModeTests
             SiteServiceFactory.Create(settings),
             Mock.Of<IDataProtectionProvider>(),
             Mock.Of<IHttpClientFactory>(),
+            Mock.Of<IAsteriskAriApplicationGate>(),
             Mock.Of<IClock>(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());
