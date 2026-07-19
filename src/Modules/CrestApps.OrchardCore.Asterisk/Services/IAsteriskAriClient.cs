@@ -108,4 +108,22 @@ internal interface IAsteriskAriClient
     /// (a stop of an already-gone recording is treated as an idempotent no-op success).
     /// </returns>
     Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates a snoop channel that spies on a live channel and enters the tenant's configured Stasis application,
+    /// so an originated supervisor endpoint can be bridged to it to hear (and, for a whisper engagement, speak into)
+    /// the spied channel.
+    /// </summary>
+    /// <param name="channelId">The identifier of the live channel to snoop (the agent leg).</param>
+    /// <param name="spy">The direction of audio the snoop channel receives from the spied channel.</param>
+    /// <param name="whisper">The direction of audio the snoop channel injects into the spied channel.</param>
+    /// <param name="snoopId">The deterministic identifier to assign to the created snoop channel.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The created snoop channel.</returns>
+    Task<AsteriskAriChannel> SnoopChannelAsync(
+        string channelId,
+        string spy,
+        string whisper,
+        string snoopId,
+        CancellationToken cancellationToken);
 }

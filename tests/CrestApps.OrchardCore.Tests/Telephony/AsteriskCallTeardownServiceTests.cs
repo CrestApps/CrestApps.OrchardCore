@@ -424,5 +424,10 @@ public sealed class AsteriskCallTeardownServiceTests
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
         }
+
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
     }
 }

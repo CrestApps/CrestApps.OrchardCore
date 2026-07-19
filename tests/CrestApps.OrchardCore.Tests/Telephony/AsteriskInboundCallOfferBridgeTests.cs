@@ -517,6 +517,11 @@ public sealed class AsteriskInboundCallOfferBridgeTests
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
         }
+
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
     }
 
     private sealed class TestInboundVoiceEventSink : IInboundVoiceEventSink

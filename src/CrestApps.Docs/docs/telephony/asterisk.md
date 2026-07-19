@@ -50,6 +50,8 @@ operation currently **fails closed** (it returns a clear `agent_bridge_unavailab
 reporting a false success for a call whose media was never bridged.
 :::
 
+For Contact Center orchestration, the Asterisk voice provider also advertises **call recording** (ARI bridge recording of the tenant-owned conversation) and **supervisor monitoring** — **monitor** (listen only), **whisper** (heard by the agent only), and **barge** (heard by all parties). A monitoring engagement originates the supervisor's live browser softphone and, for monitor and whisper, bridges it to a snoop of the agent channel; barge adds the supervisor directly into the conversation bridge. **Take-over** is not yet advertised. These capabilities resolve the conversation through the tenant-owned channel binding and fail closed on a call the current tenant does not own, and they remain gated in the support matrix until the single-node audio and two-tenant proofs land.
+
 ## Tenant-configured Asterisk settings
 
 Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab under **Settings → Communication → Telephony**. The Telephony settings UI creates that tab from the site-settings display driver, and the Asterisk editor itself only renders the provider fields inside the tab. You need the `Manage telephony settings` permission.

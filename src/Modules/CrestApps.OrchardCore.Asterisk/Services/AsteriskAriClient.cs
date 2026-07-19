@@ -405,6 +405,51 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         return await GetStoredRecordingAsync(settings, recordingName, nameof(StopBridgeRecordingAsync), cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<AsteriskAriChannel> SnoopChannelAsync(
+        string channelId,
+        string spy,
+        string whisper,
+        string snoopId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(channelId);
+        ArgumentException.ThrowIfNullOrEmpty(spy);
+        ArgumentException.ThrowIfNullOrEmpty(whisper);
+        ArgumentException.ThrowIfNullOrEmpty(snoopId);
+
+        var settings = ResolveSettings(nameof(SnoopChannelAsync));
+        var query = new Dictionary<string, string>
+        {
+            // The snoop channel enters the tenant's own Stasis application (resolved from validated tenant settings,
+            // never from caller input) so its lifecycle events stay tenant-owned per CC-1.
+            ["app"] = settings.ApplicationName,
+            ["spy"] = spy,
+            ["whisper"] = whisper,
+            ["snoopId"] = snoopId,
+        };
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"channels/{Uri.EscapeDataString(channelId)}/snoop",
+            query,
+            null,
+            nameof(SnoopChannelAsync),
+            cancellationToken);
+
+        // A snoop with the same deterministic id already in progress surfaces as a 409, so read the existing snoop
+        // channel back and treat the create as idempotent.
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            return await GetChannelAsync(settings, snoopId, nameof(SnoopChannelAsync), cancellationToken);
+        }
+
+        await EnsureSuccessAsync(response, nameof(SnoopChannelAsync), cancellationToken);
+
+        return await ReadJsonAsync<AsteriskAriChannel>(response, nameof(SnoopChannelAsync), cancellationToken) ??
+            await GetChannelAsync(settings, snoopId, nameof(SnoopChannelAsync), cancellationToken);
+    }
+
     private async Task<AsteriskAriLiveRecording> GetLiveRecordingAsync(
         AsteriskResolvedSettings settings,
         string recordingName,

@@ -77,4 +77,49 @@ internal static class AsteriskAriConstants
     /// The ARI relative path prefix through which a stored recording is retrieved by name.
     /// </summary>
     public const string StoredRecordingRetrievalPathPrefix = "recordings/stored/";
+
+    /// <summary>
+    /// The deterministic prefix used for the dedicated supervisor mixing bridge that joins the snoop leg to the
+    /// originated supervisor endpoint for a listen-only or whisper engagement. Combined with the interaction and
+    /// supervisor identity it yields a stable bridge id so a later stop addresses the same bridge.
+    /// </summary>
+    public const string SupervisorBridgePrefix = "crestapps-super-bridge-";
+
+    /// <summary>
+    /// The deterministic prefix used for the originated supervisor endpoint leg of a monitoring engagement.
+    /// Combined with the interaction and supervisor identity it yields a stable channel id so retries are
+    /// idempotent and a later stop can hang up the same leg.
+    /// </summary>
+    public const string SupervisorChannelPrefix = "crestapps-super-";
+
+    /// <summary>
+    /// The deterministic prefix used for the snoop channel that carries the conversation audio to the supervisor
+    /// in a listen-only or whisper engagement. Combined with the interaction and supervisor identity it yields a
+    /// stable snoop id so a later stop can hang up the same snoop leg.
+    /// </summary>
+    public const string SupervisorSnoopPrefix = "crestapps-snoop-";
+
+    /// <summary>
+    /// The snoop <c>spy</c> direction that lets the supervisor hear audio flowing both toward and away from the
+    /// spied channel (both parties of the conversation).
+    /// </summary>
+    public const string SnoopSpyBoth = "both";
+
+    /// <summary>
+    /// The snoop <c>whisper</c> direction that injects no supervisor audio into the spied channel, keeping a
+    /// listen-only (monitor) engagement silent.
+    /// </summary>
+    public const string SnoopWhisperNone = "none";
+
+    /// <summary>
+    /// The snoop <c>whisper</c> direction that injects the supervisor audio outward into the spied channel only,
+    /// so a whisper engagement is heard by the agent but never by the customer.
+    /// </summary>
+    public const string SnoopWhisperOut = "out";
+
+    /// <summary>
+    /// The maximum time, in seconds, to wait for an originated supervisor channel to enter the Stasis application
+    /// (that is, for the supervisor's softphone to answer) before a monitoring engagement is treated as unanswered.
+    /// </summary>
+    public const int SupervisorAnswerTimeoutSeconds = 30;
 }

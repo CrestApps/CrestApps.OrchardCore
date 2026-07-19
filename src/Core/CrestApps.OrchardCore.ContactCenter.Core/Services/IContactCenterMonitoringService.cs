@@ -35,4 +35,22 @@ public interface IContactCenterMonitoringService
         ClaimsPrincipal principal,
         MonitorMode mode,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stops a supervisor engagement on a live interaction, releasing only the supervisor-owned media without
+    /// affecting the underlying customer-to-agent call. Authorized under the same boundary as
+    /// <see cref="EngageAsync(string, string, ClaimsPrincipal, MonitorMode, CancellationToken)"/>.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="supervisorId">The supervisor whose engagement should be stopped.</param>
+    /// <param name="principal">The authenticated supervisor principal.</param>
+    /// <param name="mode">The engagement mode being stopped.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The stop result.</returns>
+    Task<SupervisorEngagementResult> StopEngagementAsync(
+        string interactionId,
+        string supervisorId,
+        ClaimsPrincipal principal,
+        MonitorMode mode,
+        CancellationToken cancellationToken = default);
 }

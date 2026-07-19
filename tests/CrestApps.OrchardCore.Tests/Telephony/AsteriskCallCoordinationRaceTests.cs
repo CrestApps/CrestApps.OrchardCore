@@ -468,6 +468,11 @@ public sealed class AsteriskCallCoordinationRaceTests
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
         }
+
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
     }
 
     private sealed class BarrierTeardownAriClient : IAsteriskAriClient
@@ -560,6 +565,11 @@ public sealed class AsteriskCallCoordinationRaceTests
         public Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
+        }
+
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
         }
     }
 
@@ -657,6 +667,11 @@ public sealed class AsteriskCallCoordinationRaceTests
         public Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
+        }
+
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
         }
     }
 

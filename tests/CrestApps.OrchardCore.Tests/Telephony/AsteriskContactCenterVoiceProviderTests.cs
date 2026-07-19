@@ -29,15 +29,18 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         Assert.Equal(
             ContactCenterVoiceProviderCapabilities.DialerDial |
             ContactCenterVoiceProviderCapabilities.AgentConnect |
-            ContactCenterVoiceProviderCapabilities.Recording,
+            ContactCenterVoiceProviderCapabilities.Recording |
+            ContactCenterVoiceProviderCapabilities.Monitor |
+            ContactCenterVoiceProviderCapabilities.Whisper |
+            ContactCenterVoiceProviderCapabilities.Barge,
             capabilities);
         Assert.Equal(VoiceProviderDeliveryModel.ServerSideAcd, service.DeliveryModel);
         Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
+        Assert.IsAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceTransferProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
-        Assert.IsNotAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
     }
 
     [Fact]

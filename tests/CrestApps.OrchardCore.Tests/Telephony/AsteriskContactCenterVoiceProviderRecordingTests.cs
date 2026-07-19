@@ -361,6 +361,11 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
             return Task.FromResult(StopResult);
         }
 
+        public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
+
         public Task<AsteriskAriChannel> OriginateAsync(AsteriskAriOriginateRequest request, CancellationToken cancellationToken)
         {
             return Task.FromResult(new AsteriskAriChannel());

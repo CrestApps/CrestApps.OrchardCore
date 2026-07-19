@@ -198,6 +198,106 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         return EngageAsync(interactionId, supervisorId, null, mode, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<SupervisorEngagementResult> StopEngagementAsync(
+        string interactionId,
+        string supervisorId,
+        ClaimsPrincipal principal,
+        MonitorMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(interactionId))
+        {
+            return SupervisorEngagementResult.Failure("An interaction is required.");
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return SupervisorEngagementResult.Failure("The interaction could not be found.");
+        }
+
+        var providerCallId = interaction.ProviderInteractionId;
+
+        if (_callControlAuthorizationService is not null)
+        {
+            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            {
+                Principal = principal,
+                UserId = supervisorId,
+                Verb = CallControlVerb.SupervisorEngage,
+                InteractionId = interaction.ItemId,
+                ProviderName = interaction.ProviderName,
+                ProviderCallId = interaction.ProviderInteractionId,
+                SupervisorOperation = true,
+            }, cancellationToken);
+
+            if (!authorization.Succeeded)
+            {
+                return SupervisorEngagementResult.Failure(authorization.FailureReason);
+            }
+
+            providerCallId = authorization.ProviderCallId;
+        }
+
+        var provider = _voiceProviderResolver.Get(interaction.ProviderName);
+
+        if (provider is not IContactCenterVoiceMonitoringProvider monitoringProvider ||
+            string.IsNullOrEmpty(providerCallId))
+        {
+            return SupervisorEngagementResult.Failure($"The voice provider cannot stop the '{mode}' engagement.");
+        }
+
+        try
+        {
+            var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+                monitoringProvider.StopAsync(new ContactCenterVoiceMonitoringRequest
+                {
+                    InteractionId = interaction.ItemId,
+                    ProviderCallId = providerCallId,
+                    SupervisorId = supervisorId,
+                    Mode = mode,
+                }, commandCancellationToken));
+
+            if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
+            {
+                return SupervisorEngagementResult.Failure(
+                    providerResult?.ErrorMessage ?? $"The voice provider did not confirm stopping the '{mode}' engagement.");
+            }
+
+            var interactionEvent = new InteractionEvent
+            {
+                EventType = ContactCenterConstants.Events.SupervisorMonitorStopped,
+                InteractionId = interaction.ItemId,
+                AggregateType = nameof(Interaction),
+                AggregateId = interaction.ItemId,
+                ActorId = supervisorId,
+                SourceComponent = ContactCenterConstants.Components.RealTime,
+            };
+
+            interactionEvent.SetData(new Dictionary<string, string>
+            {
+                ["mode"] = mode.ToString(),
+                ["supervisorId"] = supervisorId,
+            });
+
+            await _publisher.PublishAsync(interactionEvent, CancellationToken.None);
+
+            return SupervisorEngagementResult.Success();
+        }
+        catch (TimeoutException)
+        {
+            return SupervisorEngagementResult.Unknown(
+                $"The voice provider did not confirm stopping the '{mode}' engagement before the server timeout; the provider outcome is unknown.");
+        }
+        catch (OperationCanceledException)
+        {
+            return SupervisorEngagementResult.Unknown(
+                $"Stopping the '{mode}' engagement was interrupted before the provider outcome could be confirmed.");
+        }
+    }
+
     private static ContactCenterVoiceProviderCapabilities ResolveCapability(MonitorMode mode)
     {
         return mode switch

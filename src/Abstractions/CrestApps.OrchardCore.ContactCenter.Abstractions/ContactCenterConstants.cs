@@ -229,6 +229,35 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable provider-result metadata keys describing a supervisor monitoring engagement, shared between
+    /// voice providers and the monitoring service.
+    /// </summary>
+    public static class MonitoringMetadata
+    {
+        /// <summary>
+        /// Identifies the originated supervisor endpoint channel that carries the supervisor's audio.
+        /// </summary>
+        public const string SupervisorChannelId = "supervisorChannelId";
+
+        /// <summary>
+        /// Identifies the snoop channel that carries the conversation audio to the supervisor in a listen-only or
+        /// whisper engagement. It is omitted for a barge engagement, which uses no snoop.
+        /// </summary>
+        public const string SnoopChannelId = "snoopChannelId";
+
+        /// <summary>
+        /// Identifies the bridge the supervisor was joined to: a dedicated supervisor bridge for a listen-only or
+        /// whisper engagement, or the main conversation bridge for a barge engagement.
+        /// </summary>
+        public const string BridgeId = "supervisorBridgeId";
+
+        /// <summary>
+        /// Identifies the engagement mode that was executed.
+        /// </summary>
+        public const string Mode = "mode";
+    }
+
+    /// <summary>
     /// Contains site-settings configuration identifiers used by the Contact Center module set.
     /// </summary>
     public static class Settings
@@ -497,5 +526,10 @@ public static class ContactCenterConstants
         /// Raised when a supervisor starts monitoring, whispering, barging, or taking over a live call.
         /// </summary>
         public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";
+
+        /// <summary>
+        /// Raised when a supervisor stops a monitoring, whisper, or barge engagement on a live call.
+        /// </summary>
+        public const string SupervisorMonitorStopped = "SupervisorMonitorStopped";
     }
 }
