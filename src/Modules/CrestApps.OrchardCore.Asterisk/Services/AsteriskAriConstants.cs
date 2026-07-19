@@ -45,4 +45,36 @@ internal static class AsteriskAriConstants
     /// (that is, for the agent to answer) before a caller-to-agent connect attempt is treated as unanswered.
     /// </summary>
     public const int AgentAnswerTimeoutSeconds = 30;
+
+    /// <summary>
+    /// The deterministic prefix used for Contact Center conversation recordings. Combined with the owning
+    /// interaction identifier it yields a stable recording name so pause, resume, and stop address the same live
+    /// recording without additional state.
+    /// </summary>
+    public const string RecordingNamePrefix = "crestapps-recording-";
+
+    /// <summary>
+    /// The media format used when starting a Contact Center bridge recording.
+    /// </summary>
+    public const string RecordingFormat = "wav";
+
+    /// <summary>
+    /// The <c>ifExists</c> value used when starting a bridge recording so a re-issued start reuses the same name.
+    /// </summary>
+    public const string RecordingIfExistsOverwrite = "overwrite";
+
+    /// <summary>
+    /// The <c>terminateOn</c> value used when starting a bridge recording so no DTMF key stops it.
+    /// </summary>
+    public const string RecordingTerminateOnNone = "none";
+
+    /// <summary>
+    /// The live-recording state Asterisk reports for a paused recording.
+    /// </summary>
+    public const string RecordingPausedState = "paused";
+
+    /// <summary>
+    /// The ARI relative path prefix through which a stored recording is retrieved by name.
+    /// </summary>
+    public const string StoredRecordingRetrievalPathPrefix = "recordings/stored/";
 }

@@ -107,6 +107,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }
 
         interaction.RecordingState = state;
+        PersistRecordingMetadata(interaction, providerResult.Metadata);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
 
         await _publisher.PublishAsync(new InteractionEvent
@@ -120,5 +121,36 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }, CancellationToken.None);
 
         return true;
+    }
+
+    private static void PersistRecordingMetadata(Interaction interaction, IDictionary<string, string> metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return;
+        }
+
+        // Persist every provider-supplied recording field onto the interaction so the durable retrieval path,
+        // format, and duration survive beyond the transient provider call (closing DIST-8, which previously
+        // discarded this metadata). The interaction document is tenant-scoped, so the metadata stays isolated.
+        interaction.TechnicalMetadata ??= new Dictionary<string, object>();
+
+        foreach (var entry in metadata)
+        {
+            interaction.TechnicalMetadata[entry.Key] = entry.Value;
+        }
+
+        // The recording reference is the canonical retrieval handle, so prefer the durable storage reference and
+        // fall back to the provider recording name when only the name is reported.
+        if (metadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReference) &&
+            !string.IsNullOrWhiteSpace(storageReference))
+        {
+            interaction.RecordingReference = storageReference;
+        }
+        else if (metadata.TryGetValue(ContactCenterConstants.RecordingMetadata.RecordingName, out var recordingName) &&
+            !string.IsNullOrWhiteSpace(recordingName))
+        {
+            interaction.RecordingReference = recordingName;
+        }
     }
 }

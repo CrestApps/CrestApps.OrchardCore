@@ -197,6 +197,38 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable provider-result metadata keys describing a captured recording, shared between voice providers
+    /// and the recording service that persists them onto the interaction.
+    /// </summary>
+    public static class RecordingMetadata
+    {
+        /// <summary>
+        /// Identifies the provider-side recording name.
+        /// </summary>
+        public const string RecordingName = "recordingName";
+
+        /// <summary>
+        /// Identifies the durable storage reference used to retrieve the recording media.
+        /// </summary>
+        public const string StorageReference = "storageReference";
+
+        /// <summary>
+        /// Identifies the recording media format.
+        /// </summary>
+        public const string Format = "format";
+
+        /// <summary>
+        /// Identifies the recording duration, in seconds, when the provider reports it.
+        /// </summary>
+        public const string DurationSeconds = "durationSeconds";
+
+        /// <summary>
+        /// Identifies the provider-relative path used to retrieve the stored recording.
+        /// </summary>
+        public const string RetrievalPath = "retrievalPath";
+    }
+
+    /// <summary>
     /// Contains site-settings configuration identifiers used by the Contact Center module set.
     /// </summary>
     public static class Settings

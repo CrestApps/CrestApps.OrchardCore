@@ -302,6 +302,162 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         await EnsureSuccessAsync(response, nameof(DestroyBridgeAsync), cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<AsteriskAriLiveRecording> StartBridgeRecordingAsync(
+        string bridgeId,
+        string recordingName,
+        string format,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(bridgeId);
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+        ArgumentException.ThrowIfNullOrEmpty(format);
+
+        var settings = ResolveSettings(nameof(StartBridgeRecordingAsync));
+        var query = new Dictionary<string, string>
+        {
+            ["name"] = recordingName,
+            ["format"] = format,
+            ["ifExists"] = AsteriskAriConstants.RecordingIfExistsOverwrite,
+            ["terminateOn"] = AsteriskAriConstants.RecordingTerminateOnNone,
+        };
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"bridges/{Uri.EscapeDataString(bridgeId)}/record",
+            query,
+            null,
+            nameof(StartBridgeRecordingAsync),
+            cancellationToken);
+
+        // A recording with the same deterministic name already in progress surfaces as a 409, so read the live
+        // recording back and treat the start as idempotent. The caller inspects its state to resume it when paused.
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            return await GetLiveRecordingAsync(settings, recordingName, nameof(StartBridgeRecordingAsync), cancellationToken);
+        }
+
+        await EnsureSuccessAsync(response, nameof(StartBridgeRecordingAsync), cancellationToken);
+
+        return await ReadJsonAsync<AsteriskAriLiveRecording>(response, nameof(StartBridgeRecordingAsync), cancellationToken) ??
+            new AsteriskAriLiveRecording { Name = recordingName, Format = format };
+    }
+
+    /// <inheritdoc/>
+    public async Task PauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+
+        var settings = ResolveSettings(nameof(PauseBridgeRecordingAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"recordings/live/{Uri.EscapeDataString(recordingName)}/pause",
+            null,
+            null,
+            nameof(PauseBridgeRecordingAsync),
+            cancellationToken);
+
+        await EnsureSuccessAsync(response, nameof(PauseBridgeRecordingAsync), cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task UnpauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+
+        var settings = ResolveSettings(nameof(UnpauseBridgeRecordingAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Delete,
+            $"recordings/live/{Uri.EscapeDataString(recordingName)}/pause",
+            null,
+            null,
+            nameof(UnpauseBridgeRecordingAsync),
+            cancellationToken);
+
+        await EnsureSuccessAsync(response, nameof(UnpauseBridgeRecordingAsync), cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+
+        var settings = ResolveSettings(nameof(StopBridgeRecordingAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"recordings/live/{Uri.EscapeDataString(recordingName)}/stop",
+            null,
+            null,
+            nameof(StopBridgeRecordingAsync),
+            cancellationToken);
+
+        // Stopping a recording that is no longer live (already stopped, or never started) is an idempotent no-op.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response, nameof(StopBridgeRecordingAsync), cancellationToken);
+
+        return await GetStoredRecordingAsync(settings, recordingName, nameof(StopBridgeRecordingAsync), cancellationToken);
+    }
+
+    private async Task<AsteriskAriLiveRecording> GetLiveRecordingAsync(
+        AsteriskResolvedSettings settings,
+        string recordingName,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Get,
+            $"recordings/live/{Uri.EscapeDataString(recordingName)}",
+            null,
+            null,
+            operation,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new AsteriskAriLiveRecording { Name = recordingName };
+        }
+
+        await EnsureSuccessAsync(response, operation, cancellationToken);
+
+        return await ReadJsonAsync<AsteriskAriLiveRecording>(response, operation, cancellationToken) ??
+            new AsteriskAriLiveRecording { Name = recordingName };
+    }
+
+    private async Task<AsteriskAriStoredRecording> GetStoredRecordingAsync(
+        AsteriskResolvedSettings settings,
+        string recordingName,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Get,
+            $"recordings/stored/{Uri.EscapeDataString(recordingName)}",
+            null,
+            null,
+            operation,
+            cancellationToken);
+
+        // The stored file may not be readable yet (or may have been removed by retention), so a missing stored
+        // recording does not fail the stop; the metadata simply omits the fields that could not be read.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response, operation, cancellationToken);
+
+        return await ReadJsonAsync<AsteriskAriStoredRecording>(response, operation, cancellationToken);
+    }
+
     private async Task<AsteriskAriChannel> GetChannelAsync(
         AsteriskResolvedSettings settings,
         string channelId,

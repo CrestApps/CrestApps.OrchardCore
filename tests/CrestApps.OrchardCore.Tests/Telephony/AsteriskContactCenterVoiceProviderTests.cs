@@ -27,14 +27,16 @@ public sealed class AsteriskContactCenterVoiceProviderTests
 
         // Assert
         Assert.Equal(
-            ContactCenterVoiceProviderCapabilities.DialerDial | ContactCenterVoiceProviderCapabilities.AgentConnect,
+            ContactCenterVoiceProviderCapabilities.DialerDial |
+            ContactCenterVoiceProviderCapabilities.AgentConnect |
+            ContactCenterVoiceProviderCapabilities.Recording,
             capabilities);
         Assert.Equal(VoiceProviderDeliveryModel.ServerSideAcd, service.DeliveryModel);
         Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
+        Assert.IsAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceTransferProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
-        Assert.IsNotAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
     }
 

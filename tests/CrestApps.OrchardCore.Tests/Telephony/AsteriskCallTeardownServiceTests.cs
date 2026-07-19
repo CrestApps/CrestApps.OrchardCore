@@ -399,5 +399,30 @@ public sealed class AsteriskCallTeardownServiceTests
         {
             return Task.FromResult(false);
         }
+
+        public Task<AsteriskAriLiveRecording> StartBridgeRecordingAsync(string bridgeId, string recordingName, string format, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AsteriskAriLiveRecording
+            {
+                Name = recordingName,
+                Format = format,
+                State = "recording",
+            });
+        }
+
+        public Task PauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task UnpauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<AsteriskAriStoredRecording>(null);
+        }
     }
 }

@@ -68,4 +68,44 @@ internal interface IAsteriskAriClient
     /// <param name="bridgeId">The ARI bridge identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task DestroyBridgeAsync(string bridgeId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Starts recording the media mixed on a bridge, or returns the already-running recording when a recording with
+    /// the same name is already in progress.
+    /// </summary>
+    /// <param name="bridgeId">The ARI bridge identifier whose mixed media should be recorded.</param>
+    /// <param name="recordingName">The deterministic recording name that addresses the live recording.</param>
+    /// <param name="format">The media format to record in.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The started or already-running live recording.</returns>
+    Task<AsteriskAriLiveRecording> StartBridgeRecordingAsync(
+        string bridgeId,
+        string recordingName,
+        string format,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Pauses a live recording.
+    /// </summary>
+    /// <param name="recordingName">The recording name that addresses the live recording.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task PauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Resumes a paused live recording.
+    /// </summary>
+    /// <param name="recordingName">The recording name that addresses the live recording.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task UnpauseBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stops a live recording if it exists and returns the resulting stored recording when it can be read.
+    /// </summary>
+    /// <param name="recordingName">The recording name that addresses the live recording.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// The stored recording captured for the name, or <see langword="null"/> when no live or stored recording exists
+    /// (a stop of an already-gone recording is treated as an idempotent no-op success).
+    /// </returns>
+    Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken);
 }

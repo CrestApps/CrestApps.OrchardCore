@@ -205,6 +205,49 @@ public sealed class ContactCenterRecordingAndMonitoringTests
     }
 
     [Fact]
+    public async Task StartAsync_WhenProviderReturnsRecordingMetadata_PersistsMetadataAndRecordingReference()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult
+            {
+                Succeeded = true,
+                Metadata = new Dictionary<string, string>
+                {
+                    [ContactCenterConstants.RecordingMetadata.RecordingName] = "crestapps-recording-int1",
+                    [ContactCenterConstants.RecordingMetadata.StorageReference] = "crestapps-recording-int1",
+                    [ContactCenterConstants.RecordingMetadata.Format] = "wav",
+                    [ContactCenterConstants.RecordingMetadata.RetrievalPath] = "recordings/stored/crestapps-recording-int1",
+                },
+            });
+        var resolver = CreateResolver(provider);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor());
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(changed);
+        Assert.Equal("crestapps-recording-int1", interaction.RecordingReference);
+        Assert.Equal("wav", interaction.TechnicalMetadata[ContactCenterConstants.RecordingMetadata.Format]);
+        Assert.Equal(
+            "recordings/stored/crestapps-recording-int1",
+            interaction.TechnicalMetadata[ContactCenterConstants.RecordingMetadata.RetrievalPath]);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenAlreadyRecording_DoesNotInvokeProvider()
     {
         // Arrange
