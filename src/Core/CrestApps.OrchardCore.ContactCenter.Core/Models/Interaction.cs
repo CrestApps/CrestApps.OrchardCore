@@ -111,6 +111,12 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public DateTime? RecordingRetainUntilUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC instant at which the captured recording reference was erased at the orchestration layer
+    /// in response to a right-to-erasure request, or <see langword="null"/> when the recording has not been erased.
+    /// </summary>
+    public DateTime? RecordingErasedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the transcript reference when a transcript is available for the interaction.
     /// </summary>
     public string TranscriptReference { get; set; }

@@ -246,6 +246,23 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable machine-readable reason codes describing why a recording governance policy denied a
+    /// right-to-erasure request, shared between the erasure service and the denial events it publishes.
+    /// </summary>
+    public static class RecordingErasureDenyReason
+    {
+        /// <summary>
+        /// The interaction has no captured recording reference to erase.
+        /// </summary>
+        public const string NoRecording = "noRecording";
+
+        /// <summary>
+        /// The recording is under legal hold and is exempt from erasure until the hold is released.
+        /// </summary>
+        public const string LegalHold = "legalHold";
+    }
+
+    /// <summary>
     /// Contains stable provider-result metadata keys describing a supervisor monitoring engagement, shared between
     /// voice providers and the monitoring service.
     /// </summary>
@@ -567,6 +584,24 @@ public static class ContactCenterConstants
         /// Raised when the recording governance policy denies a request to start or resume recording.
         /// </summary>
         public const string RecordingDenied = "RecordingDenied";
+
+        /// <summary>
+        /// Raised when a captured recording is accessed or retrieved, recording who accessed it and why for the
+        /// recording access audit trail.
+        /// </summary>
+        public const string RecordingAccessed = "RecordingAccessed";
+
+        /// <summary>
+        /// Raised when a captured recording reference is erased at the orchestration layer in response to a
+        /// right-to-erasure request, delegating media deletion to the owning media store.
+        /// </summary>
+        public const string RecordingErased = "RecordingErased";
+
+        /// <summary>
+        /// Raised when the recording governance policy denies a right-to-erasure request, for example because the
+        /// recording is under legal hold.
+        /// </summary>
+        public const string RecordingErasureDenied = "RecordingErasureDenied";
 
         /// <summary>
         /// Raised when a supervisor starts monitoring, whispering, barging, or taking over a live call.

@@ -673,6 +673,7 @@ public sealed class RecordingStartup : StartupBase
     {
         services.AddScoped<IRecordingGovernancePolicy, RecordingGovernancePolicy>();
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
+        services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
 
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
         services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();

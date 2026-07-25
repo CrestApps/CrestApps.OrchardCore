@@ -197,6 +197,12 @@ On every start or resume, the recording service evaluates `IRecordingGovernanceP
 
 When recording is permitted, the interaction is stamped once at capture time with the resolved retention deadline (`RecordingRetainUntilUtc`, computed from the retention window through the injected clock, or left indefinite when the window is zero) and, when configured, its legal-hold flag is raised. The retention deadline is established a single time so a later resume never extends it, and legal hold is only ever raised — never silently cleared — by resuming a recording. This governance layer is additive to, and independent of, the provider capability and support-matrix gates, which remain the hard gate on whether recording can execute at all.
 
+#### Access audit and right to erasure
+
+Because the Contact Center orchestration layer never stores recording media — the interaction holds only an opaque recording reference and the retrieval metadata needed to fetch the media from the owning media store — post-capture governance is handled by `IRecordingAccessGovernanceService`. Every recording retrieval is audited: `RecordAccessAsync` publishes a `RecordingAccessed` domain event capturing who accessed the recording, the stated purpose, and the reference that was accessed. Access is not audited when the interaction has no captured recording.
+
+Right-to-erasure requests are served by `EraseAsync`. A recording under **legal hold** is exempt from erasure until the hold is released, so an erasure request against a held recording is denied with the `legalHold` reason and a `RecordingErasureDenied` event, leaving the reference intact. Otherwise the orchestration layer clears the opaque recording reference and its retrieval metadata, stamps the erasure instant (`RecordingErasedUtc`), and publishes a `RecordingErased` event that carries the original reference so the owning media store can delete the underlying media. Deletion of the media bytes is delegated to that store — the Contact Center layer never touches the media itself.
+
 ## Inbound voice
 
 > **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`
