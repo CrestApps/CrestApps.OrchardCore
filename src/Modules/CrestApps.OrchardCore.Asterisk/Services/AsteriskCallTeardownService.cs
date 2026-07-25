@@ -97,6 +97,23 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
 
         if (!string.IsNullOrWhiteSpace(binding.BridgeId))
         {
+            // A joining leg (a transfer destination added to a shared canonical bridge it does not own) is the
+            // handoff analogue of a pending connect leg: the bridge and the caller belong to the existing Connected
+            // agent leg until the transfer commits, so a terminal event for a joining leg must tear down NOTHING —
+            // never the shared bridge, never the caller. It only retains its durable record for the reconciler to
+            // age-retire, so the caller keeps the previous agent when a half-handed-off destination leg dies.
+            if (claim.PreviousState == AsteriskChannelBindingState.Joining)
+            {
+                return new TeardownPlan
+                {
+                    BindingChannelId = binding.ChannelId,
+                    IsAgentLeg = true,
+                    MixingBridgeId = null,
+                    RetainRecord = true,
+                    PeerLegs = [],
+                };
+            }
+
             // Agent leg: it owns the shared mixing bridge and references the caller as its peer. Release the caller
             // only when the leg was already Connected (a live call whose agent dropped). While the leg was still
             // Pending the connect flow owns the caller's disposition: our claim makes its MarkConnectedAsync lose,

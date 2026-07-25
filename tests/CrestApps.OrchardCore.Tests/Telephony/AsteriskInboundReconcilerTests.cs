@@ -230,6 +230,48 @@ public sealed class AsteriskInboundReconcilerTests
     }
 
     [Fact]
+    public async Task ReconcileAsync_WhenJoiningTransferLegIsAgedAndAlive_HangsUpOnlyTheChannelAndKeepsBridgeAndCaller()
+    {
+        // Arrange
+        // An aged Joining leg means a transfer crashed after the destination was added to the shared canonical bridge
+        // but before ownership was swapped. Recovery must hang up only the dangling destination channel and NEVER
+        // destroy the shared bridge or release the caller, because the Connected agent still owns that live call.
+        var bindingStore = new TestBindingStore(
+        [
+            new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "bridge-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now.AddMinutes(-10),
+            },
+        ]);
+        var ariClient = new TestAriClient
+        {
+            ExistingChannels = ["transfer-agent-1", "caller-1"],
+        };
+        var sink = new TestProviderVoiceEventSink();
+        var reconciler = CreateReconciler(bindingStore, ariClient, sink);
+
+        // Act
+        await reconciler.ReconcileAsync("Asterisk", TestContext.Current.CancellationToken);
+
+        // Assert
+        // Only the dangling destination channel is hung up; the shared bridge and the caller are untouched so the
+        // customer keeps talking to the Connected agent that owns the call.
+        Assert.Contains("transfer-agent-1", ariClient.HungupChannelIds);
+        Assert.Empty(ariClient.DestroyedBridgeIds);
+        Assert.DoesNotContain("caller-1", ariClient.HungupChannelIds);
+        Assert.Empty(sink.IngestedEvents);
+
+        // The record is retired once its provisioning lease has elapsed.
+        Assert.Equal("transfer-agent-1", Assert.Single(bindingStore.RemovedChannelIds));
+    }
+
+    [Fact]
     public async Task ReconcileAsync_WhenAgedPendingLegHasDetachedCallerStillAlive_ReturnsCallerToHoldingBeforeRetiring()
     {
         // Arrange
@@ -800,6 +842,21 @@ public sealed class AsteriskInboundReconcilerTests
             }
 
             binding.CallerDetached = true;
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+        {
+            var promoted = _bindings.FirstOrDefault(item => item.ChannelId == newAgentChannelId);
+
+            if (promoted is null || promoted.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            promoted.State = AsteriskChannelBindingState.Connected;
+            _bindings.RemoveAll(item => item.ChannelId == previousAgentChannelId);
 
             return Task.FromResult(true);
         }

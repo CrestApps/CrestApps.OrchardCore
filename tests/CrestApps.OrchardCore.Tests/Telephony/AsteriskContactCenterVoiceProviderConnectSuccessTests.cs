@@ -448,6 +448,11 @@ public sealed class AsteriskContactCenterVoiceProviderConnectSuccessTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+        {
+            return Task.FromResult(false);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             var binding = _bindings.Find(item => item.ChannelId == channelId);

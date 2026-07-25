@@ -43,4 +43,18 @@ public enum AsteriskChannelBindingState
     /// offer has been routed.
     /// </summary>
     Offering = 3,
+
+    /// <summary>
+    /// A transfer destination leg has been persisted and (once answered) added to a shared canonical conversation
+    /// bridge it does NOT own. This is the handoff analogue of <see cref="Pending"/>: the bridge and the caller are
+    /// still owned by the existing <see cref="Connected"/> agent leg until the transfer commits, so a terminal event
+    /// for a joining leg must never destroy the shared bridge nor release the caller — doing so would drop a live
+    /// call the previous agent could still handle. The durable binding is the transfer's exactly-once ownership
+    /// claim on the deterministic destination channel id (a concurrent duplicate transfer loses the create), and it
+    /// is promoted to <see cref="Connected"/> — atomically retiring the previous agent leg — only once the
+    /// destination has joined the bridge and the handoff commits. A joining leg that dies before that commit is a
+    /// teardown no-op, so the caller keeps the previous agent; an aged joining leg orphaned by a crashed transfer is
+    /// reclaimed by the reconciler (hanging up only the dangling destination channel, never the shared bridge).
+    /// </summary>
+    Joining = 4,
 }

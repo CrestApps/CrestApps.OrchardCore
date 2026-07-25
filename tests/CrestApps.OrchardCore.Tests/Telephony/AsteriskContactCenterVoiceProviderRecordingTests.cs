@@ -466,6 +466,11 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
             return Task.FromResult(false);
         }
 
+        public Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+        {
+            return Task.FromResult(false);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             return Task.FromResult<AsteriskChannelTeardownClaim>(null);

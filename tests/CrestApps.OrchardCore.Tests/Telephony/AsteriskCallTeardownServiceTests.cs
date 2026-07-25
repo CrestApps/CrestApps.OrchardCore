@@ -213,6 +213,71 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
     }
 
+    [Fact]
+    public async Task ReleaseAsync_WhenJoiningTransferLegTerminates_TearsDownNothingAndKeepsCallerWithPreviousAgent()
+    {
+        // Arrange
+        var bindingStore = new InMemoryBindingStore();
+        var ariClient = new RecordingAriClient();
+
+        // The caller is already Connected on the canonical bridge with the previous agent.
+        await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        {
+            ChannelId = "caller-1",
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderCallId = "caller-1",
+        });
+        await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        {
+            ChannelId = "agent-1",
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderCallId = "caller-1",
+            BridgeId = "mixing-1",
+            PeerChannelId = "caller-1",
+            State = AsteriskChannelBindingState.Connected,
+        });
+
+        // A transfer destination leg was added to the SAME canonical bridge but has not yet taken ownership, so it is
+        // Joining (non-owning) and references the caller and the shared bridge.
+        await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        {
+            ChannelId = "transfer-agent-1",
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderCallId = "caller-1",
+            BridgeId = "mixing-1",
+            PeerChannelId = "caller-1",
+            State = AsteriskChannelBindingState.Joining,
+        });
+        var service = CreateService(bindingStore, ariClient);
+
+        // Act
+        await service.ReleaseAsync(
+            new AsteriskRealtimeVoiceEvent
+            {
+                EventType = "StasisEnd",
+                ChannelId = "transfer-agent-1",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // The joining leg does not own the shared canonical bridge, so its terminal event must tear down NOTHING: the
+        // customer keeps the previous agent on the same bridge, which is neither destroyed nor released.
+        Assert.Empty(ariClient.DestroyedBridges);
+        Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
+
+        // The previous Connected owner and the caller are both untouched.
+        var previousAgent = await bindingStore.FindByChannelIdAsync("agent-1");
+        Assert.NotNull(previousAgent);
+        Assert.Equal(AsteriskChannelBindingState.Connected, previousAgent.State);
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+
+        // The joining leg's durable record is retained (in Terminating) for the reconciler to age-retire.
+        var retained = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
+        Assert.NotNull(retained);
+        Assert.Equal(AsteriskChannelBindingState.Terminating, retained.State);
+        Assert.Equal(AsteriskChannelBindingState.Joining, retained.PreTeardownState);
+    }
+
     private static AsteriskCallTeardownService CreateService(
         InMemoryBindingStore bindingStore,
         RecordingAriClient ariClient)
@@ -319,6 +384,21 @@ public sealed class AsteriskCallTeardownServiceTests
             }
 
             binding.CallerDetached = true;
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+        {
+            var promoted = _bindings.Find(item => item.ChannelId == newAgentChannelId);
+
+            if (promoted is null || promoted.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            promoted.State = AsteriskChannelBindingState.Connected;
+            _bindings.RemoveAll(item => item.ChannelId == previousAgentChannelId);
 
             return Task.FromResult(true);
         }

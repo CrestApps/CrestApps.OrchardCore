@@ -54,19 +54,22 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
         Assert.Equal(_callerChannelId, newBinding.PeerChannelId);
         Assert.Null(bindingStore.Find(_currentAgentChannelId));
 
-        // The previous agent-leg binding is retired BEFORE its channel is hung up, so the old leg's terminal event
-        // finds no owning binding and cannot tear down the canonical bridge the destination agent just joined.
-        var removeOldIndex = ariClient.Operations.IndexOf($"removeBinding:{_currentAgentChannelId}");
-        var hangupOldIndex = ariClient.Operations.IndexOf($"hangup:{_currentAgentChannelId}");
-        Assert.True(removeOldIndex >= 0 && hangupOldIndex >= 0);
-        Assert.True(removeOldIndex < hangupOldIndex, "The old agent binding must be removed before the old leg is hung up.");
+        // The destination leg's durable Joining claim is persisted BEFORE the leg is originated, so a concurrent
+        // duplicate transfer loses the serialized create and can never re-ring the destination.
+        var claimIndex = ariClient.Operations.IndexOf($"createBinding:{_newAgentChannelId}");
+        var originateIndex = ariClient.Operations.IndexOf($"originate:{_newAgentChannelId}");
+        Assert.True(claimIndex >= 0 && originateIndex >= 0);
+        Assert.True(claimIndex < originateIndex, "The durable transfer claim must be persisted before the destination leg is originated.");
 
-        // The new agent-leg ownership binding is recorded only AFTER the old leg is retired and hung up, so the
-        // canonical bridge is never owned by two Connected agent bindings at once (a window in which a new-leg death
-        // could tear down a bridge a still-live old agent owns).
-        var createNewIndex = ariClient.Operations.IndexOf($"createBinding:{_newAgentChannelId}");
-        Assert.True(createNewIndex >= 0);
-        Assert.True(hangupOldIndex < createNewIndex, "The new agent binding must be recorded only after the old leg is retired and hung up.");
+        // Ownership transfers with an atomic swap (promote destination + retire previous in one transaction) only
+        // AFTER the destination joins the canonical bridge, and the previous leg is hung up only AFTER the swap, so
+        // the bridge is owned by exactly one Connected binding at every instant.
+        var addIndex = ariClient.Operations.IndexOf($"add:{_mixingBridgeId}:{_newAgentChannelId}");
+        var swapIndex = ariClient.Operations.IndexOf($"swap:{_newAgentChannelId}:{_currentAgentChannelId}");
+        var hangupOldIndex = ariClient.Operations.IndexOf($"hangup:{_currentAgentChannelId}");
+        Assert.True(addIndex >= 0 && swapIndex >= 0 && hangupOldIndex >= 0);
+        Assert.True(addIndex < swapIndex, "The destination leg must join the canonical bridge before ownership is swapped.");
+        Assert.True(swapIndex < hangupOldIndex, "The previous leg must be hung up only after ownership is atomically swapped.");
 
         Assert.Equal(_newAgentChannelId, result.Metadata[ContactCenterConstants.TransferMetadata.NewChannelId]);
         Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.TransferMetadata.BridgeId]);
@@ -377,7 +380,7 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
     }
 
     [Fact]
-    public async Task TransferAsync_WhenOldLegHangupIsNotConfirmed_ReportsSuccessButLeavesNewLegUnboundToAvoidDoubleOwnerDrop()
+    public async Task TransferAsync_WhenPreviousLegHangupIsUnconfirmed_StillSwapsOwnershipAtomicallyToTheDestination()
     {
         // Arrange
         var ariClient = new TestTransferAriClient
@@ -397,31 +400,67 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
         Assert.True(result.Succeeded);
         Assert.Contains((_mixingBridgeId, _newAgentChannelId), ariClient.AddedToBridge);
 
-        // The old leg's hangup was not confirmed, so it may still be live on the bridge. Recording the new leg as the
-        // sole Connected owner would let a later new-leg death destroy the bridge and drop a customer who still has the
-        // old agent, so BOTH legs are left unbound (any terminal event is then a teardown no-op) rather than creating a
-        // binding that could drop a live call.
-        Assert.Null(bindingStore.Find(_newAgentChannelId));
-        Assert.Null(bindingStore.Find(_currentAgentChannelId));
+        // The atomic swap promotes the destination to the sole Connected owner and retires the previous binding to a
+        // non-owning Terminating (Joining-disposition) recovery record in one transaction, so even though the previous
+        // leg's hangup could not be confirmed the canonical bridge still has exactly one Connected owner (the
+        // destination). The previous leg's unconfirmed hangup no longer leaks: its retired binding survives as a
+        // durable recovery record the reconciler reclaims.
+        var destination = bindingStore.Find(_newAgentChannelId);
+        Assert.NotNull(destination);
+        Assert.Equal(AsteriskChannelBindingState.Connected, destination.State);
+        Assert.Equal(_mixingBridgeId, destination.BridgeId);
+
+        var previous = bindingStore.Find(_currentAgentChannelId);
+        Assert.NotNull(previous);
+        Assert.Equal(AsteriskChannelBindingState.Terminating, previous.State);
+        Assert.Equal(AsteriskChannelBindingState.Joining, previous.PreTeardownState);
     }
 
     [Fact]
-    public async Task TransferAsync_WhenConcurrentWinnerAlreadyOwnsDeterministicLeg_DoesNotHangUpTheWinnersLeg()
+    public async Task TransferAsync_WhenDestinationLegClaimedForTeardownBeforeSwap_KeepsCustomerWithPreviousAgent()
     {
         // Arrange
-        // Simulate an ambiguous originate for THIS request while a concurrent duplicate transfer has already
-        // originated, bridged, and taken ownership of the same deterministic destination leg.
-        var ariClient = new TestTransferAriClient
-        {
-            OriginateException = new AsteriskAriException(
-                nameof(IAsteriskAriClient.OriginateAsync),
-                statusCode: null,
-                "Asterisk ARI timed out before a response was observed.",
-                new HttpRequestException("Asterisk ARI could not reach Asterisk.")),
-        };
-        var bindingStore = CreateConnectedBindingStore(_currentAgentChannelId);
+        var ariClient = new TestTransferAriClient();
+        var bindingStore = CreateConnectedBindingStore(_currentAgentChannelId, ariClient.Operations);
 
-        // The concurrent winner's committed ownership binding for the deterministic destination leg.
+        // Simulate a terminal event claiming the destination leg for teardown between the bridge commit and the swap:
+        // the atomic owner-swap then loses the race and does not commit.
+        bindingStore.SwapAlwaysFails = true;
+        var service = CreateService(ariClient, bindingStore, CreateAgentLeaseStore());
+
+        // Act
+        var result = await service.TransferAsync(
+            CreateRequest(),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // The destination physically bridged, so the transfer reports success, but because the swap lost the race the
+        // previous agent binding is deliberately retained as the Connected owner so the customer keeps the previous
+        // agent — never a drop, never a window with zero owners.
+        Assert.True(result.Succeeded);
+        Assert.Contains((_mixingBridgeId, _newAgentChannelId), ariClient.AddedToBridge);
+
+        var previous = bindingStore.Find(_currentAgentChannelId);
+        Assert.NotNull(previous);
+        Assert.Equal(AsteriskChannelBindingState.Connected, previous.State);
+
+        // The previous leg is never hung up because ownership never transferred, and the destination binding is left
+        // Joining (non-owning) for the reconciler to reclaim.
+        Assert.DoesNotContain(_currentAgentChannelId, ariClient.HungupChannels);
+        var destination = bindingStore.Find(_newAgentChannelId);
+        Assert.NotNull(destination);
+        Assert.Equal(AsteriskChannelBindingState.Joining, destination.State);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenConcurrentDuplicateLostTheDurableClaim_IsIdempotentSuccessWithoutReoriginating()
+    {
+        // Arrange
+        var ariClient = new TestTransferAriClient();
+        var bindingStore = CreateConnectedBindingStore(_currentAgentChannelId, ariClient.Operations);
+
+        // A concurrent duplicate transfer to the same destination already persisted the durable Joining claim on the
+        // deterministic destination leg and originated it, so this request's serialized create must lose.
         bindingStore.Seed(new AsteriskChannelTenantBinding
         {
             ChannelId = _newAgentChannelId,
@@ -430,7 +469,7 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
             ProviderCallId = _callerChannelId,
             PeerChannelId = _callerChannelId,
             BridgeId = _mixingBridgeId,
-            State = AsteriskChannelBindingState.Connected,
+            State = AsteriskChannelBindingState.Joining,
             CreatedUtc = _now,
         });
         var service = CreateService(ariClient, bindingStore, CreateAgentLeaseStore());
@@ -441,12 +480,95 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Succeeded);
-
-        // The winner's live destination leg is NOT hung up, so the concurrent duplicate transfer never drops the
-        // customer's newly connected agent, and the winner's ownership binding is left intact.
+        // Losing the durable claim means the duplicate confirms the in-flight transfer's outcome without re-ringing
+        // the destination or disturbing the concurrent transfer's leg.
+        Assert.True(result.Succeeded);
+        Assert.Null(ariClient.OriginatedChannelId);
         Assert.DoesNotContain(_newAgentChannelId, ariClient.HungupChannels);
         Assert.NotNull(bindingStore.Find(_newAgentChannelId));
+        Assert.Equal(_newAgentChannelId, result.Metadata[ContactCenterConstants.TransferMetadata.NewChannelId]);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenPriorClaimIsStaleTerminating_FailsClosedInsteadOfReportingSuccess()
+    {
+        // Arrange
+        var ariClient = new TestTransferAriClient();
+        var bindingStore = CreateConnectedBindingStore(_currentAgentChannelId, ariClient.Operations);
+
+        // A prior transfer attempt's destination leg died and left a Terminating recovery record (Joining
+        // disposition) the reconciler has not yet retired. This request's serialized create loses because the
+        // deterministic destination id still exists, but there is NO live destination leg behind it.
+        bindingStore.Seed(new AsteriskChannelTenantBinding
+        {
+            ChannelId = _newAgentChannelId,
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            InteractionId = _interactionId,
+            ProviderCallId = _callerChannelId,
+            PeerChannelId = _callerChannelId,
+            BridgeId = _mixingBridgeId,
+            State = AsteriskChannelBindingState.Terminating,
+            PreTeardownState = AsteriskChannelBindingState.Joining,
+            CreatedUtc = _now,
+        });
+        var service = CreateService(ariClient, bindingStore, CreateAgentLeaseStore());
+
+        // Act
+        var result = await service.TransferAsync(
+            CreateRequest(),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // A stale claim has no live leg, so confirming success would falsely report a completed transfer while the
+        // customer still talks to the previous agent. Fail closed (confirmed, retryable) instead, and never re-ring.
+        Assert.False(result.Succeeded);
+        Assert.False(result.OutcomeUnknown);
+        Assert.Equal("transfer_failed", result.ErrorCode);
+        Assert.Null(ariClient.OriginatedChannelId);
+
+        var previous = bindingStore.Find(_currentAgentChannelId);
+        Assert.NotNull(previous);
+        Assert.Equal(AsteriskChannelBindingState.Connected, previous.State);
+    }
+
+    [Fact]
+    public async Task TransferAsync_WhenOriginateIsAmbiguousAndHangupUnconfirmed_RetainsRecoveryRecordForReconciler()
+    {
+        // Arrange
+        var ariClient = new TestTransferAriClient
+        {
+            OriginateException = new AsteriskAriException(
+                nameof(IAsteriskAriClient.OriginateAsync),
+                statusCode: null,
+                "Asterisk ARI timed out before a response was observed.",
+                new HttpRequestException("Asterisk ARI could not reach Asterisk.")),
+
+            // The compensating hangup for the possibly-live destination leg also times out (unconfirmed).
+            HangupExceptionChannelId = _newAgentChannelId,
+        };
+        var bindingStore = CreateConnectedBindingStore(_currentAgentChannelId, ariClient.Operations);
+        var service = CreateService(ariClient, bindingStore, CreateAgentLeaseStore());
+
+        // Act
+        var result = await service.TransferAsync(
+            CreateRequest(),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Equal("transfer_outcome_unknown", result.ErrorCode);
+
+        // The ambiguous originate may have created the destination channel and its hangup was not confirmed, so the
+        // durable claim is RETAINED as a Terminating recovery record (Joining disposition) — never hard-deleted — so
+        // the age-gated reconciler reclaims the dangling channel instead of leaking it.
+        var destination = bindingStore.Find(_newAgentChannelId);
+        Assert.NotNull(destination);
+        Assert.Equal(AsteriskChannelBindingState.Terminating, destination.State);
+        Assert.Equal(AsteriskChannelBindingState.Joining, destination.PreTeardownState);
+
+        // The original call is left intact.
+        Assert.NotNull(bindingStore.Find(_currentAgentChannelId));
     }
 
     private static ContactCenterVoiceTransferRequest CreateRequest(
@@ -687,10 +809,55 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
                 _bindings.Where(binding => binding.PeerChannelId == peerChannelId).ToArray());
         }
 
+        public bool SwapAlwaysFails { get; set; }
+
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)
         {
+            // Model the serialized exactly-once create: a concurrent duplicate transfer that races to claim the same
+            // deterministic destination channel id loses this create and must return false.
+            if (_bindings.Exists(existing => existing.ChannelId == binding.ChannelId))
+            {
+                return Task.FromResult(false);
+            }
+
             _bindings.Add(binding);
             _operations?.Add($"createBinding:{binding.ChannelId}");
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+        {
+            // Model the atomic handoff: promote the destination's Joining binding to Connected AND retire the previous
+            // agent leg to a non-owning Terminating (Joining-disposition) recovery record in one transaction. If the
+            // destination binding is no longer Joining, or the previous leg is no longer the Connected owner, the swap
+            // does not commit and neither binding is changed.
+            if (SwapAlwaysFails)
+            {
+                return Task.FromResult(false);
+            }
+
+            var promoted = _bindings.Find(binding => binding.ChannelId == newAgentChannelId);
+
+            if (promoted is null || promoted.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            // The promotion commits ONLY when the previous agent leg is still the live Connected owner. A missing or
+            // non-Connected previous binding means ownership was already swapped away, so promoting this destination
+            // would create a second Connected owner: reject instead.
+            var previous = _bindings.Find(binding => binding.ChannelId == previousAgentChannelId);
+
+            if (previous is null || previous.State != AsteriskChannelBindingState.Connected)
+            {
+                return Task.FromResult(false);
+            }
+
+            promoted.State = AsteriskChannelBindingState.Connected;
+            previous.State = AsteriskChannelBindingState.Terminating;
+            previous.PreTeardownState = AsteriskChannelBindingState.Joining;
+            _operations?.Add($"swap:{newAgentChannelId}:{previousAgentChannelId}");
 
             return Task.FromResult(true);
         }
@@ -720,7 +887,26 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
 
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
-            return Task.FromResult<AsteriskChannelTeardownClaim>(null);
+            // Model the durable teardown claim: a live binding is marked Terminating and records the state it held
+            // before teardown, so a retained provisional transfer claim survives as a reconciler-owned recovery
+            // record instead of being deleted.
+            var binding = _bindings.Find(existing => existing.ChannelId == channelId);
+
+            if (binding is null || binding.State == AsteriskChannelBindingState.Terminating)
+            {
+                return Task.FromResult<AsteriskChannelTeardownClaim>(null);
+            }
+
+            var previousState = binding.State;
+            binding.State = AsteriskChannelBindingState.Terminating;
+            binding.PreTeardownState = previousState;
+            _operations?.Add($"beginTeardown:{channelId}");
+
+            return Task.FromResult(new AsteriskChannelTeardownClaim
+            {
+                Binding = binding,
+                PreviousState = previousState,
+            });
         }
     }
 }

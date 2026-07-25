@@ -341,6 +341,86 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
     }
 
     /// <inheritdoc/>
+    public async Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newAgentChannelId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(previousAgentChannelId);
+
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            await using var session = _store.CreateSession();
+
+            var newBinding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == newAgentChannelId)
+                .FirstOrDefaultAsync();
+
+            // Only a still-joining destination leg may be promoted. A missing binding or any non-joining state means
+            // a terminal event has already claimed the destination leg for teardown, so the transfer finalization
+            // must not retire the previous agent leg — the caller safely stays with the previous agent.
+            if (newBinding is null || newBinding.State != AsteriskChannelBindingState.Joining)
+            {
+                return false;
+            }
+
+            var previousBinding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == previousAgentChannelId)
+                .FirstOrDefaultAsync();
+
+            // The destination may be promoted ONLY when the previous agent leg is still the live Connected owner of
+            // the conversation. A missing or non-Connected previous binding means ownership was already swapped away
+            // by another transfer (or the previous agent's own terminal event claimed it), so promoting this
+            // destination would create a SECOND Connected owner of the shared canonical bridge — the exact
+            // double-teardown drop this swap exists to prevent. Reject instead: the destination stays a non-owning
+            // Joining leg the reconciler reclaims, and the customer keeps the agent that won ownership.
+            if (previousBinding is null || previousBinding.State != AsteriskChannelBindingState.Connected)
+            {
+                return false;
+            }
+
+            newBinding.State = AsteriskChannelBindingState.Connected;
+
+            // Retire the previous owner by transitioning it to a NON-OWNING terminating state whose Joining
+            // pre-teardown disposition tells the teardown planner and reconciler to hang up ONLY the previous
+            // channel — never the shared canonical bridge or the caller. This is deliberately a concurrency-checked
+            // state transition, not a raw delete: a YesSql delete is an id-only operation with no version fence, so
+            // two transfers of the same call to DIFFERENT destinations could both read the previous owner as
+            // Connected, both promote their own destination (their concurrency checks target distinct destination
+            // bindings and never conflict), and both delete the previous row — the second deleting zero rows but
+            // still committing — leaving TWO Connected owners of the one bridge. Making the previous-owner transition
+            // a version-checked write turns it into the single linearization point: only the first swap can move the
+            // previous binding out of Connected, and the loser's version-checked write fails, re-reads, and rejects.
+            previousBinding.State = AsteriskChannelBindingState.Terminating;
+            previousBinding.PreTeardownState = AsteriskChannelBindingState.Joining;
+
+            try
+            {
+                // Promote the destination leg and retire the previous leg in ONE transaction. BOTH writes are
+                // version-checked: the destination promotion fences a racing teardown that claimed the destination,
+                // and the previous-owner retirement fences a second concurrent transfer racing to promote a different
+                // destination. Committing both atomically guarantees no terminal event can ever see two Connected
+                // owners of the canonical bridge or a moment with none.
+                await session.SaveAsync(newBinding, checkConcurrency: true);
+                await session.SaveAsync(previousBinding, checkConcurrency: true);
+                await session.SaveChangesAsync();
+            }
+            catch (ConcurrencyException)
+            {
+                // A concurrent teardown committed to the destination binding, or a concurrent transfer already retired
+                // this previous owner, after either was read. The session is canceled; re-read in a fresh session,
+                // where the state checks above will observe the change and reject the swap so the caller safely stays
+                // with whichever agent won ownership.
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveByChannelIdAsync(string channelId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelId);

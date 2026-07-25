@@ -627,8 +627,45 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             return Failure("transfer_target_offline", "The destination agent has no live Asterisk softphone registration to transfer the call to.");
         }
 
+        // Persist the transfer's exactly-once ownership claim on the deterministic destination channel id BEFORE
+        // originating. The durable Joining binding is BOTH the per-conversation transfer claim — a concurrent
+        // duplicate transfer to the same destination loses this serialized create and must not re-ring the
+        // destination — AND the guarantee that ANY death of the destination leg (before, during, or after bridging
+        // but before the handoff commits) is a teardown no-op that leaves the caller with the current agent, because
+        // a Joining leg never owns the shared canonical bridge. The BridgeId is recorded so recording/monitoring and
+        // the atomic swap can resolve the conversation, but it is not an ownership claim while the state is Joining.
+        var claimedNewLeg = await _channelTenantBindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        {
+            ChannelId = newAgentChannelId,
+            ProviderName = TechnicalName,
+            InteractionId = request.InteractionId,
+            ProviderCallId = callerChannelId,
+            BridgeId = bridgeId,
+            PeerChannelId = callerChannelId,
+            State = AsteriskChannelBindingState.Joining,
+            CreatedUtc = _clock.UtcNow,
+        });
+
+        if (!claimedNewLeg)
+        {
+            // The serialized durable create lost. Distinguish an ACTIVE concurrent duplicate transfer to the same
+            // destination (an in-flight Joining claim — the handoff outcome is identical, so confirm success without
+            // re-ringing the destination or disturbing the concurrent transfer's leg) from a STALE claim: a prior
+            // attempt's destination leg whose terminal event left a Terminating recovery record for the reconciler to
+            // reclaim. Reporting success for a stale claim would falsely confirm a transfer that has no live
+            // destination leg while the previous agent still owns the call, so fail closed (confirmed, retryable)
+            // instead and let the caller retry once the stale claim is retired.
+            var existingClaim = await _channelTenantBindingStore.FindByChannelIdAsync(newAgentChannelId);
+
+            if (existingClaim is not null && existingClaim.State == AsteriskChannelBindingState.Joining)
+            {
+                return TransferSuccess(newAgentChannelId, bridgeId);
+            }
+
+            return Failure("transfer_failed", "A previous transfer to this destination is still being reclaimed; retry the transfer shortly.");
+        }
+
         var originateAttempted = false;
-        var newLegConfirmed = false;
         var handoffCommitted = false;
 
         try
@@ -658,12 +695,6 @@ internal sealed class AsteriskContactCenterVoiceProvider :
 
             await _ariClient.OriginateAsync(originateRequest, cancellationToken);
 
-            // A returned originate confirms we own a real destination leg. A concurrent duplicate transfer to the same
-            // destination reuses this deterministic channel id, so Asterisk rejects the loser's originate with a
-            // confirmed 4xx before this line — the loser never confirms a leg and never tears down the winner's leg,
-            // and at most one leg is ever created for a given transfer.
-            newLegConfirmed = true;
-
             // The destination can only be bridged once it has entered Stasis (that is, once the destination agent
             // answers), so wait for its owned-origination StasisStart bounded by the answer timeout. The customer
             // keeps talking to the current agent on the canonical bridge until the destination answers, so a blind
@@ -678,16 +709,20 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 // and let cancellation propagate to the unknown-outcome path instead of reporting a confirmed timeout.
                 cancellationToken.ThrowIfCancellationRequested();
 
-                await TryHangupAsync(newAgentChannelId, CancellationToken.None);
+                // The destination leg was originated and is ringing (it simply never answered), so its channel is
+                // live. Best-effort hang it up; if that hangup is not confirmed, keep a durable recovery record so
+                // the reconciler reclaims the dangling channel instead of leaking it.
+                var noAnswerHungUp = await TryHangupAsync(newAgentChannelId, CancellationToken.None);
+                await RetireProvisionalTransferClaimAsync(newAgentChannelId, noAnswerHungUp);
 
                 return Failure("transfer_no_answer", "The destination agent did not answer before the transfer timed out.");
             }
 
             // Commit point: add the answered destination leg to the SAME canonical conversation bridge the customer is
             // already on, so recording stays on one continuous bridge and the customer never leaves the recorded
-            // conversation. No ownership binding exists for the new leg yet, so a destination death in this window is a
-            // teardown no-op (nothing owns the canonical bridge through the new leg). Once the leg is on the bridge it
-            // may be the customer's only remaining agent, so from here it must never be torn down by a failure path.
+            // conversation. The destination binding is still Joining (non-owning), so a destination death anywhere in
+            // this window is a teardown no-op that leaves the customer with the current agent. The handoff becomes
+            // durable only when FinalizeTransferHandoffAsync atomically promotes it and retires the previous leg.
             await _ariClient.AddChannelToBridgeAsync(bridgeId, newAgentChannelId, cancellationToken);
             handoffCommitted = true;
         }
@@ -698,36 +733,29 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 "Asterisk failed to transfer interaction {InteractionId}; compensating the new destination leg.",
                 OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
 
-            // Pre-commit only: the new destination leg is not yet on the customer's bridge and has no ownership
-            // binding, so releasing it can never touch the original call — the caller stays with the current agent on
-            // the canonical bridge. Compensate our own destination leg when we may own it: either the originate
-            // confirmed a leg, or an ambiguous transport failure after an attempted originate may have created a leg
-            // under our deterministic id. A CONFIRMED originate rejection (4xx/5xx) created no leg for us — any leg with
-            // that id belongs to a concurrent winner — so we must not hang it up. (A commit-time failure leaves
-            // handoffCommitted false, so this path never runs after the leg has joined the bridge.)
-            var mayOwnNewLeg = newLegConfirmed ||
-                (originateAttempted && ex is AsteriskAriException ambiguousOriginate && IsAmbiguousAriOutcome(ambiguousOriginate));
-
-            if (!handoffCommitted && mayOwnNewLeg)
+            // Pre-commit compensation. Because the serialized durable Joining create above gave THIS transfer
+            // exclusive ownership of the deterministic destination id (a concurrent duplicate lost the create and
+            // never originated), releasing our own destination leg can never touch another transfer's live call — no
+            // existence probe or winner check is needed. A Joining leg never owns the shared bridge, so compensating
+            // in any order can never drop the customer, who stays with the current agent on the canonical bridge.
+            if (!handoffCommitted)
             {
-                // Guard against a concurrent duplicate transfer: this request never creates a binding for the new leg
-                // before commit, so a Connected binding for the deterministic id existing now means a CONCURRENT winner
-                // already originated, bridged, and took ownership of that same-id leg. Hanging it up would drop a LIVE
-                // customer call, so skip compensation and let the winner keep its leg. (This closes the common
-                // ambiguous-originate-vs-winner race; the narrow commit-during-check window remains a tracked residual
-                // pending a durable per-conversation transfer claim.)
-                var committedByWinner = await _channelTenantBindingStore.FindByChannelIdAsync(newAgentChannelId);
+                // The destination channel may be live whenever the originate was attempted and Asterisk did not
+                // DEFINITELY reject it: a received 4xx/5xx response (non-null status) proves no channel was created
+                // under our id, but a transport-ambiguous or cancelled originate may still have created it. Hang up
+                // the leg only when it may exist, and keep a durable recovery record whenever its disposition is
+                // unconfirmed so the reconciler reclaims a leaked channel instead of hard-deleting the only record
+                // that could find it.
+                var channelDefinitelyRejected = ex is AsteriskAriException rejected && rejected.StatusCode is not null;
+                var channelMayExist = originateAttempted && !channelDefinitelyRejected;
+                var channelConfirmedGone = true;
 
-                if (committedByWinner is null)
+                if (channelMayExist)
                 {
-                    await TryHangupAsync(newAgentChannelId, CancellationToken.None);
+                    channelConfirmedGone = await TryHangupAsync(newAgentChannelId, CancellationToken.None);
                 }
-                else
-                {
-                    _logger.LogWarning(
-                        "Asterisk transfer of interaction {InteractionId} skipped compensating the destination leg because a concurrent transfer already owns it.",
-                        OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
-                }
+
+                await RetireProvisionalTransferClaimAsync(newAgentChannelId, channelConfirmedGone);
             }
 
             if (ex is OperationCanceledException)
@@ -749,14 +777,12 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
 
         // Post-commit finalization: the destination leg is bridged with the customer, so the transfer has physically
-        // succeeded and is reported as success. The previous agent leg is retired and the new ownership recorded on a
+        // succeeded and is reported as success. Ownership is transferred atomically and the previous leg retired on a
         // best-effort basis — never rolling back the new leg — leaving any residue to the terminal-event/reconciler
         // path, exactly as the connect flow tolerates post-commit ARI hiccups.
         await FinalizeTransferHandoffAsync(
             currentAgentChannelId,
             newAgentChannelId,
-            callerChannelId,
-            bridgeId,
             request.InteractionId);
 
         return TransferSuccess(newAgentChannelId, bridgeId);
@@ -765,54 +791,40 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     private async Task FinalizeTransferHandoffAsync(
         string currentAgentChannelId,
         string newAgentChannelId,
-        string callerChannelId,
-        string bridgeId,
         string interactionId)
     {
         try
         {
-            // Retire the previous agent-leg binding FIRST, before recording the new leg's ownership, so the canonical
-            // conversation bridge is never owned by TWO Connected agent bindings at once. While the old agent is still
-            // live on the bridge, a Connected binding for the new leg would let a new-leg terminal event tear the
-            // canonical bridge down and drop the customer even though the old agent could have continued; retiring the
-            // old binding first removes that double-owner window.
-            await _channelTenantBindingStore.RemoveByChannelIdAsync(currentAgentChannelId);
+            // Atomically promote the destination leg from Joining to Connected AND retire the previous agent leg in
+            // ONE transaction, so ownership of the canonical conversation bridge transfers from the previous agent to
+            // the destination agent with no instant of two Connected owners (a double-teardown drop) or zero owners
+            // (an unowned live bridge). Until this commits the destination leg is Joining and non-owning, so the
+            // customer is always owned by exactly one Connected binding — the previous agent before the swap, the
+            // destination agent after it.
+            var swapped = await _channelTenantBindingStore.SwapConnectedOwnerAsync(newAgentChannelId, currentAgentChannelId);
 
-            // Hang up the old leg only after its binding is gone: an agent-leg terminal event destroys the canonical
-            // bridge and releases the customer, so the old leg must have no owning binding when it is hung up —
-            // otherwise hanging it up would tear down the very conversation the destination agent just joined.
-            var oldLegHungUp = await TryHangupAsync(currentAgentChannelId, CancellationToken.None);
-
-            if (!oldLegHungUp)
+            if (!swapped)
             {
-                // The old leg's hangup was not confirmed, so it may still be live on the canonical bridge but is now
-                // unbound. Recording the new leg as the SOLE Connected owner here would let a later new-leg terminal
-                // event destroy the bridge and release the customer while that old agent is still live — a live-call
-                // drop. Instead, leave BOTH legs unbound: any terminal event then finds no owning binding and is a
-                // teardown no-op, so the customer keeps whichever agent remains and the residue (an unowned but live
-                // bridge, and a monitoring/recording gap on the new leg) is reclaimed by the reconciler. This trades a
-                // recoverable leak for never dropping a live call.
+                // The destination leg was no longer Joining — a terminal event claimed it for teardown between the
+                // bridge commit and this swap. The previous agent leg is deliberately left as the Connected owner, so
+                // the customer safely keeps the previous agent and the dangling destination residue is reclaimed by
+                // the reconciler. Never a drop, never a double owner.
                 _logger.LogWarning(
-                    "Asterisk transfer of interaction {InteractionId} could not confirm hangup of the previous agent leg; leaving the destination leg unbound for the reconciler to avoid a double-owner teardown.",
+                    "Asterisk transfer of interaction {InteractionId} could not finalize the handoff because the destination leg was already claimed for teardown; leaving the previous agent as the owner.",
                     OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
 
                 return;
             }
 
-            // The old leg is confirmed retired and hung up, so this new Connected binding is the single owner of the
-            // canonical bridge — no double-owner window ever exists. Record the new agent-leg ownership as Connected
-            // (same peer and canonical bridge) so recording and monitoring resolve the live destination leg.
-            await _channelTenantBindingStore.CreateAsync(new AsteriskChannelTenantBinding
-            {
-                ChannelId = newAgentChannelId,
-                ProviderName = TechnicalName,
-                InteractionId = interactionId,
-                ProviderCallId = callerChannelId,
-                BridgeId = bridgeId,
-                PeerChannelId = callerChannelId,
-                State = AsteriskChannelBindingState.Connected,
-                CreatedUtc = _clock.UtcNow,
-            });
+            // The destination leg now solely owns the canonical bridge, and the previous leg's binding was atomically
+            // retired to a NON-OWNING Terminating (Joining-disposition) recovery record, so hanging up the previous
+            // leg cannot tear down the conversation — its terminal event finds no owning binding and only releases its
+            // own channel. Best-effort hang up the previous channel; when that hangup is confirmed remove its now
+            // redundant recovery record, and when it is unconfirmed leave the durable record so the reconciler
+            // reclaims the possibly-live previous channel instead of leaking it. This is the same post-commit,
+            // update-then-call-ARI residual the connect flow tolerates.
+            var previousHungUp = await TryHangupAsync(currentAgentChannelId, CancellationToken.None);
+            await RetireProvisionalTransferClaimAsync(currentAgentChannelId, previousHungUp);
         }
         catch (Exception ex)
         {
@@ -1393,9 +1405,16 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         // persisted in this tenant's store are considered, so ownership is structural.
         var peerBindings = await _channelTenantBindingStore.FindAllByPeerChannelIdAsync(providerCallId);
 
-        return peerBindings.FirstOrDefault(binding =>
-            !string.IsNullOrWhiteSpace(binding.BridgeId) &&
-            !string.IsNullOrWhiteSpace(binding.ChannelId));
+        // Prefer the Connected owner over an in-flight Joining destination leg: during a transfer both a Connected
+        // (previous) agent leg and a Joining (destination) leg reference the same caller, and the live conversation
+        // agent — the one to resolve for a concurrent transfer's current leg or a monitoring snoop — is the Connected
+        // one until the handoff atomically swaps ownership.
+        return peerBindings
+            .Where(binding =>
+                !string.IsNullOrWhiteSpace(binding.BridgeId) &&
+                !string.IsNullOrWhiteSpace(binding.ChannelId))
+            .OrderBy(binding => binding.State == AsteriskChannelBindingState.Connected ? 0 : 1)
+            .FirstOrDefault();
     }
 
     private Task<string> ResolveSupervisorEndpointAsync(string supervisorId, CancellationToken cancellationToken)
@@ -1529,6 +1548,25 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk caller-to-agent binding compensation did not complete cleanly.");
             }
         }
+    }
+
+    private async Task RetireProvisionalTransferClaimAsync(string channelId, bool channelConfirmedGone)
+    {
+        if (channelConfirmedGone)
+        {
+            // The destination channel is confirmed gone (a confirmed hangup, or an originate Asterisk definitely
+            // rejected so no channel was created), so hard-delete the durable Joining claim and let a retry re-run.
+            await _channelTenantBindingStore.RemoveByChannelIdAsync(channelId);
+
+            return;
+        }
+
+        // The destination channel may still be live but its hangup was not confirmed. Retain the claim as a durable
+        // Terminating record whose Joining pre-teardown disposition tells the teardown planner and reconciler to hang
+        // up ONLY this dangling channel — never the shared canonical bridge or the customer — so the reconciler
+        // reclaims the leaked channel once the provisioning lease elapses instead of deleting the only record that
+        // could ever find it.
+        await _channelTenantBindingStore.TryBeginTeardownAsync(channelId);
     }
 
     private async Task<bool> TryHangupAsync(string channelId, CancellationToken cancellationToken)

@@ -127,6 +127,40 @@ internal interface IAsteriskChannelTenantBindingStore
     Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId);
 
     /// <summary>
+    /// Atomically completes a transfer handoff in a single isolated, immediately committed tenant session:
+    /// promotes the destination leg's binding from <see cref="AsteriskChannelBindingState.Joining"/> to
+    /// <see cref="AsteriskChannelBindingState.Connected"/> AND, in the same transaction, retires the previous agent
+    /// leg's binding by transitioning it to a non-owning <see cref="AsteriskChannelBindingState.Terminating"/> state
+    /// with a <see cref="AsteriskChannelBindingState.Joining"/> pre-teardown disposition (so teardown and the
+    /// reconciler hang up ONLY the previous channel, never the shared bridge, and the previous leg keeps a durable
+    /// recovery record until its hangup is confirmed). Committing both in one transaction is the linearization point
+    /// that guarantees the canonical conversation bridge is owned by EXACTLY ONE
+    /// <see cref="AsteriskChannelBindingState.Connected"/> binding at every instant — the previous agent before the
+    /// swap, the destination agent after it — so a terminal event can never observe a window with two Connected
+    /// owners (a double-teardown drop) or zero owners (an unowned live bridge). BOTH writes use YesSql
+    /// document-version optimistic concurrency: the destination promotion commits only while the destination is
+    /// still <see cref="AsteriskChannelBindingState.Joining"/> (a terminal event that already claimed it for teardown
+    /// fences the swap), and the previous-owner retirement commits only while the previous leg is still the live
+    /// <see cref="AsteriskChannelBindingState.Connected"/> owner — a version-checked transition, not an id-only
+    /// delete, so that a second concurrent transfer of the same call to a different destination cannot also promote:
+    /// only the first swap can move the previous owner out of Connected, and the loser's version-checked write fails,
+    /// re-reads, and rejects. If either precondition no longer holds the swap does not commit and the caller safely
+    /// stays with whichever agent won ownership.
+    /// </summary>
+    /// <param name="newAgentChannelId">The destination agent-leg channel identifier to promote to <see cref="AsteriskChannelBindingState.Connected"/>.</param>
+    /// <param name="previousAgentChannelId">The previous agent-leg channel identifier whose binding should be retired to a non-owning terminating state as part of the same transaction.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the destination binding was found in
+    /// <see cref="AsteriskChannelBindingState.Joining"/>, the previous agent leg was still the
+    /// <see cref="AsteriskChannelBindingState.Connected"/> owner, and this call committed both the destination's
+    /// promotion to <see cref="AsteriskChannelBindingState.Connected"/> and the retirement of the previous agent leg;
+    /// <see langword="false"/> when the destination binding does not exist or is no longer joining (a terminal
+    /// event claimed it), or when the previous agent leg is missing or no longer Connected (another transfer won
+    /// ownership), which signals the transfer's finalization lost the race and must not retire the previous leg.
+    /// </returns>
+    Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId);
+
+    /// <summary>
     /// Removes the binding for the supplied Asterisk channel identifier from the current tenant store. Teardown
     /// calls this only after every ARI cleanup effect for the binding has been applied, so the durable
     /// <see cref="AsteriskChannelBindingState.Terminating"/> record is retired only once no orphaned resource can

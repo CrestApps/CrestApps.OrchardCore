@@ -245,6 +245,222 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
         }
     }
 
+    [Fact]
+    public async Task SwapConnectedOwnerAsync_WhenDestinationIsJoining_PromotesItAndRetiresPreviousInOneTransaction()
+    {
+        // Arrange
+        var databasePath = DatabasePath("swap-commits");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "previous-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
+            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
+            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1");
+
+            // Assert
+            Assert.True(swapped);
+            Assert.NotNull(destination);
+            Assert.Equal(AsteriskChannelBindingState.Connected, destination.State);
+
+            // The previous owner is retired to a non-owning Terminating (Joining-disposition) recovery record — never
+            // an id-only delete — so the transition is the version-checked linearization point and the previous leg
+            // keeps a durable record until its hangup is confirmed.
+            Assert.NotNull(previous);
+            Assert.Equal(AsteriskChannelBindingState.Terminating, previous.State);
+            Assert.Equal(AsteriskChannelBindingState.Joining, previous.PreTeardownState);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task SwapConnectedOwnerAsync_WhenDestinationNoLongerJoining_DoesNotCommitAndKeepsPreviousOwner()
+    {
+        // Arrange
+        var databasePath = DatabasePath("swap-loses");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "previous-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+
+            // A terminal event already claimed the destination leg for teardown, so it is no longer Joining.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
+            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1");
+
+            // Assert
+            // The swap must not commit, and the previous agent leg must remain the Connected owner so the customer
+            // safely keeps the previous agent.
+            Assert.False(swapped);
+            Assert.NotNull(previous);
+            Assert.Equal(AsteriskChannelBindingState.Connected, previous.State);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task SwapConnectedOwnerAsync_WhenPreviousOwnerAlreadySwappedAway_DoesNotPromoteASecondConnectedOwner()
+    {
+        // Arrange
+        var databasePath = DatabasePath("swap-guards-second-owner");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // The previous agent leg's binding no longer exists as a Connected owner (a prior transfer already swapped
+            // ownership away, or the previous agent's own terminal event claimed it).
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
+            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
+
+            // Assert
+            // Promoting a destination whose previous owner is gone would create a SECOND Connected owner of the shared
+            // bridge (a double-teardown drop). The swap must reject and leave the destination a non-owning Joining leg
+            // for the reconciler to reclaim.
+            Assert.False(swapped);
+            Assert.NotNull(destination);
+            Assert.Equal(AsteriskChannelBindingState.Joining, destination.State);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task SwapConnectedOwnerAsync_WhenTwoTransfersRaceTheSamePreviousOwner_PromotesExactlyOneConnectedOwner()
+    {
+        // Arrange
+        var databasePath = DatabasePath("swap-concurrent-owner");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // One conversation, one current Connected owner, and TWO distinct destination legs that both raced to
+            // transfer the same call to different agents. Each destination has its own Joining claim.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "previous-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-a",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "transfer-agent-b",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            // Both transfers finalize concurrently, contending on the SAME previous owner. Because retiring the
+            // previous owner is a version-checked transition (not an id-only delete), only one swap can move it out of
+            // Connected; the other must lose and reject.
+            var swapA = bindingStore.SwapConnectedOwnerAsync("transfer-agent-a", "previous-agent-1");
+            var swapB = bindingStore.SwapConnectedOwnerAsync("transfer-agent-b", "previous-agent-1");
+            var results = await Task.WhenAll(swapA, swapB);
+
+            var bindings = await bindingStore.GetAllAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            // Exactly one swap commits, and the canonical bridge ends with EXACTLY ONE Connected owner — never two.
+            Assert.Equal(1, results.Count(swapped => swapped));
+            Assert.Single(bindings, binding => binding.State == AsteriskChannelBindingState.Connected);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
     private static AsteriskChannelTenantBindingStore CreateBindingStore(IStore store, string tenantName = "Default")
     {
         return new AsteriskChannelTenantBindingStore(store, new ShellSettings { Name = tenantName });

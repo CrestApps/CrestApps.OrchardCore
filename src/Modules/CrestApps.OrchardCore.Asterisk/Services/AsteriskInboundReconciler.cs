@@ -11,17 +11,19 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// Reconciles tenant-owned Asterisk inbound and agent-leg channel bindings against live ARI state. It runs both
 /// when the realtime listener reconnects and on a periodic background sweep, so a durable
 /// <see cref="AsteriskChannelBindingState.Terminating"/> record whose live cleanup did not complete, a channel
-/// whose terminal event was missed, and a <see cref="AsteriskChannelBindingState.Pending"/> binding orphaned by a
-/// connect that crashed mid-flight are all recovered without waiting for a WebSocket reconnect. Every cleanup is
-/// idempotent (the ARI client treats already-gone bridges and channels as success) and the durable record is
-/// removed last, so a transient ARI outage leaves the record for the next sweep instead of leaking a resource.
+/// whose terminal event was missed, and a <see cref="AsteriskChannelBindingState.Pending"/> or
+/// <see cref="AsteriskChannelBindingState.Joining"/> binding orphaned by a connect or transfer that crashed
+/// mid-flight are all recovered without waiting for a WebSocket reconnect. Every cleanup is idempotent (the ARI
+/// client treats already-gone bridges and channels as success) and the durable record is removed last, so a
+/// transient ARI outage leaves the record for the next sweep instead of leaking a resource.
 /// </summary>
 internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconciler
 {
     // A healthy caller-to-agent connect promotes its Pending agent-leg binding to Connected (or compensates and
-    // removes it) within seconds — bounded by the agent answer timeout plus a couple of bridging calls. A Pending
-    // binding still present well beyond that window can only be the residue of a connect that crashed before it
-    // could finalize or compensate, so reclaiming it cannot tear down an in-flight connect.
+    // removes it) within seconds — bounded by the agent answer timeout plus a couple of bridging calls; a transfer
+    // promotes or retracts its Joining destination leg on the same order of magnitude. A provisioning binding still
+    // present well beyond that window can only be the residue of a connect or transfer that crashed before it could
+    // finalize or compensate, so reclaiming it cannot tear down an in-flight allocator.
     private static readonly TimeSpan _pendingReclamationThreshold = TimeSpan.FromMinutes(5);
 
     private readonly IAsteriskChannelTenantBindingStore _bindingStore;
@@ -244,6 +246,19 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         AsteriskChannelBindingState disposition,
         CancellationToken cancellationToken)
     {
+        // A joining leg (a transfer destination on a shared canonical bridge it does not own) is non-owning: the
+        // bridge and the caller belong to the Connected agent leg (the previous agent before the swap, or the
+        // swapped-in destination afterward), so recovery must NEVER destroy the shared bridge or release the caller
+        // — that would drop a live call. An aged joining record means a transfer crashed before it committed, so
+        // only the dangling destination channel itself is hung up (idempotent); the durable record is then retired
+        // by ResolveClaimedBindingAsync once its provisioning lease has elapsed.
+        if (disposition == AsteriskChannelBindingState.Joining)
+        {
+            await HangupAsync(binding.ChannelId, cancellationToken);
+
+            return true;
+        }
+
         // Destroy the shared mixing bridge and hang up the agent channel itself (idempotent; covers the case where
         // a connect crashed while the agent channel was still live in Stasis).
         await DestroyBridgeAsync(binding.BridgeId, cancellationToken);
