@@ -122,4 +122,11 @@ internal static class AsteriskAriConstants
     /// (that is, for the supervisor's softphone to answer) before a monitoring engagement is treated as unanswered.
     /// </summary>
     public const int SupervisorAnswerTimeoutSeconds = 30;
+
+    /// <summary>
+    /// The deterministic prefix used for the new agent leg originated by a blind transfer to an agent. Combined with
+    /// the interaction and destination-agent identity it yields a stable channel id so a retried transfer to the same
+    /// destination is idempotent and never originates a second leg.
+    /// </summary>
+    public const string TransferAgentChannelPrefix = "crestapps-xfer-agent-";
 }

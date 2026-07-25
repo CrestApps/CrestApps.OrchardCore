@@ -258,6 +258,30 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable request-metadata keys the transfer service passes to a voice provider so the provider can
+    /// execute a resolved transfer destination without receiving raw client input.
+    /// </summary>
+    public static class TransferMetadata
+    {
+        /// <summary>
+        /// Identifies the Orchard user id of the destination agent for an agent transfer, so a provider can resolve
+        /// that agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
+        /// </summary>
+        public const string AgentUserId = "transferAgentUserId";
+
+        /// <summary>
+        /// Identifies the provider channel of the new leg established for a completed transfer, when the provider
+        /// reports one.
+        /// </summary>
+        public const string NewChannelId = "transferNewChannelId";
+
+        /// <summary>
+        /// Identifies the conversation bridge the transfer was executed on, when the provider reports one.
+        /// </summary>
+        public const string BridgeId = "transferBridgeId";
+    }
+
+    /// <summary>
     /// Contains site-settings configuration identifiers used by the Contact Center module set.
     /// </summary>
     public static class Settings

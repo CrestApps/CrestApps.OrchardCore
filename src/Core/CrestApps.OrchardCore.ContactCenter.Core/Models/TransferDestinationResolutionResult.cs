@@ -28,20 +28,29 @@ public sealed class TransferDestinationResolutionResult
     public string ResolvedTarget { get; set; }
 
     /// <summary>
+    /// Gets or sets the Orchard user id of the destination agent, when the destination is an agent, so a voice
+    /// provider can resolve that agent's live endpoint. It is <see langword="null"/> for non-agent destinations.
+    /// </summary>
+    public string ProviderEndpointUserId { get; set; }
+
+    /// <summary>
     /// Creates a successful destination result.
     /// </summary>
     /// <param name="targetType">The destination type.</param>
     /// <param name="resolvedTarget">The provider-safe destination.</param>
+    /// <param name="providerEndpointUserId">The destination agent's Orchard user id, for an agent destination.</param>
     /// <returns>The destination result.</returns>
     public static TransferDestinationResolutionResult Success(
         InteractionTransferTargetType targetType,
-        string resolvedTarget)
+        string resolvedTarget,
+        string providerEndpointUserId = null)
     {
         return new TransferDestinationResolutionResult
         {
             Succeeded = true,
             TargetType = targetType,
             ResolvedTarget = resolvedTarget,
+            ProviderEndpointUserId = providerEndpointUserId,
         };
     }
 

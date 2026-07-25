@@ -122,15 +122,23 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
 
         try
         {
+            var transferRequest = new ContactCenterVoiceTransferRequest
+            {
+                InteractionId = interaction.ItemId,
+                ProviderCallId = providerCallId,
+                TransferType = request.Type,
+                TargetType = destination.TargetType,
+                Target = destination.ResolvedTarget,
+            };
+
+            if (!string.IsNullOrEmpty(destination.ProviderEndpointUserId))
+            {
+                transferRequest.Metadata[ContactCenterConstants.TransferMetadata.AgentUserId] =
+                    destination.ProviderEndpointUserId;
+            }
+
             var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
-                transferProvider.TransferAsync(new ContactCenterVoiceTransferRequest
-                {
-                    InteractionId = interaction.ItemId,
-                    ProviderCallId = providerCallId,
-                    TransferType = request.Type,
-                    TargetType = destination.TargetType,
-                    Target = destination.ResolvedTarget,
-                }, commandCancellationToken));
+                transferProvider.TransferAsync(transferRequest, commandCancellationToken));
 
             if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
             {

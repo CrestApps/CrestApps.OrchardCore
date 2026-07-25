@@ -72,7 +72,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
 
         return agent is null
             ? TransferDestinationResolutionResult.Denied()
-            : TransferDestinationResolutionResult.Success(InteractionTransferTargetType.Agent, agent.ItemId);
+            : TransferDestinationResolutionResult.Success(InteractionTransferTargetType.Agent, agent.ItemId, agent.UserId);
     }
 
     private async Task<TransferDestinationResolutionResult> ResolveQueueAsync(
