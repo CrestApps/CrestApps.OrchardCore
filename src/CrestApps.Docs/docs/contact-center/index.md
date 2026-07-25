@@ -187,6 +187,16 @@ A `ProviderVoiceEvent` may carry an optional monotonic `SequenceNumber`. When a 
 
 Provider webhook inbox deliveries are likewise keyed by canonical provider name, and one inbox message per canonical provider delivery is database-enforced. A canonicalizing upgrade migration rewrites legacy alias-stored deliveries to their canonical provider before the unique index is created, and the inbox index provider canonicalizes `ProviderName` on reindex so legacy documents cannot recreate alias index values.
 
+### Recording governance
+
+> **Feature ID** `CrestApps.OrchardCore.ContactCenter.Recording`
+
+Recording orchestration is governed by a tenant-scoped policy that is enforced server-side **before** any provider media capture. The **Recording governance** section on the Contact Center settings screen configures whether recording is enabled for the tenant, the consent model (all parties must consent, or single-party consent is sufficient), whether explicit consent must be captured on the interaction before recording may start, the retention window in days, and whether captured recordings begin under legal hold.
+
+On every start or resume, the recording service evaluates `IRecordingGovernancePolicy` before invoking the provider. Recording **fails closed** — the provider is never called — when recording is disabled for the tenant, or when the all-parties consent model requires explicit consent that has not yet been captured on the interaction; a `RecordingDenied` domain event is published carrying the machine-readable deny reason. Pause and stop are never gated, so a tenant can always halt an in-progress capture.
+
+When recording is permitted, the interaction is stamped once at capture time with the resolved retention deadline (`RecordingRetainUntilUtc`, computed from the retention window through the injected clock, or left indefinite when the window is zero) and, when configured, its legal-hold flag is raised. The retention deadline is established a single time so a later resume never extends it, and legal hold is only ever raised — never silently cleared — by resuming a recording. This governance layer is additive to, and independent of, the provider capability and support-matrix gates, which remain the hard gate on whether recording can execute at all.
+
 ## Inbound voice
 
 > **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`

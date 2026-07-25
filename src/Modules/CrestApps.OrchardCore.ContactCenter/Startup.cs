@@ -671,7 +671,11 @@ public sealed class RecordingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IRecordingGovernancePolicy, RecordingGovernancePolicy>();
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
+
+        services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 }
 

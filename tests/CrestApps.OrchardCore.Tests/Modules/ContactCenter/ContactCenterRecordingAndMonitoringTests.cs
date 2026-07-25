@@ -27,7 +27,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -62,7 +63,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -75,6 +77,151 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.RecordingStarted),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenGovernanceDeniesRecording_FailsClosedAndPublishesRecordingDenied()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        var recordingProvider = provider.As<IContactCenterVoiceRecordingProvider>();
+        var resolver = CreateResolver(provider);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor(),
+            CreateGovernancePolicy(RecordingGovernanceDecision.Deny(
+                ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled)));
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(changed);
+        Assert.Equal(RecordingState.None, interaction.RecordingState);
+        recordingProvider.Verify(
+            p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        publisher.Verify(
+            p => p.PublishAsync(
+                It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.RecordingDenied),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenInteractionAlreadyPaused_DoesNotReStampGovernanceMetadata()
+    {
+        // Arrange
+        var stampedRetainUntil = new DateTime(2029, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var interaction = CreateInteraction();
+        interaction.RecordingState = RecordingState.Paused;
+        interaction.RecordingRetainUntilUtc = stampedRetainUntil;
+        interaction.RecordingLegalHold = false;
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+        var resolver = CreateResolver(provider);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor(),
+            CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
+                new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                legalHold: true)));
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(changed);
+        Assert.Equal(RecordingState.Recording, interaction.RecordingState);
+        Assert.Equal(stampedRetainUntil, interaction.RecordingRetainUntilUtc);
+        Assert.False(interaction.RecordingLegalHold);
+    }
+
+    [Fact]
+    public async Task ResumeAsync_DoesNotAlterCaptureTimeGovernanceMetadata()
+    {
+        // Arrange
+        var stampedRetainUntil = new DateTime(2029, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var interaction = CreateInteraction();
+        interaction.RecordingState = RecordingState.Paused;
+        interaction.RecordingRetainUntilUtc = stampedRetainUntil;
+        interaction.RecordingLegalHold = false;
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+        var resolver = CreateResolver(provider);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor(),
+            CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
+                new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                legalHold: true)));
+
+        // Act
+        var changed = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(changed);
+        Assert.Equal(RecordingState.Recording, interaction.RecordingState);
+        Assert.Equal(stampedRetainUntil, interaction.RecordingRetainUntilUtc);
+        Assert.False(interaction.RecordingLegalHold);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenGovernanceAllowsWithRetention_StampsRetentionAndLegalHold()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+        var resolver = CreateResolver(provider);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var retainUntil = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            resolver.Object,
+            publisher.Object,
+            CreateCommandExecutor(),
+            CreateGovernancePolicy(RecordingGovernanceDecision.Allow(retainUntil, legalHold: true)));
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(changed);
+        Assert.Equal(RecordingState.Recording, interaction.RecordingState);
+        Assert.Equal(retainUntil, interaction.RecordingRetainUntilUtc);
+        Assert.True(interaction.RecordingLegalHold);
     }
 
     [Fact]
@@ -122,7 +269,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             CreateResolver(provider).Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", callerCancellation.Token);
@@ -155,7 +303,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -185,7 +334,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             CreateResolver(provider).Object,
             publisher.Object,
-            new TimeoutTelephonyCommandExecutor());
+            new TimeoutTelephonyCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -233,7 +383,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -263,7 +414,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            CreateGovernancePolicy());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -541,6 +693,17 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         return new DefaultTelephonyCommandExecutor(
             Options.Create(new TelephonyCommandOptions()),
             Mock.Of<IHostApplicationLifetime>());
+    }
+
+    private static IRecordingGovernancePolicy CreateGovernancePolicy(
+        RecordingGovernanceDecision decision = null)
+    {
+        var policy = new Mock<IRecordingGovernancePolicy>();
+        policy
+            .Setup(p => p.EvaluateStartAsync(It.IsAny<Interaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(decision ?? RecordingGovernanceDecision.Allow(null, false));
+
+        return policy.Object;
     }
 
     private sealed class TimeoutTelephonyCommandExecutor : ITelephonyCommandExecutor

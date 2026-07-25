@@ -229,6 +229,23 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable machine-readable reason codes describing why a recording governance policy denied recording,
+    /// shared between the governance policy and the recording service that records them on denial events.
+    /// </summary>
+    public static class RecordingGovernanceDenyReason
+    {
+        /// <summary>
+        /// Recording is disabled for the tenant by the recording governance policy.
+        /// </summary>
+        public const string RecordingDisabled = "recordingDisabled";
+
+        /// <summary>
+        /// Recording requires explicit party consent that has not been captured on the interaction.
+        /// </summary>
+        public const string ConsentRequired = "consentRequired";
+    }
+
+    /// <summary>
     /// Contains stable provider-result metadata keys describing a supervisor monitoring engagement, shared between
     /// voice providers and the monitoring service.
     /// </summary>
@@ -545,6 +562,11 @@ public static class ContactCenterConstants
         /// Raised when call recording stops.
         /// </summary>
         public const string RecordingStopped = "RecordingStopped";
+
+        /// <summary>
+        /// Raised when the recording governance policy denies a request to start or resume recording.
+        /// </summary>
+        public const string RecordingDenied = "RecordingDenied";
 
         /// <summary>
         /// Raised when a supervisor starts monitoring, whispering, barging, or taking over a live call.

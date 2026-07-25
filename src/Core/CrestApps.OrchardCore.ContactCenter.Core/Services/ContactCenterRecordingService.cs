@@ -13,6 +13,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
+    private readonly IRecordingGovernancePolicy _governancePolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRecordingService"/> class.
@@ -21,16 +22,19 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
+    /// <param name="governancePolicy">The recording governance policy that gates recording and resolves retention metadata.</param>
     public ContactCenterRecordingService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
-        ITelephonyCommandExecutor commandExecutor)
+        ITelephonyCommandExecutor commandExecutor,
+        IRecordingGovernancePolicy governancePolicy)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
+        _governancePolicy = governancePolicy;
     }
 
     /// <inheritdoc/>
@@ -71,6 +75,8 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             return false;
         }
 
+        var previousState = interaction.RecordingState;
+
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
 
         if (provider is not IContactCenterVoiceRecordingProvider recordingProvider ||
@@ -78,6 +84,37 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             string.IsNullOrEmpty(interaction.ProviderInteractionId))
         {
             return false;
+        }
+
+        // Recording governance gates only the transition into an actively-recording state (start and resume); a
+        // pause or stop must never be blocked by policy so the tenant can always halt capture.
+        RecordingGovernanceDecision governanceDecision = null;
+
+        if (state == RecordingState.Recording)
+        {
+            governanceDecision = await _governancePolicy.EvaluateStartAsync(interaction, cancellationToken);
+
+            if (!governanceDecision.Allowed)
+            {
+                var deniedEvent = new InteractionEvent
+                {
+                    EventType = ContactCenterConstants.Events.RecordingDenied,
+                    InteractionId = interaction.ItemId,
+                    AggregateType = nameof(Interaction),
+                    AggregateId = interaction.ItemId,
+                    ActorId = interaction.AgentId,
+                    SourceComponent = ContactCenterConstants.Components.Interactions,
+                };
+
+                deniedEvent.SetData(new RecordingDeniedEventData
+                {
+                    DenyReasonCode = governanceDecision.DenyReasonCode,
+                });
+
+                await _publisher.PublishAsync(deniedEvent, CancellationToken.None);
+
+                return false;
+            }
         }
 
         ContactCenterVoiceProviderResult providerResult;
@@ -107,6 +144,20 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }
 
         interaction.RecordingState = state;
+
+        // Determine initial capture from the persisted pre-transition state rather than the calling entry point,
+        // so invoking Start on an already paused interaction (or any resume) cannot re-stamp the capture-time
+        // retention window or newly raise legal hold. Only a transition into Recording from a state that was never
+        // actively capturing (None, or a fully Stopped prior session) counts as an initial capture.
+        var isInitialCapture = state == RecordingState.Recording &&
+            previousState != RecordingState.Recording &&
+            previousState != RecordingState.Paused;
+
+        if (isInitialCapture)
+        {
+            ApplyGovernanceMetadata(interaction, governanceDecision);
+        }
+
         PersistRecordingMetadata(interaction, providerResult.Metadata);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
 
@@ -121,6 +172,24 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }, CancellationToken.None);
 
         return true;
+    }
+
+    private static void ApplyGovernanceMetadata(Interaction interaction, RecordingGovernanceDecision decision)
+    {
+        if (decision is null)
+        {
+            return;
+        }
+
+        // Stamp the capture-time retention window and legal-hold flag. This runs only on the initial capture
+        // transition, so a later resume can neither reset the retention deadline to a resume-relative value nor
+        // raise legal hold on a recording that did not begin under one.
+        interaction.RecordingRetainUntilUtc = decision.RetainUntilUtc;
+
+        if (decision.LegalHold)
+        {
+            interaction.RecordingLegalHold = true;
+        }
     }
 
     private static void PersistRecordingMetadata(Interaction interaction, IDictionary<string, string> metadata)

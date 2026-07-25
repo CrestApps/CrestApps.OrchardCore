@@ -88,6 +88,29 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public RecordingState RecordingState { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC instant at which explicit party consent to record this interaction was captured, when
+    /// the tenant recording governance policy requires it.
+    /// </summary>
+    public DateTime? RecordingConsentCapturedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jurisdiction under which recording consent for this interaction was evaluated, when known.
+    /// </summary>
+    public string RecordingConsentJurisdiction { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the captured recording is under legal hold. A recording under legal
+    /// hold is exempt from retention-driven and subject-request erasure until the hold is released.
+    /// </summary>
+    public bool RecordingLegalHold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC instant beyond which the captured recording becomes eligible for erasure, or
+    /// <see langword="null"/> when the recording is retained indefinitely.
+    /// </summary>
+    public DateTime? RecordingRetainUntilUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the transcript reference when a transcript is available for the interaction.
     /// </summary>
     public string TranscriptReference { get; set; }
