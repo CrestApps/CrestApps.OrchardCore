@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -40,8 +42,18 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         _shellSettingsManager = application.Services.GetRequiredService<IShellSettingsManager>();
     }
 
-    public static async Task<ContactCenterFeatureActivationHost> StartAsync()
-    {
+    /// <summary>
+    /// Gets the base address the test host is listening on, so a test can exercise a mapped route over real
+    /// HTTP including the tenant request URL prefix.
+    /// </summary>
+    public Uri BaseAddress => new(_application.Services
+        .GetRequiredService<IServer>()
+        .Features
+        .Get<IServerAddressesFeature>()
+        .Addresses
+        .First());
+
+    public static async Task<ContactCenterFeatureActivationHost> StartAsync()    {
         var applicationDataPath = Path.Combine(Path.GetTempPath(), $"crestapps-contact-center-{Guid.NewGuid():N}");
         var webRootPath = Path.Combine(applicationDataPath, "wwwroot");
         Directory.CreateDirectory(webRootPath);
@@ -57,10 +69,16 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services
             .AddOrchardCms();
+        builder.Services.AddContactCenterProcessLiveness();
         builder.Services.Configure<ShellOptions>(options => options.ShellsApplicationDataPath = applicationDataPath);
         builder.Configuration["OrchardCore:OrchardCore_Documents:CheckConcurrency"] = bool.FalseString;
 
         var application = builder.Build();
+
+        // Mirrors src/Startup/CrestApps.OrchardCore.Cms.Web/Program.cs: process liveness is installed ahead of
+        // the Orchard Core pipeline so it answers regardless of tenant state or request URL prefix.
+        application.UseContactCenterProcessLiveness();
+
         application.UseOrchardCore();
         await application.StartAsync();
         await application.Services.GetRequiredService<IShellHost>().InitializeAsync();

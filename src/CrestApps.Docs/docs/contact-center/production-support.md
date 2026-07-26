@@ -76,13 +76,140 @@ Current instruments:
 
 ### Health checks
 
-When the `OrchardCore.HealthChecks` feature is enabled it exposes the standard `/health/live` endpoint that aggregates the tenant-registered checks below. The Contact Center feature registers each check with the `contactcenter` and `ready` tags so a readiness probe can select them:
+Three probes answer three different questions. They are separate on purpose, and the separation is a reliability requirement rather than a stylistic one.
 
-| Check | Signal | Degraded | Unhealthy |
-| --- | --- | --- | --- |
-| `contactcenter-storage` | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
-| `contactcenter-outbox` | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
-| `contactcenter-provider-ingress` | Provider webhook inbox dead-letter and overdue backlog. A stuck provider stream or an expired listener lease surfaces here as a growing ingress backlog. | Same thresholds as the outbox. | Same thresholds as the outbox. |
+| Route | Scope | Contract | Selects | Wire to |
+| --- | --- | --- | --- | --- |
+| `/health/process` | Host | Liveness. Returns `Healthy` whenever the process can serve the request. It consults nothing, by design. | Nothing. | The orchestrator's liveness probe / restart policy. |
+| `/api/contact-center/health/ready` | Tenant | Readiness. Reports whether *this node* should receive traffic for this tenant. | Checks tagged `contactcenter-ready`. | The load balancer and the orchestrator's readiness probe. |
+| `/api/contact-center/health/dependencies` | Tenant | Dependency report. Per-check status for the tenant's dependencies. | Checks tagged `contactcenter-dependency`. | Dashboards and alerting. **Never** an orchestrator probe. |
+
+The liveness and readiness routes allow anonymous requests so an orchestrator can reach them, and both return only the aggregate status word — never per-check detail — so they disclose nothing useful to an unauthenticated caller. The dependency route discloses which dependency degraded, so it requires the `MonitorContactCenter` permission.
+
+#### Why liveness is served by the host, not a tenant
+
+Liveness answers exactly one question: *should this process be restarted*. No tenant-scoped route can answer it. A route mapped inside a tenant shell returns **404** whenever that tenant is disabled, renamed, given a different request URL prefix, or fails to start — and an orchestrator reads 404 as a probe failure. A healthy process would be restarted forever because of a tenant-level problem, and the restart would not fix the tenant.
+
+`/health/process` is therefore answered by host middleware installed ahead of the Orchard Core pipeline:
+
+```csharp
+builder.Services
+    .AddContactCenterProcessLiveness()
+    .AddOrchardCms();
+
+var app = builder.Build();
+
+app.UseContactCenterProcessLiveness();
+
+app.UseOrchardCore();
+```
+
+It must be registered before `UseOrchardCore`, and it must be middleware rather than a mapped endpoint: endpoints registered on a `WebApplication` are executed by terminal middleware appended *after* everything the application added, so an endpoint would be evaluated only after Orchard Core had already handled the request. Only `GET` and `HEAD` are answered; every other verb falls through to the normal pipeline.
+
+:::warning
+The path is `/health/process`, not `/health/live`, and that is deliberate. `/health/live` is the default route of the `OrchardCore.HealthChecks` module. Because this middleware short-circuits *before routing*, taking that path would silently shadow that module's endpoint for every tenant in the process — including tenants that never enable Contact Center — and answer an unconditional `200 Healthy` in its place. A health endpoint that can only ever report success is worse than none at all. `AddContactCenterProcessLiveness` also registers a startup validator that reads **every configured tenant's** health-check route — tenant configuration is not host configuration, so a tenant could otherwise claim the path unseen — and fails the host with an explanatory error naming the tenant. A tenant created *after* startup is not covered by that validator; tenants that enable Contact Center are covered by the shell-level guard, and for tenants that do not, treat the liveness path as reserved.
+
+To move the probe, pass the path to `AddContactCenterProcessLiveness("/probe/alive")`. `UseContactCenterProcessLiveness` deliberately takes no path: the path is validated against every tenant at registration, so accepting it again at the pipeline would let the probe answer on a path no tenant was ever checked against — the exact collision the validator exists to prevent. Registering it twice on different paths fails startup for the same reason.
+:::
+
+The readiness tag is namespaced (`contactcenter-ready`, not `ready`) so that a check contributed by another module — which conventionally uses the bare `ready` tag — can never silently join the Contact Center readiness verdict.
+
+#### Why readiness does not check dependencies
+
+This is the single most important thing to understand about these probes, and it is the opposite of what most health check examples show.
+
+Readiness removes a node from the load balancer. A dependency shared by every node — the database, Redis, the provider, the outbox backlog — is observed identically by every node. If readiness consulted it, every node would fail readiness at the same instant, the load balancer would have no healthy target, and a *degraded* dependency would become a *total* outage. The system would take itself down in response to a problem it could otherwise have served through, and it would stay down because no node can pass a probe that depends on something still broken.
+
+Readiness must therefore only reflect conditions that genuinely differ between nodes. Two apply on every deployment:
+
+- The node has not finished starting. During a rolling deployment a new instance must not receive calls before its shells are initialized.
+- The node is shutting down. Reporting unready on `SIGTERM` is what lets the load balancer evict the node *before* the process stops accepting connections. Without it, every deployment drops in-flight calls.
+
+A third, the [node serving gate](#optional-the-node-serving-gate), is available where a node's *own* ability to reach a shared dependency can fail independently of its peers. It is opt-in because it re-introduces fleet-wide risk when the dependency itself is down.
+
+Dependency health is still observed — that is what the dependency probe and the metrics are for — but it is an **alerting** signal that pages a human, never a **routing** signal that drains capacity.
+
+:::tip
+The rule generalizes: an orchestrator probe may only consult state that differs between instances. If two healthy instances would always answer identically, the check belongs on the dependency probe.
+:::
+
+#### The tenant probes inherit the tenant prefix
+
+The readiness and dependency routes are mapped inside the Contact Center feature, so they exist on every tenant that enables it and they inherit that tenant's request URL prefix. A tenant reachable at `/support` answers on `/support/api/contact-center/health/ready`; a tenant with no prefix answers on `/api/contact-center/health/ready`.
+
+:::warning
+Probing an unprefixed tenant route when Contact Center runs on a prefixed tenant reaches a shell that does not map these routes, and returns **404**. An orchestrator treats 404 as a probe failure. Always include the tenant prefix, and verify the probe returns 200 before relying on it. `/health/process` is the only probe that is prefix-independent, because it is served by the host.
+:::
+
+With the default configuration readiness is node-local, so probing a single Contact Center tenant is sufficient and correct — every tenant on the node reports the same node state. This is what makes a single Kubernetes `readinessProbe` correct even when the pod hosts several tenants. If you enable the node serving gate below, readiness becomes genuinely per tenant and each tenant you care about must be probed.
+
+Scrape the **dependency** probe per tenant, since dependency health genuinely is per tenant.
+
+#### Optional: the node serving gate
+
+Readiness being purely lifetime-based is deliberately shallow, and that shallowness has a cost. "Shared dependency" does not mean "fails identically on every node": a node with an exhausted connection pool, a stale DNS entry, an expired TLS trust store, or exhausted outbound ports fails every store call while its peers are perfectly healthy. Nothing in the default readiness contract notices, so that node keeps taking its share of traffic and failing all of it.
+
+The node serving gate closes that hole. It runs a cheap store probe on readiness and drains the node after `ConsecutiveFailuresBeforeUnready` consecutive failures, returning it after `ConsecutiveSuccessesBeforeReady` consecutive successes. The hysteresis is what makes it usable: a single transient failure never costs capacity, and a node does not flap back into rotation on one lucky call.
+
+It is **disabled by default**, because when the store itself is down every node observes the same failure and the gate drains the whole fleet — the exact failure mode the readiness split exists to prevent.
+
+:::warning
+Enable it only when your load balancer fails open once too few targets remain healthy — for example an Envoy or Istio panic threshold, which by default routes to all hosts when fewer than 50% are healthy. On a plain Kubernetes `Service`, all-pods-NotReady means zero endpoints and a total outage. If you are unsure, leave it disabled and rely on the dependency probe and alerting instead.
+:::
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "HealthChecks": {
+      "EnableNodeServingGate": true,
+      "ConsecutiveFailuresBeforeUnready": 3,
+      "ConsecutiveSuccessesBeforeReady": 2
+    }
+  }
+}
+```
+
+When disabled the check performs no I/O and reports healthy immediately, so readiness stays free.
+
+#### Which checks a tenant registers
+
+The dependency report contains only what the tenant's enabled features registered. `contactcenter-provider-ingress` needs the provider webhook inbox, which the Voice feature owns, so it is registered by the Voice feature and is absent on tenants that do not enable Voice. Do not assert a fixed check count in monitoring.
+
+| Check | Probe | Registered by | Signal | Degraded | Unhealthy |
+| --- | --- | --- | --- | --- | --- |
+| `contactcenter-node` | Readiness | Contact Center | Node-local lifetime: startup complete and not shutting down. Consults no dependency and performs no I/O. | — | Startup incomplete, or shutdown in progress. |
+| `contactcenter-node-serving` | Readiness | Contact Center | Opt-in node serving gate (see above). Disabled by default, in which case it performs no I/O and is always healthy. | — | Enabled, and this node failed `ConsecutiveFailuresBeforeUnready` consecutive store probes. |
+| `contactcenter-storage` | Dependency | Contact Center | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
+| `contactcenter-outbox` | Dependency | Contact Center | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
+| `contactcenter-provider-ingress` | Dependency | Contact Center Voice | Provider webhook inbox dead-letter and overdue backlog. A stuck provider stream or an expired listener lease surfaces here as a growing ingress backlog. | Same thresholds as the outbox. | Same thresholds as the outbox. |
+
+With the serving gate disabled, readiness performs no I/O at all and is safe to scrape at orchestrator frequency; with it enabled, readiness costs one store query per scrape. The dependency probe runs two queries for each queue check plus one for storage — five queries on a Voice-enabled tenant — so scrape it on the order of seconds, not milliseconds.
+
+:::warning
+Do not point a liveness or readiness probe at the `OrchardCore.HealthChecks` module's endpoint. That module maps a single route with no registration predicate, so it aggregates every check contributed by every enabled module regardless of tag — including the dependency checks. Despite its default `/health/live` route it is neither a liveness nor a readiness signal, and wiring a probe to it reintroduces exactly the fleet-wide-drain and restart-loop failures described above.
+
+Because documentation cannot stop a deployment chart from wiring that route, the Contact Center module fails tenant startup when `OrchardCore.HealthChecks` is enabled and its route still claims liveness. Resolve it by moving the shared endpoint off a liveness name:
+
+```json
+{
+  "OrchardCore_HealthChecks": {
+    "Url": "/health/aggregate"
+  }
+}
+```
+
+If you have deliberately accepted the aggregate-on-liveness-route behavior, acknowledge it explicitly instead:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "HealthChecks": {
+      "AllowUnsafeSharedEndpointRoute": true
+    }
+  }
+}
+```
+:::
 
 Thresholds are configured under `CrestApps_ContactCenter:HealthChecks` and are normalized so an unhealthy bound can never fall below its degraded bound:
 
@@ -99,7 +226,13 @@ Thresholds are configured under `CrestApps_ContactCenter:HealthChecks` and are n
 }
 ```
 
-SignalR backplane health is owned by the backplane provider rather than the Contact Center module: when a Redis backplane is configured, enable the Redis/backplane connectivity health check so its liveness is aggregated by the same `/health/live` endpoint. On a single node the in-memory backplane needs no separate check.
+SignalR backplane health is owned by the backplane provider rather than the Contact Center module. When a Redis backplane is configured, register the Redis/backplane connectivity check with the `contactcenter-dependency` tag so it appears on the dependency probe and can be alerted on.
+
+:::danger
+Never tag a Redis, database, provider, or backplane connectivity check `contactcenter-ready`. Redis is shared by every node, so every node would fail readiness at the same instant, the load balancer would be left with no target, and a degraded backplane would become a total outage that cannot self-heal. Shared dependencies are alerting signals, not routing signals.
+:::
+
+On a single node the in-memory backplane needs no separate check.
 
 ## Multi-node real-time backplane
 

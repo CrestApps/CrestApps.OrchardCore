@@ -73,17 +73,7 @@ public sealed class Startup : StartupBase
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
         services.Configure<ContactCenterHealthCheckOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"));
-        services
-            .AddHealthChecks()
-            .AddCheck<ContactCenterStorageHealthCheck>(
-                "contactcenter-storage",
-                tags: ["contactcenter", "ready"])
-            .AddCheck<ContactCenterOutboxHealthCheck>(
-                "contactcenter-outbox",
-                tags: ["contactcenter", "ready"])
-            .AddCheck<ContactCenterProviderIngressHealthCheck>(
-                "contactcenter-provider-ingress",
-                tags: ["contactcenter", "ready"]);
+        services.AddContactCenterHealthChecks();
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))
@@ -162,6 +152,45 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
             .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddContactCenterHealthEndpoints();
+    }
+}
+
+/// <summary>
+/// Rejects a shared health-check endpoint whose route claims liveness while reporting Contact Center
+/// dependency checks.
+/// </summary>
+/// <remarks>
+/// This runs only when the <c>OrchardCore.HealthChecks</c> feature is also enabled, because only then does the
+/// unfiltered aggregate endpoint exist. Contact Center is what makes that endpoint dangerous, so it refuses to
+/// introduce the hazard silently rather than relying on documentation an operator may never read.
+/// </remarks>
+[RequireFeatures("OrchardCore.HealthChecks")]
+public sealed class ContactCenterSharedHealthEndpointStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterSharedHealthEndpointStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to read both modules' health settings.</param>
+    public ContactCenterSharedHealthEndpointStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        SharedHealthCheckEndpointGuard.Validate(
+            _shellConfiguration["OrchardCore_HealthChecks:Url"],
+            string.Equals(
+                _shellConfiguration["CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
+                bool.TrueString,
+                StringComparison.OrdinalIgnoreCase));
     }
 }
 
@@ -593,6 +622,8 @@ public sealed class VoiceStartup : StartupBase
                     options.MaximumFutureSkewSeconds is >= 0 and <= 3600,
                 "Webhook ingress rate, concurrency, period, delivery-age, or future-skew values are outside their supported ranges.")
             .ValidateOnStart();
+
+        services.AddContactCenterVoiceHealthChecks();
 
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()

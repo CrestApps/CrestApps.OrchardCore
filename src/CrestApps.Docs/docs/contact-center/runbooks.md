@@ -9,7 +9,7 @@ These runbooks cover the dependency and node failures an operator must handle fo
 
 Every runbook uses the same signals so responders do not have to learn per-incident tooling:
 
-- **Health checks** on `/health/live` (the `OrchardCore.HealthChecks` feature must be enabled): `contactcenter-storage`, `contactcenter-outbox`, and `contactcenter-provider-ingress`, all tagged `contactcenter` and `ready`.
+- **Health probes.** `/api/contact-center/health/dependencies` (requires `MonitorContactCenter`) reports per-check status for `contactcenter-storage`, `contactcenter-outbox`, and — on tenants that enable Voice — `contactcenter-provider-ingress`. **This is the probe to read during an incident.** The anonymous `/api/contact-center/health/ready` and `/health/process` probes are orchestrator signals only: readiness reports node-local state and deliberately stays healthy while a dependency is degraded, so that a shared outage cannot drain every node at once, and `/health/process` reports only that the process is scheduling requests. Never diagnose a dependency from them. Readiness and the dependency report are per tenant and inherit the tenant's request URL prefix; `/health/process` is served by the host and is prefix-independent. See [Production support](production-support.md) for the full probe contract.
 - **Metrics** from the `CrestApps.OrchardCore.ContactCenter` meter: `contactcenter.outbox.redelivered` and `contactcenter.outbox.dead_lettered` (tagged by `reason`).
 - **Traces** from the `CrestApps.OrchardCore.ContactCenter` activity source.
 
@@ -17,7 +17,7 @@ Thresholds are configurable under `CrestApps_ContactCenter:HealthChecks`; tune t
 
 ## General triage
 
-1. Read `/health/live` and identify which of the three Contact Center checks is `Degraded` or `Unhealthy`.
+1. Read `/api/contact-center/health/dependencies` for the affected tenant and identify which check is `Degraded` or `Unhealthy`. Corroborate with the `contactcenter.outbox.redelivered` and `contactcenter.outbox.dead_lettered` counters.
 2. Correlate with the outbox counters. A rising `contactcenter.outbox.dead_lettered{reason="retry_exhausted"}` means downstream dispatch is failing; a rising `redelivered` with no dead-letters means transient retries are recovering.
 3. Pick the matching runbook below. Storage failures cascade into every other subsystem, so always rule out SQL and Redis first.
 
@@ -69,17 +69,17 @@ Thresholds are configurable under `CrestApps_ContactCenter:HealthChecks`; tune t
 
 ## Node failure
 
-**Detection.** A node stops responding to `/health/live`; the load balancer removes it; connected agents reconnect elsewhere.
+**Detection.** A node stops passing `/api/contact-center/health/ready`; the load balancer removes it; connected agents reconnect elsewhere.
 
 **Impact.** Contact Center nodes are stateless beyond in-flight requests — all durable state is in SQL, all cross-node coordination is in Redis. A single node loss does not lose committed work: outbox messages, inbox messages, and leased commands held by the dead node time out and are re-leased by survivors.
 
 **Response.**
 
-1. Confirm the load balancer has evicted the node (readiness probe on `/health/live` with the `ready` tag).
+1. Confirm the load balancer has evicted the node (readiness probe on `/api/contact-center/health/ready`).
 2. Let leases held by the dead node expire; survivors re-acquire them via fence tokens and continue. No manual intervention is required for correctness.
 3. Replace the node. New nodes pick up the backplane and lock service automatically once their features are enabled.
 
-**Prevention.** Run at least two nodes behind a load balancer with `/health/live` readiness probing so a single failure is transparent to agents and providers.
+**Prevention.** Run at least two nodes behind a load balancer probing `/api/contact-center/health/ready` so a single failure is transparent to agents and providers.
 
 ## Network partition
 
@@ -101,7 +101,7 @@ Contact Center supports zero-downtime rolling deployments because every shipped 
 
 1. Confirm the release contains only additive migrations. If a release declares a downtime requirement, use a maintenance window instead of a rolling deploy.
 2. Drain and replace nodes one (or one batch) at a time. Each replaced node runs the additive migration; old nodes keep running against the expanded schema because new columns are defaulted or nullable.
-3. Wait for each replaced node to report `/health/live` healthy (including the three Contact Center checks) before draining the next.
+3. Wait for each replaced node to report `/api/contact-center/health/ready` healthy before draining the next.
 4. Leases and outbox/inbox messages held by a draining node expire and are re-acquired by the nodes that remain, so in-flight work is not lost.
 5. After the last node is replaced, confirm the outbox backlog is drained and no health check is degraded.
 
@@ -109,6 +109,6 @@ Contact Center supports zero-downtime rolling deployments because every shipped 
 
 1. Stand up the green environment against the **same** SQL database and Redis instance as blue, with the additive migration applied.
 2. Because migrations are additive, blue keeps operating correctly while green runs the expanded schema.
-3. Warm green and verify `/health/live` (all three Contact Center checks) plus a synthetic routing and disposition flow.
+3. Warm green and verify `/api/contact-center/health/ready` plus a synthetic routing and disposition flow.
 4. Cut the load balancer from blue to green. In-flight leases and outbox/inbox messages are keyed in the shared database and are picked up by green.
 5. Keep blue on standby until green is confirmed stable, then decommission blue. Defer any contract-phase (destructive) migration to a later release, after blue is retired and no node reads the old schema shape.

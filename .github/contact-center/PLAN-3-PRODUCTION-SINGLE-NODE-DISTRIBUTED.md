@@ -199,10 +199,41 @@ Small, independent, high-value; land these in week 1 regardless of other sequenc
 > log one warning, and return `0` so a Queues-only tenant degrades instead of throwing. The diagnosis (a Queues-only
 > tenant crashes) was correct; only the prescription was wrong.
 >
-> **Execution correction 2 — the health-endpoint item is a build task, not a fix.** A repository-wide search finds
-> **no health check registration anywhere in Contact Center source** (matches occur only in `obj/` package artifacts).
-> There is no `/health/live` to rebind. This item moves to W0.8 and is rewritten as: *build* liveness (process-only) and
-> readiness (outbox age, Redis, ARI ownership) endpoints. It cannot be closed as a one-line containment fix.
+> **Execution correction 2 (superseded — see 2a) — the health-endpoint item is a build task, not a fix.** A repository-wide
+> search finds **no health check registration anywhere in Contact Center source** (matches occur only in `obj/` package
+> artifacts). There is no `/health/live` to rebind.
+>
+> **Execution correction 2a — correction 2 was wrong; the board's original finding was right.** The search behind
+> correction 2 was defective. Three checks *are* registered — `contactcenter-storage`, `contactcenter-outbox`,
+> `contactcenter-provider-ingress` — in `Startup.cs:76-85`, all tagged `["contactcenter","ready"]`, and two of them are
+> already unit-tested. What was missing was any *endpoint*: no `MapHealthChecks` or `UseHealthChecks` existed in the
+> repository, so the checks were unreachable. The board's stated pathology is nevertheless real and worse than described:
+> `OrchardCore.HealthChecks` maps `MapHealthChecks(healthChecksOptions.Url)` with **no `Predicate`**
+> (`OrchardCore.Modules/OrchardCore.HealthChecks/Startup.cs`), and `HealthChecksOptions.Url` defaults to `/health/live`
+> (`OrchardCore.HealthChecks.Abstractions/HealthChecksOptions.cs`). Enabling that feature therefore aggregates **every**
+> module's checks — including all three `ready`-tagged Contact Center dependency checks — onto the liveness route, so a
+> degraded outbox restarts the node and a restart cannot drain an outbox. Applied fix (W0.8): map dedicated
+> `api/contact-center/health/live` (predicate selects nothing) and `api/contact-center/health/ready` (predicate selects
+> the `ready` tag), extract registration into a testable extension so a drifted tag cannot silently empty readiness, and
+> document that the Orchard endpoint is a readiness signal despite its route name.
+>
+> **Execution correction 2b — correction 2a's own fix was still wrong: readiness must not consult a dependency.**
+> Review of the 2a implementation established that aggregating `contactcenter-storage`, `contactcenter-outbox`, and
+> `contactcenter-provider-ingress` into *readiness* reproduces the same class of failure it was meant to prevent, one
+> level up. Those checks observe state shared by every node — the tenant database, the outbox backlog, the provider
+> inbox — so every node evaluates them identically. Crossing an unhealthy threshold therefore returns 503 on **every**
+> node at the same instant, the load balancer is left with no healthy target, and a degraded dependency becomes a total
+> outage that cannot self-heal, because no node can pass a probe that depends on something still broken. This is the
+> documented deep-health-check cascading failure (Amazon Builders' Library, *Implementing health checks*; Kubernetes
+> probe guidance). **Governing rule adopted: an orchestrator probe may only consult state that differs between
+> instances. If two healthy instances would always answer identically, the check is an alerting signal, not a routing
+> signal.** Final W0.8 shape: readiness selects only a new node-local `contactcenter-node` check (host started, not
+> shutting down, zero I/O); the three dependency checks move to a `contactcenter-dependency` tag surfaced on a new
+> authorized `api/contact-center/health/dependencies` route gated on `MonitorContactCenter`; and reporting unready
+> during `ApplicationStopping` supplies the graceful-drain signal that was missing entirely, without which every
+> deployment drops in-flight calls. All three routes are mapped inside the tenant shell and therefore inherit the
+> tenant request URL prefix; an unprefixed probe reaches a shell that does not map them and returns 404, which an
+> orchestrator reads as failure — covered by a real-HTTP test rather than documentation alone.
 >
 > **Execution correction 3 — the Twilio item must not be implemented as written.** A faithful port of the official
 > Twilio validator already exists at `src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Twillio/TwillioRequestValidator.cs`,
@@ -577,7 +608,7 @@ which requires live Asterisk and TURN infrastructure. Counting it as coverage is
 - [~] W0.5 Supply chain `gate: hermetic build only — CopilotSkipCliDownload default in Directory.Build.props; solution builds with no network. NuGetAudit / SBOM / gitleaks / Trivy / licenses / Dependabot still open.`
 - [ ] W0.6 Non-executing tests replaced `gate:`
 - [x] W0.7 Containment fixes `gate: VoiceIngressEndpointTests (5), TwilioEventGridEndpointSignatureTests (14), AgentWorkStateHealingServiceTests, CopilotRuntimeLocatorTests (4) — 33 tests; full suite 2451 passed / 0 failed. Reviewed by gpt-5.6-terra over 3 rounds (NO-GO, NO-GO, GO).`
-- [ ] W0.8 Minimal safety telemetry `gate:`
+- [x] W0.8 Minimal safety telemetry `gate: ContactCenterProcessHealthMiddlewareTests`, `ContactCenterProcessLivenessPathValidatorTests`, `ContactCenterHealthEndpointsTests`, `ContactCenterNodeHealthCheckTests`, `ContactCenterNodeServingHealthCheckTests`, `NodeServingStateTrackerTests`, `SharedHealthCheckEndpointGuardTests`, `ContactCenterHealthProbeActivationTests` — 87 unit + 19 activation, reviewed GO round 7 (gpt-5.6-terra)
 
 ### Wave 2 — Authority
 - [ ] W1.1 `Telephony.Core` ingress layer `gate:`

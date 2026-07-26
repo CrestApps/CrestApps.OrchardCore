@@ -34,6 +34,98 @@ public static class ContactCenterConstants
     public const string SystemActor = "system";
 
     /// <summary>
+    /// Contains the identifiers used to register and select the Contact Center operational health checks.
+    /// The readiness endpoint selects checks by <see cref="HealthChecks.ReadyTag"/>, so a registration that
+    /// omits the tag silently disappears from readiness. Both sides must reference these constants.
+    /// </summary>
+    public static class HealthChecks
+    {
+        /// <summary>
+        /// The tag applied to every Contact Center health check, used to distinguish them from checks
+        /// contributed by other modules.
+        /// </summary>
+        public const string AreaTag = "contactcenter";
+
+        /// <summary>
+        /// The tag applied to node-local readiness checks. The readiness probe selects this tag and nothing
+        /// else, so a check that observes a condition every node shares must never carry it: gating rotation on
+        /// such a condition drains the whole fleet at once.
+        /// </summary>
+        /// <remarks>
+        /// The tag is namespaced rather than the conventional bare <c>ready</c> because the probe selects by tag
+        /// across the whole shell container. A bare tag would silently enlist any other module's readiness check
+        /// — including a shared-infrastructure check such as a Redis backplane probe — and reintroduce exactly
+        /// the fleet-wide drain the split exists to prevent.
+        /// </remarks>
+        public const string ReadyTag = "contactcenter-ready";
+
+        /// <summary>
+        /// The tag applied to checks that consult an external dependency. These are alerting signals surfaced
+        /// through the dependency probe and must never gate load balancer rotation.
+        /// </summary>
+        public const string DependencyTag = "contactcenter-dependency";
+
+        /// <summary>
+        /// The registration name of the node-local readiness check.
+        /// </summary>
+        public const string NodeCheckName = "contactcenter-node";
+
+        /// <summary>
+        /// The registration name of the opt-in node-local serving gate.
+        /// </summary>
+        public const string NodeServingCheckName = "contactcenter-node-serving";
+
+        /// <summary>
+        /// The registration name of the durable-storage reachability check.
+        /// </summary>
+        public const string StorageCheckName = "contactcenter-storage";
+
+        /// <summary>
+        /// The registration name of the event outbox backlog check.
+        /// </summary>
+        public const string OutboxCheckName = "contactcenter-outbox";
+
+        /// <summary>
+        /// The registration name of the provider ingress inbox backlog check.
+        /// </summary>
+        public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
+
+        /// <summary>
+        /// The default path of the process liveness probe. It reports only that the process can serve a
+        /// request and never consults a dependency, so a failing database or a growing backlog cannot trigger a
+        /// restart.
+        /// </summary>
+        /// <remarks>
+        /// Liveness is answered by host middleware placed ahead of the Orchard Core pipeline, not by a tenant
+        /// feature. A route mapped inside a shell answers 404 whenever that tenant is disabled, renamed, or
+        /// fails to start, and an orchestrator reads 404 as a probe failure — so a tenant-scoped liveness route
+        /// restarts an otherwise healthy process for a tenant-level problem.
+        /// <para>
+        /// The path deliberately avoids <c>/health/live</c>, which is the default route of the
+        /// <c>OrchardCore.HealthChecks</c> module. Host middleware short-circuits before routing, so taking that
+        /// path would silently shadow that module's endpoint for every tenant in the process — including
+        /// tenants that never enable Contact Center — and answer a permanent <c>200 Healthy</c> in its place.
+        /// Shadowing a health endpoint with an unconditional success is a worse failure than any it could
+        /// report.
+        /// </para>
+        /// </remarks>
+        public const string ProcessLivenessPath = "/health/process";
+
+        /// <summary>
+        /// The route of the readiness probe. It aggregates every check tagged <see cref="ReadyTag"/>, which is
+        /// only node-local state, and reports whether this node should receive traffic for this tenant.
+        /// </summary>
+        public const string ReadinessRoute = "api/contact-center/health/ready";
+
+        /// <summary>
+        /// The route of the dependency probe. It aggregates every check tagged <see cref="DependencyTag"/> and
+        /// reports per-check detail, so it requires authorization and must never be wired to an orchestrator
+        /// probe or a load balancer.
+        /// </summary>
+        public const string DependenciesRoute = "api/contact-center/health/dependencies";
+    }
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Contact Center module set.
     /// </summary>
     public static class Feature
