@@ -421,6 +421,129 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
     }
 
     /// <inheritdoc/>
+    public async Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            await using var session = _store.CreateSession();
+
+            var binding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == channelId)
+                .FirstOrDefaultAsync();
+
+            // Only a still-joining participant leg may be promoted. A missing binding or any non-joining state means
+            // a terminal event has already claimed the participant leg for teardown, so the conference flow must not
+            // treat it as a live member.
+            if (binding is null || binding.State != AsteriskChannelBindingState.Joining)
+            {
+                return false;
+            }
+
+            binding.State = AsteriskChannelBindingState.Participating;
+
+            try
+            {
+                await session.SaveAsync(binding, checkConcurrency: true);
+                await session.SaveChangesAsync();
+            }
+            catch (ConcurrencyException)
+            {
+                // A terminal event (or another writer) committed to this binding after it was read. The session is
+                // canceled; re-read in a fresh session and re-evaluate whether the leg is still joining.
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bridgeId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(departingOwnerChannelId);
+
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            await using var session = _store.CreateSession();
+
+            // Scan for the departing owner and a remaining participating leg on the shared bridge in memory rather
+            // than through a dedicated index: at most a handful of legs are ever bound to one live conversation at a
+            // time, so the volume is tiny and a full scan avoids an index/migration change for a rarely hit
+            // ownership-handoff path.
+            var bindings = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>()
+                .ListAsync();
+
+            var owner = bindings?
+                .FirstOrDefault(binding =>
+                    string.Equals(binding.ChannelId, departingOwnerChannelId, StringComparison.Ordinal));
+
+            // A concurrent hand-off (a racing teardown or reconciler sweep on the same departing owner) already
+            // retired this owner to a non-owning disposition, or already removed its record entirely. In both cases
+            // the bridge is now owned by the promoted participant, so this caller must NOT tear it down.
+            if (owner is null ||
+                (owner.State == AsteriskChannelBindingState.Terminating &&
+                    owner.PreTeardownState == AsteriskChannelBindingState.Joining))
+            {
+                return true;
+            }
+
+            var participant = bindings
+                .FirstOrDefault(binding =>
+                    binding.State == AsteriskChannelBindingState.Participating &&
+                    string.Equals(binding.BridgeId, bridgeId, StringComparison.Ordinal) &&
+                    !string.Equals(binding.ChannelId, departingOwnerChannelId, StringComparison.Ordinal));
+
+            // No remaining participant means the departing owner is the last agent, so the caller and bridge may be
+            // released by the departing owner's own teardown path.
+            if (participant is null)
+            {
+                return false;
+            }
+
+            participant.State = AsteriskChannelBindingState.Connected;
+
+            // Retire the departing owner to a NON-OWNING terminating disposition in the SAME transaction as the
+            // promotion. A YesSql delete is an id-only operation with no version fence, and the owner's record removal
+            // happens in a later, separate session; if that removal never lands (a transient ARI failure or crash
+            // between committing this promotion and removing the record), a subsequent sweep would otherwise re-read
+            // the owner as a live Connected owner and either destroy the now-live promoted bridge or promote a SECOND
+            // owner. Flipping the owner's pre-teardown disposition to Joining here — version-checked, atomic with the
+            // promotion — makes this the single linearization point: any later processing of the owner sees a
+            // non-owning leg that only hangs up its own channel, and a concurrent hand-off loses the version race,
+            // re-reads, and observes the already-handed-off owner.
+            owner.PreTeardownState = AsteriskChannelBindingState.Joining;
+
+            try
+            {
+                await session.SaveAsync(participant, checkConcurrency: true);
+                await session.SaveAsync(owner, checkConcurrency: true);
+                await session.SaveChangesAsync();
+            }
+            catch (ConcurrencyException)
+            {
+                // Another writer committed to the selected participant or the departing owner after either was read
+                // (a concurrent owner departure promoted it, its own terminal event claimed it for teardown, or a
+                // racing hand-off retired the owner). Re-read in a fresh session and re-evaluate.
+                continue;
+            }
+
+            return true;
+        }
+
+        // The records could not be resolved deterministically within the retry budget, which means another writer is
+        // actively mutating them — most likely a concurrent hand-off completing. The safe direction is to NOT destroy
+        // a possibly-live promoted bridge, so report the bridge as retained.
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveByChannelIdAsync(string channelId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelId);

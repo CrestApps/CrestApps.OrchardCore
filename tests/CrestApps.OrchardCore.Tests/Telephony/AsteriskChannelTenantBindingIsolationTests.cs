@@ -461,6 +461,317 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
         }
     }
 
+    [Fact]
+    public async Task TryHandOffBridgeOwnershipAsync_WhenOwnerDepartsWithParticipant_PromotesParticipantAndRetiresOwnerAtomically()
+    {
+        // Arrange
+        var databasePath = DatabasePath("handoff-promote");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // A departing owner already claimed to Terminating (with a Connected pre-teardown disposition) and a
+            // remaining non-owning Participating leg on the same canonical bridge.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "owner-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var handedOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+            var promoted = await bindingStore.FindByChannelIdAsync("participant-2");
+            var owner = await bindingStore.FindByChannelIdAsync("owner-1");
+
+            // Assert
+            // The participant is promoted to the sole Connected owner AND the departing owner is atomically retired to a
+            // non-owning Joining disposition so no later sweep can re-process it as a Connected owner.
+            Assert.True(handedOff);
+            Assert.NotNull(promoted);
+            Assert.Equal(AsteriskChannelBindingState.Connected, promoted.State);
+            Assert.NotNull(owner);
+            Assert.Equal(AsteriskChannelBindingState.Terminating, owner.State);
+            Assert.Equal(AsteriskChannelBindingState.Joining, owner.PreTeardownState);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryHandOffBridgeOwnershipAsync_WhenReprocessingAnAlreadyRetiredOwner_DoesNotPromoteASecondOwner()
+    {
+        // Arrange
+        var databasePath = DatabasePath("handoff-reprocess");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // A departing owner and TWO remaining participants: after the first hand-off retires the owner and promotes
+            // one participant, the owner's record survives (its later id-only removal has not yet landed, or crashed).
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "owner-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-3",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            // The first sweep hands the bridge off. A second sweep re-processes the SAME retired owner record (the exact
+            // window where a crash left the owner record behind after promotion).
+            var firstHandOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+            var secondHandOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+
+            var bindings = await bindingStore.GetAllAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            // Both calls report the bridge as retained (never destroy it), and re-processing the retired owner must NOT
+            // promote the second participant into a SECOND Connected owner — the single-owner-destroyer invariant holds.
+            Assert.True(firstHandOff);
+            Assert.True(secondHandOff);
+            Assert.Single(bindings, binding => binding.State == AsteriskChannelBindingState.Connected);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryHandOffBridgeOwnershipAsync_WhenNoParticipantRemains_ReturnsFalseAndLeavesOwnerForDestroy()
+    {
+        // Arrange
+        var databasePath = DatabasePath("handoff-last-owner");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "owner-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var handedOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+            var owner = await bindingStore.FindByChannelIdAsync("owner-1");
+
+            // Assert
+            // With no successor, the departing owner must destroy the bridge and release the caller, so the hand-off
+            // reports false and the owner's Connected disposition is left untouched for the destroy path.
+            Assert.False(handedOff);
+            Assert.NotNull(owner);
+            Assert.Equal(AsteriskChannelBindingState.Connected, owner.PreTeardownState);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryHandOffBridgeOwnershipAsync_WhenTwoOwnerDeparturesRaceTheSameBridge_PromotesExactlyOneConnectedOwner()
+    {
+        // Arrange
+        var databasePath = DatabasePath("handoff-concurrent");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // One departing owner claimed to Terminating and two remaining participants. A live teardown and a
+            // reconciler sweep can both process the same claimed owner concurrently.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "owner-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-3",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            // Both hand-offs contend on the SAME owner's document version. Because retiring the owner is version-checked
+            // and atomic with the promotion, only one can commit; the loser re-reads the retired owner and returns
+            // without promoting a second participant.
+            var handOffA = bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+            var handOffB = bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
+            var results = await Task.WhenAll(handOffA, handOffB);
+
+            var bindings = await bindingStore.GetAllAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            // Both report the bridge retained, and the canonical bridge ends with EXACTLY ONE Connected owner — never two.
+            Assert.True(results[0]);
+            Assert.True(results[1]);
+            Assert.Single(bindings, binding => binding.State == AsteriskChannelBindingState.Connected);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryPromoteJoiningToParticipatingAsync_WhenLegIsJoining_PromotesToParticipating()
+    {
+        // Arrange
+        var databasePath = DatabasePath("promote-participating");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var promoted = await bindingStore.TryPromoteJoiningToParticipatingAsync("participant-2");
+            var binding = await bindingStore.FindByChannelIdAsync("participant-2");
+
+            // Assert
+            Assert.True(promoted);
+            Assert.NotNull(binding);
+            Assert.Equal(AsteriskChannelBindingState.Participating, binding.State);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryPromoteJoiningToParticipatingAsync_WhenLegIsNotJoining_RejectsPromotion()
+    {
+        // Arrange
+        var databasePath = DatabasePath("promote-participating-reject");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // A leg a terminal event already claimed for teardown must never be treated as a live participant.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "participant-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Terminating,
+                PreTeardownState = AsteriskChannelBindingState.Joining,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var promoted = await bindingStore.TryPromoteJoiningToParticipatingAsync("participant-2");
+            var binding = await bindingStore.FindByChannelIdAsync("participant-2");
+
+            // Assert
+            Assert.False(promoted);
+            Assert.NotNull(binding);
+            Assert.Equal(AsteriskChannelBindingState.Terminating, binding.State);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
     private static AsteriskChannelTenantBindingStore CreateBindingStore(IStore store, string tenantName = "Default")
     {
         return new AsteriskChannelTenantBindingStore(store, new ShellSettings { Name = tenantName });

@@ -33,15 +33,16 @@ public sealed class AsteriskContactCenterVoiceProviderTests
             ContactCenterVoiceProviderCapabilities.Monitor |
             ContactCenterVoiceProviderCapabilities.Whisper |
             ContactCenterVoiceProviderCapabilities.Barge |
-            ContactCenterVoiceProviderCapabilities.CallTransfer,
+            ContactCenterVoiceProviderCapabilities.CallTransfer |
+            ContactCenterVoiceProviderCapabilities.Conference,
             capabilities);
         Assert.Equal(VoiceProviderDeliveryModel.ServerSideAcd, service.DeliveryModel);
         Assert.IsAssignableFrom<IContactCenterVoiceCallControlProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceRecordingProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceTransferProvider>(service);
+        Assert.IsAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
-        Assert.IsNotAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
     }
 
     [Fact]

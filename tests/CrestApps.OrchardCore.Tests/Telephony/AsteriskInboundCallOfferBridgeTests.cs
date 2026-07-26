@@ -391,6 +391,20 @@ public sealed class AsteriskInboundCallOfferBridgeTests
             return Task.FromResult(false);
         }
 
+        public Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
+        {
+            _calls?.Add("promote-joining-participating:" + channelId);
+
+            return Task.FromResult(false);
+        }
+
+        public Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId)
+        {
+            _calls?.Add("handoff-bridge:" + bridgeId);
+
+            return Task.FromResult(false);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             _calls?.Add("begin-teardown:" + channelId);

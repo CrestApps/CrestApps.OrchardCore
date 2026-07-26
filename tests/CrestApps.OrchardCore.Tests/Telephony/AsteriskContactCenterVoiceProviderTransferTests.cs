@@ -896,6 +896,49 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
             return Task.FromResult(false);
         }
 
+        public Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
+        {
+            var binding = _bindings.Find(item => item.ChannelId == channelId);
+
+            if (binding is null || binding.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            binding.State = AsteriskChannelBindingState.Participating;
+            _operations?.Add($"promoteParticipating:{channelId}");
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId)
+        {
+            var owner = _bindings.Find(item => item.ChannelId == departingOwnerChannelId);
+
+            if (owner is null ||
+                (owner.State == AsteriskChannelBindingState.Terminating &&
+                    owner.PreTeardownState == AsteriskChannelBindingState.Joining))
+            {
+                return Task.FromResult(true);
+            }
+
+            var participant = _bindings.Find(item =>
+                item.State == AsteriskChannelBindingState.Participating &&
+                item.BridgeId == bridgeId &&
+                item.ChannelId != departingOwnerChannelId);
+
+            if (participant is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            participant.State = AsteriskChannelBindingState.Connected;
+            owner.PreTeardownState = AsteriskChannelBindingState.Joining;
+            _operations?.Add($"handoffOwner:{participant.ChannelId}");
+
+            return Task.FromResult(true);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             // Model the durable teardown claim: a live binding is marked Terminating and records the state it held

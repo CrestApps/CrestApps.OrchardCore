@@ -861,6 +861,47 @@ public sealed class AsteriskInboundReconcilerTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
+        {
+            var binding = _bindings.Find(item => item.ChannelId == channelId);
+
+            if (binding is null || binding.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            binding.State = AsteriskChannelBindingState.Participating;
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId)
+        {
+            var owner = _bindings.Find(item => item.ChannelId == departingOwnerChannelId);
+
+            if (owner is null ||
+                (owner.State == AsteriskChannelBindingState.Terminating &&
+                    owner.PreTeardownState == AsteriskChannelBindingState.Joining))
+            {
+                return Task.FromResult(true);
+            }
+
+            var participant = _bindings.Find(item =>
+                item.State == AsteriskChannelBindingState.Participating &&
+                item.BridgeId == bridgeId &&
+                item.ChannelId != departingOwnerChannelId);
+
+            if (participant is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            participant.State = AsteriskChannelBindingState.Connected;
+            owner.PreTeardownState = AsteriskChannelBindingState.Joining;
+
+            return Task.FromResult(true);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             var binding = _bindings.FirstOrDefault(item => item.ChannelId == channelId);

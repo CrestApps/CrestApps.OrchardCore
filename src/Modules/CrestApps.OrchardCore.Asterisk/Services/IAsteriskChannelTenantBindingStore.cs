@@ -161,6 +161,52 @@ internal interface IAsteriskChannelTenantBindingStore
     Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId);
 
     /// <summary>
+    /// Atomically promotes the conference participant leg for the supplied channel from
+    /// <see cref="AsteriskChannelBindingState.Joining"/> to <see cref="AsteriskChannelBindingState.Participating"/>
+    /// using YesSql document-version optimistic concurrency, committing durably in its own isolated tenant session.
+    /// It is called once a conference participant leg has answered and joined the shared canonical bridge, moving it
+    /// out of the provisioning <see cref="AsteriskChannelBindingState.Joining"/> phase so the reconciler treats the
+    /// still-alive participant as a healthy, non-owning member rather than an aged, never-committed join to reclaim.
+    /// The promotion commits only while the leg is still <see cref="AsteriskChannelBindingState.Joining"/>: if a
+    /// terminal event has already claimed it for teardown, the promotion is rejected so the two sides can never both
+    /// win.
+    /// </summary>
+    /// <param name="channelId">The conference participant agent-leg channel identifier whose binding should be promoted.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the binding was found in <see cref="AsteriskChannelBindingState.Joining"/>
+    /// and this call committed the transition to <see cref="AsteriskChannelBindingState.Participating"/>;
+    /// <see langword="false"/> when no binding exists or it was no longer joining, which signals that a terminal
+    /// event already claimed the participant leg and the conference flow must not treat it as a live member.
+    /// </returns>
+    Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId);
+
+    /// <summary>
+    /// Atomically hands ownership of a shared canonical conversation bridge to a remaining conference participant
+    /// when its <see cref="AsteriskChannelBindingState.Connected"/> owner departs. In a single YesSql
+    /// document-version optimistic-concurrency transaction, committed durably in its own isolated tenant session, it
+    /// promotes the first remaining <see cref="AsteriskChannelBindingState.Participating"/> leg on the supplied
+    /// bridge (other than the departing owner) to <see cref="AsteriskChannelBindingState.Connected"/> AND retires the
+    /// departing owner's already-claimed teardown record to a non-owning <see cref="AsteriskChannelBindingState.Joining"/>
+    /// disposition. Retiring the owner in the SAME version-checked transaction as the promotion is the single
+    /// linearization point that keeps the invariant that a shared bridge always has EXACTLY ONE
+    /// <see cref="AsteriskChannelBindingState.Connected"/> owner-destroyer: it guarantees no later teardown or
+    /// reconciler sweep can ever re-observe the departed owner as a live owner and thereby destroy the now-live
+    /// promoted bridge or promote a second owner, and two concurrent owner departures on the same bridge cannot both
+    /// promote a participant. Callers MUST have already claimed the departing owner to
+    /// <see cref="AsteriskChannelBindingState.Terminating"/> (with a <see cref="AsteriskChannelBindingState.Connected"/>
+    /// pre-teardown disposition) before invoking this method.
+    /// </summary>
+    /// <param name="bridgeId">The shared canonical conversation bridge whose ownership should pass to a remaining participant.</param>
+    /// <param name="departingOwnerChannelId">The departing owner's channel identifier, which must never be selected as the promotion target and whose teardown record is retired to a non-owning disposition on a successful hand-off.</param>
+    /// <returns>
+    /// <see langword="true"/> when the bridge is now (or was already concurrently) owned by a live promoted
+    /// participant and the departing owner must therefore NOT tear it down; <see langword="false"/> when the bridge
+    /// has no remaining participating leg, which signals the departing owner was the last agent and the caller and
+    /// bridge may be released.
+    /// </returns>
+    Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId);
+
+    /// <summary>
     /// Removes the binding for the supplied Asterisk channel identifier from the current tenant store. Teardown
     /// calls this only after every ARI cleanup effect for the binding has been applied, so the durable
     /// <see cref="AsteriskChannelBindingState.Terminating"/> record is retired only once no orphaned resource can

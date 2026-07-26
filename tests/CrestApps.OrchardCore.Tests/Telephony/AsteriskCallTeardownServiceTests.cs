@@ -278,6 +278,100 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.Equal(AsteriskChannelBindingState.Joining, retained.PreTeardownState);
     }
 
+    [Fact]
+    public async Task ReleaseAsync_WhenParticipantLegTerminates_LeavesSharedBridgeAndConversationIntact()
+    {
+        // Arrange
+        var bindingStore = new InMemoryBindingStore();
+        var ariClient = new RecordingAriClient();
+        await SeedConnectedCallAsync(bindingStore);
+        await SeedParticipantAsync(bindingStore, "participant-2");
+        var service = CreateService(bindingStore, ariClient);
+
+        // Act
+        await service.ReleaseAsync(
+            new AsteriskRealtimeVoiceEvent
+            {
+                EventType = "StasisEnd",
+                ChannelId = "participant-2",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // A non-owning participant leaving a multi-party call must tear down NOTHING shared: the canonical bridge, the
+        // caller, and the Connected owner are all untouched, and only the participant's own record is retired.
+        Assert.Empty(ariClient.DestroyedBridges);
+        Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
+
+        var owner = await bindingStore.FindByChannelIdAsync("agent-1");
+        Assert.NotNull(owner);
+        Assert.Equal(AsteriskChannelBindingState.Connected, owner.State);
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("participant-2"));
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_WhenConnectedOwnerLeavesWithRemainingParticipant_PromotesParticipantAndKeepsBridge()
+    {
+        // Arrange
+        var bindingStore = new InMemoryBindingStore();
+        var ariClient = new RecordingAriClient();
+        await SeedConnectedCallAsync(bindingStore);
+        await SeedParticipantAsync(bindingStore, "participant-2");
+        var service = CreateService(bindingStore, ariClient);
+
+        // Act
+        await service.ReleaseAsync(
+            new AsteriskRealtimeVoiceEvent
+            {
+                EventType = "StasisEnd",
+                ChannelId = "agent-1",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // The departing owner hands the canonical bridge to a remaining participant, so the multi-party conversation
+        // survives: the shared bridge is NOT destroyed and the caller is NOT released.
+        Assert.Empty(ariClient.DestroyedBridges);
+        Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+
+        // The remaining participant is promoted to the sole Connected owner of the shared bridge.
+        var promoted = await bindingStore.FindByChannelIdAsync("participant-2");
+        Assert.NotNull(promoted);
+        Assert.Equal(AsteriskChannelBindingState.Connected, promoted.State);
+
+        // The departed owner's own record is retired.
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_WhenLastOwnerLeavesWithNoParticipant_DestroysBridgeAndReleasesCaller()
+    {
+        // Arrange
+        var bindingStore = new InMemoryBindingStore();
+        var ariClient = new RecordingAriClient();
+        await SeedConnectedCallAsync(bindingStore);
+        var service = CreateService(bindingStore, ariClient);
+
+        // Act
+        await service.ReleaseAsync(
+            new AsteriskRealtimeVoiceEvent
+            {
+                EventType = "StasisEnd",
+                ChannelId = "agent-1",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // With no remaining participant, the last owner leaving ends the call: the shared bridge is destroyed and the
+        // caller released, exactly as the 2-party model always did.
+        Assert.Contains("mixing-1", ariClient.DestroyedBridges);
+        Assert.Contains("caller-1", ariClient.HungupChannels);
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+    }
+
     private static AsteriskCallTeardownService CreateService(
         InMemoryBindingStore bindingStore,
         RecordingAriClient ariClient)
@@ -304,6 +398,21 @@ public sealed class AsteriskCallTeardownServiceTests
             ProviderCallId = "caller-1",
             BridgeId = "mixing-1",
             PeerChannelId = "caller-1",
+        });
+    }
+
+    private static async Task SeedParticipantAsync(InMemoryBindingStore bindingStore, string channelId)
+    {
+        // A conference participant is a NON-owning additional agent leg on the same canonical bridge, referencing the
+        // caller as its peer, in the stable Participating phase.
+        await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        {
+            ChannelId = channelId,
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderCallId = "caller-1",
+            BridgeId = "mixing-1",
+            PeerChannelId = "caller-1",
+            State = AsteriskChannelBindingState.Participating,
         });
     }
 
@@ -399,6 +508,47 @@ public sealed class AsteriskCallTeardownServiceTests
 
             promoted.State = AsteriskChannelBindingState.Connected;
             _bindings.RemoveAll(item => item.ChannelId == previousAgentChannelId);
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
+        {
+            var binding = _bindings.Find(item => item.ChannelId == channelId);
+
+            if (binding is null || binding.State != AsteriskChannelBindingState.Joining)
+            {
+                return Task.FromResult(false);
+            }
+
+            binding.State = AsteriskChannelBindingState.Participating;
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId)
+        {
+            var owner = _bindings.Find(item => item.ChannelId == departingOwnerChannelId);
+
+            if (owner is null ||
+                (owner.State == AsteriskChannelBindingState.Terminating &&
+                    owner.PreTeardownState == AsteriskChannelBindingState.Joining))
+            {
+                return Task.FromResult(true);
+            }
+
+            var participant = _bindings.Find(item =>
+                item.State == AsteriskChannelBindingState.Participating &&
+                item.BridgeId == bridgeId &&
+                item.ChannelId != departingOwnerChannelId);
+
+            if (participant is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            participant.State = AsteriskChannelBindingState.Connected;
+            owner.PreTeardownState = AsteriskChannelBindingState.Joining;
 
             return Task.FromResult(true);
         }

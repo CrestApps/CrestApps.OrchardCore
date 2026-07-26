@@ -151,4 +151,11 @@ internal static class AsteriskAriConstants
     /// destination is idempotent and never originates a second leg.
     /// </summary>
     public const string TransferAgentChannelPrefix = "crestapps-xfer-agent-";
+
+    /// <summary>
+    /// The deterministic prefix used for an additional agent leg originated to join a live conversation as a
+    /// conference participant. Combined with the interaction and participant-agent identity it yields a stable
+    /// channel id so a retried conference add for the same agent is idempotent and never originates a second leg.
+    /// </summary>
+    public const string ConferenceParticipantChannelPrefix = "crestapps-conf-agent-";
 }

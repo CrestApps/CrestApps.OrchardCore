@@ -114,6 +114,48 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
                 };
             }
 
+            // A participating leg is a non-owning additional conference member on a shared canonical bridge it does
+            // NOT own: the bridge and the caller belong to the Connected owner. A terminal event for a participating
+            // leg must therefore tear down NOTHING shared — never the bridge, never the caller, never another
+            // participant — so any one participant leaving a multi-party call leaves the remaining conversation
+            // fully intact. Its own channel already terminated (that is what fired this event), so only its durable
+            // record is retired.
+            if (claim.PreviousState == AsteriskChannelBindingState.Participating)
+            {
+                return new TeardownPlan
+                {
+                    BindingChannelId = binding.ChannelId,
+                    IsAgentLeg = true,
+                    MixingBridgeId = null,
+                    RetainRecord = false,
+                    PeerLegs = [],
+                };
+            }
+
+            // The Connected owner of the shared bridge is departing. Before tearing the conversation down, try to
+            // hand ownership of the canonical bridge to a remaining conference participant. If one is promoted, the
+            // bridge lives on with a new owner-destroyer and the caller keeps talking, so this terminal event must
+            // tear down NOTHING shared and only retire the departed owner's own record — the promoted participant
+            // now owns the bridge and its future terminal (or the last-agent case) releases the caller. Only when no
+            // participant remains does the departing owner fall through to the normal release-the-caller path.
+            if (claim.PreviousState == AsteriskChannelBindingState.Connected &&
+                !string.IsNullOrWhiteSpace(binding.PeerChannelId))
+            {
+                var bridgeHandedOff = await _bindingStore.TryHandOffBridgeOwnershipAsync(binding.BridgeId, binding.ChannelId);
+
+                if (bridgeHandedOff)
+                {
+                    return new TeardownPlan
+                    {
+                        BindingChannelId = binding.ChannelId,
+                        IsAgentLeg = true,
+                        MixingBridgeId = null,
+                        RetainRecord = false,
+                        PeerLegs = [],
+                    };
+                }
+            }
+
             // Agent leg: it owns the shared mixing bridge and references the caller as its peer. Release the caller
             // only when the leg was already Connected (a live call whose agent dropped). While the leg was still
             // Pending the connect flow owns the caller's disposition: our claim makes its MarkConnectedAsync lose,

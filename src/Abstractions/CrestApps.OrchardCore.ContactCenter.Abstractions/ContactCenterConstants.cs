@@ -316,6 +316,31 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable request-metadata keys the conference service passes to a voice provider so the provider can
+    /// add a resolved conference participant without receiving raw client input.
+    /// </summary>
+    public static class ConferenceMetadata
+    {
+        /// <summary>
+        /// Identifies the Orchard user id of the agent to add to a live conversation as a conference participant, so
+        /// a provider can resolve that agent's live endpoint. The client never supplies this; the conference service
+        /// resolves it server-side.
+        /// </summary>
+        public const string AgentUserId = "conferenceAgentUserId";
+
+        /// <summary>
+        /// Identifies the provider channel of the participant leg established for a completed conference add, when the
+        /// provider reports one.
+        /// </summary>
+        public const string ParticipantChannelId = "conferenceParticipantChannelId";
+
+        /// <summary>
+        /// Identifies the conversation bridge the conference participant was added to, when the provider reports one.
+        /// </summary>
+        public const string BridgeId = "conferenceBridgeId";
+    }
+
+    /// <summary>
     /// Contains site-settings configuration identifiers used by the Contact Center module set.
     /// </summary>
     public static class Settings

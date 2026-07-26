@@ -57,4 +57,17 @@ public enum AsteriskChannelBindingState
     /// reclaimed by the reconciler (hanging up only the dangling destination channel, never the shared bridge).
     /// </summary>
     Joining = 4,
+
+    /// <summary>
+    /// A non-owning agent leg that has joined a shared canonical conversation bridge as an additional conference
+    /// participant. Unlike the single <see cref="Connected"/> owner of a bridge, a participating leg NEVER owns the
+    /// shared bridge or the caller: its terminal event tears down ONLY its own channel and removes its own record,
+    /// so any participant leaving a multi-party call leaves the bridge and the remaining parties intact. It is a
+    /// live, non-provisioning phase (the reconciler treats a still-alive participating leg as healthy, and an aged
+    /// orphaned one is reclaimed by hanging up only its own dangling channel). When the <see cref="Connected"/>
+    /// owner of the shared bridge departs, a participating leg on the same bridge is atomically promoted to
+    /// <see cref="Connected"/> so the bridge always has exactly one owner-destroyer and a multi-party call survives
+    /// the loss of any single agent — including the original owner — until the last agent leaves.
+    /// </summary>
+    Participating = 5,
 }

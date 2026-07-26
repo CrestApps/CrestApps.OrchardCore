@@ -251,12 +251,33 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         // swapped-in destination afterward), so recovery must NEVER destroy the shared bridge or release the caller
         // — that would drop a live call. An aged joining record means a transfer crashed before it committed, so
         // only the dangling destination channel itself is hung up (idempotent); the durable record is then retired
-        // by ResolveClaimedBindingAsync once its provisioning lease has elapsed.
-        if (disposition == AsteriskChannelBindingState.Joining)
+        // by ResolveClaimedBindingAsync once its provisioning lease has elapsed. A participating leg (a non-owning
+        // additional conference member) is handled identically: it never owns the shared bridge or the caller, so an
+        // aged orphaned one only has its own dangling channel hung up, never the shared conversation.
+        if (disposition == AsteriskChannelBindingState.Joining ||
+            disposition == AsteriskChannelBindingState.Participating)
         {
             await HangupAsync(binding.ChannelId, cancellationToken);
 
             return true;
+        }
+
+        // A Connected owner whose terminal event was missed is being reclaimed. Before destroying the shared bridge,
+        // try to hand ownership to a remaining conference participant, exactly as live teardown does: if one is
+        // promoted, the multi-party conversation survives the lost owner, so only the dead owner channel is hung up
+        // and the shared bridge and caller are left with the promoted owner. Only when no participant remains does
+        // the owner fall through to destroy the bridge and release the caller.
+        if (disposition == AsteriskChannelBindingState.Connected &&
+            !string.IsNullOrWhiteSpace(binding.PeerChannelId))
+        {
+            var bridgeHandedOff = await _bindingStore.TryHandOffBridgeOwnershipAsync(binding.BridgeId, binding.ChannelId);
+
+            if (bridgeHandedOff)
+            {
+                await HangupAsync(binding.ChannelId, cancellationToken);
+
+                return true;
+            }
         }
 
         // Destroy the shared mixing bridge and hang up the agent channel itself (idempotent; covers the case where
