@@ -902,6 +902,23 @@ public sealed class AsteriskInboundReconcilerTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId)
+        {
+            var binding = _bindings.Find(item => item.ChannelId == channelId);
+
+            if (binding is null ||
+                (binding.State != AsteriskChannelBindingState.Joining &&
+                 binding.State != AsteriskChannelBindingState.Participating))
+            {
+                return Task.FromResult(false);
+            }
+
+            binding.PreTeardownState = binding.State;
+            binding.State = AsteriskChannelBindingState.Terminating;
+
+            return Task.FromResult(true);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             var binding = _bindings.FirstOrDefault(item => item.ChannelId == channelId);
@@ -937,6 +954,11 @@ public sealed class AsteriskInboundReconcilerTests
                 CallerDetached = binding.CallerDetached,
                 CreatedUtc = binding.CreatedUtc,
             };
+        }
+
+        public Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId)
+        {
+            return Task.FromResult(false);
         }
     }
 
@@ -1049,6 +1071,16 @@ public sealed class AsteriskInboundReconcilerTests
         public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
         {
             return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
+
+        public Task HoldChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task UnholdChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
     }
 

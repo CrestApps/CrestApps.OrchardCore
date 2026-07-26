@@ -22,7 +22,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     IContactCenterVoiceRecordingProvider,
     IContactCenterVoiceMonitoringProvider,
     IContactCenterVoiceTransferProvider,
-    IContactCenterVoiceConferenceProvider
+    IContactCenterVoiceConferenceProvider,
+    IContactCenterVoiceAttendedTransferProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -933,6 +934,44 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             AsteriskAriConstants.ConferenceParticipantChannelPrefix,
             string.Concat(request.InteractionId, "-", targetUserId));
 
+        return await AddAgentToConversationAsync(
+            request.InteractionId,
+            callerChannelId,
+            bridgeId,
+            participantChannelId,
+            targetUserId,
+            "conference",
+            ConferenceSuccess,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Rings a resolved agent into a live conversation as a non-owning leg on the canonical bridge, shared by the
+    /// conference-add and attended-transfer consult flows. The <paramref name="operation"/> word forms the returned
+    /// error codes (<c>{operation}_target_offline</c>, <c>{operation}_no_answer</c>, <c>{operation}_failed</c>,
+    /// <c>{operation}_outcome_unknown</c>) so each caller keeps its own stable code surface, while the ownership,
+    /// idempotency, and compensation invariants are identical because both flows add a Joining leg that never owns
+    /// the shared bridge.
+    /// </summary>
+    /// <param name="interactionId">The interaction whose live conversation the agent joins.</param>
+    /// <param name="callerChannelId">The caller channel that anchors the canonical conversation bridge.</param>
+    /// <param name="bridgeId">The canonical conversation bridge identifier.</param>
+    /// <param name="participantChannelId">The deterministic channel id to originate the agent leg onto.</param>
+    /// <param name="targetUserId">The Orchard user id of the agent to add.</param>
+    /// <param name="operation">The operation word used to form stable error codes.</param>
+    /// <param name="successFactory">Builds the caller-specific success result from the participant channel and bridge.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The provider operation result.</returns>
+    private async Task<ContactCenterVoiceProviderResult> AddAgentToConversationAsync(
+        string interactionId,
+        string callerChannelId,
+        string bridgeId,
+        string participantChannelId,
+        string targetUserId,
+        string operation,
+        Func<string, string, ContactCenterVoiceProviderResult> successFactory,
+        CancellationToken cancellationToken)
+    {
         // A retried add for the same participant must be idempotent: if the deterministic participant leg already
         // exists as a live member (a stabilized Participating leg, or the Connected owner when the target agent is
         // already on the call), the add already completed, so re-originating would ring the agent a second time.
@@ -943,14 +982,14 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             (existingMember.State == AsteriskChannelBindingState.Participating ||
                 existingMember.State == AsteriskChannelBindingState.Connected))
         {
-            return ConferenceSuccess(participantChannelId, bridgeId);
+            return successFactory(participantChannelId, bridgeId);
         }
 
         var destinationEndpoint = await ResolveLiveSoftphoneEndpointAsync(targetUserId, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(destinationEndpoint))
         {
-            return Failure("conference_target_offline", "The participant agent has no live Asterisk softphone registration to add to the conference.");
+            return Failure($"{operation}_target_offline", "The target agent has no live Asterisk softphone registration to add to the conversation.");
         }
 
         // Persist the exactly-once ownership claim on the deterministic participant channel id BEFORE originating, as
@@ -964,7 +1003,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         {
             ChannelId = participantChannelId,
             ProviderName = TechnicalName,
-            InteractionId = request.InteractionId,
+            InteractionId = interactionId,
             ProviderCallId = callerChannelId,
             BridgeId = bridgeId,
             PeerChannelId = callerChannelId,
@@ -987,10 +1026,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                     existingClaim.State == AsteriskChannelBindingState.Participating ||
                     existingClaim.State == AsteriskChannelBindingState.Connected))
             {
-                return ConferenceSuccess(participantChannelId, bridgeId);
+                return successFactory(participantChannelId, bridgeId);
             }
 
-            return Failure("conference_failed", "A previous conference add for this agent is still being reclaimed; retry the conference shortly.");
+            return Failure($"{operation}_failed", "A previous add for this agent is still being reclaimed; retry shortly.");
         }
 
         var originateAttempted = false;
@@ -1008,11 +1047,11 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 Endpoint = destinationEndpoint,
                 CallerId = callerChannelId,
                 ChannelId = participantChannelId,
-                AppArgs = [AsteriskConstants.OriginationMarkerVariableName, request.InteractionId, "agent"],
+                AppArgs = [AsteriskConstants.OriginationMarkerVariableName, interactionId, "agent"],
                 Variables = new Dictionary<string, string>
                 {
                     [AsteriskConstants.OriginationMarkerVariableName] = AsteriskAriConstants.OriginationMarkerValue,
-                    [AsteriskConstants.InteractionChannelVariableName] = request.InteractionId,
+                    [AsteriskConstants.InteractionChannelVariableName] = interactionId,
                 },
             };
 
@@ -1043,7 +1082,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 var noAnswerHungUp = await TryHangupAsync(participantChannelId, CancellationToken.None);
                 await RetireProvisionalTransferClaimAsync(participantChannelId, noAnswerHungUp);
 
-                return Failure("conference_no_answer", "The participant agent did not answer before the conference add timed out.");
+                return Failure($"{operation}_no_answer", "The target agent did not answer before the add timed out.");
             }
 
             // Commit point: add the answered participant leg to the SAME canonical conversation bridge the existing
@@ -1058,8 +1097,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         {
             _logger.LogError(
                 OperationalLogRedactor.RedactException(ex),
-                "Asterisk failed to add a conference participant to interaction {InteractionId}; compensating the participant leg.",
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                "Asterisk failed to add an agent to interaction {InteractionId}; compensating the participant leg.",
+                OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
 
             // Pre-commit compensation. Because the serialized durable Joining create above gave THIS add exclusive
             // ownership of the deterministic participant id (a concurrent duplicate lost the create and never
@@ -1093,8 +1132,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 OutcomeUnknown = outcomeUnknown,
                 ProviderName = TechnicalName,
                 ProviderCallId = callerChannelId,
-                ErrorCode = outcomeUnknown ? "conference_outcome_unknown" : "conference_failed",
-                ErrorMessage = "The Asterisk conference add could not be completed.",
+                ErrorCode = outcomeUnknown ? $"{operation}_outcome_unknown" : $"{operation}_failed",
+                ErrorMessage = "The Asterisk add of an agent to the conversation could not be completed.",
             };
         }
 
@@ -1103,9 +1142,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         // stable NON-OWNING Participating phase so the reconciler treats the live member as healthy rather than an
         // aged, never-committed join to reclaim — never rolling back the bridged leg — leaving any residue to the
         // terminal-event/reconciler path, exactly as the transfer flow tolerates post-commit ARI hiccups.
-        await FinalizeConferenceParticipantAsync(participantChannelId, request.InteractionId);
+        await FinalizeConferenceParticipantAsync(participantChannelId, interactionId);
 
-        return ConferenceSuccess(participantChannelId, bridgeId);
+        return successFactory(participantChannelId, bridgeId);
     }
 
     private async Task FinalizeConferenceParticipantAsync(string participantChannelId, string interactionId)
@@ -1150,6 +1189,284 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             },
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> BeginConsultAsync(
+        ContactCenterVoiceAttendedTransferRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable.");
+        }
+
+        var (failure, context) = await ResolveConsultContextAsync(request, "consult");
+
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        // Hold the customer BEFORE ringing the destination agent so the private consult can never be heard by the
+        // customer. Holding fails closed: if the hold does not commit, the destination is never rung, leaving the
+        // original conversation fully intact rather than opening a three-way call the customer can overhear.
+        var held = await TryHoldAsync(context.CallerChannelId, cancellationToken);
+
+        if (!held)
+        {
+            return Failure("consult_hold_failed", "The customer could not be placed on hold to begin the private consult.");
+        }
+
+        ContactCenterVoiceProviderResult addResult;
+
+        try
+        {
+            // Ring the destination agent into the SAME canonical bridge as a non-owning participant, reusing the
+            // conference-add core. The customer is held, so the destination agent and the initiating agent hold a
+            // private conversation; if the destination never answers the add leaves the original call intact.
+            addResult = await AddAgentToConversationAsync(
+                request.InteractionId,
+                context.CallerChannelId,
+                context.BridgeId,
+                context.ConsultChannelId,
+                context.TargetUserId,
+                "consult",
+                ConsultSuccess,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // The add compensated its own destination leg before rethrowing, but the customer is still held. Resume
+            // the customer so a cancelled begin-consult never strands them on hold, then propagate the cancellation.
+            await TryUnholdAsync(context.CallerChannelId, CancellationToken.None);
+
+            throw;
+        }
+
+        if (!addResult.Succeeded)
+        {
+            // The destination agent did not join (offline, no answer, or a failed originate). The add already
+            // compensated its own leg, so resume the customer with the initiating agent and surface the failure.
+            await TryUnholdAsync(context.CallerChannelId, CancellationToken.None);
+
+            return addResult;
+        }
+
+        return addResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> CompleteConsultAsync(
+        ContactCenterVoiceAttendedTransferRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable.");
+        }
+
+        var (failure, context) = await ResolveConsultContextAsync(request, "consult_complete");
+
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        // Resume the customer BEFORE the ownership swap: if the atomic hand-off cannot commit (the destination leg is
+        // gone), the customer is already back in a live conversation with the initiating agent who still owns the
+        // bridge, rather than being stranded on hold. Unhold is best-effort; a failed unhold is a recoverable degraded
+        // state (the customer stays on hold with a live owner) that never drops the call.
+        await TryUnholdAsync(context.CallerChannelId, cancellationToken);
+
+        // Atomically promote the stabilized destination participant to the Connected owner AND retire the initiating
+        // agent leg in one transaction, so the canonical bridge is owned by exactly one Connected binding at every
+        // instant — the initiating agent before the swap, the destination agent after it.
+        var swapped = await _channelTenantBindingStore.PromoteParticipantToConnectedOwnerAsync(
+            context.ConsultChannelId,
+            context.AgentChannelId);
+
+        if (!swapped)
+        {
+            // The destination leg was no longer a live participant (the consult was never begun, or the destination
+            // hung up), so ownership was not handed off. The customer safely keeps the initiating agent. This is a
+            // CONFIRMED failure — the call is intact, just not transferred.
+            return Failure("consult_complete_no_target", "No live consult leg was found to complete the attended transfer; the customer remains with the initiating agent.");
+        }
+
+        // The destination leg now solely owns the canonical bridge and the initiating leg was atomically retired to a
+        // non-owning recovery record, so hanging up the initiating leg cannot tear down the conversation. Best-effort
+        // hang it up and reconcile its record, exactly as the blind-transfer handoff does.
+        var previousHungUp = await TryHangupAsync(context.AgentChannelId, CancellationToken.None);
+        await RetireProvisionalTransferClaimAsync(context.AgentChannelId, previousHungUp);
+
+        return ConsultSuccess(context.ConsultChannelId, context.BridgeId);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> CancelConsultAsync(
+        ContactCenterVoiceAttendedTransferRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+
+        if (workLease is null)
+        {
+            return Failure("feature_quiescing", "The Asterisk Contact Center voice provider is temporarily unavailable.");
+        }
+
+        var (failure, context) = await ResolveConsultContextAsync(request, "consult_cancel");
+
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        // Drop the destination consult leg first, but atomically and ONLY while it is a non-owning member leg. The
+        // consult channel id is deterministic and is the SAME id CompleteConsultAsync promotes IN PLACE from
+        // Participating to the sole Connected owner of the canonical bridge, so a bare read-then-hangup could hang up
+        // that promoted owner and drop the live customer. TryClaimProvisionalLegForTeardownAsync is the linearization
+        // point: it version-checks and transitions the leg to Terminating ONLY when it is still Joining/Participating,
+        // so a completion that already (or concurrently) promoted it to Connected makes this claim fail and the cancel
+        // never hangs up the leg. When the claim succeeds we own the teardown of this dangling channel.
+        var claimedConsultLeg = await _channelTenantBindingStore.TryClaimProvisionalLegForTeardownAsync(context.ConsultChannelId);
+
+        if (claimedConsultLeg)
+        {
+            var consultHungUp = await TryHangupAsync(context.ConsultChannelId, CancellationToken.None);
+
+            if (consultHungUp)
+            {
+                // The channel is confirmed gone, so retire the durable teardown record. Otherwise leave the
+                // Terminating record (with its non-owning pre-teardown disposition) for the reconciler to reclaim.
+                await _channelTenantBindingStore.RemoveByChannelIdAsync(context.ConsultChannelId);
+            }
+        }
+
+        // Resume the customer with the initiating agent, who remained the Connected owner throughout the consult, so
+        // ownership is unchanged and the original conversation continues.
+        await TryUnholdAsync(context.CallerChannelId, cancellationToken);
+
+        return ConsultSuccess(context.ConsultChannelId, context.BridgeId);
+    }
+
+    private async Task<(ContactCenterVoiceProviderResult Failure, ResolvedConsultContext Context)> ResolveConsultContextAsync(
+        ContactCenterVoiceAttendedTransferRequest request,
+        string operation)
+    {
+        if (string.IsNullOrWhiteSpace(request.InteractionId))
+        {
+            return (Failure("interaction_missing", "An interaction id is required for the attended transfer."), null);
+        }
+
+        var callerChannelId = request.ProviderCallId?.Trim();
+
+        if (string.IsNullOrWhiteSpace(callerChannelId))
+        {
+            return (Failure("caller_channel_missing", "An Asterisk caller channel id is required for the attended transfer."), null);
+        }
+
+        if (request.Metadata is null ||
+            !request.Metadata.TryGetValue(ContactCenterConstants.AttendedTransferMetadata.AgentUserId, out var targetUserId) ||
+            string.IsNullOrWhiteSpace(targetUserId))
+        {
+            return (Failure($"{operation}_target_missing", "A destination agent is required for the attended transfer."), null);
+        }
+
+        // Resolve the canonical conversation bridge and its current Connected owner from a binding owned by THIS
+        // tenant's store. Failing closed here enforces CC-1 — an agent can never consult on a call this tenant does
+        // not own — and guarantees an unowned call fails with the single unambiguous ownership reason.
+        var currentLeg = await ResolveOwnedAgentLegAsync(callerChannelId);
+
+        if (currentLeg is null)
+        {
+            return (Failure($"{operation}_call_not_owned", "No owned Asterisk conversation bridge was found for the requested attended transfer."), null);
+        }
+
+        var consultChannelId = CreateDeterministicAriId(
+            AsteriskAriConstants.AttendedConsultChannelPrefix,
+            string.Concat(request.InteractionId, "-", targetUserId));
+
+        var context = new ResolvedConsultContext
+        {
+            CallerChannelId = callerChannelId,
+            BridgeId = currentLeg.BridgeId,
+            AgentChannelId = currentLeg.ChannelId,
+            TargetUserId = targetUserId,
+            ConsultChannelId = consultChannelId,
+        };
+
+        return (null, context);
+    }
+
+    private static ContactCenterVoiceProviderResult ConsultSuccess(string consultChannelId, string bridgeId)
+    {
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderName = AsteriskConstants.ProviderTechnicalName,
+            Metadata = new Dictionary<string, string>
+            {
+                [ContactCenterConstants.AttendedTransferMetadata.ConsultChannelId] = consultChannelId,
+                [ContactCenterConstants.AttendedTransferMetadata.BridgeId] = bridgeId,
+            },
+        };
+    }
+
+    private async Task<bool> TryHoldAsync(string channelId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _ariClient.HoldChannelAsync(channelId, cancellationToken);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk could not place the customer channel on hold for an attended transfer.");
+
+            return false;
+        }
+    }
+
+    private async Task<bool> TryUnholdAsync(string channelId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _ariClient.UnholdChannelAsync(channelId, cancellationToken);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk could not resume the customer channel from hold for an attended transfer.");
+
+            return false;
+        }
+    }
+
+    private sealed class ResolvedConsultContext
+    {
+        public string CallerChannelId { get; init; }
+
+        public string BridgeId { get; init; }
+
+        public string AgentChannelId { get; init; }
+
+        public string TargetUserId { get; init; }
+
+        public string ConsultChannelId { get; init; }
+    }
+
 
     /// <inheritdoc/>
     public async Task<ContactCenterVoiceProviderResult> EngageAsync(

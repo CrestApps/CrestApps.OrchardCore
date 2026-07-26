@@ -158,4 +158,11 @@ internal static class AsteriskAriConstants
     /// channel id so a retried conference add for the same agent is idempotent and never originates a second leg.
     /// </summary>
     public const string ConferenceParticipantChannelPrefix = "crestapps-conf-agent-";
+
+    /// <summary>
+    /// The deterministic prefix used for the destination-agent leg originated for an attended (consultative)
+    /// transfer consult. Combined with the interaction and destination-agent identity it yields a stable channel id
+    /// so a retried begin-consult for the same agent is idempotent and never originates a second consult leg.
+    /// </summary>
+    public const string AttendedConsultChannelPrefix = "crestapps-consult-agent-";
 }

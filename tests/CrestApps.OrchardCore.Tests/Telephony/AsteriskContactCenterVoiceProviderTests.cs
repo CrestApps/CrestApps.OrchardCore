@@ -42,6 +42,7 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         Assert.IsAssignableFrom<IContactCenterVoiceMonitoringProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceTransferProvider>(service);
         Assert.IsAssignableFrom<IContactCenterVoiceConferenceProvider>(service);
+        Assert.IsAssignableFrom<IContactCenterVoiceAttendedTransferProvider>(service);
         Assert.IsNotAssignableFrom<IContactCenterVoiceQueueAssignmentProvider>(service);
     }
 

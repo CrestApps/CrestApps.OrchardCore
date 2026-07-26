@@ -161,6 +161,34 @@ internal interface IAsteriskChannelTenantBindingStore
     Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId);
 
     /// <summary>
+    /// Atomically completes an attended (consultative) transfer in a single isolated, immediately committed tenant
+    /// session: promotes an ALREADY-STABILIZED destination leg's binding from
+    /// <see cref="AsteriskChannelBindingState.Participating"/> to <see cref="AsteriskChannelBindingState.Connected"/>
+    /// AND, in the same transaction, retires the previous agent leg's binding by transitioning it to a non-owning
+    /// <see cref="AsteriskChannelBindingState.Terminating"/> state with a <see cref="AsteriskChannelBindingState.Joining"/>
+    /// pre-teardown disposition. It is the consult-complete analogue of <see cref="SwapConnectedOwnerAsync"/>: the
+    /// difference is only the source state — a consult destination has already answered and stabilized as a
+    /// Participating member on the shared bridge (whereas a blind transfer promotes straight from Joining) — so the
+    /// promotion here commits only while the destination is still <see cref="AsteriskChannelBindingState.Participating"/>.
+    /// Committing both writes with YesSql document-version optimistic concurrency in one transaction is the single
+    /// linearization point that keeps the canonical conversation bridge owned by EXACTLY ONE
+    /// <see cref="AsteriskChannelBindingState.Connected"/> binding at every instant — the initiating agent before the
+    /// swap, the destination agent after it — so a terminal event can never observe two Connected owners or none.
+    /// </summary>
+    /// <param name="participantChannelId">The stabilized destination participant channel identifier to promote to <see cref="AsteriskChannelBindingState.Connected"/>.</param>
+    /// <param name="previousAgentChannelId">The initiating agent-leg channel identifier whose binding should be retired to a non-owning terminating state as part of the same transaction.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the destination binding was found in
+    /// <see cref="AsteriskChannelBindingState.Participating"/>, the previous agent leg was still the
+    /// <see cref="AsteriskChannelBindingState.Connected"/> owner, and this call committed both the destination's
+    /// promotion to <see cref="AsteriskChannelBindingState.Connected"/> and the retirement of the previous agent leg;
+    /// <see langword="false"/> when the destination binding does not exist or is no longer participating (a terminal
+    /// event claimed it), or when the previous agent leg is missing or no longer Connected (ownership already
+    /// changed), which signals the consult completion lost the race and must not retire the previous leg.
+    /// </returns>
+    Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId);
+
+    /// <summary>
     /// Atomically promotes the conference participant leg for the supplied channel from
     /// <see cref="AsteriskChannelBindingState.Joining"/> to <see cref="AsteriskChannelBindingState.Participating"/>
     /// using YesSql document-version optimistic concurrency, committing durably in its own isolated tenant session.
@@ -205,6 +233,29 @@ internal interface IAsteriskChannelTenantBindingStore
     /// bridge may be released.
     /// </returns>
     Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId);
+
+    /// <summary>
+    /// Atomically claims a non-owning provisional consult leg for teardown so an attended-transfer cancel can safely
+    /// hang it up. In a single YesSql document-version optimistic-concurrency transaction it transitions a binding
+    /// found in <see cref="AsteriskChannelBindingState.Joining"/> or <see cref="AsteriskChannelBindingState.Participating"/>
+    /// to <see cref="AsteriskChannelBindingState.Terminating"/> (retaining its non-owning state as the pre-teardown
+    /// disposition so the teardown planner and reconciler hang up ONLY this dangling channel), and returns whether the
+    /// claim was made. This is the linearization point that makes an attended-transfer cancel mutually exclusive with a
+    /// concurrent <see cref="PromoteParticipantToConnectedOwnerAsync"/>: because the deterministic consult channel is
+    /// promoted in place to the bridge's sole <see cref="AsteriskChannelBindingState.Connected"/> owner on completion,
+    /// a bare read-then-hangup could otherwise hang up the promoted owner and drop the live customer. Only one of the
+    /// racing writers can move the binding out of its non-owning state, so a cancel can never claim (and therefore never
+    /// hang up) a leg that completion already promoted to the connected owner.
+    /// </summary>
+    /// <param name="channelId">The consult-leg channel identifier to claim for teardown.</param>
+    /// <returns>
+    /// <see langword="true"/> when the binding was found in a non-owning <see cref="AsteriskChannelBindingState.Joining"/>
+    /// or <see cref="AsteriskChannelBindingState.Participating"/> state and this call committed the transition to
+    /// <see cref="AsteriskChannelBindingState.Terminating"/>; <see langword="false"/> when no binding exists or it is in
+    /// any other state (already promoted to <see cref="AsteriskChannelBindingState.Connected"/>, already terminating, or
+    /// otherwise owning), which signals the cancel must NOT hang up the channel.
+    /// </returns>
+    Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId);
 
     /// <summary>
     /// Removes the binding for the supplied Asterisk channel identifier from the current tenant store. Teardown

@@ -63,6 +63,22 @@ internal interface IAsteriskAriClient
     Task<bool> ChannelExistsAsync(string channelId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Places a channel on hold, starting music on hold, so a private consult can occur without the held party
+    /// hearing it. The operation is idempotent and treats an already-gone channel as a no-op.
+    /// </summary>
+    /// <param name="channelId">The ARI channel identifier to hold.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task HoldChannelAsync(string channelId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a channel from hold, stopping music on hold and returning it to the live conversation. The operation
+    /// is idempotent and treats an already-gone channel as a no-op.
+    /// </summary>
+    /// <param name="channelId">The ARI channel identifier to remove from hold.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task UnholdChannelAsync(string channelId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Destroys a bridge if it exists.
     /// </summary>
     /// <param name="bridgeId">The ARI bridge identifier.</param>

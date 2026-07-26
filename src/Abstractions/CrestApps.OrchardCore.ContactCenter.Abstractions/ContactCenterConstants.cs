@@ -341,6 +341,31 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable request- and result-metadata keys used to drive an attended (consultative) transfer across
+    /// its begin, complete, and cancel phases so a provider can execute a resolved consult without receiving raw
+    /// client input.
+    /// </summary>
+    public static class AttendedTransferMetadata
+    {
+        /// <summary>
+        /// Identifies the Orchard user id of the destination agent to consult with, so a provider can resolve that
+        /// agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
+        /// </summary>
+        public const string AgentUserId = "attendedTransferAgentUserId";
+
+        /// <summary>
+        /// Identifies the provider channel of the consult leg established for the destination agent, when the
+        /// provider reports one.
+        /// </summary>
+        public const string ConsultChannelId = "attendedTransferConsultChannelId";
+
+        /// <summary>
+        /// Identifies the conversation bridge the attended transfer was executed on, when the provider reports one.
+        /// </summary>
+        public const string BridgeId = "attendedTransferBridgeId";
+    }
+
+    /// <summary>
     /// Contains site-settings configuration identifiers used by the Contact Center module set.
     /// </summary>
     public static class Settings

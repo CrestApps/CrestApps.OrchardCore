@@ -456,6 +456,16 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
         {
             return Task.CompletedTask;
         }
+
+        public Task HoldChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task UnholdChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class TestRecordingBindingStore : IAsteriskChannelTenantBindingStore
@@ -563,9 +573,31 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId)
+        {
+            var binding = _bindings.Find(item => item.ChannelId == channelId);
+
+            if (binding is null ||
+                (binding.State != AsteriskChannelBindingState.Joining &&
+                 binding.State != AsteriskChannelBindingState.Participating))
+            {
+                return Task.FromResult(false);
+            }
+
+            binding.PreTeardownState = binding.State;
+            binding.State = AsteriskChannelBindingState.Terminating;
+
+            return Task.FromResult(true);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             return Task.FromResult<AsteriskChannelTeardownClaim>(null);
+        }
+
+        public Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId)
+        {
+            return Task.FromResult(false);
         }
     }
 }

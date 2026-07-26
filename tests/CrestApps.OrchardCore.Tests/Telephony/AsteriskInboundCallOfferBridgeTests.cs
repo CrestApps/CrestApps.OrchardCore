@@ -405,6 +405,13 @@ public sealed class AsteriskInboundCallOfferBridgeTests
             return Task.FromResult(false);
         }
 
+        public Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId)
+        {
+            _calls?.Add("claim-provisional-teardown:" + channelId);
+
+            return Task.FromResult(false);
+        }
+
         public Task<AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId)
         {
             _calls?.Add("begin-teardown:" + channelId);
@@ -424,6 +431,11 @@ public sealed class AsteriskInboundCallOfferBridgeTests
                 Binding = ExistingBinding,
                 PreviousState = previousState,
             });
+        }
+
+        public Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId)
+        {
+            return Task.FromResult(false);
         }
     }
 
@@ -550,6 +562,16 @@ public sealed class AsteriskInboundCallOfferBridgeTests
         public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
         {
             return Task.FromResult(new AsteriskAriChannel { Id = snoopId });
+        }
+
+        public Task HoldChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task UnholdChannelAsync(string channelId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
     }
 

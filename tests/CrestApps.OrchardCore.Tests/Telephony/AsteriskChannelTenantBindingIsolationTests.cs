@@ -772,6 +772,162 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
         }
     }
 
+    [Fact]
+    public async Task TryClaimProvisionalLegForTeardownAsync_WhenLegIsParticipating_ClaimsItForTeardown()
+    {
+        // Arrange
+        var databasePath = DatabasePath("claim-provisional-participating");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "consult-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var claimed = await bindingStore.TryClaimProvisionalLegForTeardownAsync("consult-2");
+            var binding = await bindingStore.FindByChannelIdAsync("consult-2");
+
+            // Assert
+            Assert.True(claimed);
+            Assert.NotNull(binding);
+            Assert.Equal(AsteriskChannelBindingState.Terminating, binding.State);
+            Assert.Equal(AsteriskChannelBindingState.Participating, binding.PreTeardownState);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryClaimProvisionalLegForTeardownAsync_WhenLegIsConnectedOwner_RejectsAndLeavesItConnected()
+    {
+        // Arrange
+        var databasePath = DatabasePath("claim-provisional-connected");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // The consult leg was already promoted in place to the sole Connected owner by a completed transfer, so a
+            // stale cancel must NEVER be able to claim (and therefore hang up) it — doing so would drop the customer.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "consult-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            var claimed = await bindingStore.TryClaimProvisionalLegForTeardownAsync("consult-2");
+            var binding = await bindingStore.FindByChannelIdAsync("consult-2");
+
+            // Assert
+            Assert.False(claimed);
+            Assert.NotNull(binding);
+            Assert.Equal(AsteriskChannelBindingState.Connected, binding.State);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryClaimProvisionalLegForTeardownAsync_WhenClaimRacesConsultCompletion_ExactlyOneWinsAndNoOwnerIsDropped()
+    {
+        // Arrange
+        var databasePath = DatabasePath("claim-provisional-race");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var bindingStore = CreateBindingStore(store);
+
+            // A stabilized consult: destination B is a Participating leg on the shared bridge; the initiating agent A is
+            // the current Connected owner.
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "initiating-agent-1",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Connected,
+                CreatedUtc = _now,
+            });
+            await bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = "consult-2",
+                ProviderName = "Asterisk",
+                ProviderCallId = "caller-1",
+                BridgeId = "mixing-1",
+                PeerChannelId = "caller-1",
+                State = AsteriskChannelBindingState.Participating,
+                CreatedUtc = _now,
+            });
+
+            // Act
+            // A cancel (claim the consult leg for teardown) and a complete (promote the consult leg to Connected owner)
+            // race on the SAME Participating binding. Both are version-checked transitions off Participating, so exactly
+            // one can win: either the claim moves it to Terminating (completion then fails and A stays owner), or the
+            // completion promotes it to Connected (the claim then fails and the live owner is never hung up).
+            var claim = bindingStore.TryClaimProvisionalLegForTeardownAsync("consult-2");
+            var complete = bindingStore.PromoteParticipantToConnectedOwnerAsync("consult-2", "initiating-agent-1");
+            var claimed = await claim;
+            var completed = await complete;
+
+            var consult = await bindingStore.FindByChannelIdAsync("consult-2");
+            var bindings = await bindingStore.GetAllAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            // The two mutually exclusive outcomes are the only safe ones; they can never both succeed.
+            Assert.NotEqual(claimed, completed);
+            Assert.NotNull(consult);
+
+            if (completed)
+            {
+                // Completion won: the consult leg is now the live Connected owner and was NOT claimed for teardown.
+                Assert.False(claimed);
+                Assert.Equal(AsteriskChannelBindingState.Connected, consult.State);
+                Assert.Single(bindings, binding => binding.State == AsteriskChannelBindingState.Connected);
+            }
+            else
+            {
+                // Cancel won: the consult leg is retired for teardown and the initiating agent remains the owner.
+                Assert.True(claimed);
+                Assert.Equal(AsteriskChannelBindingState.Terminating, consult.State);
+
+                var initiating = await bindingStore.FindByChannelIdAsync("initiating-agent-1");
+                Assert.NotNull(initiating);
+                Assert.Equal(AsteriskChannelBindingState.Connected, initiating.State);
+            }
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
     private static AsteriskChannelTenantBindingStore CreateBindingStore(IStore store, string tenantName = "Default")
     {
         return new AsteriskChannelTenantBindingStore(store, new ShellSettings { Name = tenantName });

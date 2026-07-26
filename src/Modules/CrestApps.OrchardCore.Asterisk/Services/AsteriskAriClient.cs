@@ -255,6 +255,52 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
     }
 
     /// <inheritdoc/>
+    public async Task HoldChannelAsync(string channelId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(channelId);
+
+        var settings = ResolveSettings(nameof(HoldChannelAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Post,
+            $"channels/{Uri.EscapeDataString(channelId)}/hold",
+            null,
+            null,
+            nameof(HoldChannelAsync),
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        await EnsureSuccessAsync(response, nameof(HoldChannelAsync), cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task UnholdChannelAsync(string channelId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(channelId);
+
+        var settings = ResolveSettings(nameof(UnholdChannelAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Delete,
+            $"channels/{Uri.EscapeDataString(channelId)}/hold",
+            null,
+            null,
+            nameof(UnholdChannelAsync),
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        await EnsureSuccessAsync(response, nameof(UnholdChannelAsync), cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> ChannelExistsAsync(string channelId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(channelId);

@@ -421,6 +421,75 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
     }
 
     /// <inheritdoc/>
+    public async Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(participantChannelId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(previousAgentChannelId);
+
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            await using var session = _store.CreateSession();
+
+            var participantBinding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == participantChannelId)
+                .FirstOrDefaultAsync();
+
+            // Only an already-stabilized participant leg may be promoted. A missing binding or any non-participating
+            // state means a terminal event has already claimed the destination leg for teardown, so the consult
+            // completion must not retire the initiating agent leg — the caller safely stays with the initiating agent.
+            if (participantBinding is null || participantBinding.State != AsteriskChannelBindingState.Participating)
+            {
+                return false;
+            }
+
+            var previousBinding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == previousAgentChannelId)
+                .FirstOrDefaultAsync();
+
+            // The participant may be promoted ONLY when the initiating agent leg is still the live Connected owner of
+            // the conversation. A missing or non-Connected previous binding means ownership was already handed off (or
+            // the initiating agent's own terminal event claimed it), so promoting this participant would create a
+            // SECOND Connected owner of the shared canonical bridge — the exact double-teardown drop this swap exists
+            // to prevent. Reject instead: the participant stays a non-owning Participating leg and the customer keeps
+            // whichever agent won ownership.
+            if (previousBinding is null || previousBinding.State != AsteriskChannelBindingState.Connected)
+            {
+                return false;
+            }
+
+            participantBinding.State = AsteriskChannelBindingState.Connected;
+
+            // Retire the initiating owner by transitioning it to a NON-OWNING terminating state whose Joining
+            // pre-teardown disposition tells the teardown planner and reconciler to hang up ONLY the initiating
+            // channel — never the shared canonical bridge or the customer. As in SwapConnectedOwnerAsync this is a
+            // version-checked transition rather than a raw delete so it is the single linearization point: only the
+            // first swap can move the previous binding out of Connected.
+            previousBinding.State = AsteriskChannelBindingState.Terminating;
+            previousBinding.PreTeardownState = AsteriskChannelBindingState.Joining;
+
+            try
+            {
+                await session.SaveAsync(participantBinding, checkConcurrency: true);
+                await session.SaveAsync(previousBinding, checkConcurrency: true);
+                await session.SaveChangesAsync();
+            }
+            catch (ConcurrencyException)
+            {
+                // A concurrent teardown committed to the participant binding, or a concurrent hand-off already retired
+                // this owner, after either was read. Re-read in a fresh session, where the state checks above will
+                // observe the change and reject the swap so the caller safely stays with whichever agent won.
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
@@ -453,6 +522,52 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
             {
                 // A terminal event (or another writer) committed to this binding after it was read. The session is
                 // canceled; re-read in a fresh session and re-evaluate whether the leg is still joining.
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            await using var session = _store.CreateSession();
+
+            var binding = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == channelId)
+                .FirstOrDefaultAsync();
+
+            // Only a still non-owning consult leg may be claimed. A missing binding, an already-terminating binding, or
+            // — critically — a leg that a concurrent consult completion already promoted to Connected owner must NOT be
+            // claimed, so a cancel can never hang up the sole owner of the shared bridge and drop the live customer.
+            if (binding is null ||
+                (binding.State != AsteriskChannelBindingState.Joining &&
+                 binding.State != AsteriskChannelBindingState.Participating))
+            {
+                return false;
+            }
+
+            var previousState = binding.State;
+            binding.State = AsteriskChannelBindingState.Terminating;
+            binding.PreTeardownState = previousState;
+
+            try
+            {
+                await session.SaveAsync(binding, checkConcurrency: true);
+                await session.SaveChangesAsync();
+            }
+            catch (ConcurrencyException)
+            {
+                // Another writer (a consult completion promoting this leg, or a terminal event) committed to this
+                // binding after it was read. Re-read in a fresh session and re-evaluate whether it is still claimable.
                 continue;
             }
 
