@@ -34,7 +34,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The activity manager.</param>
-    /// <param name="serviceProvider">The service provider used to lazily resolve provider synchronization without a presence-manager cycle.</param>
+    /// <param name="serviceProvider">The service provider used to lazily resolve provider synchronization, which breaks the container cycle through <see cref="IAgentPresenceManager"/> and tolerates tenants that have not enabled the Voice feature.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public AgentWorkStateHealingService(
@@ -196,12 +196,32 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         if (isProviderBacked)
         {
             var previousStatus = interaction.Status;
-            var synchronizationService = _serviceProvider.GetRequiredService<IProviderCallStateSynchronizationService>();
-            interaction = await synchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
 
-            if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+            // Resolved lazily on purpose. Constructor-injecting this service would close a real container
+            // cycle: IAgentPresenceManager -> IAgentWorkStateHealingService -> IProviderCallStateSynchronizationService
+            // -> IProviderVoiceEventService -> IAgentPresenceManager. It is also registered by the Voice feature
+            // while this service is registered by Queues, so a Queues-only tenant legitimately has no
+            // implementation. GetService (not GetRequiredService) keeps that tenant working instead of throwing:
+            // without a voice provider there is no provider truth to reconcile against, so the reconciliation
+            // step is skipped and the provider-backed guards below preserve the interaction rather than
+            // mutating it on stale information.
+            var synchronizationService = _serviceProvider.GetService<IProviderCallStateSynchronizationService>();
+
+            if (synchronizationService is null)
             {
-                return interaction.Status == previousStatus ? 0 : 1;
+                _logger.LogWarning(
+                    "Interaction '{InteractionId}' is provider-backed but no {ServiceName} is registered, so provider truth cannot be reconciled. Enable the Voice feature to restore provider-state healing.",
+                    OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                    nameof(IProviderCallStateSynchronizationService));
+            }
+            else
+            {
+                interaction = await synchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
+
+                if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+                {
+                    return interaction.Status == previousStatus ? 0 : 1;
+                }
             }
         }
 

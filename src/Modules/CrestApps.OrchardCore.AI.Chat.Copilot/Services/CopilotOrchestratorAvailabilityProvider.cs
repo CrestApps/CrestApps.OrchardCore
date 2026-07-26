@@ -37,12 +37,27 @@ internal sealed class CopilotOrchestratorAvailabilityProvider : IOrchestratorAva
     {
         var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
 
-        return settings.IsConfigured()
-        ? new OrchestratorAvailability()
-        : new OrchestratorAvailability
+        if (!settings.IsConfigured())
         {
-            IsAvailable = false,
-            Message = S["Copilot is not configured and cannot be used until it has been configured."],
-        };
+            return new OrchestratorAvailability
+            {
+                IsAvailable = false,
+                Message = S["Copilot is not configured and cannot be used until it has been configured."],
+            };
+        }
+
+        // Configuration alone does not make the orchestrator usable: the SDK spawns a native CLI runtime that
+        // is supplied by the build. Reporting availability without confirming the runtime exists would advertise
+        // Copilot to users and only fail once a chat starts.
+        if (!CopilotRuntimeLocator.IsRuntimePresent())
+        {
+            return new OrchestratorAvailability
+            {
+                IsAvailable = false,
+                Message = S["Copilot is configured but its runtime is not installed with this deployment. Rebuild with the Copilot CLI enabled, or provide the CLI path at build time."],
+            };
+        }
+
+        return new OrchestratorAvailability();
     }
 }

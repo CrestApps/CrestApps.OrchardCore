@@ -14,9 +14,10 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 
 The **Contact Center** module set is a large, multi-phase orchestration layer being built between the CRM (Omnichannel) and Telephony modules. Before doing any Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`), **ALWAYS read the durable plan first**:
 
-- **Plan & progress:** [`.github/contact-center/PLAN.md`](contact-center/PLAN.md)
+- **Release plan & progress (read first):** [`.github/contact-center/PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md`](contact-center/PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md)
+- **Architecture reference:** [`.github/contact-center/PLAN.md`](contact-center/PLAN.md)
 
-That document is the source of truth for the Contact Center architecture, phased scope, MVP definition, conceptual data model, event catalog, and current progress. Always read its **Progress status** section to see what is done and what is next, start at the lowest incomplete phase, and update that section after each meaningful change.
+Those documents are the source of truth for the Contact Center architecture, phased scope, MVP definition, conceptual data model, event catalog, and current progress. Always start with the **release plan**: read its **Progress status** section to see what is done and what is next, start at the lowest incomplete wave, and update that section after each meaningful change. A progress checkbox may be marked complete **only** when a named CI gate proves it.
 
 Key rules for this module set:
 

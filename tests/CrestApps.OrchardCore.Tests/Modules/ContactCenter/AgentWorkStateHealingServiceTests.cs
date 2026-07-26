@@ -549,6 +549,61 @@ public sealed class AgentWorkStateHealingServiceTests
         Assert.Equal("a1", interaction.AgentId);
     }
 
+    [Fact]
+    public async Task HealForResetAsync_WhenProviderSynchronizationIsNotRegistered_DoesNotThrowAndLeavesInteractionUntouched()
+    {
+        // A Queues-only tenant never registers IProviderCallStateSynchronizationService because that type is
+        // registered by the Voice feature. Healing must degrade to a no-op instead of throwing and taking the
+        // whole agent-reset path down with it.
+
+        // Arrange
+        var agent = new AgentProfile
+        {
+            ItemId = "a1",
+            PresenceStatus = AgentPresenceStatus.Available,
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(manager => manager.FindPendingByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null);
+
+        var reservationService = new Mock<IActivityReservationService>();
+        var queueItemManager = new Mock<IQueueItemManager>();
+
+        var interaction = new Interaction
+        {
+            ItemId = "i1",
+            AgentId = "a1",
+            Status = InteractionStatus.Ringing,
+            ProviderName = "asterisk",
+            ProviderInteractionId = "provider-call-1",
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var service = CreateService(
+            agentManager,
+            reservationManager,
+            reservationService,
+            queueItemManager,
+            interactionManager,
+            registerSynchronizationService: false);
+
+        // Act
+        var healed = await service.HealForResetAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, healed);
+        Assert.Equal(InteractionStatus.Ringing, interaction.Status);
+        Assert.Equal("a1", interaction.AgentId);
+    }
+
     private static AgentWorkStateHealingService CreateService(
         Mock<IAgentProfileManager> agentManager,
         Mock<IActivityReservationManager> reservationManager,
@@ -556,14 +611,17 @@ public sealed class AgentWorkStateHealingServiceTests
         Mock<IQueueItemManager> queueItemManager,
         Mock<IInteractionManager> interactionManager,
         Mock<IOmnichannelActivityManager> activityManager = null,
-        Mock<IProviderCallStateSynchronizationService> synchronizationService = null)
+        Mock<IProviderCallStateSynchronizationService> synchronizationService = null,
+        bool registerSynchronizationService = true)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
         var serviceProvider = new Mock<IServiceProvider>();
         serviceProvider
             .Setup(provider => provider.GetService(typeof(IProviderCallStateSynchronizationService)))
-            .Returns(synchronizationService?.Object ?? Mock.Of<IProviderCallStateSynchronizationService>());
+            .Returns(registerSynchronizationService
+                ? synchronizationService?.Object ?? Mock.Of<IProviderCallStateSynchronizationService>()
+                : null);
 
         return new AgentWorkStateHealingService(
             agentManager.Object,

@@ -4,6 +4,7 @@
 >
 > **How to use this document:**
 >
+> - **Superseded for release scoping (2026-07-26):** [`PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md`](PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md) is now the authoritative execution plan and progress ledger. Plan 2's remaining Waves 5–6 are absorbed into Plan 3. Completed Plan 2 work stands, but note that any capability implemented here (recording, monitoring, whisper, barge, transfer, conference) remains **prohibited in the support matrix until a named CI gate proves it** — see Plan 3 §2.2.
 > - Read this alongside `PLAN.md`. `PLAN.md` remains the master architecture/progress ledger and the R8 release gate; Plan 2 does not supersede it. Plan 2's distributed work (Part 8) *feeds* R8.
 > - Start at the lowest incomplete wave in **Sequencing**; keep the **Progress status** section current after each meaningful change.
 > - The **Cross-cutting principles** are non-negotiable and apply to every part. The most important is **CC-1 (tenant isolation & Orchard Core infrastructure conformance)**: this is a multi-tenant platform and every new service must be an extension of Orchard Core's own distributed infrastructure with zero cross-tenant leakage.
