@@ -531,12 +531,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ContactCenterOutboxMessage message,
         CancellationToken cancellationToken)
     {
-        message.Status = OutboxMessageStatus.Completed;
-        message.OwnerToken = null;
-        message.ModifiedUtc = _clock.UtcNow;
-        await _outboxStore.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-
+        // Removal is a single unit of work. Persisting the completed status first and deleting afterwards detaches
+        // the message from the session identity map when the intermediate save commits, so the delete then fails and
+        // the row survives as a completed message nothing ever reaps. Nothing consumes the completed status as
+        // domain state either: the only readers count it as a store-reachability probe. If this transaction fails
+        // the message stays claimed and claim expiry redelivers it. The per-handler checkpoint is not persisted on
+        // this path, so that redelivery replays every handler and is safe only because handlers are required to be
+        // idempotent; the checkpoint exists to avoid replay after a *failed* dispatch, which is persisted.
         await _outboxStore.DeleteAsync(message, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }

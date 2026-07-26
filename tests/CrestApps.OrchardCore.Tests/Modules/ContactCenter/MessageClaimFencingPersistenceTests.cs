@@ -91,6 +91,122 @@ public sealed class MessageClaimFencingPersistenceTests
     }
 
     [Fact]
+    public async Task OutboxCompletion_WhenClaimIsCurrent_RemovesTheMessage()
+    {
+        var databasePath = DatabasePath("outbox-complete");
+        var store = StoreFactory.Create(configuration =>
+            configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes([new ContactCenterOutboxMessageIndexProvider()]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(
+            ContactCenterConstants.CollectionName,
+            TestContext.Current.CancellationToken);
+        await CreateOutboxSchemaAsync(store);
+
+        try
+        {
+            await SeedOutboxAsync(store);
+
+            await using (var claimSession = store.CreateSession())
+            {
+                var claimStore = new ContactCenterOutboxStore(claimSession);
+                var claimed = await claimStore.FindByIdAsync("message-1", TestContext.Current.CancellationToken);
+                claimed.Status = OutboxMessageStatus.Claimed;
+                claimed.OwnerToken = "worker-a";
+                claimed.FenceToken = 1;
+                claimed.NextAttemptUtc = _now.AddMinutes(5);
+                await claimStore.UpdateAsync(claimed, TestContext.Current.CancellationToken);
+                await claimSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            await using var settlementSession = store.CreateSession();
+            var settlement = new ContactCenterOutbox(
+                [],
+                new ContactCenterOutboxStore(settlementSession),
+                new Mock<IInteractionEventStore>().Object,
+                new Mock<IContactCenterScopeExecutor>().Object,
+                new TestContactCenterFeatureWorkManager(),
+                settlementSession,
+                CreateClock(),
+                NullLogger<ContactCenterOutbox>.Instance);
+
+            var completed = await settlement.SettleClaimAsync(
+                "message-1",
+                "worker-a",
+                1,
+                [],
+                null,
+                false,
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.True(completed);
+
+            await using var verificationSession = store.CreateSession();
+            var persisted = await new ContactCenterOutboxStore(verificationSession)
+                .FindByIdAsync("message-1", TestContext.Current.CancellationToken);
+
+            Assert.Null(persisted);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task OutboxDelivery_WhenAClaimLapses_ReturnsTheMessageForRedelivery()
+    {
+        var databasePath = DatabasePath("outbox-redelivery");
+        var store = StoreFactory.Create(configuration =>
+            configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        store.RegisterIndexes([new ContactCenterOutboxMessageIndexProvider()]);
+        await store.InitializeAsync(TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(
+            ContactCenterConstants.CollectionName,
+            TestContext.Current.CancellationToken);
+        await CreateOutboxSchemaAsync(store);
+
+        try
+        {
+            await SeedOutboxAsync(store);
+
+            // Arrange: a message a worker claimed and never settled, whose claim window has since lapsed. This is
+            // the state a message is left in when its completion transaction fails, so recovery depends entirely on
+            // this message being handed back out.
+            await using (var claimSession = store.CreateSession())
+            {
+                var claimStore = new ContactCenterOutboxStore(claimSession);
+                var claimed = await claimStore.FindByIdAsync("message-1", TestContext.Current.CancellationToken);
+                claimed.Status = OutboxMessageStatus.Claimed;
+                claimed.OwnerToken = "worker-a";
+                claimed.FenceToken = 1;
+                claimed.NextAttemptUtc = _now.AddMinutes(-1);
+                await claimStore.UpdateAsync(claimed, TestContext.Current.CancellationToken);
+                await claimSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            await using var readSession = store.CreateSession();
+            var due = await new ContactCenterOutboxStore(readSession)
+                .ListDueAsync(_now, 10, TestContext.Current.CancellationToken);
+
+            // Assert
+            var redelivered = Assert.Single(due);
+
+            Assert.Equal("message-1", redelivered.ItemId);
+            Assert.Equal(OutboxMessageStatus.Claimed, redelivered.Status);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task InboxCompletion_AfterNewerClaimCommitted_FailsAndPreservesNewOwner()
     {
         var databasePath = DatabasePath("inbox-fence");
