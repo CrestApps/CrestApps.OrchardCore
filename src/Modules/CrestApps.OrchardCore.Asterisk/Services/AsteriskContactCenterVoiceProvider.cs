@@ -29,6 +29,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     private readonly IAsteriskChannelTenantBindingStore _channelTenantBindingStore;
     private readonly IAsteriskPjsipCredentialLeaseStore _pjsipCredentialLeaseStore;
     private readonly IAsteriskAgentChannelReadySignal _agentChannelReadySignal;
+    private readonly IAsteriskRecordingIngestJobStore _recordingIngestJobStore;
     private readonly IClock _clock;
     private readonly ILogger<AsteriskContactCenterVoiceProvider> _logger;
 
@@ -41,6 +42,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     /// <param name="channelTenantBindingStore">The tenant-scoped Asterisk channel binding store.</param>
     /// <param name="pjsipCredentialLeaseStore">The tenant-scoped store used to resolve an agent's live browser softphone endpoint.</param>
     /// <param name="agentChannelReadySignal">The tenant-scoped signal used to wait for an originated agent channel to enter Stasis.</param>
+    /// <param name="recordingIngestJobStore">The tenant-scoped store used to durably queue completed recordings for secure ingestion.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -51,6 +53,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         IAsteriskChannelTenantBindingStore channelTenantBindingStore,
         IAsteriskPjsipCredentialLeaseStore pjsipCredentialLeaseStore,
         IAsteriskAgentChannelReadySignal agentChannelReadySignal,
+        IAsteriskRecordingIngestJobStore recordingIngestJobStore,
         IClock clock,
         ILogger<AsteriskContactCenterVoiceProvider> logger,
         IStringLocalizer<AsteriskContactCenterVoiceProvider> stringLocalizer)
@@ -61,6 +64,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         _channelTenantBindingStore = channelTenantBindingStore;
         _pjsipCredentialLeaseStore = pjsipCredentialLeaseStore;
         _agentChannelReadySignal = agentChannelReadySignal;
+        _recordingIngestJobStore = recordingIngestJobStore;
         _clock = clock;
         _logger = logger;
         Name = stringLocalizer["Asterisk"];
@@ -418,7 +422,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             {
                 RecordingState.Recording => await StartOrResumeRecordingAsync(bridgeId, recordingName, cancellationToken),
                 RecordingState.Paused => await PauseRecordingAsync(recordingName, cancellationToken),
-                RecordingState.Stopped or RecordingState.None => await StopRecordingAsync(recordingName, cancellationToken),
+                RecordingState.Stopped or RecordingState.None => await StopRecordingAsync(request.InteractionId, recordingName, cancellationToken),
                 _ => Failure("recording_state_unsupported", "The requested recording state is not supported."),
             };
         }
@@ -479,6 +483,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     }
 
     private async Task<ContactCenterVoiceProviderResult> StopRecordingAsync(
+        string interactionId,
         string recordingName,
         CancellationToken cancellationToken)
     {
@@ -487,7 +492,31 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             ? AsteriskAriConstants.RecordingFormat
             : stored.Format;
 
+        // Queue the completed recording for durable, encrypted ingestion. The recording has already stopped, so a
+        // transient enqueue failure must not fail the stop; the idempotent durable job then owns download-and-store
+        // with retry and dead-lettering.
+        await EnqueueRecordingIngestAsync(interactionId, recordingName, format, cancellationToken);
+
         return RecordingSuccess(recordingName, format, stored?.Duration);
+    }
+
+    private async Task EnqueueRecordingIngestAsync(
+        string interactionId,
+        string recordingName,
+        string format,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _recordingIngestJobStore.EnqueueAsync(interactionId, recordingName, format, _clock.UtcNow, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                OperationalLogRedactor.RedactException(ex),
+                "Failed to enqueue recording {RecordingName} for ingestion.",
+                OperationalLogRedactor.Pseudonymize(recordingName, OperationalLogIdentifierCategory.Call));
+        }
     }
 
     private static ContactCenterVoiceProviderResult RecordingSuccess(

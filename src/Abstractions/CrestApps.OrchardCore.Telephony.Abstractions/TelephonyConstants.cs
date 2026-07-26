@@ -18,6 +18,18 @@ public static class TelephonyConstants
     public const string TokenProtectorPurpose = "CrestApps.OrchardCore.Telephony.UserTokens";
 
     /// <summary>
+    /// The data protection purpose used to encrypt conversation recording media at rest in the default local
+    /// recording media store.
+    /// </summary>
+    public const string RecordingMediaProtectorPurpose = "CrestApps.OrchardCore.Telephony.RecordingMedia";
+
+    /// <summary>
+    /// The tenant-scoped application-data folder name under which the default local recording media store
+    /// persists encrypted recordings.
+    /// </summary>
+    public const string RecordingMediaFolderName = "RecordingMedia";
+
+    /// <summary>
     /// Contains metadata keys that have provider-neutral command semantics.
     /// </summary>
     public static class RequestMetadata

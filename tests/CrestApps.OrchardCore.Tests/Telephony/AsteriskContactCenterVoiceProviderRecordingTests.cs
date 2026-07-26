@@ -97,6 +97,38 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
     }
 
     [Fact]
+    public async Task SetRecordingStateAsync_WhenStopped_EnqueuesRecordingForSecureIngest()
+    {
+        // Arrange
+        var ariClient = new TestRecordingAriClient
+        {
+            StopResult = new AsteriskAriStoredRecording
+            {
+                Name = _recordingName,
+                Format = "ulaw",
+                Duration = 42,
+            },
+        };
+        var bindingStore = CreateConnectedBindingStore();
+        var ingestJobStore = new FakeAsteriskRecordingIngestJobStore();
+        var service = CreateService(ariClient, bindingStore, ingestJobStore);
+
+        // Act
+        var result = await service.SetRecordingStateAsync(
+            CreateRequest(RecordingState.Stopped),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        var job = Assert.Single(ingestJobStore.Jobs);
+
+        Assert.Equal(_recordingName, job.RecordingName);
+        Assert.Equal(_interactionId, job.InteractionId);
+        Assert.Equal(RecordingIngestJobStatus.Pending, job.Status);
+    }
+
+    [Fact]
     public async Task SetRecordingStateAsync_WhenStopped_StopsAndReturnsStoredMetadata()
     {
         // Arrange
@@ -274,6 +306,14 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
         IAsteriskAriClient ariClient,
         IAsteriskChannelTenantBindingStore bindingStore)
     {
+        return CreateService(ariClient, bindingStore, new FakeAsteriskRecordingIngestJobStore());
+    }
+
+    private static AsteriskContactCenterVoiceProvider CreateService(
+        IAsteriskAriClient ariClient,
+        IAsteriskChannelTenantBindingStore bindingStore,
+        IAsteriskRecordingIngestJobStore recordingIngestJobStore)
+    {
         var clock = new Mock<IClock>();
         clock.SetupGet(service => service.UtcNow).Returns(_now);
 
@@ -284,6 +324,7 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
             bindingStore,
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
+            recordingIngestJobStore,
             clock.Object,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
@@ -359,6 +400,16 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
             StoppedRecordingName = recordingName;
 
             return Task.FromResult(StopResult);
+        }
+
+        public Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<AsteriskAriStoredRecordingContent>(null);
+        }
+
+        public Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
 
         public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)

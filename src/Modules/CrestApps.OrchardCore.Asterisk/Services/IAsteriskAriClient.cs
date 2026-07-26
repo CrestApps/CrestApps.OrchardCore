@@ -110,6 +110,30 @@ internal interface IAsteriskAriClient
     Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Downloads the raw bytes of a stored recording through the ARI stored-file endpoint.
+    /// </summary>
+    /// <param name="recordingName">The recording name that addresses the stored recording.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// The downloaded recording bytes, or <see langword="null"/> when the stored file is not yet readable or no
+    /// longer exists (for example, it has not finished flushing to disk, or retention already removed it). A
+    /// <see langword="null"/> result lets the durable ingest retry loop decide whether to try again later.
+    /// </returns>
+    Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes a stored recording through the ARI stored-recording endpoint so the unencrypted source file does
+    /// not linger in Asterisk once it has been securely ingested and encrypted at rest.
+    /// </summary>
+    /// <param name="recordingName">The recording name that addresses the stored recording.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// Deleting an already-gone recording is treated as an idempotent no-op success, so a repeated cleanup after
+    /// retention has already removed the file does not fail.
+    /// </remarks>
+    Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Creates a snoop channel that spies on a live channel and enters the tenant's configured Stasis application,
     /// so an originated supervisor endpoint can be bridged to it to hear (and, for a whisper engagement, speak into)
     /// the spied channel.

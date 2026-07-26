@@ -89,6 +89,8 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IAsteriskAriClient, AsteriskAriClient>()
             .AddScoped<IAsteriskChannelTenantBindingStore, AsteriskChannelTenantBindingStore>()
             .AddScoped<IAsteriskChannelOwnershipGuard, AsteriskChannelOwnershipGuard>()
+            .AddScoped<IAsteriskRecordingIngestJobStore, AsteriskRecordingIngestJobStore>()
+            .AddScoped<IAsteriskRecordingIngestService, AsteriskRecordingIngestService>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
                     AsteriskConstants.Feature.ContactCenterVoice,
@@ -97,7 +99,10 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 
         services.AddIndexProvider<AsteriskChannelTenantBindingIndexProvider>();
         services.AddDataMigration<AsteriskChannelTenantBindingMigrations>();
+        services.AddIndexProvider<AsteriskRecordingIngestJobIndexProvider>();
+        services.AddDataMigration<AsteriskRecordingIngestJobMigrations>();
         services.AddSingleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>();
     }
 }
 

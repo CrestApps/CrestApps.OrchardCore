@@ -474,6 +474,7 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
             bindingStore,
             leaseStore,
             readySignal ?? new FakeAsteriskAgentChannelReadySignal(),
+            new FakeAsteriskRecordingIngestJobStore(),
             clock.Object,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
@@ -622,6 +623,16 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
         public Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
+        }
+
+        public Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<AsteriskAriStoredRecordingContent>(null);
+        }
+
+        public Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
     }
 

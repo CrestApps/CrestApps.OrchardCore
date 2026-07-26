@@ -505,6 +505,16 @@ public sealed class AsteriskCallTeardownServiceTests
             return Task.FromResult<AsteriskAriStoredRecording>(null);
         }
 
+        public Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<AsteriskAriStoredRecordingContent>(null);
+        }
+
+        public Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)
         {
             return Task.FromResult(new AsteriskAriChannel { Id = snoopId });

@@ -79,6 +79,28 @@ internal static class AsteriskAriConstants
     public const string StoredRecordingRetrievalPathPrefix = "recordings/stored/";
 
     /// <summary>
+    /// The maximum number of recording ingest jobs processed in a single background sweep.
+    /// </summary>
+    public const int RecordingIngestBatchSize = 25;
+
+    /// <summary>
+    /// The maximum number of ingest attempts before a recording ingest job is dead-lettered instead of retried.
+    /// </summary>
+    public const int RecordingIngestMaxAttempts = 10;
+
+    /// <summary>
+    /// The base back-off, in seconds, used to schedule the next recording ingest attempt. The delay grows
+    /// exponentially with each failed attempt so a stored file that is briefly not readable is retried quickly
+    /// while a persistently missing file is retried less aggressively.
+    /// </summary>
+    public const int RecordingIngestBaseBackoffSeconds = 30;
+
+    /// <summary>
+    /// The maximum back-off, in minutes, applied to the exponential recording ingest retry schedule.
+    /// </summary>
+    public const int RecordingIngestMaxBackoffMinutes = 60;
+
+    /// <summary>
     /// The deterministic prefix used for the dedicated supervisor mixing bridge that joins the snoop leg to the
     /// originated supervisor endpoint for a listen-only or whisper engagement. Combined with the interaction and
     /// supervisor identity it yields a stable bridge id so a later stop addresses the same bridge.

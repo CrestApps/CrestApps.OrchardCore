@@ -406,6 +406,70 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
     }
 
     /// <inheritdoc/>
+    public async Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+
+        var settings = ResolveSettings(nameof(DownloadStoredRecordingAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Get,
+            $"recordings/stored/{Uri.EscapeDataString(recordingName)}/file",
+            null,
+            null,
+            nameof(DownloadStoredRecordingAsync),
+            cancellationToken);
+
+        // The stored file may not be readable yet (still flushing to disk) or may already have been removed by
+        // retention, so a missing file is a soft null rather than a failure. The durable ingest loop decides
+        // whether to retry (not-ready) or dead-letter (never appears).
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response, nameof(DownloadStoredRecordingAsync), cancellationToken);
+
+        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+
+        if (content is null || content.Length == 0)
+        {
+            return null;
+        }
+
+        return new AsteriskAriStoredRecordingContent
+        {
+            Content = content,
+            ContentType = response.Content.Headers.ContentType?.MediaType,
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingName);
+
+        var settings = ResolveSettings(nameof(DeleteStoredRecordingAsync));
+        using var response = await SendAsync(
+            settings,
+            HttpMethod.Delete,
+            $"recordings/stored/{Uri.EscapeDataString(recordingName)}",
+            null,
+            null,
+            nameof(DeleteStoredRecordingAsync),
+            cancellationToken);
+
+        // A stored recording that is already gone (removed by retention or a prior cleanup) is an idempotent
+        // no-op success, so post-ingest cleanup never fails on an already-removed source file.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        await EnsureSuccessAsync(response, nameof(DeleteStoredRecordingAsync), cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<AsteriskAriChannel> SnoopChannelAsync(
         string channelId,
         string spy,

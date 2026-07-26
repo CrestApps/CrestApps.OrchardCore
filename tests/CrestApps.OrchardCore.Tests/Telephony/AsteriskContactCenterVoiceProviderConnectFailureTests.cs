@@ -349,6 +349,7 @@ public sealed class AsteriskContactCenterVoiceProviderConnectFailureTests
             bindingStore ?? new TestBindingStore(),
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
+            new FakeAsteriskRecordingIngestJobStore(),
             clock.Object,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
@@ -480,6 +481,16 @@ public sealed class AsteriskContactCenterVoiceProviderConnectFailureTests
         public Task<AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, CancellationToken cancellationToken)
         {
             return Task.FromResult<AsteriskAriStoredRecording>(null);
+        }
+
+        public Task<AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<AsteriskAriStoredRecordingContent>(null);
+        }
+
+        public Task DeleteStoredRecordingAsync(string recordingName, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
 
         public Task<AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, CancellationToken cancellationToken)

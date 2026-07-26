@@ -24,6 +24,7 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="CrestApps.Core.SignalR" />

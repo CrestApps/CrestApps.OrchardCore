@@ -203,6 +203,7 @@ public sealed class AsteriskContactCenterVoiceProviderTests
             Mock.Of<IAsteriskChannelTenantBindingStore>(),
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
+            new FakeAsteriskRecordingIngestJobStore(),
             Mock.Of<IClock>(),
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             localizer.Object);

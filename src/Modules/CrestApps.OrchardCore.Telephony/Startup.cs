@@ -8,15 +8,19 @@ using CrestApps.OrchardCore.Telephony.Migrations;
 using CrestApps.OrchardCore.Telephony.Navigation;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -65,6 +69,26 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>();
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
+
+        // The default recording media store keeps encrypted recordings under a tenant-scoped application-data
+        // folder, so recordings ingested by any voice provider are namespaced per tenant and never observable
+        // across tenants. The abstraction is pluggable, so a deployment can replace this with a cloud-backed
+        // store without touching ingest callers.
+        services.AddSingleton<IRecordingMediaStore>(serviceProvider =>
+        {
+            var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
+            var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
+            var logger = serviceProvider.GetRequiredService<ILogger<FileSystemStore>>();
+            var dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
+            var path = Path.Combine(
+                shellOptions.ShellsApplicationDataPath,
+                shellOptions.ShellsContainerName,
+                shellSettings.Name,
+                TelephonyConstants.RecordingMediaFolderName);
+            var fileStore = new FileSystemStore(path, logger);
+
+            return new LocalEncryptedRecordingMediaStore(fileStore, dataProtectionProvider);
+        });
 
         services
             .AddPermissionProvider<TelephonyPermissionProvider>()
