@@ -51,7 +51,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
         IClock clock,
-        ICallControlAuthorizationService callControlAuthorizationService = null)
+        ICallControlAuthorizationService callControlAuthorizationService)
     {
         _telephonyService = telephonyServices.FirstOrDefault();
         _interactionManager = interactionManager;
@@ -98,26 +98,13 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return false;
         }
 
-        if (_callControlAuthorizationService is null)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(request.AgentUserId))
+        if (request.Initiator == CallControlInitiator.Agent &&
+            string.IsNullOrWhiteSpace(request.AgentUserId))
         {
             return false;
         }
 
-        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
-        {
-            UserId = request.AgentUserId,
-            Verb = CommandType == ProviderCommandType.SendToVoicemail
-                ? CallControlVerb.Voicemail
-                : CallControlVerb.Decline,
-            InteractionId = command.InteractionId,
-            ProviderName = command.ProviderName,
-            ProviderCallId = request.ProviderCallId,
-        }, cancellationToken);
+        var authorization = await AuthorizeAsync(command, request, cancellationToken);
 
         return authorization.Succeeded;
     }
@@ -144,33 +131,20 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("unavailable"), "No telephony service is registered.");
         }
 
-        var resolvedProviderCallId = request.ProviderCallId;
-
-        if (_callControlAuthorizationService is not null)
+        if (request.Initiator == CallControlInitiator.Agent &&
+            string.IsNullOrWhiteSpace(request.AgentUserId))
         {
-            if (string.IsNullOrWhiteSpace(request.AgentUserId))
-            {
-                return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), "The requested call is not available.");
-            }
-
-            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
-            {
-                UserId = request.AgentUserId,
-                Verb = CommandType == ProviderCommandType.SendToVoicemail
-                    ? CallControlVerb.Voicemail
-                    : CallControlVerb.Decline,
-                InteractionId = command.InteractionId,
-                ProviderName = command.ProviderName,
-                ProviderCallId = request.ProviderCallId,
-            }, cancellationToken);
-
-            if (!authorization.Succeeded)
-            {
-                return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), authorization.FailureReason);
-            }
-
-            resolvedProviderCallId = authorization.ProviderCallId;
+            return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), "The requested call is not available.");
         }
+
+        var authorization = await AuthorizeAsync(command, request, cancellationToken);
+
+        if (!authorization.Succeeded)
+        {
+            return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), authorization.FailureReason);
+        }
+
+        var resolvedProviderCallId = authorization.ProviderCallId;
 
         var call = new CallReference
         {
@@ -349,6 +323,24 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         {
             return null;
         }
+    }
+
+    private Task<CallControlAuthorizationResult> AuthorizeAsync(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        CancellationToken cancellationToken)
+    {
+        return _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            Initiator = request.Initiator,
+            UserId = request.AgentUserId,
+            Verb = CommandType == ProviderCommandType.SendToVoicemail
+                ? CallControlVerb.Voicemail
+                : CallControlVerb.Decline,
+            InteractionId = command.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
     }
 
     private static bool IsTerminal(InteractionStatus status)

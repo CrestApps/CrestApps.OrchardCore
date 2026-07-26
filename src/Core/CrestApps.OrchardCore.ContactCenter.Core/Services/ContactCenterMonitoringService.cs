@@ -40,7 +40,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
-        ICallControlAuthorizationService callControlAuthorizationService = null)
+        ICallControlAuthorizationService callControlAuthorizationService)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
@@ -99,28 +99,23 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure("The interaction could not be found.");
         }
 
-        var providerCallId = interaction.ProviderInteractionId;
-
-        if (_callControlAuthorizationService is not null)
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
         {
-            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
-            {
-                Principal = principal,
-                UserId = supervisorId,
-                Verb = CallControlVerb.SupervisorEngage,
-                InteractionId = interaction.ItemId,
-                ProviderName = interaction.ProviderName,
-                ProviderCallId = interaction.ProviderInteractionId,
-                SupervisorOperation = true,
-            }, cancellationToken);
+            Principal = principal,
+            UserId = supervisorId,
+            Verb = CallControlVerb.SupervisorEngage,
+            InteractionId = interaction.ItemId,
+            ProviderName = interaction.ProviderName,
+            ProviderCallId = interaction.ProviderInteractionId,
+            SupervisorOperation = true,
+        }, cancellationToken);
 
-            if (!authorization.Succeeded)
-            {
-                return SupervisorEngagementResult.Failure(authorization.FailureReason);
-            }
-
-            providerCallId = authorization.ProviderCallId;
+        if (!authorization.Succeeded)
+        {
+            return SupervisorEngagementResult.Failure(authorization.FailureReason);
         }
+
+        var providerCallId = authorization.ProviderCallId;
 
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
         var capability = ResolveCapability(mode);
@@ -218,28 +213,23 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure("The interaction could not be found.");
         }
 
-        var providerCallId = interaction.ProviderInteractionId;
-
-        if (_callControlAuthorizationService is not null)
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
         {
-            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
-            {
-                Principal = principal,
-                UserId = supervisorId,
-                Verb = CallControlVerb.SupervisorEngage,
-                InteractionId = interaction.ItemId,
-                ProviderName = interaction.ProviderName,
-                ProviderCallId = interaction.ProviderInteractionId,
-                SupervisorOperation = true,
-            }, cancellationToken);
+            Principal = principal,
+            UserId = supervisorId,
+            Verb = CallControlVerb.SupervisorEngage,
+            InteractionId = interaction.ItemId,
+            ProviderName = interaction.ProviderName,
+            ProviderCallId = interaction.ProviderInteractionId,
+            SupervisorOperation = true,
+        }, cancellationToken);
 
-            if (!authorization.Succeeded)
-            {
-                return SupervisorEngagementResult.Failure(authorization.FailureReason);
-            }
-
-            providerCallId = authorization.ProviderCallId;
+        if (!authorization.Succeeded)
+        {
+            return SupervisorEngagementResult.Failure(authorization.FailureReason);
         }
+
+        var providerCallId = authorization.ProviderCallId;
 
         var provider = _voiceProviderResolver.Get(interaction.ProviderName);
 

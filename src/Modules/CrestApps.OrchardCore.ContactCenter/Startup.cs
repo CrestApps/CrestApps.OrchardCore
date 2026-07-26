@@ -124,10 +124,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ICallSessionStore, CallSessionStore>()
-            .AddScoped<ICallSessionManager, CallSessionManager>()
-            .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
-            .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
-            .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>();
+            .AddScoped<ICallSessionManager, CallSessionManager>();
 
         services
             .AddIndexProvider<InteractionIndexProvider>()
@@ -385,6 +382,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
             .AddScoped<IActivityQueueStore, ActivityQueueStore>()
             .AddScoped<IActivityQueueManager, ActivityQueueManager>()
+            .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
             .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
             .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
             .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
@@ -651,6 +649,8 @@ public sealed class VoiceStartup : StartupBase
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
+            .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
+            .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             .AddScoped<VoiceContactCenterCallRouter>()

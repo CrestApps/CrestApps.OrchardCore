@@ -495,6 +495,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 ActivityItemId = "activity-1",
                 QueueId = "queue-1",
                 ProviderCallId = "call-1",
+                AgentUserId = "user-1",
                 Metadata = requestMetadata,
             }),
         };
@@ -526,10 +527,12 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Mock<IContactCenterEventPublisher> publisher,
         Mock<IClock> clock,
         Mock<IActivityQueueService>? queueService = null,
-        Mock<IOmnichannelActivityManager>? activityManager = null)
+        Mock<IOmnichannelActivityManager>? activityManager = null,
+        ICallControlAuthorizationService? callControlAuthorizationService = null)
     {
         queueService ??= new Mock<IActivityQueueService>(MockBehavior.Loose);
         activityManager ??= new Mock<IOmnichannelActivityManager>(MockBehavior.Loose);
+        callControlAuthorizationService ??= new FakeCallControlAuthorizationService();
 
         return commandType switch
         {
@@ -539,14 +542,16 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 queueService.Object,
                 activityManager.Object,
                 publisher.Object,
-                clock.Object),
+                clock.Object,
+                callControlAuthorizationService),
             ProviderCommandType.SendToVoicemail => new SendToVoicemailProviderCommandTypeExecutor(
                 [telephonyService.Object],
                 interactionManager.Object,
                 queueService.Object,
                 activityManager.Object,
                 publisher.Object,
-                clock.Object),
+                clock.Object,
+                callControlAuthorizationService),
             _ => throw new ArgumentOutOfRangeException(nameof(commandType)),
         };
     }

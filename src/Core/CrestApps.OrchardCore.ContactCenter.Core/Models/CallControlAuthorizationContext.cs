@@ -8,6 +8,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 public sealed class CallControlAuthorizationContext
 {
     /// <summary>
+    /// Gets or sets who initiated the operation. Defaults to <see cref="CallControlInitiator.Agent"/>, which
+    /// requires a resolvable agent that owns the call.
+    /// </summary>
+    public CallControlInitiator Initiator { get; set; }
+
+    /// <summary>
     /// Gets or sets the authenticated principal invoking the command.
     /// </summary>
     public ClaimsPrincipal Principal { get; set; }

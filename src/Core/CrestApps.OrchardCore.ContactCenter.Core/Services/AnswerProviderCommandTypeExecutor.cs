@@ -51,7 +51,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
         IClock clock,
-        ICallControlAuthorizationService callControlAuthorizationService = null)
+        ICallControlAuthorizationService callControlAuthorizationService)
     {
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
@@ -106,11 +106,6 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             return false;
         }
 
-        if (_callControlAuthorizationService is null)
-        {
-            return true;
-        }
-
         var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
         {
             UserId = request.AgentUserId,
@@ -154,28 +149,26 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         }
 
         var provider = _voiceProviderResolver.Get(command.ProviderName);
-        if (_callControlAuthorizationService is not null)
+
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
         {
-            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+            UserId = request.AgentUserId,
+            Verb = CallControlVerb.Accept,
+            InteractionId = request.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+
+        if (!authorization.Succeeded)
+        {
+            return new ContactCenterVoiceProviderResult
             {
-                UserId = request.AgentUserId,
-                Verb = CallControlVerb.Accept,
-                InteractionId = request.InteractionId,
+                Succeeded = false,
+                OutcomeUnknown = true,
                 ProviderName = command.ProviderName,
                 ProviderCallId = request.ProviderCallId,
-            }, cancellationToken);
-
-            if (!authorization.Succeeded)
-            {
-                return new ContactCenterVoiceProviderResult
-                {
-                    Succeeded = false,
-                    OutcomeUnknown = true,
-                    ProviderName = command.ProviderName,
-                    ProviderCallId = request.ProviderCallId,
-                    ErrorMessage = authorization.FailureReason,
-                };
-            }
+                ErrorMessage = authorization.FailureReason,
+            };
         }
 
         if (provider is IContactCenterVoiceCallControlProvider callControlProvider)

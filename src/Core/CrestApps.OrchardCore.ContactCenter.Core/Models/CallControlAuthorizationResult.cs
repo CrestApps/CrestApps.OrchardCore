@@ -48,6 +48,23 @@ public sealed class CallControlAuthorizationResult
     }
 
     /// <summary>
+    /// Creates an authorized result for an operation that has no owning call session, such as a
+    /// system-initiated termination of a call the platform has not yet observed a provider event for.
+    /// </summary>
+    /// <param name="agentId">The resolved agent identifier, when one is known.</param>
+    /// <param name="providerCallId">The server-resolved provider call identifier.</param>
+    /// <returns>The authorized result.</returns>
+    public static CallControlAuthorizationResult Success(string agentId, string providerCallId)
+    {
+        return new CallControlAuthorizationResult
+        {
+            Succeeded = true,
+            AgentId = agentId,
+            ProviderCallId = providerCallId,
+        };
+    }
+
+    /// <summary>
     /// Creates a redacted denial result.
     /// </summary>
     /// <returns>The denied result.</returns>

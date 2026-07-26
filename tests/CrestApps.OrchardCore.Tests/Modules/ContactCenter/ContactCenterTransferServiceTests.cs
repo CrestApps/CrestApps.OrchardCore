@@ -42,6 +42,7 @@ public sealed class ContactCenterTransferServiceTests
         var request = new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             Type = InteractionTransferType.Blind,
             TargetType = InteractionTransferTargetType.Queue,
             TargetId = "q2",
@@ -120,6 +121,7 @@ public sealed class ContactCenterTransferServiceTests
         var result = await service.TransferAsync(new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             TargetType = InteractionTransferTargetType.Queue,
             TargetId = "q2",
         }, callerCancellation.Token);
@@ -154,6 +156,7 @@ public sealed class ContactCenterTransferServiceTests
         var request = new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             TargetType = InteractionTransferTargetType.External,
             TargetId = "+15551234567",
         };
@@ -194,6 +197,7 @@ public sealed class ContactCenterTransferServiceTests
         var request = new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             TargetType = InteractionTransferTargetType.External,
             TargetId = "+15551234567",
         };
@@ -239,6 +243,7 @@ public sealed class ContactCenterTransferServiceTests
         var result = await service.TransferAsync(new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             TargetType = InteractionTransferTargetType.Queue,
             TargetId = "q2",
         }, TestContext.Current.CancellationToken);
@@ -274,6 +279,7 @@ public sealed class ContactCenterTransferServiceTests
         var request = new TransferRequest
         {
             InteractionId = "int-1",
+            InitiatedByUserId = "sup-1",
             TargetType = InteractionTransferTargetType.External,
             TargetId = "+15551234567",
         };
@@ -303,7 +309,7 @@ public sealed class ContactCenterTransferServiceTests
             new Mock<IContactCenterEventPublisher>(),
             new Mock<IContactCenterVoiceProviderResolver>());
 
-        var request = new TransferRequest { InteractionId = "int-1", TargetType = InteractionTransferTargetType.Queue, TargetId = "q2" };
+        var request = new TransferRequest { InteractionId = "int-1", InitiatedByUserId = "sup-1", TargetType = InteractionTransferTargetType.Queue, TargetId = "q2" };
 
         // Act
         var result = await service.TransferAsync(request, TestContext.Current.CancellationToken);
@@ -317,7 +323,9 @@ public sealed class ContactCenterTransferServiceTests
         Mock<IActivityQueueService> queueService,
         Mock<IContactCenterEventPublisher> publisher,
         Mock<IContactCenterVoiceProviderResolver> voiceProviderResolver,
-        ITelephonyCommandExecutor commandExecutor = null)
+        ITelephonyCommandExecutor commandExecutor = null,
+        ICallControlAuthorizationService callControlAuthorizationService = null,
+        ITransferDestinationResolver transferDestinationResolver = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -330,7 +338,9 @@ public sealed class ContactCenterTransferServiceTests
             commandExecutor ?? new DefaultTelephonyCommandExecutor(
                 Options.Create(new TelephonyCommandOptions()),
                 Mock.Of<IHostApplicationLifetime>()),
-            clock.Object);
+            clock.Object,
+            callControlAuthorizationService ?? FakeCallControlAuthorizationService.Resolving("call-1"),
+            transferDestinationResolver ?? new FakeTransferDestinationResolver());
     }
 
     private static Interaction CreateInteraction()

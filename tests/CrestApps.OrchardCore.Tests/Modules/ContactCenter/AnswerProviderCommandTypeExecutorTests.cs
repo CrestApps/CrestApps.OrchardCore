@@ -353,6 +353,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public List<InteractionEvent> PublishedEvents { get; } = [];
 
+        public FakeCallControlAuthorizationService CallControlAuthorization { get; } = new();
+
         public AnswerProviderCommandTypeExecutor CreateExecutor()
         {
             var clock = new Mock<IClock>(MockBehavior.Strict);
@@ -364,7 +366,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 InteractionManager.Object,
                 CallSessionManager.Object,
                 Publisher.Object,
-                clock.Object);
+                clock.Object,
+                CallControlAuthorization);
         }
 
         public void SetupActiveState()

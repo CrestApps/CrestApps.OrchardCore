@@ -39,8 +39,8 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
         IClock clock,
-        ICallControlAuthorizationService callControlAuthorizationService = null,
-        ITransferDestinationResolver transferDestinationResolver = null)
+        ICallControlAuthorizationService callControlAuthorizationService,
+        ITransferDestinationResolver transferDestinationResolver)
     {
         _interactionManager = interactionManager;
         _queueService = queueService;
@@ -67,7 +67,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Failure("A transfer requires a destination.");
         }
 
-        if (_callControlAuthorizationService is not null && string.IsNullOrEmpty(request.InitiatedByUserId))
+        if (string.IsNullOrEmpty(request.InitiatedByUserId))
         {
             return TransferResult.Failure("The requested call is not available.");
         }
@@ -79,30 +79,23 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Failure("The interaction could not be found.");
         }
 
-        var providerCallId = interaction.ProviderInteractionId;
-
-        if (_callControlAuthorizationService is not null)
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
         {
-            var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
-            {
-                Principal = request.Principal,
-                UserId = request.InitiatedByUserId,
-                Verb = CallControlVerb.Transfer,
-                InteractionId = interaction.ItemId,
-                ProviderName = interaction.ProviderName,
-            }, cancellationToken);
+            Principal = request.Principal,
+            UserId = request.InitiatedByUserId,
+            Verb = CallControlVerb.Transfer,
+            InteractionId = interaction.ItemId,
+            ProviderName = interaction.ProviderName,
+        }, cancellationToken);
 
-            if (!authorization.Succeeded)
-            {
-                return TransferResult.Failure(authorization.FailureReason);
-            }
-
-            providerCallId = authorization.ProviderCallId;
+        if (!authorization.Succeeded)
+        {
+            return TransferResult.Failure(authorization.FailureReason);
         }
 
-        var destination = _transferDestinationResolver is null
-            ? TransferDestinationResolutionResult.Success(request.TargetType, request.TargetId)
-            : await _transferDestinationResolver.ResolveAsync(request, request.Principal, cancellationToken);
+        var providerCallId = authorization.ProviderCallId;
+
+        var destination = await _transferDestinationResolver.ResolveAsync(request, request.Principal, cancellationToken);
 
         if (!destination.Succeeded)
         {

@@ -49,8 +49,8 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IClock clock,
-        ICallSessionManager callSessionManager = null,
-        IAgentProfileManager agentManager = null)
+        ICallSessionManager callSessionManager,
+        IAgentProfileManager agentManager)
     {
         _dispatchValidators = dispatchValidators;
         _voiceCallRouter = voiceCallRouter;
@@ -93,16 +93,12 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         var request = DeserializeDialRequest(command);
 
-        if (_callSessionManager is not null &&
-            !await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
         {
             return false;
         }
 
-        if (_callSessionManager is not null)
-        {
-            await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
-        }
+        await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
 
         return true;
     }
@@ -120,8 +116,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         StampRequest(request, command, claim);
 
-        if (_callSessionManager is not null &&
-            !await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
         {
             return new ContactCenterVoiceProviderResult
             {
@@ -133,10 +128,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             };
         }
 
-        if (_callSessionManager is not null)
-        {
-            await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
-        }
+        await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
 
         return await _voiceCallRouter.RouteOutboundAsync(request, command.ProviderName, cancellationToken);
     }
@@ -157,8 +149,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         var sessionConflict = false;
         CallSession ownedSession = null;
 
-        if (_callSessionManager is not null &&
-            !string.IsNullOrWhiteSpace(command.InteractionId) &&
+        if (!string.IsNullOrWhiteSpace(command.InteractionId) &&
             !string.IsNullOrWhiteSpace(result.ProviderCallId))
         {
             ownedSession = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
@@ -299,7 +290,6 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         if (string.IsNullOrWhiteSpace(request.InteractionId) ||
             string.IsNullOrWhiteSpace(request.AgentId) ||
             string.IsNullOrWhiteSpace(request.AgentUserId) ||
-            _agentManager is null ||
             !IsAllowedAddress(request.Destination) ||
             (!string.IsNullOrWhiteSpace(request.CallerId) && !IsAllowedAddress(request.CallerId)))
         {

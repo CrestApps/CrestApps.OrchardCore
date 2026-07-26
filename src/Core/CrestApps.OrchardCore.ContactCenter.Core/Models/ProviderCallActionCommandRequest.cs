@@ -6,6 +6,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 public sealed class ProviderCallActionCommandRequest
 {
     /// <summary>
+    /// Gets or sets who issued the action. Defaults to <see cref="CallControlInitiator.Agent"/> so a payload
+    /// that never declares an initiator is authorized as an agent request and fails closed without an owner.
+    /// </summary>
+    public CallControlInitiator Initiator { get; set; }
+
+    /// <summary>
     /// Gets or sets the CRM activity identifier.
     /// </summary>
     public string ActivityItemId { get; set; }

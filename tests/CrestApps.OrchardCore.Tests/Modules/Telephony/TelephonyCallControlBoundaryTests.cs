@@ -28,6 +28,7 @@ public sealed class TelephonyCallControlBoundaryTests
         var service = new CallControlAuthorizationService(
             agentManager.Object,
             callSessionManager.Object,
+            Mock.Of<IInteractionManager>(),
             Mock.Of<ISupervisorQueueAuthorizationService>());
 
         // Act

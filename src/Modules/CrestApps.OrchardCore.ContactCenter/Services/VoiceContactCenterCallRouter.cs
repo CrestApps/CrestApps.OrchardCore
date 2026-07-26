@@ -424,7 +424,9 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
                 RemoveReservationFromQueueOnFailure = false,
                 RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
                 {
+                    Initiator = CallControlInitiator.System,
                     ActivityItemId = activity.ItemId,
+                    InteractionId = interaction.ItemId,
                     ProviderCallId = interaction.ProviderInteractionId,
                     ReofferOnFailure = false,
                     Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)

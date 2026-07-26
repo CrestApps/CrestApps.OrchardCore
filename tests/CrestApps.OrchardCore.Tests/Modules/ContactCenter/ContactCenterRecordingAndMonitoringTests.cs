@@ -444,7 +444,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -480,7 +481,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -531,7 +533,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             CreateResolver(provider).Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var result = await service.EngageAsync(
@@ -560,7 +563,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             CreateResolver(provider).Object,
             publisher.Object,
-            new TimeoutTelephonyCommandExecutor());
+            new TimeoutTelephonyCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var result = await service.EngageAsync(
@@ -601,7 +605,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             publisher.Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -628,7 +633,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             new Mock<IContactCenterEventPublisher>().Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -652,7 +658,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             interactionManager.Object,
             resolver.Object,
             new Mock<IContactCenterEventPublisher>().Object,
-            CreateCommandExecutor());
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);

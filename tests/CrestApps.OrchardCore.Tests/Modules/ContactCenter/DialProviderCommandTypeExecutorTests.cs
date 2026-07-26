@@ -549,6 +549,7 @@ public sealed class DialProviderCommandTypeExecutorTests
         var authService = new CallControlAuthorizationService(
             agentManager.Object,
             sessionManagerForAuth.Object,
+            Mock.Of<IInteractionManager>(),
             Mock.Of<ISupervisorQueueAuthorizationService>());
 
         // Act
@@ -578,7 +579,7 @@ public sealed class DialProviderCommandTypeExecutorTests
             ProviderName = "provider",
             ActivityItemId = "activity-1",
             InteractionId = "interaction-1",
-            RequestPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","Destination":"+15551112222"}""",
+            RequestPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","AgentId":"agent-1","AgentUserId":"user-1","Destination":"+15551112222"}""",
         };
         var claim = new ProviderCommandClaim
         {
@@ -605,18 +606,26 @@ public sealed class DialProviderCommandTypeExecutorTests
         clock.SetupGet(value => value.UtcNow).Returns(_now);
         var actualValidators = validators ?? [validator.Object];
 
-        Mock<ICallSessionManager> callSessionManager = null;
+        // The container always supplies these, so the harness must too. Constructing the executor without them
+        // would exercise a fail-open path that no tenant can actually reach.
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(m => m.FindByInteractionIdAsync(command.InteractionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callSession);
+        callSessionManager
+            .Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new CallSession());
+        callSessionManager
+            .Setup(m => m.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+        callSessionManager
+            .Setup(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
 
-        if (callSession is not null)
-        {
-            callSessionManager = new Mock<ICallSessionManager>();
-            callSessionManager
-                .Setup(m => m.FindByInteractionIdAsync(command.InteractionId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(callSession);
-            callSessionManager
-                .Setup(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
-                .Returns(ValueTask.CompletedTask);
-        }
+        var dialAgentManager = new Mock<IAgentProfileManager>();
+        dialAgentManager
+            .Setup(m => m.FindByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "agent-1", UserId = "user-1" });
 
         var executor = new DialProviderCommandTypeExecutor(
             actualValidators,
@@ -624,7 +633,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             interactionManager.Object,
             activityManager.Object,
             clock.Object,
-            callSessionManager?.Object);
+            callSessionManager.Object,
+            dialAgentManager.Object);
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
     }

@@ -28,7 +28,7 @@ public sealed class RejectProviderCommandTypeExecutor : ProviderCallActionComman
         IOmnichannelActivityManager activityManager,
         IContactCenterEventPublisher publisher,
         IClock clock,
-        ICallControlAuthorizationService callControlAuthorizationService = null)
+        ICallControlAuthorizationService callControlAuthorizationService)
         : base(telephonyServices, interactionManager, queueService, activityManager, publisher, clock, callControlAuthorizationService)
     {
     }

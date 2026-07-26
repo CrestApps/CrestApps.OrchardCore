@@ -589,6 +589,7 @@ public sealed class ActivityReservationService : IActivityReservationService
                     RemoveReservationFromQueueOnFailure = false,
                     RequestPayload = JsonSerializer.Serialize(new ProviderCallActionCommandRequest
                     {
+                        Initiator = CallControlInitiator.System,
                         ActivityItemId = reservation.ActivityItemId,
                         InteractionId = interaction.ItemId,
                         QueueId = reservation.QueueId,
