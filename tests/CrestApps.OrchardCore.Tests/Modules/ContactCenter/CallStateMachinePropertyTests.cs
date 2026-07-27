@@ -267,6 +267,41 @@ public sealed class CallStateMachinePropertyTests
         });
     }
 
+    // W1.3: no code path may produce a call ending without a recorded reason. A call that ended for an
+    // unrecorded reason cannot be counted in outbound compliance reporting or abandon analytics later,
+    // and no amount of downstream repair can recover a cause the machine never wrote.
+    [Fact]
+    public async Task Ingest_WheneverTheSessionEnds_AlwaysRecordsAHangupCause()
+    {
+        await ForEachSequenceAsync(async (seed, emitted, delivered, harness, cancellationToken) =>
+        {
+            foreach (var delivery in delivered)
+            {
+                await harness.IngestAsync(delivery, cancellationToken);
+            }
+
+            var session = harness.Session;
+
+            if (session is null ||
+                !CallStateMachineSequenceGenerator.IsTerminal(session.State))
+            {
+                return;
+            }
+
+            Assert.True(
+                session.HangupCause.HasValue,
+                Describe(
+                    seed,
+                    emitted,
+                    delivered,
+                    $"the session settled on terminal state '{session.State}' with no hangup cause"));
+
+            Assert.True(
+                session.EndedUtc.HasValue,
+                Describe(seed, emitted, delivered, "a terminated session carried no end time"));
+        });
+    }
+
     [Fact]
     public void Generator_ProducesCorruptedSequencesRatherThanOrderedOnes()
     {

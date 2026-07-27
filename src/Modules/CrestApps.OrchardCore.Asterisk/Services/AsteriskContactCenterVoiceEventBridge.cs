@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -50,7 +49,11 @@ internal sealed class AsteriskContactCenterVoiceEventBridge : IAsteriskRealtimeV
         {
             ProviderName = voiceEvent.ProviderName,
             ProviderCallId = voiceEvent.CallId,
-            State = ToContactCenterState(voiceEvent.State),
+            State = ContactCenterCallStateProjection.ToContactCenterCallState(
+                voiceEvent.State,
+                voiceEvent.IsOnHold,
+                voiceEvent.HangupCause),
+            HangupCause = voiceEvent.HangupCause,
             FromAddress = voiceEvent.FromAddress,
             ToAddress = voiceEvent.ToAddress,
             OccurredUtc = voiceEvent.OccurredUtc,
@@ -59,20 +62,6 @@ internal sealed class AsteriskContactCenterVoiceEventBridge : IAsteriskRealtimeV
             IsConference = voiceEvent.IsConference,
             ParticipantCount = voiceEvent.ParticipantCount,
             Metadata = new Dictionary<string, string>(voiceEvent.Metadata, StringComparer.OrdinalIgnoreCase),
-        };
-    }
-
-    private static ContactCenterCallState ToContactCenterState(CallState state)
-    {
-        return state switch
-        {
-            CallState.Connecting => ContactCenterCallState.Dialing,
-            CallState.Ringing => ContactCenterCallState.Ringing,
-            CallState.Connected => ContactCenterCallState.Connected,
-            CallState.OnHold => ContactCenterCallState.OnHold,
-            CallState.Disconnected => ContactCenterCallState.Ended,
-            CallState.Failed => ContactCenterCallState.Failed,
-            _ => ContactCenterCallState.Dialing,
         };
     }
 }

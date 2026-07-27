@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
@@ -92,6 +94,15 @@ public sealed class ProviderVoiceEvent
     /// not change the current answer classification.
     /// </summary>
     public AnswerClassification? AnswerClassification { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-neutral reason the call ended. It is required whenever <see cref="State"/>
+    /// is terminal, because a call that ended for an unrecorded reason cannot be counted in outbound
+    /// compliance reporting or abandon analytics. When the provider ends a call without reporting any
+    /// release cause, <see cref="Telephony.Models.HangupCause.Unknown"/> records that honestly instead of
+    /// presenting the call as a normal clearing.
+    /// </summary>
+    public HangupCause? HangupCause { get; set; }
 
     /// <summary>
     /// Gets or sets additional provider metadata to retain for troubleshooting.

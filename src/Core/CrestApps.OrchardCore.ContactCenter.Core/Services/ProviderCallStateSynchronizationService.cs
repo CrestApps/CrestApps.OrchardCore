@@ -220,17 +220,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         }
 
         var call = lookup.Call;
-        var state = call.State switch
-        {
-            CallState.Connecting => ContactCenterCallState.Dialing,
-            CallState.Ringing => ContactCenterCallState.Ringing,
-            CallState.Connected when call.IsOnHold => ContactCenterCallState.OnHold,
-            CallState.Connected => ContactCenterCallState.Connected,
-            CallState.OnHold => ContactCenterCallState.OnHold,
-            CallState.Disconnected => ContactCenterCallState.Ended,
-            CallState.Failed => ContactCenterCallState.Failed,
-            _ => ContactCenterCallState.Ended,
-        };
+        var state = ContactCenterCallStateProjection.ToContactCenterCallState(call.State, call.IsOnHold);
 
         return new ProviderVoiceEvent
         {
@@ -258,17 +248,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             return false;
         }
 
-        var mappedState = call.State switch
-        {
-            CallState.Connecting => ContactCenterCallState.Dialing,
-            CallState.Ringing => ContactCenterCallState.Ringing,
-            CallState.Connected when call.IsOnHold => ContactCenterCallState.OnHold,
-            CallState.Connected => ContactCenterCallState.Connected,
-            CallState.OnHold => ContactCenterCallState.OnHold,
-            CallState.Disconnected => ContactCenterCallState.Ended,
-            CallState.Failed => ContactCenterCallState.Failed,
-            _ => ContactCenterCallState.Ended,
-        };
+        var mappedState = ContactCenterCallStateProjection.ToContactCenterCallState(call.State, call.IsOnHold);
 
         return session.State == mappedState &&
             session.IsMuted == call.IsMuted &&

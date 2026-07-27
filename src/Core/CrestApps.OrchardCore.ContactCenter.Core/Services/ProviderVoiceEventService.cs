@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -274,6 +275,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         ApplyState(session, interaction, providerEvent.State, now);
         ApplyProviderDetails(session, interaction, providerEvent);
+        ApplyHangupCause(session, providerEvent);
 
         // The watermark is monotonic. Accepting a late terminal delivery must not rewind it, because a rewound
         // watermark would re-admit deliveries the machine has already decided are stale.
@@ -721,6 +723,48 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             RecordingState.Paused => [ContactCenterConstants.Events.RecordingPaused],
             RecordingState.Stopped => [ContactCenterConstants.Events.RecordingStopped],
             _ => [],
+        };
+    }
+
+    private static void ApplyHangupCause(CallSession session, ProviderVoiceEvent providerEvent)
+    {
+        if (!IsTerminalState(session.State) ||
+            session.HangupCause.HasValue)
+        {
+            return;
+        }
+
+        var hangupCause = providerEvent.HangupCause ?? InferHangupCause(session.State);
+
+        // The provider owns the release cause, but only the session knows whether the call was ever
+        // answered, and that is what separates a completed conversation from an abandoned one. A
+        // provider reports the same normal release for both, so this one refinement belongs here.
+        if (hangupCause == HangupCause.NormalClearing && !session.AnsweredUtc.HasValue)
+        {
+            hangupCause = HangupCause.Canceled;
+        }
+        else if (hangupCause == HangupCause.Canceled && session.AnsweredUtc.HasValue)
+        {
+            hangupCause = HangupCause.NormalClearing;
+        }
+
+        session.HangupCause = hangupCause;
+    }
+
+    // A provider that reports a terminal state without a release cause has still reported the outcome
+    // through the state itself, so the cause is derived from it rather than left unset. No call may end
+    // without a recorded cause, because an unrecorded one cannot be counted in compliance or abandon
+    // reporting later.
+    private static HangupCause InferHangupCause(ContactCenterCallState state)
+    {
+        return state switch
+        {
+            ContactCenterCallState.Ended => HangupCause.NormalClearing,
+            ContactCenterCallState.Transferred => HangupCause.NormalClearing,
+            ContactCenterCallState.NoAnswer => HangupCause.NoAnswer,
+            ContactCenterCallState.Rejected => HangupCause.Rejected,
+            ContactCenterCallState.Canceled => HangupCause.Canceled,
+            _ => HangupCause.Failed,
         };
     }
 

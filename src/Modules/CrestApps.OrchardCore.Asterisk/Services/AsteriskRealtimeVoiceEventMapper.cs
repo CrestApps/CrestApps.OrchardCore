@@ -61,6 +61,7 @@ internal static class AsteriskRealtimeVoiceEventMapper
             CallerNumber = callerNumber,
             InteractionCorrelationId = interactionCorrelationId,
             State = state,
+            HangupCause = ResolveHangupCause(root, channel, state),
             IsMuted = isMuted,
             IsOnHold = isOnHold,
             OccurredUtc = occurredUtc,
@@ -73,6 +74,50 @@ internal static class AsteriskRealtimeVoiceEventMapper
         };
 
         return true;
+    }
+
+    // Asterisk reports the release reason as a Q.850 cause code, which every hangup event carries alongside its
+    // standard text. Resolving it here is what keeps a busy number, an unanswered dial, an abandoned call, and a
+    // completed conversation distinguishable once the event has left the provider module.
+    private static HangupCause? ResolveHangupCause(JsonElement root, JsonElement channel, CallState state)
+    {
+        if (state is not CallState.Disconnected and not CallState.Failed)
+        {
+            return null;
+        }
+
+        var wasAnswered = string.Equals(ReadString(channel, "state")?.Trim(), "Up", StringComparison.OrdinalIgnoreCase);
+        var answerDetection = ReadChannelVariable(root, channel, AsteriskConstants.AnswerDetectionVariableName)?.Trim();
+        var answeringMachineDetected = string.Equals(answerDetection, "MACHINE", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(answerDetection, "FAX", StringComparison.OrdinalIgnoreCase);
+
+        return AsteriskHangupCauseMapper.Resolve(
+            TryReadInt32(root, "cause"),
+            ReadString(root, "cause_txt"),
+            wasAnswered,
+            answeringMachineDetected);
+    }
+
+    private static int? TryReadInt32(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == JsonValueKind.Number &&
+            value.TryGetInt32(out var number))
+        {
+            return number;
+        }
+
+        if (value.ValueKind == JsonValueKind.String &&
+            int.TryParse(value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        return null;
     }
 
     private static Dictionary<string, string> BuildMetadata(JsonElement root, JsonElement channel, string eventType)

@@ -70,6 +70,12 @@ internal sealed class AsteriskRealtimeVoiceEvent
     public CallState State { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider-neutral reason the call ended, resolved from the Q.850 release cause
+    /// Asterisk reports on its hangup events. It is assigned only for terminal events.
+    /// </summary>
+    public HangupCause? HangupCause { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the channel mute state is known and enabled.
     /// </summary>
     public bool? IsMuted { get; set; }

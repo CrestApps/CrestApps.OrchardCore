@@ -1375,6 +1375,34 @@
         ]
       },
       "evidenceLocation": "CallStateMachinePropertyTests drives the production ProviderVoiceEventService and DefaultContactCenterEventPublisher over 400 seeded adversarial delivery sequences per property. The generator and harness live at tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/StateMachine."
+    },
+    {
+      "id": "V007",
+      "severity": "P1",
+      "planFinding": "W1.3-single-call-state-vocabulary-and-hangup-causes",
+      "category": "voice-provider",
+      "gate": "Two call-state vocabularies and no hangup causes",
+      "invariant": "Translation between the twelve-state Contact Center call vocabulary and the seven-state soft-phone vocabulary may be written in exactly one place, enforced by a source scan of every production file. Every Q.850 release cause an Asterisk release can report must normalize to a provider-neutral hangup cause, and the causes reachable across the Q.850 range must cover the whole provider-neutral vocabulary except the answer-detection outcome, which is proven separately. No call session may reach a terminal state without a recorded hangup cause, proven over the adversarial delivery sequences of the call state machine property suite.",
+      "testId": "CC-V007",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "AsteriskHangupCauseMapperTests, ContactCenterCallStateProjectionTests, ContactCenterCallStateProjectionArchitectureTests, and the Ingest_WheneverTheSessionEnds_AlwaysRecordsAHangupCause property in CallStateMachinePropertyTests."
     }
   ]
 }

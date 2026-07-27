@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
@@ -164,6 +165,14 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the UTC time the call ended.
     /// </summary>
     public DateTime? EndedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-neutral reason the call ended. It is assigned whenever the session
+    /// reaches a terminal state so outbound compliance reporting and abandon analytics can distinguish
+    /// a normal clearing from a busy, unanswered, rejected, congested, abandoned, or machine-answered
+    /// call at the source rather than inferring it later.
+    /// </summary>
+    public HangupCause? HangupCause { get; set; }
 
     /// <summary>
     /// Gets or sets the total seconds the call was connected (talk time).

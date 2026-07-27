@@ -435,6 +435,32 @@ The state machine handles this with four rules:
 
 `CallStateMachinePropertyTests` enforces all of this as properties rather than examples. It generates a real call lifecycle, then deliberately corrupts its delivery with duplicates, whole-stream replays, arbitrary reordering, clock skew wider than the spacing between events, mostly-unsequenced streams, late backward regressions stamped with the freshest timestamp and highest sequence, and competing terminal reports; it then drives the production service and the production event publisher over 400 seeded sequences per property and requires convergence to a single terminal outcome with no rank regression, no resurrection, no stranded call, no duplicated lifecycle event, and no live-only flag left set. A companion property asserts that the generator is still producing each hard case, so the suite cannot quietly become vacuous.
 
+## One call-state vocabulary and provider-neutral hangup causes
+
+Contact Center reasons about a call with a twelve-state vocabulary; the soft phone renders it with a seven-state one. Translating between them is lossy in one direction and ambiguous in the other, so it is written in exactly one place, `ContactCenterCallStateProjection`, and a build gate fails if a second translation appears anywhere in the product.
+
+The narrowing direction is a declared, lossy projection: four distinct terminal outcomes collapse onto the soft phone's `Disconnected`, and two more onto `Failed`. The widening direction cannot be recovered from the soft-phone state alone, which is why every provider event carries a **hangup cause**.
+
+`HangupCause` is provider-neutral and has eight meanings plus an explicit `Unknown`:
+
+| Cause | Meaning |
+| --- | --- |
+| `NormalClearing` | The call was answered and then released normally. |
+| `Busy` | The remote party was busy. |
+| `NoAnswer` | The call alerted but was never answered. |
+| `Rejected` | The remote party or network explicitly rejected the call. |
+| `Congestion` | No circuit was available, or the network was congested. Normally retryable. |
+| `Failed` | A permanent failure such as an unallocated number or invalid format. Not retryable. |
+| `Canceled` | The originating side abandoned the call before it was answered. |
+| `AnsweringMachine` | A machine, voicemail greeting, or fax tone answered instead of a person. |
+| `Unknown` | The provider ended the call without reporting any cause. Recorded rather than presented as a normal clearing. |
+
+Asterisk reports the release reason as a Q.850 cause code on its hangup events, which is normalized into that vocabulary; when only the standard cause text is present it is used instead. Answer detection takes precedence over the release cause, because a call released normally after a machine picked up is still a machine answer. DialPad publishes no release cause of its own, so its cause is derived from the call-state token it already reports, plus its answer classification.
+
+Q.850 has no distinct cause for an abandoned call — a caller who hangs up while the far end is still alerting releases the channel with the same normal cause as a completed conversation. That distinction therefore belongs to the state machine, which is the only component that knows whether the call was ever answered: a normal release with no answer is recorded as `Canceled`, and a cause that reached it as `Canceled` on an answered call is corrected back to `NormalClearing`.
+
+**No call may end without a cause.** A provider that reports a terminal state without one has the cause derived from the state itself, and the property suite asserts over every generated adversarial delivery sequence that a terminated session always carries both a cause and an end time. A cause that is never written at the source cannot be reconstructed later, which is what previously made outbound compliance reporting and abandon analytics impossible to compute.
+
 ## Related guides
 
 - [Contact Center overview](index.md)

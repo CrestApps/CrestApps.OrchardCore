@@ -108,6 +108,13 @@ public static class AsteriskConstants
     public const string InteractionChannelVariableName = "CRESTAPPS_INTERACTION_ID";
 
     /// <summary>
+    /// The standard Asterisk channel variable that carries the outcome of the AMD (Answering Machine
+    /// Detection) application, so a call answered by a machine or a fax tone is distinguishable from
+    /// one answered by a live person.
+    /// </summary>
+    public const string AnswerDetectionVariableName = "AMDSTATUS";
+
+    /// <summary>
     /// The identifier prefix used for provider-owned holding bridges that park inbound callers with
     /// media (ringback or music-on-hold) until an agent accepts the offered work.
     /// </summary>

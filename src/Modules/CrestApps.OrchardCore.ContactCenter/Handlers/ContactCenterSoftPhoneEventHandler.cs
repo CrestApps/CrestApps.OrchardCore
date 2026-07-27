@@ -266,21 +266,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
         if (sessionState.HasValue)
         {
-            return sessionState.Value switch
-            {
-                ContactCenterCallState.Dialing => CallState.Connecting,
-                ContactCenterCallState.Ringing => CallState.Ringing,
-                ContactCenterCallState.Connected => CallState.Connected,
-                ContactCenterCallState.OnHold => CallState.OnHold,
-                ContactCenterCallState.Ending => CallState.Disconnected,
-                ContactCenterCallState.Ended => CallState.Disconnected,
-                ContactCenterCallState.Transferred => CallState.Disconnected,
-                ContactCenterCallState.Canceled => CallState.Disconnected,
-                ContactCenterCallState.NoAnswer => CallState.Failed,
-                ContactCenterCallState.Rejected => CallState.Failed,
-                ContactCenterCallState.Failed => CallState.Failed,
-                _ => CallState.Idle,
-            };
+            return ContactCenterCallStateProjection.ToTelephonyCallState(sessionState.Value);
         }
 
         return interactionStatus switch

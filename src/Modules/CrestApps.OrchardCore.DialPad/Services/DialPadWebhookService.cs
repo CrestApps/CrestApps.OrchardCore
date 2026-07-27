@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.DialPad.Services;
@@ -46,6 +47,9 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             : _clock.UtcNow;
 
         var toAddress = string.IsNullOrEmpty(callEvent.InternalNumber) ? callEvent.Target : callEvent.InternalNumber;
+        var answerClassification = TryMapAnswerClassification(callEvent.State, out var amdClassification)
+            ? amdClassification
+            : (AnswerClassification?)null;
 
         var providerEvent = new ProviderVoiceEvent
         {
@@ -63,9 +67,8 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
             RecordingReference = callEvent.RecordingId,
             IsConference = callEvent.IsConference,
             ParticipantCount = callEvent.ParticipantCount,
-            AnswerClassification = TryMapAnswerClassification(callEvent.State, out var amdClassification)
-                ? amdClassification
-                : null,
+            AnswerClassification = answerClassification,
+            HangupCause = ResolveHangupCause(state, answerClassification),
             Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["dialPadState"] = callEvent.State ?? string.Empty,
@@ -125,6 +128,29 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
         };
 
         return Enum.IsDefined(mapped);
+    }
+
+    // DialPad reports no release cause of its own; its call-state token already carries the outcome, so the
+    // provider-neutral cause is derived from the normalized state rather than from a second token vocabulary
+    // that would have to be kept in step with the first. A completed call that answer detection classified as
+    // a machine or a fax is the one case the state alone cannot express.
+    private static HangupCause? ResolveHangupCause(ContactCenterCallState state, AnswerClassification? answerClassification)
+    {
+        if (answerClassification is AnswerClassification.Machine or AnswerClassification.Fax)
+        {
+            return HangupCause.AnsweringMachine;
+        }
+
+        return state switch
+        {
+            ContactCenterCallState.Ended => HangupCause.NormalClearing,
+            ContactCenterCallState.Transferred => HangupCause.NormalClearing,
+            ContactCenterCallState.NoAnswer => HangupCause.NoAnswer,
+            ContactCenterCallState.Rejected => HangupCause.Rejected,
+            ContactCenterCallState.Canceled => HangupCause.Canceled,
+            ContactCenterCallState.Failed => HangupCause.Failed,
+            _ => null,
+        };
     }
 
     private static bool TryMapAnswerClassification(string state, out AnswerClassification classification)
