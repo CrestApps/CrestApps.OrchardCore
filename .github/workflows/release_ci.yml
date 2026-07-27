@@ -31,6 +31,9 @@ jobs:
          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       shell: bash
     - uses: actions/checkout@v6
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
     - uses: actions/setup-node@v6
       with:
         node-version: "15"

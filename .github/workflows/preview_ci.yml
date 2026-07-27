@@ -16,6 +16,9 @@ jobs:
     name: Build, Test, Deploy
     steps:
     - uses: actions/checkout@v6
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
     - name: Check if should publish
       id: check-publish
       shell: pwsh
