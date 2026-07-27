@@ -1,0 +1,127 @@
+@using CrestApps.OrchardCore.ContactCenter.Maintenance
+
+@model ContactCenterPreviewMaintenanceViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Preview maintenance"])</h1></zone>
+
+<p class="text-muted">
+    @T["Export, quiesce, reset, and verify the Contact Center data of this tenant. The steps are enforced in order: a reset is refused unless the tenant is quiesced and the export receipt still matches the live data."]
+</p>
+
+@if (!Model.IsResetAllowed)
+{
+    <div class="alert alert-warning">
+        <strong>@T["Reset is disabled"]</strong>
+        <div>@T["Set CrestApps_ContactCenter:PreviewMaintenance:AllowReset to true on this tenant to enable reset. Export, quiesce, and verify remain available."]</div>
+    </div>
+}
+
+@if (Model.IsProductionRefusal)
+{
+    <div class="alert alert-danger">
+        <strong>@T["Reset is refused in Production"]</strong>
+        <div>@T["The host is running in the Production environment, so reset is refused regardless of the AllowReset setting."]</div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Step 1 — Export"]</div>
+    <div class="card-body">
+        <p class="mb-2">@T["Download every Contact Center data set as a single JSON document. The export returns a receipt that binds it to the exact data it captured."]</p>
+        <form asp-action="Export" method="post">
+            <button class="btn btn-primary" type="submit">@T["Export tenant data"]</button>
+        </form>
+        @if (!string.IsNullOrEmpty(Model.ExportReceipt))
+        {
+            <div class="mt-3">
+                <label class="form-label">@T["Export receipt"]</label>
+                <input class="form-control font-monospace" readonly value="@Model.ExportReceipt" />
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Step 2 — Quiesce"]</div>
+    <div class="card-body">
+        <p class="mb-2">@T["Close Contact Center work admission and wait for in-flight work to finish. {0} of {1} feature(s) are currently quiesced.", Model.QuiescedFeatureIds.Count, Model.ParticipatingFeatureIds.Count]</p>
+        <form asp-action="Quiesce" method="post" class="d-inline">
+            <button class="btn btn-warning" type="submit">@T["Quiesce work admission"]</button>
+        </form>
+        <form asp-action="Resume" method="post" class="d-inline">
+            <button class="btn btn-secondary" type="submit">@T["Resume work admission"]</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Step 3 — Reset"]</div>
+    <div class="card-body">
+        <form asp-action="Reset" method="post">
+            <div class="mb-3">
+                <label class="form-label" asp-for="Scope">@T["Scope"]</label>
+                <select class="form-select" asp-for="Scope">
+                    <option value="@ContactCenterPreviewResetScope.OperationalData">@T["Operational data only (preserve configuration)"]</option>
+                    <option value="@ContactCenterPreviewResetScope.All">@T["All Contact Center data, including configuration"]</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" asp-for="ExportReceipt">@T["Export receipt"]</label>
+                <input class="form-control font-monospace" asp-for="ExportReceipt" value="@Model.ExportReceipt" />
+                <span class="hint">@T["Paste the receipt returned by the export. The reset is refused when it no longer matches the live data."]</span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" asp-for="ConfirmationToken">@T["Confirm the tenant name"]</label>
+                <input class="form-control" asp-for="ConfirmationToken" autocomplete="off" />
+                <span class="hint">@T["Type {0} to confirm.", Model.TenantName]</span>
+            </div>
+            <button class="btn btn-danger" type="submit" disabled="@(!Model.IsResetAllowed || Model.IsProductionRefusal)">@T["Reset Contact Center data"]</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Step 4 — Verify"]</div>
+    <div class="card-body">
+        <form asp-action="Verify" method="post" class="d-inline">
+            <input type="hidden" name="scope" value="@ContactCenterPreviewResetScope.OperationalData" />
+            <button class="btn btn-secondary" type="submit">@T["Verify operational data is empty"]</button>
+        </form>
+        <form asp-action="Verify" method="post" class="d-inline">
+            <input type="hidden" name="scope" value="@ContactCenterPreviewResetScope.All" />
+            <button class="btn btn-secondary" type="submit">@T["Verify all data is empty"]</button>
+        </form>
+    </div>
+</div>
+
+<h2>@T["Data sets"]</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>@T["Data set"]</th>
+            <th>@T["Governance category"]</th>
+            <th>@T["Reset scope"]</th>
+            <th class="text-end">@T["Documents"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var dataSet in Model.DataSets)
+        {
+            <tr>
+                <td>@dataSet.Key</td>
+                <td>@dataSet.GovernanceCategoryKey</td>
+                <td>
+                    @if (dataSet.IsConfiguration)
+                    {
+                        @T["Configuration — preserved unless the scope is All"]
+                    }
+                    else
+                    {
+                        @T["Operational — always deleted"]
+                    }
+                </td>
+                <td class="text-end">@dataSet.Count</td>
+            </tr>
+        }
+    </tbody>
+</table>

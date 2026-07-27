@@ -103,6 +103,21 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
         }
     }
 
+    public bool IsQuiescing(string featureId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(featureId);
+
+        if (!_states.TryGetValue(featureId, out var state))
+        {
+            return false;
+        }
+
+        lock (state.SyncRoot)
+        {
+            return state.IsQuiescing;
+        }
+    }
+
     private sealed class FeatureWorkState
     {
         public Lock SyncRoot { get; } = new();

@@ -34,6 +34,11 @@ internal sealed class TestContactCenterFeatureWorkManager : IContactCenterFeatur
         _quiescingFeatures.Remove(featureId);
     }
 
+    public bool IsQuiescing(string featureId)
+    {
+        return _quiescingFeatures.Contains(featureId);
+    }
+
     private sealed class TestContactCenterFeatureWorkLease : IContactCenterFeatureWorkLease
     {
         private TestContactCenterFeatureWorkManager _manager;

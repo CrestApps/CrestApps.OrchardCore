@@ -902,6 +902,39 @@
       "evidenceLocation": "ContactCenterOptionsValidationTests enumerates every *Options type in the governed assemblies by reflection and fails when one accepts operator input without a registered IValidateOptions, with discovery pinned by a floor so it cannot pass vacuously and exemptions asserted to name real types; it also pins that ValidateOnStart is inert inside a per-tenant container, which is why TenantOptionsStartupValidator exists. ContactCenterConfigurationFailClosedTests boots a real Orchard host and proves a tenant carrying a negative retention window, a sub-one health threshold or an unrecognized topology profile refuses to activate, with a valid-configuration control proving activation is otherwise reachable."
     },
     {
+      "id": "O008",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "W8.5-preview-export-quiesce-reset",
+      "gate": "Preview data export, quiesce, reset and verify",
+      "invariant": "A tenant that piloted the preview can export every Contact Center document, quiesce all enabled features, delete either operational data or all data, and verify the result. The destructive step is coupled to the recoverable one: reset requires an export receipt derived from live per-data-set counts, so it refuses when the export is stale or the tenant is still admitting work, and it refuses by default, outside development, and on a confirmation token that does not match the tenant. Every persisted document type is classified in one registry, so a new entity cannot escape both export and reset.",
+      "testId": "CC-O008",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ContactCenterPreviewMaintenanceCompletenessTests compares the data-set registry against the persisted document types discovered by reflection, with a discovery floor so it cannot pass vacuously, and fails when a type is unclassified, duplicated, or mapped to a governance category that does not resolve. ContactCenterPreviewMaintenanceTests exercises export, quiesce, reset and verify against a real YesSql SQLite store and pins each refusal path, that an operational reset preserves operator-authored configuration while an All reset does not, and that a write after the export makes the receipt stale. ContactCenterPreviewMaintenanceActivationTests repeats the whole cycle inside a real Orchard tenant so the container registration, options binding and lifecycle participants are proven, not assumed."
+    },
+    {
       "id": "S001",
       "severity": "P0",
       "category": "security",

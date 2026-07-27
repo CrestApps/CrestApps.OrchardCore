@@ -31,4 +31,12 @@ public interface IContactCenterFeatureWorkManager
     /// </summary>
     /// <param name="featureId">The owning Orchard feature identifier.</param>
     void Activate(string featureId);
+
+    /// <summary>
+    /// Determines whether work admission is currently closed for the specified feature. Maintenance procedures
+    /// that must not race against live traffic use this to prove the tenant is quiesced before they run.
+    /// </summary>
+    /// <param name="featureId">The owning Orchard feature identifier.</param>
+    /// <returns><see langword="true"/> when the feature is quiescing; otherwise, <see langword="false"/>.</returns>
+    bool IsQuiescing(string featureId);
 }

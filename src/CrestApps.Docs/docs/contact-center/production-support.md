@@ -360,6 +360,34 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 
 **Backup and restore.** All durable Contact Center state lives in the tenant SQL database (see the [failure runbooks](runbooks.md)); back it up with the engine's native, point-in-time-capable mechanism. Because the interaction event log is the projection-rebuild source, keep `ProjectionReplayHorizonDays` and `LegalHoldMinimumDays` set so a point-in-time restore retains enough history to rebuild projections — after a restore, run the metrics projection rebuild to reconcile any drift. Provider-held recordings are backed up by their owning store, not by the Contact Center database backup, so a full restore must coordinate the database restore with the media store's own retention and restore policy.
 
+## Preview data maintenance
+
+Contact Center is a preview capability, so a tenant that piloted it accumulates operational data — interactions, activities, assignments, agent sessions, dialer records — that an operator must be able to take away and clear before a real rollout. Deleting rows by hand is not a substitute: the entity set spans twenty-one document types, and a table missed by hand leaves orphaned state that later reads treat as live work.
+
+The `CrestApps.OrchardCore.ContactCenter.Maintenance` feature provides the procedure, as four steps under **Contact Center → Preview maintenance** (guarded by the `ManageContactCenterPreviewData` permission):
+
+1. **Export** — writes every document in the Contact Center collection to a single JSON file and returns an *export receipt*.
+2. **Quiesce** — stops each enabled feature from admitting new work and drains what is already in flight.
+3. **Reset** — deletes the data, either `OperationalData` (preserving operator-authored configuration such as queues, skills, routing entry points, agent profiles, and business hours) or `All`.
+4. **Verify** — recounts every data set and reports anything that survived.
+
+The steps are mechanically coupled rather than merely documented in order. The receipt is a hash of the tenant name and the per-data-set document counts at the moment of export; a reset recomputes it from live state and refuses a receipt that no longer matches. A tenant that is still admitting work therefore keeps invalidating its own receipt, so **the reset cannot succeed unless the export is genuinely complete and the tenant is genuinely quiesced**. An operator cannot reach the destructive step having skipped the step that makes it recoverable.
+
+Reset refuses unless every guard passes, and reports which one refused:
+
+| Guard | Refusal |
+| --- | --- |
+| `CrestApps_ContactCenter:PreviewMaintenance:AllowReset` is `true` | `ResetNotAllowed` — the default, so no deployment can reset without explicitly opting in. |
+| The environment is not production | `ProductionEnvironment` — overridable only by setting `RefuseResetInProduction` to `false`. |
+| The typed confirmation matches the tenant name | `ConfirmationTokenMismatch` — an operator cannot wipe the tenant they are not looking at. |
+| Every enabled feature is quiesced | `WorkNotQuiesced` |
+| A receipt was supplied | `ExportReceiptMissing` |
+| The receipt matches current counts | `ExportReceiptStale` |
+
+Which data sets belong to which governance category, and which count as operator-authored configuration, is declared in one registry that a build gate compares against the persisted document types discovered by reflection. Adding a new persisted entity without classifying it fails the build rather than silently escaping both export and reset.
+
+Reset is a preview-lifecycle tool, not a retention mechanism. Ordinary data minimization is handled by the retention windows and per-entity governance described above.
+
 ## Upgrade and migration safety
 
 Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:

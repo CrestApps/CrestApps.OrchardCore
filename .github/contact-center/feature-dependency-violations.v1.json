@@ -390,6 +390,10 @@
       "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.Omnichannel",
       "OrchardCore.Workflows"
+    ],
+    "CrestApps.OrchardCore.ContactCenter.Maintenance": [
+      "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.Omnichannel"
     ]
   }
 }

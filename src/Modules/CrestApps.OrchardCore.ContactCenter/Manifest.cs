@@ -239,3 +239,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Workflows",
     ]
 )]
+
+[assembly: Feature(
+    Id = ContactCenterConstants.Feature.Maintenance,
+    Name = "Contact Center Preview Maintenance",
+    Description = "Adds the operator-visible export, quiesce, reset, and verify procedure that makes a breaking Contact Center data change recoverable on a preview tenant.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Area,
+    ]
+)]

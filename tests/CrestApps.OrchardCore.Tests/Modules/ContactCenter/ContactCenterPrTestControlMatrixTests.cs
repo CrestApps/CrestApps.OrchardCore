@@ -9,7 +9,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
         ["C"] = 8,
         ["D"] = 9,
         ["F"] = 7,
-        ["O"] = 7,
+        ["O"] = 8,
         ["S"] = 6,
         ["T"] = 3,
         ["V"] = 4,
@@ -32,7 +32,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
 
         // Assert
         Assert.Equal("blocked-until-r0-r8-pass", matrix["releaseStatus"]?.GetValue<string>());
-        Assert.Equal(44, gates.Count);
+        Assert.Equal(45, gates.Count);
         Assert.Equal(ids.Count, distinctIds.Count);
 
         foreach (var (prefix, expectedCount) in ExpectedGateCountByPrefix)
