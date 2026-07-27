@@ -34,6 +34,7 @@ public sealed class ActivityReservationSharedDatabaseTests
             new QueueItemIndexProvider(),
             new AgentProfileIndexProvider(),
             new ActivityReservationIndexProvider(),
+            new ContactCenterWorkStateIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
@@ -190,6 +191,7 @@ public sealed class ActivityReservationSharedDatabaseTests
             new QueueItemIndexProvider(),
             new AgentProfileIndexProvider(),
             new ActivityReservationIndexProvider(),
+            new ContactCenterWorkStateIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
@@ -257,6 +259,15 @@ public sealed class ActivityReservationSharedDatabaseTests
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<string>("PresenceStatus", column => column.WithLength(50)),
+            collection: ContactCenterConstants.CollectionName);
+
+        await schemaBuilder.CreateMapIndexTableAsync<ContactCenterWorkStateIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("ActivityItemId", column => column.NotNull().Unique().WithLength(26))
+            .Column<string>("AssignmentStatus", column => column.WithLength(50))
+            .Column<string>("ReservationId", column => column.WithLength(26))
+            .Column<string>("ReservedById", column => column.WithLength(26))
+            .Column<string>("AssignedToId", column => column.WithLength(26)),
             collection: ContactCenterConstants.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ActivityReservationIndex>(table => table
@@ -354,6 +365,14 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(session);
         services.AddSingleton(clock.Object);
         services.AddLogging();
+        services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
+        services.AddSingleton<IContactCenterWorkStateManager>(provider => new ContactCenterWorkStateManager(
+            provider.GetRequiredService<IContactCenterWorkStateStore>(),
+            [],
+            NullLogger<CatalogManager<ContactCenterWorkState>>.Instance));
+        services.AddSingleton<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>();
+        services.AddSingleton<IContactCenterWorkStateService, ContactCenterWorkStateService>();
+        services.AddSingleton<IContactCenterActivityWriter, ContactCenterActivityWriter>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
 
         return services.BuildServiceProvider();

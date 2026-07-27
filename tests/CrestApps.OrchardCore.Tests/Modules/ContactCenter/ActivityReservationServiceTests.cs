@@ -731,11 +731,14 @@ public sealed class ActivityReservationServiceTests
         await service.ExpireDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        // The activity is written twice because routing no longer owns it: the first write reconciles the
+        // read model with the authoritative work state and the second applies the CRM-owned terminal status.
         Assert.Equal(
             [
                 "reservation-update",
                 "queue-dequeue",
                 "agent-update",
+                "activity-update",
                 "activity-update",
                 "interaction-update",
                 "publish",
@@ -896,11 +899,14 @@ public sealed class ActivityReservationServiceTests
         await service.ExpireDueAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        // The activity is written twice because routing no longer owns it: the first write reconciles the
+        // read model with the authoritative work state and the second applies the CRM-owned terminal status.
         Assert.Equal(
             [
                 "reservation-update",
                 "queue-dequeue",
                 "agent-update",
+                "activity-update",
                 "activity-update",
                 "interaction-update",
                 "publish",
@@ -1486,7 +1492,8 @@ public sealed class ActivityReservationServiceTests
             queueManager.Object,
             queueService.Object,
             interactionManager.Object,
-            activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
+            new FakeContactCenterActivityWriter(activityManager.Object),
             publisher.Object,
             providerCommandStateService is null ? [] : [providerCommandStateService.Object],
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,

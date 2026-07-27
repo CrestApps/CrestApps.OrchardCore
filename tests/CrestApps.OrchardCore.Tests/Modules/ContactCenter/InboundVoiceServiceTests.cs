@@ -556,7 +556,7 @@ public sealed class InboundVoiceServiceTests
                 activity,
                 It.IsAny<JsonNode>(),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.AtLeastOnce);
         harness.InteractionManager.Verify(
             manager => manager.UpdateAsync(
                 interaction,
@@ -662,7 +662,7 @@ public sealed class InboundVoiceServiceTests
                 activity,
                 It.IsAny<JsonNode>(),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.AtLeastOnce);
         harness.InteractionManager.Verify(
             manager => manager.UpdateAsync(
                 interaction,
@@ -780,7 +780,7 @@ public sealed class InboundVoiceServiceTests
                 activity,
                 It.IsAny<JsonNode>(),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.AtLeastOnce);
         harness.InteractionManager.Verify(
             manager => manager.UpdateAsync(
                 interaction,
@@ -1138,6 +1138,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IOmnichannelActivityManager> ActivityManager { get; } = new();
 
+        public Dictionary<string, OmnichannelActivity> Activities { get; } = new(StringComparer.Ordinal);
+
         public Mock<IContentManager> ContentManager { get; } = new();
 
         public Mock<IInteractionManager> InteractionManager { get; } = new();
@@ -1182,6 +1184,18 @@ public sealed class InboundVoiceServiceTests
             DistributedLock
                 .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
                 .ReturnsAsync((null, true));
+
+            // Routing owns assignment state in its own document and reconciles the activity afterwards, so the
+            // activity has to be resolvable by identifier for the reconciliation to reach the object the test holds.
+            ActivityManager
+                .Setup(m => m.CreateAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()))
+                .Callback<OmnichannelActivity, CancellationToken>((activity, _) => Activities[activity.ItemId] = activity)
+                .Returns(ValueTask.CompletedTask);
+
+            ActivityManager
+                .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string itemId, CancellationToken _) =>
+                    Activities.TryGetValue(itemId, out var activity) ? activity : null);
         }
 
         public void SetupNoContext()
@@ -1216,6 +1230,8 @@ public sealed class InboundVoiceServiceTests
                 ChannelEndpointManager.Object,
                 SubjectFlowSettingsService.Object,
                 ActivityManager.Object,
+                new FakeContactCenterWorkStateService(ActivityManager.Object),
+                new FakeContactCenterActivityWriter(ActivityManager.Object),
                 ContentManager.Object,
                 InteractionManager.Object,
                 QueueManager.Object,

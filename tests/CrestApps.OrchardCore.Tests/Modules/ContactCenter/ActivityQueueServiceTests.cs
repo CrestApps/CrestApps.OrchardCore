@@ -265,6 +265,7 @@ public sealed class ActivityQueueServiceTests
             queueItemManager.Object,
             queueManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             businessHours.Object,
             publisher.Object,
             session.Object,

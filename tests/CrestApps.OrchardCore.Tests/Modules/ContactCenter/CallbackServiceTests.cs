@@ -161,6 +161,12 @@ public sealed class CallbackServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-        return new CallbackService(callbackManager.Object, activityManager.Object, queueService.Object, publisher.Object, clock.Object);
+        return new CallbackService(
+            callbackManager.Object,
+            activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
+            queueService.Object,
+            publisher.Object,
+            clock.Object);
     }
 }

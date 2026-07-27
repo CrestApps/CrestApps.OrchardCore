@@ -21,6 +21,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     private readonly IQueueItemManager _queueItemManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -34,6 +35,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="serviceProvider">The service provider used to lazily resolve provider synchronization, which breaks the container cycle through <see cref="IAgentPresenceManager"/> and tolerates tenants that have not enabled the Voice feature.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
@@ -44,6 +46,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         IQueueItemManager queueItemManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<AgentWorkStateHealingService> logger)
@@ -54,6 +57,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         _queueItemManager = queueItemManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _workStateService = workStateService;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
@@ -299,22 +303,17 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         interaction.AgentId = null;
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        var activity = await _activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
-
-        if (activity is null)
+        await _workStateService.MutateAsync(interaction.ActivityItemId, workState =>
         {
-            return;
-        }
-
-        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-        activity.AssignedToId = null;
-        activity.AssignedToUsername = null;
-        activity.AssignedToUtc = null;
-        activity.ReservationId = null;
-        activity.ReservedById = null;
-        activity.ReservedByUsername = null;
-        activity.ReservedUtc = null;
-        activity.ReservationExpiresUtc = null;
-        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+            workState.AssignmentStatus = ActivityAssignmentStatus.Available;
+            workState.AssignedToId = null;
+            workState.AssignedToUsername = null;
+            workState.AssignedToUtc = null;
+            workState.ReservationId = null;
+            workState.ReservedById = null;
+            workState.ReservedByUsername = null;
+            workState.ReservedUtc = null;
+            workState.ReservationExpiresUtc = null;
+        }, cancellationToken);
     }
 }

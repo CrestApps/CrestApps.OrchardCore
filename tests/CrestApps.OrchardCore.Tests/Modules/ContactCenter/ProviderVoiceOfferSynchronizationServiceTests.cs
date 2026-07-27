@@ -90,6 +90,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             agentManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
             clock.Object,
             logger.Object);
@@ -174,6 +175,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             new Mock<IAgentProfileManager>().Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
@@ -249,6 +251,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             agentManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
@@ -338,6 +341,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             agentManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
@@ -406,6 +410,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             new Mock<IAgentProfileManager>().Object,
             new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
             CreateServiceProvider(),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
@@ -489,6 +494,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             agentManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
@@ -571,6 +577,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             reservationManager.Object,
             agentManager.Object,
             new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
             CreateServiceProvider(presenceManager.Object),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);

@@ -22,6 +22,7 @@ public static class ContactCenterPreviewDataSetRegistry
         new ContactCenterPreviewDataSetDescriptor(typeof(AgentSession), "agent-session", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(QueueItem), "queue-item", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ActivityReservation), "activity-reservation", isConfiguration: false),
+        new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterWorkState), "work-state", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterOutboxMessage), "outbox-message", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ProviderWebhookInboxMessage), "provider-inbox-message", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ProviderCommand), "provider-command", isConfiguration: false),

@@ -18,6 +18,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IInteractionManager _interactionManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IQueuedVoiceWorkOfferService _queuedVoiceWorkOfferService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -28,6 +29,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="presenceManager">The agent presence manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="queuedVoiceWorkOfferServices">The optional queued voice work offer services.</param>
     /// <param name="clock">The clock used to complete wrap-up timing.</param>
     /// <param name="logger">The logger.</param>
@@ -35,6 +37,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
         IInteractionManager interactionManager,
+        IContactCenterWorkStateService workStateService,
         IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
         IClock clock,
         ILogger<ContactCenterActivityDispositionHandler> logger)
@@ -42,6 +45,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         _agentManager = agentManager;
         _presenceManager = presenceManager;
         _interactionManager = interactionManager;
+        _workStateService = workStateService;
         _queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
         _clock = clock;
         _logger = logger;
@@ -54,9 +58,17 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
 
         var activity = request.Activity;
 
-        if (activity is null ||
-            activity.Status != ActivityStatus.Completed ||
-            string.IsNullOrWhiteSpace(activity.AssignedToId))
+        if (activity is null || activity.Status != ActivityStatus.Completed)
+        {
+            return;
+        }
+
+        // The assigned agent is read from routing's own work state rather than the CRM projection, because a
+        // disposition can be recorded in the same request that routing assigned the work in, before the
+        // projection has reconciled the activity row.
+        var workState = await _workStateService.GetAsync(activity.ItemId, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(workState?.AssignedToId))
         {
             return;
         }
@@ -69,7 +81,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
-        var agent = await _agentManager.FindByUserIdAsync(activity.AssignedToId, cancellationToken);
+        var agent = await _agentManager.FindByUserIdAsync(workState.AssignedToId, cancellationToken);
 
         if (agent is null ||
             !string.IsNullOrWhiteSpace(agent.ActiveReservationId) ||

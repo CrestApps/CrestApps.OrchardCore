@@ -27,7 +27,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityQueueService _queueService;
     private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -46,7 +47,8 @@ public sealed class ActivityReservationService : IActivityReservationService
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="queueService">The queue service used for dequeue operations.</param>
     /// <param name="interactionManager">The interaction manager.</param>
-    /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity lifecycle changes outside the routing transaction.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
@@ -62,7 +64,8 @@ public sealed class ActivityReservationService : IActivityReservationService
         IActivityQueueManager queueManager,
         IActivityQueueService queueService,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
         IContactCenterEventPublisher publisher,
         IEnumerable<IProviderCommandStateService> providerCommandStateServices,
         IContactCenterScopeExecutor scopeExecutor,
@@ -78,7 +81,8 @@ public sealed class ActivityReservationService : IActivityReservationService
         _queueManager = queueManager;
         _queueService = queueService;
         _interactionManager = interactionManager;
-        _activityManager = activityManager;
+        _workStateService = workStateService;
+        _activityWriter = activityWriter;
         _publisher = publisher;
         _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
         _scopeExecutor = scopeExecutor;
@@ -184,14 +188,14 @@ public sealed class ActivityReservationService : IActivityReservationService
         agent.LastAssignedUtc = now;
         await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
 
-        await UpdateActivityAsync(queueItem.ActivityItemId, activity =>
+        await _workStateService.MutateAsync(queueItem.ActivityItemId, workState =>
         {
-            activity.AssignmentStatus = ActivityAssignmentStatus.Reserved;
-            activity.ReservationId = reservation.ItemId;
-            activity.ReservedById = agent.UserId;
-            activity.ReservedByUsername = agent.UserName;
-            activity.ReservedUtc = now;
-            activity.ReservationExpiresUtc = reservation.ExpiresUtc;
+            workState.AssignmentStatus = ActivityAssignmentStatus.Reserved;
+            workState.ReservationId = reservation.ItemId;
+            workState.ReservedById = agent.UserId;
+            workState.ReservedByUsername = agent.UserName;
+            workState.ReservedUtc = now;
+            workState.ReservationExpiresUtc = reservation.ExpiresUtc;
         }, cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemReserved, reservation, cancellationToken);
@@ -262,12 +266,12 @@ public sealed class ActivityReservationService : IActivityReservationService
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 
-        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        await _workStateService.MutateAsync(reservation.ActivityItemId, workState =>
         {
-            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
-            activity.AssignedToId = agent?.UserId;
-            activity.AssignedToUsername = agent?.UserName;
-            activity.AssignedToUtc = _clock.UtcNow;
+            workState.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+            workState.AssignedToId = agent?.UserId;
+            workState.AssignedToUsername = agent?.UserName;
+            workState.AssignedToUtc = _clock.UtcNow;
         }, cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, cancellationToken);
@@ -440,24 +444,24 @@ public sealed class ActivityReservationService : IActivityReservationService
             agentReleased = true;
         }
 
-        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        await _workStateService.MutateAsync(reservation.ActivityItemId, workState =>
         {
-            if (!string.Equals(activity.ReservationId, reservation.ItemId, StringComparison.Ordinal))
+            if (!string.Equals(workState.ReservationId, reservation.ItemId, StringComparison.Ordinal))
             {
                 return;
             }
 
-            activity.AssignmentStatus = removeFromQueue
+            workState.AssignmentStatus = removeFromQueue
                 ? ActivityAssignmentStatus.Released
                 : ActivityAssignmentStatus.Available;
-            activity.ReservationId = null;
-            activity.ReservedById = null;
-            activity.ReservedByUsername = null;
-            activity.ReservedUtc = null;
-            activity.ReservationExpiresUtc = null;
-            activity.AssignedToId = null;
-            activity.AssignedToUsername = null;
-            activity.AssignedToUtc = null;
+            workState.ReservationId = null;
+            workState.ReservedById = null;
+            workState.ReservedByUsername = null;
+            workState.ReservedUtc = null;
+            workState.ReservationExpiresUtc = null;
+            workState.AssignedToId = null;
+            workState.AssignedToUsername = null;
+            workState.AssignedToUtc = null;
         }, cancellationToken);
 
         if (agentReleased)
@@ -631,25 +635,30 @@ public sealed class ActivityReservationService : IActivityReservationService
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 
-        await UpdateActivityAsync(reservation.ActivityItemId, activity =>
+        await _workStateService.MutateAsync(reservation.ActivityItemId, workState =>
         {
-            activity.AssignmentStatus = requeue
+            workState.AssignmentStatus = requeue
                 ? ActivityAssignmentStatus.Available
                 : ActivityAssignmentStatus.Released;
-            activity.ReservationId = null;
-            activity.ReservedById = null;
-            activity.ReservedByUsername = null;
-            activity.ReservedUtc = null;
-            activity.ReservationExpiresUtc = null;
-
-            if (!requeue)
-            {
-                activity.Status = unansweredAction == UnansweredOfferAction.Voicemail
-                    ? ActivityStatus.Completed
-                    : ActivityStatus.Cancelled;
-                activity.CompletedUtc = now;
-            }
+            workState.ReservationId = null;
+            workState.ReservedById = null;
+            workState.ReservedByUsername = null;
+            workState.ReservedUtc = null;
+            workState.ReservationExpiresUtc = null;
         }, cancellationToken);
+
+        if (!requeue)
+        {
+            var terminalStatus = unansweredAction == UnansweredOfferAction.Voicemail
+                ? ActivityStatus.Completed
+                : ActivityStatus.Cancelled;
+
+            await _activityWriter.ScheduleUpdateAsync(reservation.ActivityItemId, activity =>
+            {
+                activity.Status = terminalStatus;
+                activity.CompletedUtc = now;
+            }, cancellationToken);
+        }
 
         if (interaction is not null)
         {
@@ -741,25 +750,6 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         return metadata;
-    }
-
-    private async Task UpdateActivityAsync(string activityItemId, Action<OmnichannelActivity> mutate, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(activityItemId))
-        {
-            return;
-        }
-
-        var activity = await _activityManager.FindByIdAsync(activityItemId, cancellationToken);
-
-        if (activity is null)
-        {
-            return;
-        }
-
-        mutate(activity);
-
-        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
     }
 
     private Task PublishAsync(string eventType, ActivityReservation reservation, CancellationToken cancellationToken)

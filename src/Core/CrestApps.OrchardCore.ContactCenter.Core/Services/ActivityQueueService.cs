@@ -18,6 +18,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ISession _session;
@@ -30,6 +31,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="queueItemManager">The queue item manager.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="businessHours">The business-hours service used to evaluate after-hours overflow.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
@@ -39,6 +41,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IQueueItemManager queueItemManager,
         IActivityQueueManager queueManager,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
         ISession session,
@@ -48,6 +51,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _queueItemManager = queueItemManager;
         _queueManager = queueManager;
         _activityManager = activityManager;
+        _workStateService = workStateService;
         _businessHours = businessHours;
         _publisher = publisher;
         _session = session;
@@ -91,7 +95,10 @@ public sealed class ActivityQueueService : IActivityQueueService
         item.ActivityItemId = activityItemId;
         item.Priority = priority ?? queue?.DefaultPriority ?? InteractionPriority.Normal;
         item.Status = QueueItemStatus.Waiting;
-        item.StickyAgentUserId = activity?.AssignedToId;
+        var existingWorkState = activity is null
+            ? null
+            : await _workStateService.GetAsync(activity.ItemId, cancellationToken);
+        item.StickyAgentUserId = existingWorkState?.AssignedToId;
         item.EnqueuedUtc = _clock.UtcNow;
         item.QueueEnteredUtc = item.EnqueuedUtc;
 
@@ -99,8 +106,10 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         if (activity is not null)
         {
-            activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-            await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+            await _workStateService.MutateAsync(
+                activity.ItemId,
+                workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+                cancellationToken);
         }
 
         await _session.SaveChangesAsync(cancellationToken);

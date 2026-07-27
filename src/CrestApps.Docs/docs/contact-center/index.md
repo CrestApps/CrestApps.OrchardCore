@@ -117,7 +117,7 @@ A small client helper (`contact-center-realtime` script resource, depending on t
 
 The [agent desktop and supervisor dashboard](agent-desktop.md) build directly on this layer.
 
-For a technical deep dive into the live voice paths, see [Inbound and Outbound Voice Routing Architecture](voice-routing.md).
+For a technical deep dive into the live voice paths, see [Inbound and Outbound Voice Routing Architecture](voice-routing.md). For which document owns assignment, reservation, and attempt state — and which one a routing decision must read — see [Routing Work State and the CRM Activity](routing-work-state.md).
 
 ## Domain events and reliable dispatch
 

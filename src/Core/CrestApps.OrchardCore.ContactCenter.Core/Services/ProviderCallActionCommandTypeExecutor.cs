@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
@@ -30,7 +29,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     private readonly IInteractionManager _interactionManager;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
 
@@ -40,7 +40,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// <param name="telephonyServices">The optional telephony services used to execute the provider action.</param>
     /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
     /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
-    /// <param name="activityManager">The CRM activity manager used to restore live work after a definitive action failure.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
@@ -48,7 +49,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
         IActivityQueueService queueService,
-        IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
         IContactCenterEventPublisher publisher,
         IClock clock,
         ICallControlAuthorizationService callControlAuthorizationService)
@@ -57,7 +59,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         _interactionManager = interactionManager;
         _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
-        _activityManager = activityManager;
+        _workStateService = workStateService;
+        _activityWriter = activityWriter;
         _publisher = publisher;
         _clock = clock;
     }
@@ -207,15 +210,16 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             !string.IsNullOrWhiteSpace(request.QueueId))
         {
             await _queueService.EnqueueAsync(request.ActivityItemId, request.QueueId, null, cancellationToken);
-            var activity = await _activityManager.FindByIdAsync(request.ActivityItemId, cancellationToken);
+            await _workStateService.MutateAsync(
+                request.ActivityItemId,
+                workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+                cancellationToken);
 
-            if (activity is not null)
+            await _activityWriter.ScheduleUpdateAsync(request.ActivityItemId, activity =>
             {
-                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
                 activity.Status = ActivityStatus.AwaitingAgentResponse;
                 activity.CompletedUtc = null;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
+            }, cancellationToken);
 
             interaction.Status = InteractionStatus.Created;
             interaction.EndedUtc = null;

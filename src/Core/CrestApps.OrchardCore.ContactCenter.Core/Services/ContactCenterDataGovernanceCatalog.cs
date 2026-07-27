@@ -123,6 +123,16 @@ public static class ContactCenterDataGovernanceCatalog
         },
         new ContactCenterDataCategory
         {
+            Key = "work-state",
+            DisplayName = "Work state",
+            Sensitivity = ContactCenterDataSensitivity.Personal,
+            ContainsRecordingReference = false,
+            RetentionBasis = "Retained while the work item is routable; erased with the activity it routes.",
+            ErasureStrategy = ContactCenterErasureStrategy.CascadeWithInteraction,
+            Description = "The authoritative routing state for a work item, holding its assignment status, reservation, attempt count, and the identity of the agent who reserved or was assigned it. The agent identity makes it personal data.",
+        },
+        new ContactCenterDataCategory
+        {
             Key = "event-metric",
             DisplayName = "Event metric",
             Sensitivity = ContactCenterDataSensitivity.NonPersonal,

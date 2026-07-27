@@ -21,6 +21,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     private readonly IActivityReservationManager _reservationManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -34,6 +35,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     /// <param name="reservationManager">The reservation manager.</param>
     /// <param name="agentManager">The agent manager.</param>
     /// <param name="activityManager">The activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="serviceProvider">The service provider used to lazily resolve presence management without an event-publisher cycle.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
@@ -44,6 +46,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         IActivityReservationManager reservationManager,
         IAgentProfileManager agentManager,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ProviderVoiceOfferSynchronizationService> logger)
@@ -54,6 +57,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         _reservationManager = reservationManager;
         _agentManager = agentManager;
         _activityManager = activityManager;
+        _workStateService = workStateService;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
@@ -182,16 +186,18 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             return;
         }
 
-        activity.AssignmentStatus = ActivityAssignmentStatus.Released;
-        activity.AssignedToId = null;
-        activity.AssignedToUsername = null;
-        activity.AssignedToUtc = null;
-        activity.ReservationId = null;
-        activity.ReservedById = null;
-        activity.ReservedByUsername = null;
-        activity.ReservedUtc = null;
-        activity.ReservationExpiresUtc = null;
-        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+        await _workStateService.MutateAsync(activity.ItemId, workState =>
+        {
+            workState.AssignmentStatus = ActivityAssignmentStatus.Released;
+            workState.AssignedToId = null;
+            workState.AssignedToUsername = null;
+            workState.AssignedToUtc = null;
+            workState.ReservationId = null;
+            workState.ReservedById = null;
+            workState.ReservedByUsername = null;
+            workState.ReservedUtc = null;
+            workState.ReservationExpiresUtc = null;
+        }, cancellationToken);
     }
 
     private static bool IsTerminalState(VoiceCallState? state)

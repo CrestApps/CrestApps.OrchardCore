@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules;
@@ -31,7 +30,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IAgentProfileManager _agentManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IClock _clock;
 
     /// <summary>
@@ -40,7 +39,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     /// <param name="dispatchValidators">The policy validators applied before recovering a pending dispatch.</param>
     /// <param name="voiceCallRouter">The router used to execute outbound voice commands.</param>
     /// <param name="interactionManager">The manager used to project interaction outcomes.</param>
-    /// <param name="activityManager">The manager used to project CRM activity outcomes.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="clock">The clock used to stamp UTC timestamps on projections.</param>
     /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
@@ -48,7 +47,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
         IVoiceContactCenterCallRouter voiceCallRouter,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        IContactCenterActivityWriter activityWriter,
         IClock clock,
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentManager)
@@ -58,7 +57,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _agentManager = agentManager;
-        _activityManager = activityManager;
+        _activityWriter = activityWriter;
         _clock = clock;
     }
 
@@ -181,13 +180,10 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
         {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
-
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Dialing;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Dialing,
+                cancellationToken);
         }
 
         if (!sessionConflict && ownedSession is not null && string.IsNullOrWhiteSpace(ownedSession.ProviderCallId))
@@ -221,13 +217,10 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
         {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
-
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Failed;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Failed,
+                cancellationToken);
         }
     }
 
@@ -252,13 +245,10 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
         {
-            var activity = await _activityManager.FindByIdAsync(command.ActivityItemId, cancellationToken);
-
-            if (activity is not null)
-            {
-                activity.Status = ActivityStatus.Dialing;
-                await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
-            }
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Dialing,
+                cancellationToken);
         }
     }
 

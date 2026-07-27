@@ -632,7 +632,7 @@ public sealed class DialProviderCommandTypeExecutorTests
             actualValidators,
             router.Object,
             interactionManager.Object,
-            activityManager.Object,
+            new FakeContactCenterActivityWriter(activityManager.Object),
             clock.Object,
             callSessionManager.Object,
             dialAgentManager.Object);

@@ -545,6 +545,8 @@ public sealed class DialerAttemptServiceTests
             compensationService,
             interactionManager.Object,
             activityManager.Object,
+            new FakeContactCenterWorkStateService(activityManager.Object),
+            new FakeContactCenterActivityWriter(activityManager.Object),
             agentManager.Object,
             voiceCallRouter.Object,
             publisher.Object,

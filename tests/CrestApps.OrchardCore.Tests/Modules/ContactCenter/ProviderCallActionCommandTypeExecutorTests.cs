@@ -533,6 +533,8 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         queueService ??= new Mock<IActivityQueueService>(MockBehavior.Loose);
         activityManager ??= new Mock<IOmnichannelActivityManager>(MockBehavior.Loose);
         callControlAuthorizationService ??= new FakeCallControlAuthorizationService();
+        var workStateService = new FakeContactCenterWorkStateService(activityManager.Object);
+        var activityWriter = new FakeContactCenterActivityWriter(activityManager.Object);
 
         return commandType switch
         {
@@ -540,7 +542,8 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 [telephonyService.Object],
                 interactionManager.Object,
                 queueService.Object,
-                activityManager.Object,
+                workStateService,
+                activityWriter,
                 publisher.Object,
                 clock.Object,
                 callControlAuthorizationService),
@@ -548,7 +551,8 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 [telephonyService.Object],
                 interactionManager.Object,
                 queueService.Object,
-                activityManager.Object,
+                workStateService,
+                activityWriter,
                 publisher.Object,
                 clock.Object,
                 callControlAuthorizationService),

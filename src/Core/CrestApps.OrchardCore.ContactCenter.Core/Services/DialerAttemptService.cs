@@ -22,6 +22,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IDialerAttemptCompensationService _compensationService;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IAgentProfileManager _agentManager;
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterEventPublisher _publisher;
@@ -37,6 +39,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="compensationService">The service used to release failed or suppressed attempts.</param>
     /// <param name="interactionManager">The interaction manager used to record attempts.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
@@ -49,6 +53,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IDialerAttemptCompensationService compensationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
         IAgentProfileManager agentManager,
         IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterEventPublisher publisher,
@@ -61,6 +67,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _compensationService = compensationService;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
+        _workStateService = workStateService;
+        _activityWriter = activityWriter;
         _agentManager = agentManager;
         _voiceCallRouter = voiceCallRouter;
         _publisher = publisher;
@@ -146,8 +154,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         try
         {
-            activity.Attempts++;
-            await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+            await _workStateService.MutateAsync(
+                activity.ItemId,
+                workState => workState.Attempts++,
+                cancellationToken);
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
             await _publisher.PublishAsync(new InteractionEvent
             {
@@ -195,8 +205,10 @@ public sealed class DialerAttemptService : IDialerAttemptService
 
         if (status.HasValue)
         {
-            activity.Status = status.Value;
-            await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+            await _activityWriter.ScheduleUpdateAsync(
+                activity.ItemId,
+                suppressed => suppressed.Status = status.Value,
+                cancellationToken);
         }
 
         await _compensationService.CompensateAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);

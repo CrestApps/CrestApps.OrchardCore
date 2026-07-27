@@ -286,8 +286,12 @@ public sealed class DialerEligibilityServiceTests
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
+            var workStateService = new FakeContactCenterWorkStateService();
+            workStateService.SeedFrom(activity);
+
             var service = new DefaultDialerEligibilityService(
                 InteractionManager.Object,
+                workStateService,
                 ContentManager.Object,
                 PhoneNumberService.Object,
                 BusinessHoursService.Object,

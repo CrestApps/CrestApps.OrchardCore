@@ -204,6 +204,17 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
             .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();
 
+        // Routing owns assignment and reservation state in its own document so that a routing transition never
+        // contends with a CRM edit of the same activity row. The work state itself is a Contact Center document
+        // with no CRM dependency; the projection onto the CRM activity is registered by the Administration
+        // feature, which is what declares the dependency on CRM activity management.
+        services
+            .AddScoped<IContactCenterWorkStateStore, ContactCenterWorkStateStore>()
+            .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
+            .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>()
+            .AddIndexProvider<ContactCenterWorkStateIndexProvider>()
+            .AddDataMigration<ContactCenterWorkStateIndexMigrations>();
+
         // The call-session index and its migration canonicalize provider identity, and this feature does not
         // depend on Telephony, so the resolver must also be available without the Telephony module.
         services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
@@ -258,6 +269,24 @@ public sealed class ContactCenterSharedHealthEndpointStartup : StartupBase
                 _shellConfiguration["CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
                 bool.TrueString,
                 StringComparison.OrdinalIgnoreCase));
+    }
+}
+
+/// <summary>
+/// Registers the seam between Contact Center routing state and the CRM activity.
+/// </summary>
+/// <remarks>
+/// These two services are the only Contact Center services that write a CRM activity, so they are registered by
+/// the one feature that declares a dependency on CRM activity management rather than by the base feature.
+/// </remarks>
+[Feature(ContactCenterConstants.Feature.Admin)]
+public sealed class ContactCenterAdminStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>()
+            .AddScoped<IContactCenterActivityWriter, ContactCenterActivityWriter>();
     }
 }
 

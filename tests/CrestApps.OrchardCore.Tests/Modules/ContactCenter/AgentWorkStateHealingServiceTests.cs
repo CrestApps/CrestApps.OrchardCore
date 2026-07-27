@@ -623,13 +623,16 @@ public sealed class AgentWorkStateHealingServiceTests
                 ? synchronizationService?.Object ?? Mock.Of<IProviderCallStateSynchronizationService>()
                 : null);
 
+        var resolvedActivityManager = activityManager?.Object ?? Mock.Of<IOmnichannelActivityManager>();
+
         return new AgentWorkStateHealingService(
             agentManager.Object,
             reservationManager.Object,
             reservationService.Object,
             queueItemManager.Object,
             interactionManager.Object,
-            activityManager?.Object ?? Mock.Of<IOmnichannelActivityManager>(),
+            resolvedActivityManager,
+            new FakeContactCenterWorkStateService(resolvedActivityManager),
             serviceProvider.Object,
             clock.Object,
             NullLogger<AgentWorkStateHealingService>.Instance);

@@ -1515,6 +1515,34 @@
         ]
       },
       "evidenceLocation": "VoiceEventFanOutIntegrationTests, plus the normalized-stream ownership case in ContactCenterFeatureDependencyArchitectureTests."
+    },
+    {
+      "id": "D011",
+      "severity": "P0",
+      "planFinding": "W2.1-contact-center-work-state-extraction",
+      "category": "data",
+      "gate": "Routing and the CRM wrote the same activity document, so one of the two writes was lost",
+      "invariant": "Routing state \u2014 assignment status, reservation, assignee, and attempt count \u2014 is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
+      "testId": "CC-D011",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ContactCenterWorkStateAuthorityTests, which scans every Contact Center source for routing-state writes on the CRM activity, self-tests that scan against the projector as a known-positive control, and exercises a reservation concurrent with a CRM edit against a real SQLite database."
     }
   ]
 }

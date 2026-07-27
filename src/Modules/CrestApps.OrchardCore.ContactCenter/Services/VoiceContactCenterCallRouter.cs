@@ -32,6 +32,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IContentManager _contentManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IActivityQueueManager _queueManager;
@@ -58,6 +60,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="channelEndpointManager">The channel endpoint manager used to map the dialed number to an endpoint.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service used to resolve the subject and campaign.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="contentManager">The content manager used to create the subject and load contacts.</param>
     /// <param name="interactionManager">The interaction manager used to record communication history.</param>
     /// <param name="queueManager">The queue manager used to resolve the inbound queue.</param>
@@ -80,6 +84,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IOmnichannelChannelEndpointManager channelEndpointManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
         IContentManager contentManager,
         IInteractionManager interactionManager,
         IActivityQueueManager queueManager,
@@ -102,6 +108,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _channelEndpointManager = channelEndpointManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _activityManager = activityManager;
+        _workStateService = workStateService;
+        _activityWriter = activityWriter;
         _contentManager = contentManager;
         _interactionManager = interactionManager;
         _queueManager = queueManager;
@@ -441,10 +449,10 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             };
         }
 
-        activity.Status = activityStatus;
-        activity.AssignmentStatus = ActivityAssignmentStatus.Released;
-        activity.TerminalReasonCode = reasonCode;
-        activity.CompletedUtc = endedUtc;
+        await _workStateService.MutateAsync(
+            activity.ItemId,
+            workState => workState.AssignmentStatus = ActivityAssignmentStatus.Released,
+            cancellationToken);
 
         interaction.Status = providerCommand is null
             ? interactionStatus
@@ -454,7 +462,13 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
             : null;
         interaction.TechnicalMetadata[RoutingTerminalReasonMetadataKey] = reasonCode;
 
-        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+        await _activityWriter.ScheduleUpdateAsync(activity.ItemId, terminated =>
+        {
+            terminated.Status = activityStatus;
+            terminated.TerminalReasonCode = reasonCode;
+            terminated.CompletedUtc = endedUtc;
+        }, cancellationToken);
+
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
         if (providerCommand is not null)
@@ -590,7 +604,6 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         activity.PreferredDestination = fromAddress;
         activity.CampaignId = flow?.CampaignId;
         activity.SubjectContentType = flow?.SubjectContentType;
-        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
         activity.Status = ActivityStatus.AwaitingAgentResponse;
         activity.ScheduledUtc = now;
         activity.CreatedUtc = now;
@@ -621,6 +634,17 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         if (!string.IsNullOrEmpty(activity.SubjectContentType))
         {
             activity.Subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
+
+        // Routing state is created before the activity is persisted so the activity's read model is already
+        // reconciled on its first write, instead of costing a second write to converge.
+        var workState = await _workStateService.MutateAsync(
+            activity.ItemId,
+            state => state.AssignmentStatus = ActivityAssignmentStatus.Available);
+
+        if (workState is not null)
+        {
+            ContactCenterWorkStateProjector.Apply(activity, workState);
         }
 
         await _activityManager.CreateAsync(activity);

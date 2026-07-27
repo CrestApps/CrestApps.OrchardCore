@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 {
     private readonly IInteractionManager _interactionManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IContentManager _contentManager;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IBusinessHoursService _businessHoursService;
@@ -29,6 +30,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// Initializes a new instance of the <see cref="DefaultDialerEligibilityService"/> class.
     /// </summary>
     /// <param name="interactionManager">The interaction manager used to evaluate the retry cool-down.</param>
+    /// <param name="workStateService">The routing-owned work state service that holds the authoritative attempt count.</param>
     /// <param name="contentManager">The content manager used to load the contact's communication preferences.</param>
     /// <param name="phoneNumberService">The phone number service used to normalize destinations to E.164.</param>
     /// <param name="businessHoursService">The business-hours service used to evaluate calling calendars.</param>
@@ -37,6 +39,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="clock">The clock used to evaluate cool-down and calling-window timing.</param>
     public DefaultDialerEligibilityService(
         IInteractionManager interactionManager,
+        IContactCenterWorkStateService workStateService,
         IContentManager contentManager,
         IPhoneNumberService phoneNumberService,
         IBusinessHoursService businessHoursService,
@@ -45,6 +48,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IClock clock)
     {
         _interactionManager = interactionManager;
+        _workStateService = workStateService;
         _contentManager = contentManager;
         _phoneNumberService = phoneNumberService;
         _businessHoursService = businessHoursService;
@@ -70,7 +74,10 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
                 "The activity has no destination to dial.");
         }
 
-        if (activity.Attempts >= profile.MaxAttempts)
+        var workState = await _workStateService.GetAsync(activity.ItemId, cancellationToken);
+        var attempts = workState?.Attempts ?? 0;
+
+        if (attempts >= profile.MaxAttempts)
         {
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.MaxAttemptsReached,

@@ -21,6 +21,7 @@ public sealed class CallbackService : ICallbackService
 
     private readonly ICallbackRequestManager _callbackManager;
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
@@ -30,18 +31,21 @@ public sealed class CallbackService : ICallbackService
     /// </summary>
     /// <param name="callbackManager">The callback manager.</param>
     /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="queueService">The queue service used to enqueue promoted callbacks.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp callback times.</param>
     public CallbackService(
         ICallbackRequestManager callbackManager,
         IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
         IActivityQueueService queueService,
         IContactCenterEventPublisher publisher,
         IClock clock)
     {
         _callbackManager = callbackManager;
         _activityManager = activityManager;
+        _workStateService = workStateService;
         _queueService = queueService;
         _publisher = publisher;
         _clock = clock;
@@ -148,12 +152,16 @@ public sealed class CallbackService : ICallbackService
         activity.CampaignId = callback.CampaignId;
         activity.ContactContentItemId = callback.ContactContentItemId;
         activity.ContactContentType = callback.ContactContentType;
-        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
         activity.Status = ActivityStatus.NotStated;
         activity.ScheduledUtc = now;
         activity.CreatedUtc = now;
 
         await _activityManager.CreateAsync(activity, cancellationToken: cancellationToken);
+
+        await _workStateService.MutateAsync(
+            activity.ItemId,
+            workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+            cancellationToken);
 
         return activity;
     }

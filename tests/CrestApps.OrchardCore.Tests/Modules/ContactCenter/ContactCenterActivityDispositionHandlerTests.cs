@@ -38,10 +38,19 @@ public sealed class ContactCenterActivityDispositionHandlerTests
 
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
         var interactionManager = new Mock<IInteractionManager>();
+        var workStateService = new FakeContactCenterWorkStateService();
+        workStateService.Seed(new ContactCenterWorkState
+        {
+            ItemId = "work-state-1",
+            ActivityItemId = "activity-1",
+            AssignedToId = "user-1",
+        });
+
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
             interactionManager.Object,
+            workStateService,
             [offerService.Object],
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
@@ -85,10 +94,19 @@ public sealed class ContactCenterActivityDispositionHandlerTests
         var presenceManager = new Mock<IAgentPresenceManager>();
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
         var interactionManager = new Mock<IInteractionManager>();
+        var workStateService = new FakeContactCenterWorkStateService();
+        workStateService.Seed(new ContactCenterWorkState
+        {
+            ItemId = "work-state-1",
+            ActivityItemId = "activity-1",
+            AssignedToId = "user-1",
+        });
+
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
             interactionManager.Object,
+            workStateService,
             [offerService.Object],
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
@@ -141,10 +159,19 @@ public sealed class ContactCenterActivityDispositionHandlerTests
 
         var offerService = new Mock<IQueuedVoiceWorkOfferService>();
         var interactionManager = new Mock<IInteractionManager>();
+        var workStateService = new FakeContactCenterWorkStateService();
+        workStateService.Seed(new ContactCenterWorkState
+        {
+            ItemId = "work-state-1",
+            ActivityItemId = "activity-1",
+            AssignedToId = "user-1",
+        });
+
         var handler = new ContactCenterActivityDispositionHandler(
             agentManager.Object,
             presenceManager.Object,
             interactionManager.Object,
+            workStateService,
             [offerService.Object],
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
