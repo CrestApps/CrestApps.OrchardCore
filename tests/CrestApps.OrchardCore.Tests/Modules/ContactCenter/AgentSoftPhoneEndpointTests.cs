@@ -90,6 +90,7 @@ public sealed class AgentSoftPhoneEndpointTests
         };
         var provider = new Mock<ITelephonyProvider>();
         provider
+            .As<ITelephonySoftPhoneCredentialsProvider>()
             .Setup(service => service.GetClientCredentialsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TelephonyClientCredentials
             {
@@ -127,6 +128,7 @@ public sealed class AgentSoftPhoneEndpointTests
         // Arrange
         var provider = new Mock<ITelephonyProvider>();
         provider
+            .As<ITelephonySoftPhoneCredentialsProvider>()
             .Setup(service => service.GetClientCredentialsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TelephonyClientCredentials
             {

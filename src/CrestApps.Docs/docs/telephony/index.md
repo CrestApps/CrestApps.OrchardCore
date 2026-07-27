@@ -28,7 +28,7 @@ Provider event stream/webhook ──► server projection/reconciliation ──�
                                          └──SignalR CallStateChanged──► Browser state
 ```
 
-- **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts: `ITelephonyProvider`, `ITelephonyCallStateProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`, `ITelephonyAuthenticationProvider`, `ITelephonyAuthenticationService`, `ITelephonyUserTokenStore`, `ITelephonyInteractionStore`, `ITelephonyInteractionSynchronizationService`, the request/response and interaction models, `TelephonyProviderOptions`, `TelephonySettings`, and `TelephonyPermissions`. A provider module depends only on this package.
+- **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts: `ITelephonyProvider`, the per-capability operation contracts (`ITelephonyCallControlProvider`, `ITelephonyInboundCallProvider`, `ITelephonyHoldProvider`, `ITelephonyMuteProvider`, `ITelephonyTransferProvider`, `ITelephonyAttendedTransferProvider`, `ITelephonyConferenceProvider`, `ITelephonyDtmfProvider`, `ITelephonyVoicemailProvider`, `ITelephonySoftPhoneCredentialsProvider`) and their `TelephonyCapabilityContracts` map, `ITelephonyCallStateProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`, `ITelephonyAuthenticationProvider`, `ITelephonyAuthenticationService`, `ITelephonyUserTokenStore`, `ITelephonyInteractionStore`, `ITelephonyInteractionSynchronizationService`, the request/response and interaction models, `TelephonyProviderOptions`, `TelephonySettings`, and `TelephonyPermissions`. A provider module depends only on this package.
 - **`CrestApps.OrchardCore.Telephony`** contains the `TelephonyHub`, the default service and resolver
   implementations, the site settings, and the soft phone widget.
 - A **provider module** (such as DialPad or Asterisk) implements `ITelephonyProvider` and registers itself as a
@@ -38,25 +38,32 @@ If you are building another provider, see [Custom Telephony and Contact Center P
 
 ## The provider contract
 
-A telephony provider implements `ITelephonyProvider`. The interface is the adapter contract between
-the shared soft phone and a concrete telephony backend, and it covers the common soft phone
-operations:
+A telephony provider implements `ITelephonyProvider`, which declares only the provider's display name and
+the operations it advertises through the `Capabilities` property (a `TelephonyCapabilities` flags value).
+Every call operation lives on its own capability contract, so a provider implements exactly the operations
+its backend really supports:
 
-| Operation | Method |
-| --- | --- |
-| Dial | `DialAsync` |
-| Hang up | `HangupAsync` |
-| Hold (pause) | `HoldAsync` |
-| Resume | `ResumeAsync` |
-| Mute / Unmute | `MuteAsync` / `UnmuteAsync` |
-| Transfer | `TransferAsync` |
-| Merge calls | `MergeAsync` |
-| Send DTMF digits | `SendDigitsAsync` |
-| Answer / Reject inbound | `AnswerAsync` / `RejectAsync` |
-| Send to voicemail | `SendToVoicemailAsync` |
-| Client bootstrap | `GetClientCredentialsAsync` |
+| Operation | Capability | Contract and method |
+| --- | --- | --- |
+| Dial | `Dial` | `ITelephonyCallControlProvider.DialAsync` |
+| Hang up | `Hangup` | `ITelephonyCallControlProvider.HangupAsync` |
+| Hold (pause) | `Hold` | `ITelephonyHoldProvider.HoldAsync` |
+| Resume | `Resume` | `ITelephonyHoldProvider.ResumeAsync` |
+| Mute / Unmute | `Mute` | `ITelephonyMuteProvider.MuteAsync` / `UnmuteAsync` |
+| Blind transfer | `Transfer` | `ITelephonyTransferProvider.TransferAsync` |
+| Attended (warm) transfer | `AttendedTransfer` | `ITelephonyAttendedTransferProvider.StartAttendedTransferAsync` |
+| Merge calls | `Merge` | `ITelephonyConferenceProvider.MergeAsync` |
+| Send DTMF digits | `SendDigits` | `ITelephonyDtmfProvider.SendDigitsAsync` |
+| Answer / Reject inbound | `ReceiveCalls` | `ITelephonyInboundCallProvider.AnswerAsync` / `RejectAsync` |
+| Send to voicemail | `Voicemail` | `ITelephonyVoicemailProvider.SendToVoicemailAsync` |
+| Directory lookup | `Directory` | `ITelephonyDirectoryProvider.GetDirectoryAsync` |
+| Client bootstrap | — | `ITelephonySoftPhoneCredentialsProvider.GetClientCredentialsAsync` |
 
-Each provider also advertises the operations it supports through the `Capabilities` property (a `TelephonyCapabilities` flags value). The soft phone UI uses these flags to show or hide controls, and `DefaultTelephonyService` enforces the same capability before calling the provider so a hidden or forged client command fails closed.
+The soft phone UI uses the advertised flags to show or hide controls, and `DefaultTelephonyService` repeats
+the check server-side before calling the provider so a hidden or forged client command fails closed. It also
+requires the provider to implement the capability's declared contract, recorded once in
+`TelephonyCapabilityContracts`, so advertising a capability without implementing it and implementing a
+contract without advertising it both fail closed instead of dispatching.
 
 Live agent audio is advertised separately through the optional `ITelephonyAudioProvider` contract. `TelephonyAudioCapabilities` distinguishes browser audio from an external device or provider-owned application, and `TelephonyAudioModeResolver` applies these rules:
 
@@ -318,7 +325,7 @@ user.
 To add a new provider:
 
 1. Reference `CrestApps.OrchardCore.Telephony.Abstractions`.
-2. Implement `ITelephonyProvider`.
+2. Implement `ITelephonyProvider` plus a capability contract for each operation the backend supports.
 3. Register the provider and an `IConfigureOptions<TelephonyProviderOptions>` that reflects whether
    it is enabled based on the tenant settings:
 

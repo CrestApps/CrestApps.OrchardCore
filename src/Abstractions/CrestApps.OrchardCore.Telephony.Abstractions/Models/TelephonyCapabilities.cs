@@ -38,7 +38,7 @@ public enum TelephonyCapabilities
     Mute = 1 << 4,
 
     /// <summary>
-    /// The provider can transfer a call to another destination.
+    /// The provider can transfer a call to another destination without consulting it first.
     /// </summary>
     Transfer = 1 << 5,
 
@@ -66,4 +66,10 @@ public enum TelephonyCapabilities
     /// The provider can list directory destinations for call transfer.
     /// </summary>
     Directory = 1 << 10,
+
+    /// <summary>
+    /// The provider can perform an attended (warm) transfer, where the transferring party consults the
+    /// destination before the call is released to it.
+    /// </summary>
+    AttendedTransfer = 1 << 11,
 }

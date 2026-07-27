@@ -20,7 +20,22 @@ namespace CrestApps.OrchardCore.DialPad.Services;
 /// API key and per-user OAuth 2.0 authentication. All call control happens server-side, so the soft
 /// phone client never talks to DialPad directly.
 /// </summary>
-public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyAuthenticationProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+public sealed class DialPadTelephonyProvider :
+    ITelephonyProvider,
+    ITelephonyCallControlProvider,
+    ITelephonyInboundCallProvider,
+    ITelephonyHoldProvider,
+    ITelephonyMuteProvider,
+    ITelephonyTransferProvider,
+    ITelephonyConferenceProvider,
+    ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
+    ITelephonySoftPhoneCredentialsProvider,
+    ITelephonyAttendedTransferProvider,
+    ITelephonyAudioProvider,
+    ITelephonyAuthenticationProvider,
+    ITelephonyCallStateProvider,
+    ITelephonyDirectoryProvider
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -81,6 +96,7 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAud
                 TelephonyCapabilities.Resume |
                 TelephonyCapabilities.Mute |
                 TelephonyCapabilities.Transfer |
+                TelephonyCapabilities.AttendedTransfer |
                 TelephonyCapabilities.Merge |
                 TelephonyCapabilities.SendDigits |
                 TelephonyCapabilities.ReceiveCalls |
@@ -334,6 +350,10 @@ public sealed class DialPadTelephonyProvider : ITelephonyProvider, ITelephonyAud
     /// <inheritdoc/>
     public Task<TelephonyResult> UnmuteAsync(CallReference call, CancellationToken cancellationToken = default)
         => ExecuteCallActionAsync(call?.CallId, "unmute", body: null, () => BuildCall(call?.CallId, CallState.Connected), cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TelephonyResult> StartAttendedTransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
+        => TransferAsync(request, cancellationToken);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)

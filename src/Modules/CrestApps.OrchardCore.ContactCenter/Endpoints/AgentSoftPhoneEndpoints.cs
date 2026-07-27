@@ -125,12 +125,12 @@ internal static class AgentSoftPhoneEndpoints
 
         var provider = await telephonyProviderResolver.GetAsync();
 
-        if (provider is null)
+        if (provider is not ITelephonySoftPhoneCredentialsProvider credentialsProvider)
         {
             return TypedResults.NotFound();
         }
 
-        var credentials = await provider.GetClientCredentialsAsync(httpContext.RequestAborted);
+        var credentials = await credentialsProvider.GetClientCredentialsAsync(httpContext.RequestAborted);
 
         if (credentials?.AudioMode != TelephonyAudioMode.Browser || string.IsNullOrWhiteSpace(credentials.BrowserMediaAdapterName))
         {

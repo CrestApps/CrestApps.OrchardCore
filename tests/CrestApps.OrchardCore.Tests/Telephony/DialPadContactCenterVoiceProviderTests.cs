@@ -37,6 +37,10 @@ public sealed class DialPadContactCenterVoiceProviderTests
         // Arrange
         var telephonyProvider = new Mock<ITelephonyProvider>();
         telephonyProvider
+            .Setup(provider => provider.Capabilities)
+            .Returns(TelephonyCapabilities.Dial);
+        telephonyProvider
+            .As<ITelephonyCallControlProvider>()
             .Setup(provider => provider.DialAsync(It.IsAny<DialRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TelephonyResult.Unknown("The provider response was lost."));
 

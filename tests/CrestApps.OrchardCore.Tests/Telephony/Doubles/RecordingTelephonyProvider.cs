@@ -7,7 +7,20 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// <summary>
 /// A telephony provider that records the last invoked operation and returns a configurable result.
 /// </summary>
-internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyDirectoryProvider
+internal sealed class RecordingTelephonyProvider :
+    ITelephonyProvider,
+    ITelephonyCallControlProvider,
+    ITelephonyInboundCallProvider,
+    ITelephonyHoldProvider,
+    ITelephonyMuteProvider,
+    ITelephonyTransferProvider,
+    ITelephonyAttendedTransferProvider,
+    ITelephonyConferenceProvider,
+    ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
+    ITelephonySoftPhoneCredentialsProvider,
+    ITelephonyAudioProvider,
+    ITelephonyDirectoryProvider
 {
     public string LastOperation { get; private set; }
 
@@ -42,6 +55,9 @@ internal sealed class RecordingTelephonyProvider : ITelephonyProvider, ITelephon
 
     public Task<TelephonyResult> UnmuteAsync(CallReference call, CancellationToken cancellationToken = default)
         => Record("Unmute", call);
+
+    public Task<TelephonyResult> StartAttendedTransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
+        => Record("AttendedTransfer", request);
 
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
         => Record("Transfer", request);

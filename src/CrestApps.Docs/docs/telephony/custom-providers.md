@@ -15,7 +15,14 @@ There are five separate seams, and a provider may implement any combination supp
 
 | Seam | Interface | Responsibility |
 | --- | --- | --- |
-| Soft-phone call control | `ITelephonyProvider` | Dial, hang up, hold, resume, mute, transfer, merge, answer, reject, voicemail, and provider capabilities |
+| Provider identity | `ITelephonyProvider` | Display name and advertised `TelephonyCapabilities`. It declares no call operations |
+| Soft-phone call control | `ITelephonyCallControlProvider` | Dial and hang up |
+| Inbound call handling | `ITelephonyInboundCallProvider` | Answer and reject a ringing inbound call |
+| Hold and mute | `ITelephonyHoldProvider`, `ITelephonyMuteProvider` | Hold/resume and mute/unmute |
+| Transfer | `ITelephonyTransferProvider`, `ITelephonyAttendedTransferProvider` | Blind transfer, and attended transfer where the destination is consulted first |
+| Conference and DTMF | `ITelephonyConferenceProvider`, `ITelephonyDtmfProvider` | Merge calls and send digits |
+| Voicemail | `ITelephonyVoicemailProvider` | Send a ringing call to voicemail |
+| Soft-phone credentials | `ITelephonySoftPhoneCredentialsProvider` | Issue the client credentials the browser soft phone registers with |
 | Agent audio delivery | `ITelephonyAudioProvider` | Advertise browser and/or external-device audio, expose the configured mode, and name an executable browser media adapter |
 | Live call-state lookup | `ITelephonyCallStateProvider` | Query the provider's current server truth for a specific call so Contact Center can revalidate offers and reconcile restarts |
 | Contact Center identity | `IContactCenterVoiceProvider` | Stable provider identity, display name, delivery model, and capability metadata |
@@ -55,15 +62,49 @@ TelephonyHub / soft phone projection
 
 To appear as a telephony provider in **Settings → Communication → Telephony**, implement `ITelephonyProvider`.
 
+`ITelephonyProvider` declares only the provider's display name and its advertised `TelephonyCapabilities`. Every call operation lives on a separate capability contract, so you implement exactly the operations your backend really supports and nothing else. A provider that can only place and end calls is complete after two methods:
+
+```csharp
+public sealed class MyTelephonyProvider : ITelephonyProvider, ITelephonyCallControlProvider
+{
+    public LocalizedString Name => S["My PBX"];
+
+    public TelephonyCapabilities Capabilities => TelephonyCapabilities.Dial | TelephonyCapabilities.Hangup;
+
+    public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default) { /* ... */ }
+
+    public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default) { /* ... */ }
+}
+```
+
 At minimum, your provider should:
 
 1. Return a stable technical name and display name
 2. Advertise accurate `TelephonyCapabilities`
-3. Implement the call-control methods your backend really supports
+3. Implement the capability contract behind every capability it advertises
 4. Return provider-neutral `TelephonyCall` results
 5. Register the provider through the Telephony provider options configuration pattern used by the built-in modules
 
 Use `TelephonyCall.Metadata` only for contextual data that should travel with the call without polluting the shared contract with provider-specific fields.
+
+### Capabilities and contracts are checked together
+
+`TelephonyCapabilityContracts` records the contract each capability flag requires, and the shared telephony service refuses an operation unless the resolved provider **both** advertises the flag **and** implements the contract. Advertising a capability you did not implement fails closed, and implementing a contract you did not advertise fails closed too, so neither half alone can make an operation reachable.
+
+| Capability | Required contract |
+| --- | --- |
+| `Dial`, `Hangup` | `ITelephonyCallControlProvider` |
+| `ReceiveCalls` | `ITelephonyInboundCallProvider` |
+| `Hold`, `Resume` | `ITelephonyHoldProvider` |
+| `Mute` | `ITelephonyMuteProvider` |
+| `Transfer` | `ITelephonyTransferProvider` |
+| `AttendedTransfer` | `ITelephonyAttendedTransferProvider` |
+| `Merge` | `ITelephonyConferenceProvider` |
+| `SendDigits` | `ITelephonyDtmfProvider` |
+| `Voicemail` | `ITelephonyVoicemailProvider` |
+| `Directory` | `ITelephonyDirectoryProvider` |
+
+Blind and attended transfer are separate capabilities. A backend that can release a call to a destination but cannot consult that destination first advertises `Transfer` only; a warm transfer request then fails closed instead of reaching a method that would have to refuse it.
 
 ### Declare the agent audio path
 

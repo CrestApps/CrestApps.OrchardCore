@@ -7,7 +7,19 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// <summary>
 /// A telephony provider that also supports OAuth, used to test the authentication service.
 /// </summary>
-internal sealed class FakeAuthTelephonyProvider : ITelephonyProvider, ITelephonyAuthenticationProvider
+internal sealed class FakeAuthTelephonyProvider :
+    ITelephonyProvider,
+    ITelephonyCallControlProvider,
+    ITelephonyInboundCallProvider,
+    ITelephonyHoldProvider,
+    ITelephonyMuteProvider,
+    ITelephonyTransferProvider,
+    ITelephonyAttendedTransferProvider,
+    ITelephonyConferenceProvider,
+    ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
+    ITelephonySoftPhoneCredentialsProvider,
+    ITelephonyAuthenticationProvider
 {
     public bool RequiresUserAuthentication { get; set; } = true;
 
@@ -55,6 +67,9 @@ internal sealed class FakeAuthTelephonyProvider : ITelephonyProvider, ITelephony
         => Task.FromResult(TelephonyResult.Success());
 
     public Task<TelephonyResult> UnmuteAsync(CallReference call, CancellationToken cancellationToken = default)
+        => Task.FromResult(TelephonyResult.Success());
+
+    public Task<TelephonyResult> StartAttendedTransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult(TelephonyResult.Success());
 
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)

@@ -52,6 +52,10 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         // Arrange
         var telephonyProvider = new Mock<ITelephonyProvider>();
         telephonyProvider
+            .Setup(provider => provider.Capabilities)
+            .Returns(TelephonyCapabilities.Dial);
+        telephonyProvider
+            .As<ITelephonyCallControlProvider>()
             .Setup(provider => provider.DialAsync(
                 It.Is<DialRequest>(request => request.To == "+15551234567" && request.From == "+15550001000"),
                 It.IsAny<CancellationToken>()))
@@ -86,6 +90,10 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         // Arrange
         var telephonyProvider = new Mock<ITelephonyProvider>();
         telephonyProvider
+            .Setup(provider => provider.Capabilities)
+            .Returns(TelephonyCapabilities.Dial);
+        telephonyProvider
+            .As<ITelephonyCallControlProvider>()
             .Setup(provider => provider.DialAsync(It.IsAny<DialRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TelephonyResult.Success(new TelephonyCall
             {
@@ -120,6 +128,10 @@ public sealed class AsteriskContactCenterVoiceProviderTests
         // Arrange
         var telephonyProvider = new Mock<ITelephonyProvider>();
         telephonyProvider
+            .Setup(provider => provider.Capabilities)
+            .Returns(TelephonyCapabilities.Dial);
+        telephonyProvider
+            .As<ITelephonyCallControlProvider>()
             .Setup(provider => provider.DialAsync(It.IsAny<DialRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TelephonyResult.Unknown("The provider response was lost."));
 

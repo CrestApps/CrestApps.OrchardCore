@@ -1431,6 +1431,34 @@
         ]
       },
       "evidenceLocation": "AsteriskHangupCauseMapperTests, ContactCenterCallStateProjectionTests, ContactCenterCallStateProjectionArchitectureTests, and the Ingest_WheneverTheSessionEnds_AlwaysRecordsAHangupCause property in CallStateMachinePropertyTests."
+    },
+    {
+      "id": "V008",
+      "severity": "P1",
+      "planFinding": "W1.4-capability-contracts-replace-the-fat-provider-interface",
+      "category": "voice-provider",
+      "gate": "One fat provider interface forces every provider to fake every operation",
+      "invariant": "A telephony provider declares only identity and its advertised capabilities; every call operation lives on a separate capability contract, proven by a provider that compiles and dials while implementing call control alone. An operation executes only when the provider both advertises the capability and implements its declared contract, so advertising without implementing and implementing without advertising both fail closed rather than dispatching. Attended transfer is a distinct capability from blind transfer and is never satisfied by the blind-transfer contract. Every capability flag declares a required contract, and each shipped provider implements the contracts for the widest capability set its own capability source can ever advertise.",
+      "testId": "CC-V008",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "TelephonyProviderCapabilityContractTests, plus the capability-gating theories in DefaultTelephonyServiceTests."
     }
   ]
 }

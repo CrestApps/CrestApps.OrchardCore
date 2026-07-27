@@ -15,7 +15,20 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
-internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+internal abstract class AsteriskTelephonyProviderBase :
+    ITelephonyProvider,
+    ITelephonyCallControlProvider,
+    ITelephonyInboundCallProvider,
+    ITelephonyHoldProvider,
+    ITelephonyMuteProvider,
+    ITelephonyTransferProvider,
+    ITelephonyConferenceProvider,
+    ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
+    ITelephonySoftPhoneCredentialsProvider,
+    ITelephonyAudioProvider,
+    ITelephonyCallStateProvider,
+    ITelephonyDirectoryProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
@@ -447,11 +460,6 @@ internal abstract class AsteriskTelephonyProviderBase : ITelephonyProvider, ITel
         if (request is null || string.IsNullOrWhiteSpace(request.CallId) || string.IsNullOrWhiteSpace(request.To))
         {
             return TelephonyResult.Failed(S["A call id and destination are required to transfer the call."].Value);
-        }
-
-        if (request.Mode == TransferMode.Warm)
-        {
-            return TelephonyResult.Failed(S["Warm transfers are not supported."].Value);
         }
 
         var settings = await GetResolvedSettingsAsync(cancellationToken);

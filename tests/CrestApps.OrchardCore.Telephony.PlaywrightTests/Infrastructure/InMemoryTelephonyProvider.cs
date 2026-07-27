@@ -8,7 +8,20 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 /// An in-memory telephony provider used by the Playwright harness to exercise the soft phone widget
 /// and the SignalR hub contract without a real provider.
 /// </summary>
-public sealed class InMemoryTelephonyProvider : ITelephonyProvider, ITelephonyAudioProvider, ITelephonyCallStateProvider, ITelephonyDirectoryProvider
+public sealed class InMemoryTelephonyProvider :
+    ITelephonyProvider,
+    ITelephonyCallControlProvider,
+    ITelephonyInboundCallProvider,
+    ITelephonyHoldProvider,
+    ITelephonyMuteProvider,
+    ITelephonyTransferProvider,
+    ITelephonyConferenceProvider,
+    ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
+    ITelephonySoftPhoneCredentialsProvider,
+    ITelephonyAudioProvider,
+    ITelephonyCallStateProvider,
+    ITelephonyDirectoryProvider
 {
     private readonly ConcurrentDictionary<string, TelephonyCall> _calls = new();
     private readonly ConcurrentDictionary<string, byte> _publishedCallIds = new();

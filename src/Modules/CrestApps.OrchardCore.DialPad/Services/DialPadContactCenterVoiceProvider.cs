@@ -95,7 +95,15 @@ public sealed class DialPadContactCenterVoiceProvider :
             return Failure("provider_unavailable", "The DialPad telephony provider is not configured.");
         }
 
-        var result = await provider.DialAsync(new DialRequest
+        // Resolving a provider is not the same as it being able to place calls, so the dial contract is
+        // required explicitly rather than assumed from the provider registration.
+        if (!provider.Capabilities.HasFlag(TelephonyCapabilities.Dial) ||
+            provider is not ITelephonyCallControlProvider callControlProvider)
+        {
+            return Failure("provider_unavailable", "The DialPad telephony provider cannot place outbound calls.");
+        }
+
+        var result = await callControlProvider.DialAsync(new DialRequest
         {
             To = destination,
             From = callerId,
