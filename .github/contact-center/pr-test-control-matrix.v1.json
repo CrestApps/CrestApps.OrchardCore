@@ -935,6 +935,33 @@
       "evidenceLocation": "ContactCenterPreviewMaintenanceCompletenessTests compares the data-set registry against the persisted document types discovered by reflection, with a discovery floor so it cannot pass vacuously, and fails when a type is unclassified, duplicated, or mapped to a governance category that does not resolve. ContactCenterPreviewMaintenanceTests exercises export, quiesce, reset and verify against a real YesSql SQLite store and pins each refusal path, that an operational reset preserves operator-authored configuration while an All reset does not, and that a write after the export makes the receipt stale. ContactCenterPreviewMaintenanceActivationTests repeats the whole cycle inside a real Orchard tenant so the container registration, options binding and lifecycle participants are proven, not assumed."
     },
     {
+      "id": "O009",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "W15.3-n-1-rolling-upgrade",
+      "invariant": "A node still running the previous schema version keeps reading and writing every Contact Center index table after a node running the current version has upgraded the database, and the upgrade path converges on exactly the schema a fresh installation produces, including the unique constraints. An upgrade step may not add a non-nullable column without a default, drop or narrow a column the previous version still projects, or leave a freshly installed deployment and an upgraded deployment on different shapes.",
+      "gate": "N-1 rolling upgrade and install-path convergence",
+      "testId": "CC-O009",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ContactCenterRollingUpgradeTests builds two real SQLite databases from the shipped migrations. One takes the fresh-installation path, the other is installed at the previous schema version and then upgraded, after which a previous-version writer and a current-version writer both insert into the upgraded tables and the previous version's projection is read back. A third assertion compares every column definition and every unique constraint between the two databases, and discovery floors plus a strict-subset assertion stop the suite passing vacuously. The static additive-migration gate cannot cover this, because adding a non-nullable column with no default is additive and still breaks every previous-version write."
+    },
+    {
       "id": "S001",
       "severity": "P0",
       "category": "security",

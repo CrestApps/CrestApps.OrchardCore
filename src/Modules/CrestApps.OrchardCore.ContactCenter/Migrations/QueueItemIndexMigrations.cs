@@ -41,7 +41,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
-            .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
+            .Column<string>("ActivityClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(26))
             .Column<QueueItemStatus>("Status")
             .Column<InteractionPriority>("Priority")
             .Column<string>("AgentId", column => column.WithLength(26))
@@ -53,6 +53,16 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             .CreateIndex("IDX_QueueItemIndex_DocumentId", "DocumentId", "QueueId", "Status", "ActivityItemId", "AgentId"),
             collection: ContactCenterConstants.CollectionName
         );
+
+        // The claim constraint is created the same way the upgrade path creates it. Declaring it inline
+        // instead would leave a freshly installed database with a different shape than an upgraded one, and
+        // the two would then diverge again on the next rolling upgrade.
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(QueueItemIndex),
+            "UQ_QueueItemIndex_ActivityClaimKey",
+            "ActivityClaimKey");
 
         return 2;
     }

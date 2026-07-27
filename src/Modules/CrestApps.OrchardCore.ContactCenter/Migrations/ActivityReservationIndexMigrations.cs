@@ -40,9 +40,9 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ActivityReservationIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("ActivityItemId", column => column.WithLength(26))
-            .Column<string>("ActivityClaimKey", column => column.NotNull().Unique().WithLength(26))
+            .Column<string>("ActivityClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(26))
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<string>("AgentClaimKey", column => column.NotNull().Unique().WithLength(26))
+            .Column<string>("AgentClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(26))
             .Column<ReservationStatus>("Status")
             .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
             collection: ContactCenterConstants.CollectionName
@@ -52,6 +52,22 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             .CreateIndex("IDX_ActivityReservationIndex_DocumentId", "DocumentId", "AgentId", "Status", "ExpiresUtc"),
             collection: ContactCenterConstants.CollectionName
         );
+
+        // The claim constraints are created the same way the upgrade path creates them. Declaring them inline
+        // instead would leave a freshly installed database with a different shape than an upgraded one, and
+        // the two would then diverge again on the next rolling upgrade.
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ActivityReservationIndex),
+            "UQ_ActivityReservationIndex_ActivityClaimKey",
+            "ActivityClaimKey");
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ActivityReservationIndex),
+            "UQ_ActivityReservationIndex_AgentClaimKey",
+            "AgentClaimKey");
 
         return 2;
     }

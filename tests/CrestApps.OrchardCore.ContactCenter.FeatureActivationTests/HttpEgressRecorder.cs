@@ -5,8 +5,8 @@ using System.Net.Http;
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
 /// <summary>
-/// Records outbound HTTP requests issued through <see cref="HttpClient"/> anywhere in the process while the
-/// recorder is active.
+/// Records outbound HTTP requests issued through <see cref="HttpClient"/> from the logical call context that
+/// created the recorder, for as long as the recorder is active.
 /// </summary>
 /// <remarks>
 /// Observation is done through the <see cref="DiagnosticListener"/> that <see cref="HttpClient"/> writes to, rather
@@ -22,6 +22,16 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// than in-process observation, which is tracked as the packaging-harness follow-up.
 /// </para>
 /// <para>
+/// Observation is process-wide but attribution is not. The diagnostic listener is shared by the whole process, so a
+/// recorder that enqueued every event would also enqueue requests issued by tests running in parallel, and would
+/// report them against whatever it happened to be measuring. That is not a hypothetical: it made this check fail
+/// intermittently against another suite's health probes. Requests are therefore attributed through an
+/// <see cref="AsyncLocal{T}"/> set when the recorder is constructed. The diagnostic event is written synchronously on
+/// the thread that starts the request, so it observes the execution context of the code that issued it, and work the
+/// exercised code starts — including background work it schedules — inherits that context. A request from an
+/// unrelated context is another test's, not a finding.
+/// </para>
+/// <para>
 /// The recorder deliberately captures all destinations rather than filtering for known search endpoints. Matching on
 /// host names would only catch a regression that names its search cluster recognizably, and a deployment is free to
 /// call its cluster anything. A supported single-node correctness path has no legitimate out-of-process dependency
@@ -33,6 +43,8 @@ public sealed class HttpEgressRecorder : IDisposable, IObserver<DiagnosticListen
     private const string HttpListenerName = "HttpHandlerDiagnosticListener";
     private const string RequestStartEventName = "System.Net.Http.HttpRequestOut.Start";
 
+    private static readonly AsyncLocal<HttpEgressRecorder> _attributedRecorder = new();
+
     private readonly ConcurrentQueue<string> _observed = new();
     private readonly List<IDisposable> _subscriptions = [];
     private readonly IDisposable _allListeners;
@@ -42,6 +54,7 @@ public sealed class HttpEgressRecorder : IDisposable, IObserver<DiagnosticListen
     /// </summary>
     public HttpEgressRecorder()
     {
+        _attributedRecorder.Value = this;
         _allListeners = DiagnosticListener.AllListeners.Subscribe(this);
     }
 
@@ -100,7 +113,7 @@ public sealed class HttpEgressRecorder : IDisposable, IObserver<DiagnosticListen
 
         lock (_subscriptions)
         {
-            _subscriptions.Add(listener.Subscribe(new RequestObserver(_observed)));
+            _subscriptions.Add(listener.Subscribe(new RequestObserver(this)));
         }
     }
 
@@ -132,11 +145,11 @@ public sealed class HttpEgressRecorder : IDisposable, IObserver<DiagnosticListen
 
     private sealed class RequestObserver : IObserver<KeyValuePair<string, object>>
     {
-        private readonly ConcurrentQueue<string> _observed;
+        private readonly HttpEgressRecorder _owner;
 
-        public RequestObserver(ConcurrentQueue<string> observed)
+        public RequestObserver(HttpEgressRecorder owner)
         {
-            _observed = observed;
+            _owner = owner;
         }
 
         public void OnNext(KeyValuePair<string, object> value)
@@ -146,12 +159,17 @@ public sealed class HttpEgressRecorder : IDisposable, IObserver<DiagnosticListen
                 return;
             }
 
+            if (!ReferenceEquals(_attributedRecorder.Value, _owner))
+            {
+                return;
+            }
+
             // The payload is an anonymous type, so the request has to be read reflectively. A payload shape change
             // upstream must not silently turn the recorder into a no-op, so an unreadable payload is still recorded.
             var property = value.Value.GetType().GetProperty("Request");
             var request = property?.GetValue(value.Value) as HttpRequestMessage;
 
-            _observed.Enqueue(request is null
+            _owner._observed.Enqueue(request is null
                 ? "an outbound HTTP request whose destination could not be read from the diagnostic payload"
                 : $"{request.Method} {request.RequestUri}");
         }
