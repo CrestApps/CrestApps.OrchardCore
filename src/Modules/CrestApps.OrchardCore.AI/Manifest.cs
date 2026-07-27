@@ -58,3 +58,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ToolInstances,
+    Name = "AI Tool Instances",
+    Description = "Provides user interface to manage AI tool instances.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]

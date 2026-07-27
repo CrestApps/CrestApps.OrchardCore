@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIToolInstanceFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+            <span class="hint">@T["The unique technical name of this tool instance. It is used to build the function name the AI model calls and cannot be changed once created."]</span>
+        }
+        else
+        {
+            <input asp-for="Name" class="form-control" disabled="disabled" />
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["Explain what this specific instance does. The AI model relies on this description to decide when to call it and to tell it apart from other instances of the same source."]</span>
+    </div>
+</div>

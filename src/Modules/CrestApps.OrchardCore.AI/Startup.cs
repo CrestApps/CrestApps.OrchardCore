@@ -328,3 +328,24 @@ public sealed class ChatAnalyticsStartup : StartupBase
             .AddIndexProvider<AICompletionUsageIndexProvider>();
     }
 }
+
+/// <summary>
+/// Registers services and configuration for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+public sealed class ToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIToolInstanceServices();
+
+        services
+            .AddDataMigration<AIToolInstanceIndexMigrations>()
+            .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
+            .AddNavigationProvider<AIToolInstanceAdminMenu>()
+            .AddPermissionProvider<AIToolInstancePermissionsProvider>();
+    }
+}
