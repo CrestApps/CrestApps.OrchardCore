@@ -94,6 +94,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.DialPad",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Telephony.Abstractions",
+        "CrestApps.OrchardCore.Telephony.Core",
     ];
 
     /// <summary>
