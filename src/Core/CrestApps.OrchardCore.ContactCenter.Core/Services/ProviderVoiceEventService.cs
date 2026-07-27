@@ -274,7 +274,12 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         ApplyState(session, interaction, providerEvent.State, now);
         ApplyProviderDetails(session, interaction, providerEvent);
-        session.LastProviderEventUtc = now;
+
+        // The watermark is monotonic. Accepting a late terminal delivery must not rewind it, because a rewound
+        // watermark would re-admit deliveries the machine has already decided are stale.
+        session.LastProviderEventUtc = session.LastProviderEventUtc.HasValue && session.LastProviderEventUtc.Value > now
+            ? session.LastProviderEventUtc.Value
+            : now;
 
         if (providerEvent.SequenceNumber.HasValue)
         {
@@ -433,6 +438,18 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return true;
         }
 
+        // A terminal delivery is never stale. Provider nodes do not share a clock and do not all stamp
+        // sequence numbers, so a hangup can carry a timestamp behind the state change that preceded it or
+        // arrive unsequenced after a sequenced delivery. Applying the staleness guards to it would discard
+        // the only notification that the call is over, stranding the session in a live state forever: no
+        // CallEnded is published, wrap-up never starts, and the agent and reservation are never released.
+        // Ending twice is not a risk here, because an already terminal session is rejected above and an
+        // exact redelivery is rejected by the idempotency check before this method runs.
+        if (IsTerminalState(providerEvent.State))
+        {
+            return false;
+        }
+
         // Once a provider establishes a sequence domain, unsequenced deliveries cannot safely advance it.
         if (session.HighWaterSequence.HasValue)
         {
@@ -548,7 +565,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             session.ToAddress = providerEvent.ToAddress;
         }
 
-        if (providerEvent.IsMuted.HasValue)
+        // A terminal call is normalized as not muted by ApplyState, which runs first. Re-applying a provider
+        // mute flag here would contradict that decision and leave an ended call flagged as muted, so the flag
+        // is honored only while the call is still live.
+        if (providerEvent.IsMuted.HasValue && !IsTerminalState(session.State))
         {
             session.IsMuted = providerEvent.IsMuted.Value;
         }

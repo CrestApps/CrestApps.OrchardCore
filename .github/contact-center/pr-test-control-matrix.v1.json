@@ -1347,6 +1347,34 @@
         ]
       },
       "evidenceLocation": "AsteriskAriContractProvenanceTests, AsteriskAriEventContractTests, AsteriskAriRestContractTests, and DialPadWebhookContractTests replay the vendored Asterisk declarations and the recorded DialPad deliveries through the production mapper, ARI client, and webhook normalizer. The cassette set lives at tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes."
+    },
+    {
+      "id": "V006",
+      "severity": "P1",
+      "planFinding": "W5.6-call-state-machine-property-tests",
+      "category": "voice-provider",
+      "gate": "No call state machine property test",
+      "invariant": "The provider call state machine must converge to the same terminal session state, interaction status, and domain event set no matter how the provider delivers its lifecycle. Deliveries are generated with duplicates, full replays, arbitrary reordering, clock skew across provider nodes, partially sequenced streams, late backward state regressions, and competing terminal reports, and the resulting session must never regress its lifecycle rank, never resurrect a terminated call, never strand a call that the provider reported terminated, never publish a lifecycle domain event twice, and never leave live-only flags set on a terminated call.",
+      "testId": "CC-V006",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "CallStateMachinePropertyTests drives the production ProviderVoiceEventService and DefaultContactCenterEventPublisher over 400 seeded adversarial delivery sequences per property. The generator and harness live at tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/StateMachine."
     }
   ]
 }

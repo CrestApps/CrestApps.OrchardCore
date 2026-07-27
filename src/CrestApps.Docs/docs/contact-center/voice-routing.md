@@ -420,6 +420,21 @@ The current voice flow stays consistent because it combines these protections:
 - Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
 - Reconciliation currently repairs **known local provider-backed interactions**. It does not yet bootstrap a completely unknown live provider call that never got a local interaction before the restart window.
 
+## How the call state machine tolerates the way providers really deliver events
+
+Every provider event that carries a call state reaches Contact Center through `ProviderVoiceEventService`. That service is the single place where a provider report becomes a change to the call session and the interaction, and where the resulting domain events are published, so it is the component that has to absorb the difference between the lifecycle a provider *had* and the way that provider *delivered* it.
+
+Those two things do not match in production. Provider nodes do not share a clock, so a hangup can be stamped fractionally behind the state change that preceded it. Providers do not sequence every event type, so the same stream can mix sequenced and unsequenced deliveries. Retries and at-least-once webhook semantics mean any delivery can arrive twice, or the whole stream can be replayed. Network paths reorder. A provider can also report a call terminated more than once and disagree with itself about how it ended.
+
+The state machine handles this with four rules:
+
+- **Lifecycle rank, not raw ordering.** States are ranked (planned; dialing and ringing; connected and on hold; ending; terminal). A delivery that would move the session backwards down that ranking is ignored, so a late `ringing` cannot undo a `connected`.
+- **Terminal absorption.** Once a session is terminal it stops accepting further state reports, so a second, competing terminal report cannot rewrite how the call ended.
+- **Terminal deliveries bypass the staleness guards.** Sequence-number and timestamp staleness checks are deliberately *not* applied to a terminal state. Discarding a hangup because it looked stale is far worse than accepting one late: the session would stay live forever, `CallEnded` would never publish, wrap-up would never start, and the agent and their reservation would never be released.
+- **Terminated calls carry no live-only state.** Flags that only make sense while a call is up, such as mute, are cleared on termination and cannot be re-applied by a later delivery.
+
+`CallStateMachinePropertyTests` enforces all of this as properties rather than examples. It generates a real call lifecycle, then deliberately corrupts its delivery with duplicates, whole-stream replays, arbitrary reordering, clock skew wider than the spacing between events, mostly-unsequenced streams, late backward regressions stamped with the freshest timestamp and highest sequence, and competing terminal reports; it then drives the production service and the production event publisher over 400 seeded sequences per property and requires convergence to a single terminal outcome with no rank regression, no resurrection, no stranded call, no duplicated lifecycle event, and no live-only flag left set. A companion property asserts that the generator is still producing each hard case, so the suite cannot quietly become vacuous.
+
 ## Related guides
 
 - [Contact Center overview](index.md)
