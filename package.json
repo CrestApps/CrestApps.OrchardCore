@@ -65,5 +65,9 @@
       "postcss": "^8.5.15"
     },
     "yaml": "^2.8.3"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "es5-ext@0.10.64": true
   }
 }

@@ -164,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
+    <PackageVersion Include="AngleSharp" Version="1.6.0" />
     <PackageVersion Include="MessagePack" Version="3.1.7" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
