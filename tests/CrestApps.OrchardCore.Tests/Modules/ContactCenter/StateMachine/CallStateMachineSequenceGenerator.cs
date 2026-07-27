@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 
@@ -10,21 +11,21 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 /// </summary>
 public static class CallStateMachineSequenceGenerator
 {
-    private static readonly ContactCenterCallState[] _terminalStates =
+    private static readonly VoiceCallState[] _terminalStates =
     [
-        ContactCenterCallState.Ended,
-        ContactCenterCallState.Failed,
-        ContactCenterCallState.NoAnswer,
-        ContactCenterCallState.Rejected,
-        ContactCenterCallState.Canceled,
-        ContactCenterCallState.Transferred,
+        VoiceCallState.Ended,
+        VoiceCallState.Failed,
+        VoiceCallState.NoAnswer,
+        VoiceCallState.Rejected,
+        VoiceCallState.Canceled,
+        VoiceCallState.Transferred,
     ];
 
-    private static readonly ContactCenterCallState[] _earlyStates =
+    private static readonly VoiceCallState[] _earlyStates =
     [
-        ContactCenterCallState.Planned,
-        ContactCenterCallState.Dialing,
-        ContactCenterCallState.Ringing,
+        VoiceCallState.Planned,
+        VoiceCallState.Dialing,
+        VoiceCallState.Ringing,
     ];
 
     private static readonly RecordingState[] _recordingStates =
@@ -64,9 +65,9 @@ public static class CallStateMachineSequenceGenerator
         var steps = new List<CallStateMachineStep>();
         var state = random.Next(3) switch
         {
-            0 => ContactCenterCallState.Planned,
-            1 => ContactCenterCallState.Dialing,
-            _ => ContactCenterCallState.Ringing,
+            0 => VoiceCallState.Planned,
+            1 => VoiceCallState.Dialing,
+            _ => VoiceCallState.Ringing,
         };
 
         var length = random.Next(1, 9);
@@ -192,11 +193,11 @@ public static class CallStateMachineSequenceGenerator
         return regressions;
     }
 
-    private static bool IsConnectedOrLater(ContactCenterCallState state)
+    private static bool IsConnectedOrLater(VoiceCallState state)
     {
-        return state is ContactCenterCallState.Connected or
-            ContactCenterCallState.OnHold or
-            ContactCenterCallState.Ending ||
+        return state is VoiceCallState.Connected or
+            VoiceCallState.OnHold or
+            VoiceCallState.Ending ||
             IsTerminal(state);
     }
 
@@ -243,9 +244,9 @@ public static class CallStateMachineSequenceGenerator
 
             if (state == settled.State)
             {
-                state = state == ContactCenterCallState.Ended
-                    ? ContactCenterCallState.Failed
-                    : ContactCenterCallState.Ended;
+                state = state == VoiceCallState.Ended
+                    ? VoiceCallState.Failed
+                    : VoiceCallState.Ended;
             }
 
             competing.Add(new CallStateMachineStep
@@ -268,7 +269,7 @@ public static class CallStateMachineSequenceGenerator
     /// </summary>
     /// <param name="state">The state to inspect.</param>
     /// <returns><see langword="true"/> when the state is terminal; otherwise, <see langword="false"/>.</returns>
-    public static bool IsTerminal(ContactCenterCallState state)
+    public static bool IsTerminal(VoiceCallState state)
     {
         return Array.IndexOf(_terminalStates, state) >= 0;
     }
@@ -280,7 +281,7 @@ public static class CallStateMachineSequenceGenerator
         bool emitSequenceNumbers,
         int skewMilliseconds,
         double unsequencedProbability,
-        ContactCenterCallState state)
+        VoiceCallState state)
     {
         var skew = skewMilliseconds == 0
             ? 0
@@ -300,29 +301,29 @@ public static class CallStateMachineSequenceGenerator
         });
     }
 
-    private static ContactCenterCallState NextState(Random random, ContactCenterCallState current)
+    private static VoiceCallState NextState(Random random, VoiceCallState current)
     {
         return current switch
         {
-            ContactCenterCallState.Planned => random.Next(2) == 0
-                ? ContactCenterCallState.Dialing
-                : ContactCenterCallState.Ringing,
-            ContactCenterCallState.Dialing => random.Next(4) == 0
+            VoiceCallState.Planned => random.Next(2) == 0
+                ? VoiceCallState.Dialing
+                : VoiceCallState.Ringing,
+            VoiceCallState.Dialing => random.Next(4) == 0
                 ? _terminalStates[random.Next(_terminalStates.Length)]
-                : ContactCenterCallState.Ringing,
-            ContactCenterCallState.Ringing => random.Next(3) == 0
+                : VoiceCallState.Ringing,
+            VoiceCallState.Ringing => random.Next(3) == 0
                 ? _terminalStates[random.Next(_terminalStates.Length)]
-                : ContactCenterCallState.Connected,
-            ContactCenterCallState.Connected => random.Next(3) switch
+                : VoiceCallState.Connected,
+            VoiceCallState.Connected => random.Next(3) switch
             {
-                0 => ContactCenterCallState.OnHold,
-                1 => ContactCenterCallState.Ending,
+                0 => VoiceCallState.OnHold,
+                1 => VoiceCallState.Ending,
                 _ => _terminalStates[random.Next(_terminalStates.Length)],
             },
-            ContactCenterCallState.OnHold => random.Next(3) == 0
+            VoiceCallState.OnHold => random.Next(3) == 0
                 ? _terminalStates[random.Next(_terminalStates.Length)]
-                : ContactCenterCallState.Connected,
-            ContactCenterCallState.Ending => _terminalStates[random.Next(_terminalStates.Length)],
+                : VoiceCallState.Connected,
+            VoiceCallState.Ending => _terminalStates[random.Next(_terminalStates.Length)],
             _ => current,
         };
     }

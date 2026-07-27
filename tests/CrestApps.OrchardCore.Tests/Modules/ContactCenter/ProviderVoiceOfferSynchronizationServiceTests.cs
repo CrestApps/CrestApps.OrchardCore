@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.Modules;
 
@@ -28,7 +29,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
         };
         var queueItem = new QueueItem
@@ -156,7 +157,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             .ReturnsAsync(new CallSession
             {
                 InteractionId = "int1",
-                State = ContactCenterCallState.Ended,
+                State = VoiceCallState.Ended,
             });
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
@@ -213,7 +214,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
         };
         var queueItem = new QueueItem
@@ -294,7 +295,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
         };
         var queueItem = new QueueItem
@@ -372,7 +373,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = ContactCenterCallState.Transferred,
+            State = VoiceCallState.Transferred,
             AnsweredUtc = answeredUtc,
         };
         var queueItem = new QueueItem

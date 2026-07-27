@@ -572,7 +572,7 @@ public sealed class ContactCenterUniquenessMigrationTests
                 ("@ItemId", itemId),
                 ("@ProviderName", (object)providerName ?? DBNull.Value),
                 ("@ProviderCallId", (object)providerCallId ?? DBNull.Value),
-                ("@State", ContactCenterCallState.Connected.ToString()),
+                ("@State", VoiceCallState.Connected.ToString()),
                 ("@CreatedUtc", new DateTime(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc)));
 
             return;
@@ -589,7 +589,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             ("@ProviderName", (object)providerName ?? DBNull.Value),
             ("@ProviderCallId", (object)providerCallId ?? DBNull.Value),
             ("@ProviderCallClaimKey", claimKey),
-            ("@State", ContactCenterCallState.Connected.ToString()),
+            ("@State", VoiceCallState.Connected.ToString()),
             ("@CreatedUtc", new DateTime(2026, 7, 14, 8, 0, 0, DateTimeKind.Utc)));
     }
 

@@ -1,6 +1,7 @@
 using System;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -161,13 +162,13 @@ public sealed class CallControlAuthorizationService : ICallControlAuthorizationS
         return status is InteractionStatus.Ended or InteractionStatus.Failed;
     }
 
-    private static bool IsTerminal(ContactCenterCallState state)
+    private static bool IsTerminal(VoiceCallState state)
     {
-        return state is ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled or
-            ContactCenterCallState.Transferred;
+        return state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred;
     }
 }

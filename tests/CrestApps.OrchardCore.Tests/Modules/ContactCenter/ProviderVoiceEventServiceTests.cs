@@ -55,7 +55,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "event-1",
         }, TestContext.Current.CancellationToken));
 
@@ -82,7 +82,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
         };
@@ -131,7 +131,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "late-connected",
             OccurredUtc = endedUtc.AddSeconds(-1),
         }, TestContext.Current.CancellationToken);
@@ -160,7 +160,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             LastProviderEventUtc = ringingUtc,
         };
         var interactionManager = new Mock<IInteractionManager>();
@@ -215,7 +215,7 @@ public sealed class ProviderVoiceEventServiceTests
             {
                 ProviderName = "ProviderA",
                 ProviderCallId = "call-1",
-                State = ContactCenterCallState.Connected,
+                State = VoiceCallState.Connected,
                 IdempotencyKey = "connected-event",
                 OccurredUtc = ringingUtc.AddSeconds(1),
             };
@@ -228,7 +228,7 @@ public sealed class ProviderVoiceEventServiceTests
 
         // Assert
         Assert.All(results, result => Assert.Same(session, result));
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         callSessionManager.Verify(
             manager => manager.UpdateAsync(
                 It.IsAny<CallSession>(),
@@ -265,7 +265,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = interaction.AnsweredUtc,
         };
 
@@ -305,7 +305,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "Default Asterisk",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "ended-1",
         }, TestContext.Current.CancellationToken);
 
@@ -313,7 +313,7 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal("Asterisk", interaction.ProviderName);
         Assert.Equal("Asterisk", session.ProviderName);
         Assert.Equal(InteractionStatus.Ended, interaction.Status);
-        Assert.Equal(ContactCenterCallState.Ended, session.State);
+        Assert.Equal(VoiceCallState.Ended, session.State);
         Assert.Equal(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc), interaction.WrapUpStartedUtc);
         presenceManager.Verify(
             manager => manager.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
@@ -363,7 +363,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderB",
             ProviderCallId = "shared-call-id",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
         }, TestContext.Current.CancellationToken);
 
         // Assert
@@ -397,7 +397,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IsMuted = false,
             RecordingState = RecordingState.None,
             IsConference = false,
@@ -448,7 +448,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "key-1",
             IsMuted = true,
             RecordingState = RecordingState.Recording,
@@ -507,7 +507,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            State = ContactCenterCallState.Dialing,
+            State = VoiceCallState.Dialing,
         };
 
         var interactionManager = new Mock<IInteractionManager>();
@@ -550,7 +550,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "amd-machine-1",
             AnswerClassification = AnswerClassification.Machine,
         }, TestContext.Current.CancellationToken);
@@ -582,7 +582,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = ContactCenterCallState.OnHold,
+            State = VoiceCallState.OnHold,
             IsMuted = true,
             RecordingState = RecordingState.Paused,
             IsConference = true,
@@ -628,7 +628,7 @@ public sealed class ProviderVoiceEventServiceTests
         await service.IngestAsync(new ProviderVoiceEvent
         {
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "key-2",
             IsMuted = false,
             RecordingState = RecordingState.Stopped,
@@ -662,7 +662,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
         };
         var persistedEvents = new List<InteractionEvent>();
         var persistedKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -713,7 +713,7 @@ public sealed class ProviderVoiceEventServiceTests
         var providerEvent = new ProviderVoiceEvent
         {
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.OnHold,
+            State = VoiceCallState.OnHold,
             IdempotencyKey = "provider-event-1",
         };
 
@@ -759,7 +759,7 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
         };
@@ -792,13 +792,13 @@ public sealed class ProviderVoiceEventServiceTests
         await service.IngestAsync(new ProviderVoiceEvent
         {
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "late-connected",
             OccurredUtc = endedUtc.AddSeconds(-5),
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Ended, session.State);
+        Assert.Equal(VoiceCallState.Ended, session.State);
         Assert.Equal(InteractionStatus.Ended, interaction.Status);
         callSessionManager.Verify(
             manager => manager.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
@@ -830,7 +830,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = occurredUtc,
             LastProviderEventUtc = occurredUtc,
         };
@@ -863,13 +863,13 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "ringing-older-sequence",
             OccurredUtc = occurredUtc,
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(InteractionStatus.Connected, interaction.Status);
         callSessionManager.Verify(
             manager => manager.UpdateAsync(
@@ -898,7 +898,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc,
         };
@@ -934,12 +934,12 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "late-ringing",
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(InteractionStatus.Connected, interaction.Status);
         callSessionManager.Verify(
             manager => manager.UpdateAsync(
@@ -977,7 +977,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc,
             HighWaterSequence = 6,
@@ -1012,13 +1012,13 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "unsequenced-ringing",
             OccurredUtc = connectedUtc.AddMinutes(1),
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(InteractionStatus.Connected, interaction.Status);
         Assert.Equal(6, session.HighWaterSequence);
         callSessionManager.Verify(
@@ -1057,7 +1057,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc.AddSeconds(-5),
             HighWaterSequence = 5,
@@ -1091,14 +1091,14 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "late-ringing",
             OccurredUtc = connectedUtc.AddSeconds(10),
             SequenceNumber = 4,
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(InteractionStatus.Connected, interaction.Status);
         Assert.Equal(5, session.HighWaterSequence);
         callSessionManager.Verify(
@@ -1127,7 +1127,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             LastProviderEventUtc = startedUtc,
             HighWaterSequence = 5,
         };
@@ -1162,14 +1162,14 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "connected",
             OccurredUtc = startedUtc.AddSeconds(3),
             SequenceNumber = 6,
         }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(6, session.HighWaterSequence);
     }
 
@@ -1190,7 +1190,7 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
         };
@@ -1223,7 +1223,7 @@ public sealed class ProviderVoiceEventServiceTests
         var result = await service.IngestAsync(new ProviderVoiceEvent
         {
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "later-terminal",
             OccurredUtc = endedUtc.AddSeconds(1),
         }, TestContext.Current.CancellationToken);
@@ -1285,7 +1285,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "duplicate",
         }, TestContext.Current.CancellationToken);
 
@@ -1357,7 +1357,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "duplicate",
         }, TestContext.Current.CancellationToken);
 
@@ -1427,7 +1427,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "legacy-delivery",
         }, TestContext.Current.CancellationToken);
 
@@ -1465,7 +1465,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-asterisk",
             ProviderName = "Asterisk",
             ProviderCallId = "call-asterisk",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
         };
         var dialPadSession = new CallSession
@@ -1474,7 +1474,7 @@ public sealed class ProviderVoiceEventServiceTests
             InteractionId = "interaction-dialpad",
             ProviderName = "DialPad",
             ProviderCallId = "call-dialpad",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
         };
 
@@ -1535,7 +1535,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "Default Asterisk",
             ProviderCallId = "call-asterisk",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "delivery-42",
             OccurredUtc = connectedUtc.AddSeconds(1),
         }, TestContext.Current.CancellationToken);
@@ -1543,7 +1543,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "DialPad",
             ProviderCallId = "call-dialpad",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "delivery-42",
             OccurredUtc = connectedUtc.AddSeconds(1),
         }, TestContext.Current.CancellationToken);
@@ -1555,8 +1555,8 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Contains(
             publishedEvents,
             value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("DialPad", "delivery-42"));
-        Assert.Equal(ContactCenterCallState.Ended, asteriskSession.State);
-        Assert.Equal(ContactCenterCallState.Ended, dialPadSession.State);
+        Assert.Equal(VoiceCallState.Ended, asteriskSession.State);
+        Assert.Equal(VoiceCallState.Ended, dialPadSession.State);
     }
 
     [Fact]
@@ -1624,7 +1624,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "ended-new-1",
         }, TestContext.Current.CancellationToken);
 
@@ -1664,7 +1664,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
         };
 
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
@@ -1774,7 +1774,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "connected-1",
         }, TestContext.Current.CancellationToken);
 
@@ -1808,7 +1808,7 @@ public sealed class ProviderVoiceEventServiceTests
                 "schedule",
             ],
             order);
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
         Assert.Equal(InteractionStatus.Connected, interaction.Status);
         Assert.Equal(now, session.AnsweredUtc);
         Assert.Equal(now, interaction.AnsweredUtc);
@@ -1885,7 +1885,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
         };
 
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
@@ -1993,7 +1993,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "connected-1",
         }, TestContext.Current.CancellationToken);
 
@@ -2001,7 +2001,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             IdempotencyKey = "connected-2",
         }, TestContext.Current.CancellationToken);
 
@@ -2061,7 +2061,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = null,
             Direction = InteractionDirection.Outbound,
-            State = ContactCenterCallState.Planned,
+            State = VoiceCallState.Planned,
         };
 
         var interactionManager = new Mock<IInteractionManager>();
@@ -2108,7 +2108,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-outbound-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             IdempotencyKey = "ringing-1",
         }, TestContext.Current.CancellationToken);
 
@@ -2140,7 +2140,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = "call-existing",
             Direction = InteractionDirection.Outbound,
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AnsweredUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
             LastProviderEventUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
         };
@@ -2189,7 +2189,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ProviderName = "ProviderA",
             ProviderCallId = "call-new",
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             IdempotencyKey = "ended-new",
         }, TestContext.Current.CancellationToken);
 
@@ -2200,7 +2200,7 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal("call-existing", session.ProviderCallId);
 
         // Assert — session state must not be mutated by the mis-bound event
-        Assert.Equal(ContactCenterCallState.Connected, session.State);
+        Assert.Equal(VoiceCallState.Connected, session.State);
 
         // Assert — no mutation was persisted to the wrong session
         callSessionManager.Verify(
@@ -2241,7 +2241,7 @@ public sealed class ProviderVoiceEventServiceTests
             providerCommandStateService,
             scopeExecutor,
             session,
-            distributedLock,
+            new VoiceIngressGate(distributedLock),
             clock,
             logger);
     }

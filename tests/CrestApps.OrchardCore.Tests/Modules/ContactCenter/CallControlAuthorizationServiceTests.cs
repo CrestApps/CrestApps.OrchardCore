@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -24,7 +25,7 @@ public sealed class CallControlAuthorizationServiceTests
                 AgentId = "agent-1",
                 ProviderName = "provider",
                 ProviderCallId = "provider-call-1",
-                State = ContactCenterCallState.Connected,
+                State = VoiceCallState.Connected,
             });
         var service = new CallControlAuthorizationService(
             agentManager.Object,
@@ -230,7 +231,7 @@ public sealed class CallControlAuthorizationServiceTests
                 AgentId = "agent-1",
                 ProviderName = "provider",
                 ProviderCallId = "provider-call-1",
-                State = ContactCenterCallState.Connected,
+                State = VoiceCallState.Connected,
             });
 
         // Act

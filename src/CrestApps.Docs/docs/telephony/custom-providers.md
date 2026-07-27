@@ -162,7 +162,7 @@ Do not register `IContactCenterVoiceMediaProvider` for event-only integrations, 
 
 This is the most important real-time seam.
 
-Every provider-specific callback or stream event should be translated into `ProviderVoiceEvent` and passed to `IProviderVoiceEventService.IngestAsync()`.
+Every provider-specific callback or stream event should be translated into `ProviderVoiceEvent` and passed to `INormalizedVoiceEventIngestor.IngestAsync()`. Do not call a specific consumer such as `IProviderVoiceEventService` or `IProviderVoiceEventSink` directly: the ingestor is the single entry point that canonicalizes your provider identity, takes the ingestion lease for the call stream exactly once, and then hands the same delivery to every consumer.
 
 The normalized event supports:
 
@@ -172,7 +172,18 @@ The normalized event supports:
 - `IsConference` and `ParticipantCount` for multi-party/conference updates
 - `Metadata` for provider-specific troubleshooting context
 
-The Contact Center pipeline then updates the durable `CallSession` and `Interaction`, emits detailed internal events such as `CallHeld`, `CallResumed`, `CallMuted`, `CallUnmuted`, `RecordingStarted`, `RecordingPaused`, `RecordingResumed`, `RecordingStopped`, and `CallConferenceChanged`, and projects the authoritative state back to the soft phone.
+### One ingest, many projections
+
+A normalized delivery is consumed by every registered `INormalizedVoiceEventHandler`, not by the first one that recognizes it. Two ship in the box:
+
+- `TelephonyCallHistoryVoiceEventHandler` writes the `TelephonyInteraction` call-history record and pushes the soft-phone state change. It runs whether or not Contact Center is installed.
+- `ContactCenterVoiceProjection` drives the durable `CallSession` and `Interaction`, emits detailed internal events such as `CallHeld`, `CallResumed`, `CallMuted`, `CallUnmuted`, `RecordingStarted`, `RecordingPaused`, `RecordingResumed`, `RecordingStopped`, and `CallConferenceChanged`, and projects the authoritative state back to the soft phone. It is registered by the Contact Center Voice feature.
+
+Handlers are peers. A handler must never suppress the delivery for the others, because each one is an independent view of the same call and a suppressed delivery silently desynchronizes it. Return `false` from `HandleAsync` when your handler had nothing to project — that is a report, not a veto — and let the ingestor continue.
+
+If you add your own handler, note what the ingress already did for you: the provider name on the event is canonical, the call stream is already serialized by the ingestion lease, and asking for that lease again from inside your handler is satisfied re-entrantly rather than taken twice. Do not open your own distributed lock on the same call, and do not create a second de-duplication record for a delivery another consumer already recorded.
+
+Only internal call-control orchestration may take an event *out* of the stream before ingestion — for example answering and parking a first-seen inbound channel, or releasing a leg the module itself originated. That is a provider-private concern and belongs in your own module, never in a normalized-event handler.
 
 When the provider also implements `ITelephonyCallStateProvider`, Contact Center can use that same server truth to:
 

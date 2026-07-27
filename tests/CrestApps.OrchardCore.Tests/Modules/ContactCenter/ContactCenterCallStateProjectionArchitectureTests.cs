@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// </summary>
 public sealed partial class ContactCenterCallStateProjectionArchitectureTests
 {
-    private const string ProjectionFileName = "ContactCenterCallStateProjection.cs";
+    private const string ProjectionFileName = "VoiceCallStateProjection.cs";
 
     [Fact]
     public void NoProductionSourceOutsideTheProjection_TranslatesBetweenTheTwoCallStateVocabularies()
@@ -29,12 +29,12 @@ public sealed partial class ContactCenterCallStateProjectionArchitectureTests
 
             if (WideningProjection().IsMatch(source))
             {
-                violations.Add($"{file} widens a telephony CallState into a ContactCenterCallState.");
+                violations.Add($"{file} widens a telephony CallState into a VoiceCallState.");
             }
 
             if (NarrowingProjection().IsMatch(source))
             {
-                violations.Add($"{file} narrows a ContactCenterCallState into a telephony CallState.");
+                violations.Add($"{file} narrows a VoiceCallState into a telephony CallState.");
             }
         }
 
@@ -76,9 +76,9 @@ public sealed partial class ContactCenterCallStateProjectionArchitectureTests
         }
     }
 
-    // A switch arm that reads a telephony CallState and yields a ContactCenterCallState. The negative
-    // lookbehind is required because "ContactCenterCallState." contains "CallState." as a substring.
-    [GeneratedRegex(@"(?<!ContactCenter)\bCallState\.\w+[^\r\n]*=>\s*ContactCenterCallState\.")]
+    // A switch arm that reads a telephony CallState and yields a VoiceCallState. The negative
+    // lookbehind is required because "VoiceCallState." contains "CallState." as a substring.
+    [GeneratedRegex(@"(?<!ContactCenter)\bCallState\.\w+[^\r\n]*=>\s*VoiceCallState\.")]
     private static partial Regex WideningProjection();
 
     [GeneratedRegex(@"\bContactCenterCallState\.\w+[^\r\n]*=>\s*(?<!ContactCenter)CallState\.")]

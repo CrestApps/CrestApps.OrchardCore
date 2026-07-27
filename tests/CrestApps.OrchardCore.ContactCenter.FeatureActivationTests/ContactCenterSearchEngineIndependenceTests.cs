@@ -1,11 +1,12 @@
 using System.Collections.Immutable;
-using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Reflection;
 using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -481,14 +482,14 @@ public sealed class ContactCenterSearchEngineIndependenceTests
                 {
                     ProviderName = interaction.ProviderName,
                     ProviderCallId = interaction.ProviderInteractionId,
-                    State = ContactCenterCallState.Connected,
+                    State = VoiceCallState.Connected,
                     OccurredUtc = now,
                     IdempotencyKey = "search-independence-ingest",
                 },
                 cancellationToken);
 
             Assert.NotNull(callSession);
-            Assert.Equal(ContactCenterCallState.Connected, callSession.State);
+            Assert.Equal(VoiceCallState.Connected, callSession.State);
 
             // Replaying the same delivery must be absorbed rather than double-applied, which is the property
             // that makes provider ingest safe to retry without a search engine in the path.
@@ -497,13 +498,13 @@ public sealed class ContactCenterSearchEngineIndependenceTests
                 {
                     ProviderName = interaction.ProviderName,
                     ProviderCallId = interaction.ProviderInteractionId,
-                    State = ContactCenterCallState.Ended,
+                    State = VoiceCallState.Ended,
                     OccurredUtc = now,
                     IdempotencyKey = "search-independence-ingest",
                 },
                 cancellationToken);
 
-            Assert.Equal(ContactCenterCallState.Connected, replayed.State);
+            Assert.Equal(VoiceCallState.Connected, replayed.State);
         });
 
         var observed = egress.GetObservedRequests();

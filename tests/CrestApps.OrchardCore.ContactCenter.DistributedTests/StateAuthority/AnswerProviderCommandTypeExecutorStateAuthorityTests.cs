@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony;
 using Moq;
 using OrchardCore.Modules;
@@ -32,7 +33,7 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             ActivityItemId = "activity-1",
             ProviderName = "provider",
             ProviderCallId = "canonical-call-1",
-            State = ContactCenterCallState.Ringing,
+            State = VoiceCallState.Ringing,
             CreatedUtc = _now,
         };
         var interactionManager = new Mock<IInteractionManager>();
@@ -69,7 +70,7 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
         Assert.Equal("canonical-call-1", interaction.ProviderInteractionId);
         Assert.Equal("canonical-call-1", callSession.ProviderCallId);
         Assert.Equal(InteractionStatus.Ringing, interaction.Status);
-        Assert.Equal(ContactCenterCallState.Ringing, callSession.State);
+        Assert.Equal(VoiceCallState.Ringing, callSession.State);
         publisher.Verify(
             service => service.PublishAsync(
                 It.Is<InteractionEvent>(interactionEvent => interactionEvent.EventType == ContactCenterConstants.Events.CallConnected),

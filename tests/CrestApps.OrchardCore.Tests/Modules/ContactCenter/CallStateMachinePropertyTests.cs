@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -99,7 +100,7 @@ public sealed class CallStateMachinePropertyTests
     {
         await ForEachSequenceAsync(async (seed, emitted, delivered, harness, cancellationToken) =>
         {
-            ContactCenterCallState? terminalState = null;
+            VoiceCallState? terminalState = null;
 
             foreach (var delivery in delivered)
             {
@@ -257,8 +258,8 @@ public sealed class CallStateMachinePropertyTests
                 $"corrupted delivery settled on '{harness.Session?.State}' while ordered delivery settled on '{ordered.Session?.State}'");
 
             Assert.True(
-                CallStateMachineSequenceGenerator.IsTerminal(harness.Session?.State ?? ContactCenterCallState.Planned) ==
-                CallStateMachineSequenceGenerator.IsTerminal(ordered.Session?.State ?? ContactCenterCallState.Planned),
+                CallStateMachineSequenceGenerator.IsTerminal(harness.Session?.State ?? VoiceCallState.Planned) ==
+                CallStateMachineSequenceGenerator.IsTerminal(ordered.Session?.State ?? VoiceCallState.Planned),
                 reason);
 
             Assert.Equal(
@@ -475,16 +476,16 @@ public sealed class CallStateMachinePropertyTests
     /// </summary>
     /// <param name="state">The state to rank.</param>
     /// <returns>The lifecycle position of the state.</returns>
-    private static int GetLifecycleRank(ContactCenterCallState state)
+    private static int GetLifecycleRank(VoiceCallState state)
     {
         return state switch
         {
-            ContactCenterCallState.Planned => 0,
-            ContactCenterCallState.Dialing => 1,
-            ContactCenterCallState.Ringing => 1,
-            ContactCenterCallState.Connected => 2,
-            ContactCenterCallState.OnHold => 2,
-            ContactCenterCallState.Ending => 3,
+            VoiceCallState.Planned => 0,
+            VoiceCallState.Dialing => 1,
+            VoiceCallState.Ringing => 1,
+            VoiceCallState.Connected => 2,
+            VoiceCallState.OnHold => 2,
+            VoiceCallState.Ending => 3,
             _ => 4,
         };
     }

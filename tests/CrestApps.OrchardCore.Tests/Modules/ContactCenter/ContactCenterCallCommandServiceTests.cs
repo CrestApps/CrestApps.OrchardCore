@@ -1,16 +1,17 @@
 #nullable enable annotations
 
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.ContactCenter;
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
-using OrchardCore;
 using OrchardCore.Modules;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -165,7 +166,7 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.Equal(_now, harness.Interaction.StartedUtc);
         var createdCallSession = harness.CreatedCallSession!;
 
-        Assert.Equal(ContactCenterCallState.Ringing, createdCallSession.State);
+        Assert.Equal(VoiceCallState.Ringing, createdCallSession.State);
         Assert.Equal(VoiceProviderDeliveryModel.AgentDeviceNative, createdCallSession.DeliveryModel);
         Assert.Equal(_now, createdCallSession.CreatedUtc);
         Assert.Equal(_now, createdCallSession.StartedUtc);
@@ -236,7 +237,7 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.Equal("int1", result.InteractionId);
         Assert.Equal("session-1", result.CallSessionId);
         Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
-        Assert.Equal(ContactCenterCallState.Ringing, harness.CreatedCallSession!.State);
+        Assert.Equal(VoiceCallState.Ringing, harness.CreatedCallSession!.State);
         Assert.Equal(
             [
                 "accept",
@@ -319,7 +320,7 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.Equal("int1", result.InteractionId);
         Assert.Equal("session-1", result.CallSessionId);
         Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
-        Assert.Equal(ContactCenterCallState.Ringing, harness.CreatedCallSession!.State);
+        Assert.Equal(VoiceCallState.Ringing, harness.CreatedCallSession!.State);
         Assert.Equal(
             [
                 "accept",

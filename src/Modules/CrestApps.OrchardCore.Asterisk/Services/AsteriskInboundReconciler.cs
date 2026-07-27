@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -412,7 +413,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         {
             ProviderName = binding.ProviderName,
             ProviderCallId = binding.ProviderCallId,
-            State = ContactCenterCallState.Ended,
+            State = VoiceCallState.Ended,
             OccurredUtc = _clock.UtcNow,
             IdempotencyKey = "asterisk-reconcile-hangup-" + binding.ProviderCallId,
         }, cancellationToken);

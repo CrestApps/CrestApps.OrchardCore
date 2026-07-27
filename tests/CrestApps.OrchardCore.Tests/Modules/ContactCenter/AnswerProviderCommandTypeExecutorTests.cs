@@ -58,11 +58,11 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     }
 
     [Theory]
-    [InlineData(InteractionStatus.Ended, ContactCenterCallState.Ringing)]
-    [InlineData(InteractionStatus.Ringing, ContactCenterCallState.Ended)]
+    [InlineData(InteractionStatus.Ended, VoiceCallState.Ringing)]
+    [InlineData(InteractionStatus.Ringing, VoiceCallState.Ended)]
     public async Task CanDispatchAsync_WhenInteractionOrCallSessionIsTerminal_ReturnsFalse(
         InteractionStatus interactionStatus,
-        ContactCenterCallState sessionState)
+        VoiceCallState sessionState)
     {
         // Arrange
         var harness = new Harness();
@@ -82,7 +82,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     {
         // Arrange
         var harness = new Harness();
-        harness.SetupDispatchableState(InteractionStatus.Ringing, ContactCenterCallState.Ringing);
+        harness.SetupDispatchableState(InteractionStatus.Ringing, VoiceCallState.Ringing);
         harness.Interaction.ProviderInteractionId = "call-2";
         var executor = harness.CreateExecutor();
         var command = CreateCommand();
@@ -193,7 +193,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Equal("queue-1", harness.Interaction.QueueId);
         Assert.Equal("provider-a", harness.Interaction.ProviderName);
         Assert.Equal("call-1", harness.Interaction.ProviderInteractionId);
-        Assert.Equal(ContactCenterCallState.Ringing, harness.Session.State);
+        Assert.Equal(VoiceCallState.Ringing, harness.Session.State);
         Assert.Null(harness.Session.StartedUtc);
         Assert.Null(harness.Session.AnsweredUtc);
         Assert.Equal("agent-1", harness.Session.AgentId);
@@ -219,7 +219,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         // Assert
         Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
         Assert.Null(harness.Interaction.EndedUtc);
-        Assert.Equal(ContactCenterCallState.Ringing, harness.Session.State);
+        Assert.Equal(VoiceCallState.Ringing, harness.Session.State);
         Assert.Null(harness.Session.EndedUtc);
         Assert.Single(harness.PublishedEvents);
         Assert.Equal(ContactCenterConstants.Events.OfferRequeued, harness.PublishedEvents[0].EventType);
@@ -245,7 +245,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         // Assert
         Assert.Equal(InteractionStatus.Failed, harness.Interaction.Status);
         Assert.Equal(_now, harness.Interaction.EndedUtc);
-        Assert.Equal(ContactCenterCallState.Ended, harness.Session.State);
+        Assert.Equal(VoiceCallState.Ended, harness.Session.State);
         Assert.Equal(_now, harness.Session.EndedUtc);
         Assert.Single(harness.PublishedEvents);
         Assert.Equal(ContactCenterConstants.Events.CallEnded, harness.PublishedEvents[0].EventType);
@@ -267,7 +267,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         // Assert
         Assert.Equal(InteractionStatus.Ringing, harness.Interaction.Status);
-        Assert.Equal(ContactCenterCallState.Ringing, harness.Session.State);
+        Assert.Equal(VoiceCallState.Ringing, harness.Session.State);
         Assert.Equal("provider-unknown", harness.Interaction.TechnicalMetadata[ProviderErrorCodeKey]);
         Assert.Equal("provider-unknown", harness.Session.Metadata[ProviderErrorCodeKey]);
         Assert.Empty(harness.PublishedEvents);
@@ -382,7 +382,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
             Interaction.ProviderInteractionId = "call-1";
             Interaction.TechnicalMetadata.Clear();
 
-            Session.State = ContactCenterCallState.Ringing;
+            Session.State = VoiceCallState.Ringing;
             Session.StartedUtc = null;
             Session.AnsweredUtc = null;
             Session.EndedUtc = null;
@@ -409,7 +409,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 .Returns(ValueTask.CompletedTask);
         }
 
-        public void SetupDispatchableState(InteractionStatus interactionStatus, ContactCenterCallState sessionState)
+        public void SetupDispatchableState(InteractionStatus interactionStatus, VoiceCallState sessionState)
         {
             SetupActiveState();
             Interaction.Status = interactionStatus;

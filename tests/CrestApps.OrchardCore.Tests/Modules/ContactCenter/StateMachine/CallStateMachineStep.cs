@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 
@@ -19,7 +20,7 @@ public sealed class CallStateMachineStep
     /// <summary>
     /// Gets or sets the normalized call state the delivery reports.
     /// </summary>
-    public ContactCenterCallState State { get; set; }
+    public VoiceCallState State { get; set; }
 
     /// <summary>
     /// Gets or sets the provider timestamp the delivery carries.

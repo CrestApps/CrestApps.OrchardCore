@@ -55,7 +55,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         // Assert
         Assert.Equal(InteractionStatus.Ended, refreshed.Status);
         Assert.NotNull(providerEvent);
-        Assert.Equal(ContactCenterCallState.Ended, providerEvent.State);
+        Assert.Equal(VoiceCallState.Ended, providerEvent.State);
         Assert.Equal("reconcile-missing:provider-1:call-1:ended", providerEvent.IdempotencyKey);
     }
 
@@ -125,7 +125,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             {
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = ContactCenterCallState.Connected,
+                State = VoiceCallState.Connected,
             });
         var service = CreateService(
             new Mock<IInteractionManager>(),
@@ -149,7 +149,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
 
         // Assert
         Assert.NotNull(providerEvent);
-        Assert.Equal(ContactCenterCallState.OnHold, providerEvent.State);
+        Assert.Equal(VoiceCallState.OnHold, providerEvent.State);
         Assert.True(providerEvent.IsMuted);
         Assert.Contains(":OnHold:True:True", providerEvent.IdempotencyKey, StringComparison.Ordinal);
     }
@@ -167,7 +167,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             {
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = ContactCenterCallState.OnHold,
+                State = VoiceCallState.OnHold,
                 IsOnHold = true,
                 IsMuted = true,
             });
@@ -212,7 +212,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
                 ItemId = "session-1",
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = ContactCenterCallState.Ended,
+                State = VoiceCallState.Ended,
                 StartedUtc = _now.AddMinutes(-2),
                 EndedUtc = _now.AddMinutes(-1),
             });

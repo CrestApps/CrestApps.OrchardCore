@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSql;
@@ -25,7 +26,7 @@ public sealed class CallSessionStoreConcurrencyTests
 
         try
         {
-            await SeedCallSessionAsync(store, sequence: null, ContactCenterCallState.Ringing);
+            await SeedCallSessionAsync(store, sequence: null, VoiceCallState.Ringing);
 
             await using var sessionA = store.CreateSession();
             await using var sessionB = store.CreateSession();
@@ -39,13 +40,13 @@ public sealed class CallSessionStoreConcurrencyTests
             // Act
             // Worker A applies sequence N+1 and commits first.
             callFromA.HighWaterSequence = 6;
-            callFromA.State = ContactCenterCallState.Connected;
+            callFromA.State = VoiceCallState.Connected;
             await storeA.UpdateAsync(callFromA, TestContext.Current.CancellationToken);
             await sessionA.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Worker B loaded the pre-A version and now tries to commit the lower sequence N.
             callFromB.HighWaterSequence = 5;
-            callFromB.State = ContactCenterCallState.Ringing;
+            callFromB.State = VoiceCallState.Ringing;
             await storeB.UpdateAsync(callFromB, TestContext.Current.CancellationToken);
             var exception = await Record.ExceptionAsync(() => sessionB.SaveChangesAsync(TestContext.Current.CancellationToken));
 
@@ -56,7 +57,7 @@ public sealed class CallSessionStoreConcurrencyTests
 
             var persisted = await ReadCallSessionAsync(store, "session-1");
             Assert.Equal(6, persisted.HighWaterSequence);
-            Assert.Equal(ContactCenterCallState.Connected, persisted.State);
+            Assert.Equal(VoiceCallState.Connected, persisted.State);
         }
         finally
         {
@@ -73,7 +74,7 @@ public sealed class CallSessionStoreConcurrencyTests
 
         try
         {
-            await SeedCallSessionAsync(store, sequence: 1, ContactCenterCallState.Ringing);
+            await SeedCallSessionAsync(store, sequence: 1, VoiceCallState.Ringing);
 
             await using var sessionA = store.CreateSession();
             await using var sessionB = store.CreateSession();
@@ -83,9 +84,9 @@ public sealed class CallSessionStoreConcurrencyTests
             var callFromB = await storeB.FindByIdAsync("session-1", TestContext.Current.CancellationToken);
 
             callFromA.HighWaterSequence = 3;
-            callFromA.State = ContactCenterCallState.Connected;
+            callFromA.State = VoiceCallState.Connected;
             callFromB.HighWaterSequence = 2;
-            callFromB.State = ContactCenterCallState.OnHold;
+            callFromB.State = VoiceCallState.OnHold;
             await storeA.UpdateAsync(callFromA, TestContext.Current.CancellationToken);
             await storeB.UpdateAsync(callFromB, TestContext.Current.CancellationToken);
 
@@ -153,7 +154,7 @@ public sealed class CallSessionStoreConcurrencyTests
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 
-    private static async Task SeedCallSessionAsync(IStore store, long? sequence, ContactCenterCallState state)
+    private static async Task SeedCallSessionAsync(IStore store, long? sequence, VoiceCallState state)
     {
         await using var session = store.CreateSession();
         var callSessionStore = new CallSessionStore(session);

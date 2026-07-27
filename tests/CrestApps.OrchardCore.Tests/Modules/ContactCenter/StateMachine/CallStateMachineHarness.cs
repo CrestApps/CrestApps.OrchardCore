@@ -136,7 +136,7 @@ public sealed class CallStateMachineHarness
             new Mock<IProviderCommandStateService>().Object,
             scopeExecutor.Object,
             new Mock<ISession>().Object,
-            distributedLock.Object,
+            new VoiceIngressGate(distributedLock.Object),
             clock.Object,
             NullLogger<ProviderVoiceEventService>.Instance);
     }

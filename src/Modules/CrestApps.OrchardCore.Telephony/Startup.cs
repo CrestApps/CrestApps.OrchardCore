@@ -1,6 +1,7 @@
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -72,6 +74,10 @@ public sealed class Startup : StartupBase
                 "'CrestApps_Telephony:Coordination:NewInteractionGracePeriod' must be greater than zero, otherwise reconciliation can terminate an interaction another node has only just written.")
             .ValidateOnStart();
 
+        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
+        services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
+        services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
+        services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();

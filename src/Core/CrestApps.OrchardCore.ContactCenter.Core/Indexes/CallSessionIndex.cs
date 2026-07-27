@@ -1,5 +1,6 @@
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 
@@ -44,7 +45,7 @@ public sealed class CallSessionIndex : CatalogItemIndex
     /// <summary>
     /// Gets or sets the normalized call state.
     /// </summary>
-    public ContactCenterCallState State { get; set; }
+    public VoiceCallState State { get; set; }
 
     /// <summary>
     /// Gets or sets the agent connected to the call.

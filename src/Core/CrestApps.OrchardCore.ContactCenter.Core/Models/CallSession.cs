@@ -45,7 +45,7 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the normalized call state.
     /// </summary>
-    public ContactCenterCallState State { get; set; }
+    public VoiceCallState State { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the agent connected to the call.

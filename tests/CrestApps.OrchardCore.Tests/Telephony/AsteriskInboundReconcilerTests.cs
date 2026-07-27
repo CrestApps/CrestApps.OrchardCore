@@ -1,12 +1,13 @@
-using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -41,7 +42,7 @@ public sealed class AsteriskInboundReconcilerTests
         var voiceEvent = Assert.Single(sink.IngestedEvents);
         Assert.Equal("Asterisk", voiceEvent.ProviderName);
         Assert.Equal("call-1", voiceEvent.ProviderCallId);
-        Assert.Equal(ContactCenterCallState.Ended, voiceEvent.State);
+        Assert.Equal(VoiceCallState.Ended, voiceEvent.State);
         Assert.Equal(_now, voiceEvent.OccurredUtc);
         Assert.Equal("asterisk-reconcile-hangup-call-1", voiceEvent.IdempotencyKey);
         Assert.Equal("dead-channel-1", Assert.Single(bindingStore.RemovedChannelIds));
@@ -156,7 +157,7 @@ public sealed class AsteriskInboundReconcilerTests
         // Assert
         Assert.Empty(ariClient.CheckedChannelIds);
         var voiceEvent = Assert.Single(sink.IngestedEvents);
-        Assert.Equal(ContactCenterCallState.Ended, voiceEvent.State);
+        Assert.Equal(VoiceCallState.Ended, voiceEvent.State);
         Assert.Equal("asterisk-reconcile-hangup-call-1", voiceEvent.IdempotencyKey);
         Assert.Equal("terminating-channel-1", Assert.Single(bindingStore.RemovedChannelIds));
     }

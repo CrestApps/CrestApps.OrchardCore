@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
@@ -82,7 +83,7 @@ public sealed class CallSessionTopologyStateAuthorityTests
             ActivityItemId = "activity-1",
             ProviderName = "provider",
             ProviderCallId = "provider-call-1",
-            State = ContactCenterCallState.Connected,
+            State = VoiceCallState.Connected,
             AgentId = "agent-1",
             AgentSessionId = "agent-session-1",
             QueueId = "queue-1",

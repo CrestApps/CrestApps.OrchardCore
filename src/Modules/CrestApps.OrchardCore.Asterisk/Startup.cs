@@ -127,7 +127,6 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskAgentChannelReadyBridge>()
             .AddScoped<IAsteriskCallTeardownService, AsteriskCallTeardownService>()
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskInboundCallOfferBridge>()
-            .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskInboundReconciler>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()
             .AddScoped<IAsteriskAriClient, AsteriskAriClient>()

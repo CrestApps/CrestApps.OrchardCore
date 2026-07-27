@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -193,13 +194,13 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
     }
 
-    private static bool IsTerminalState(ContactCenterCallState? state)
+    private static bool IsTerminalState(VoiceCallState? state)
     {
-        return state is ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled or
-            ContactCenterCallState.Transferred;
+        return state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred;
     }
 }

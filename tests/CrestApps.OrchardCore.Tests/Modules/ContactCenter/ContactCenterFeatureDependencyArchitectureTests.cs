@@ -592,9 +592,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             startup.Body.Contains(
                 "AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()",
                 StringComparison.Ordinal));
-        var asteriskEventBridgeOwner = asteriskStartups.Single(startup =>
+        var contactCenterVoiceProjectionOwner = contactCenterStartups.Single(startup =>
             startup.Body.Contains(
-                "AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskContactCenterVoiceEventBridge>()",
+                "AddScoped<INormalizedVoiceEventHandler, ContactCenterVoiceProjection>()",
                 StringComparison.Ordinal));
         var asteriskContactCenterReconcilerOwner = asteriskStartups.Single(startup =>
             startup.Body.Contains(
@@ -631,7 +631,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ],
             asteriskMediaDependencies);
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskVoiceOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskEventBridgeOwner.FeatureId);
+        // The Contact Center projection is a peer consumer of the provider-neutral normalized stream, so it
+        // is owned by the Contact Center voice feature rather than by any one provider module. A provider
+        // module that owned it would be able to absorb the stream and starve every other projection.
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", contactCenterVoiceProjectionOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskContactCenterReconcilerOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", asteriskMediaOwner.FeatureId);
         Assert.True(asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterMedia"].EnabledByDependencyOnly);

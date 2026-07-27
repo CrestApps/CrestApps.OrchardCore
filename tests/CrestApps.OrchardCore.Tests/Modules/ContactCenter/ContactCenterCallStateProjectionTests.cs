@@ -12,8 +12,8 @@ public sealed class ContactCenterCallStateProjectionTests
         var declared = Enum.GetValues<CallState>().ToHashSet();
 
         // Act
-        var produced = Enum.GetValues<ContactCenterCallState>()
-            .Select(ContactCenterCallStateProjection.ToTelephonyCallState)
+        var produced = Enum.GetValues<VoiceCallState>()
+            .Select(VoiceCallStateProjection.ToTelephonyCallState)
             .ToHashSet();
 
         // Assert
@@ -21,39 +21,39 @@ public sealed class ContactCenterCallStateProjectionTests
     }
 
     [Theory]
-    [InlineData(ContactCenterCallState.Planned, CallState.Idle)]
-    [InlineData(ContactCenterCallState.Dialing, CallState.Connecting)]
-    [InlineData(ContactCenterCallState.Ringing, CallState.Ringing)]
-    [InlineData(ContactCenterCallState.Connected, CallState.Connected)]
-    [InlineData(ContactCenterCallState.OnHold, CallState.OnHold)]
-    [InlineData(ContactCenterCallState.Ending, CallState.Disconnected)]
-    [InlineData(ContactCenterCallState.Ended, CallState.Disconnected)]
-    [InlineData(ContactCenterCallState.Transferred, CallState.Disconnected)]
-    [InlineData(ContactCenterCallState.Canceled, CallState.Disconnected)]
-    [InlineData(ContactCenterCallState.NoAnswer, CallState.Failed)]
-    [InlineData(ContactCenterCallState.Rejected, CallState.Failed)]
-    [InlineData(ContactCenterCallState.Failed, CallState.Failed)]
+    [InlineData(VoiceCallState.Planned, CallState.Idle)]
+    [InlineData(VoiceCallState.Dialing, CallState.Connecting)]
+    [InlineData(VoiceCallState.Ringing, CallState.Ringing)]
+    [InlineData(VoiceCallState.Connected, CallState.Connected)]
+    [InlineData(VoiceCallState.OnHold, CallState.OnHold)]
+    [InlineData(VoiceCallState.Ending, CallState.Disconnected)]
+    [InlineData(VoiceCallState.Ended, CallState.Disconnected)]
+    [InlineData(VoiceCallState.Transferred, CallState.Disconnected)]
+    [InlineData(VoiceCallState.Canceled, CallState.Disconnected)]
+    [InlineData(VoiceCallState.NoAnswer, CallState.Failed)]
+    [InlineData(VoiceCallState.Rejected, CallState.Failed)]
+    [InlineData(VoiceCallState.Failed, CallState.Failed)]
     public void ToTelephonyCallState_NarrowsEachContactCenterStateOntoItsSoftPhoneState(
-        ContactCenterCallState state,
+        VoiceCallState state,
         CallState expected)
     {
         // Act
-        var actual = ContactCenterCallStateProjection.ToTelephonyCallState(state);
+        var actual = VoiceCallStateProjection.ToTelephonyCallState(state);
 
         // Assert
         Assert.Equal(expected, actual);
     }
 
     [Theory]
-    [InlineData(CallState.Connecting, ContactCenterCallState.Dialing)]
-    [InlineData(CallState.Ringing, ContactCenterCallState.Ringing)]
-    [InlineData(CallState.Connected, ContactCenterCallState.Connected)]
-    [InlineData(CallState.OnHold, ContactCenterCallState.OnHold)]
-    public void ToContactCenterCallState_RoundTripsEveryLiveState(CallState state, ContactCenterCallState expected)
+    [InlineData(CallState.Connecting, VoiceCallState.Dialing)]
+    [InlineData(CallState.Ringing, VoiceCallState.Ringing)]
+    [InlineData(CallState.Connected, VoiceCallState.Connected)]
+    [InlineData(CallState.OnHold, VoiceCallState.OnHold)]
+    public void ToContactCenterCallState_RoundTripsEveryLiveState(CallState state, VoiceCallState expected)
     {
         // Act
-        var widened = ContactCenterCallStateProjection.ToContactCenterCallState(state);
-        var narrowed = ContactCenterCallStateProjection.ToTelephonyCallState(widened);
+        var widened = VoiceCallStateProjection.ToVoiceCallState(state);
+        var narrowed = VoiceCallStateProjection.ToTelephonyCallState(widened);
 
         // Assert
         Assert.Equal(expected, widened);
@@ -64,39 +64,39 @@ public sealed class ContactCenterCallStateProjectionTests
     public void ToContactCenterCallState_WhenTheProviderAlsoReportsHold_PrefersHeldOverConnected()
     {
         // Act
-        var actual = ContactCenterCallStateProjection.ToContactCenterCallState(CallState.Connected, isOnHold: true);
+        var actual = VoiceCallStateProjection.ToVoiceCallState(CallState.Connected, isOnHold: true);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.OnHold, actual);
+        Assert.Equal(VoiceCallState.OnHold, actual);
     }
 
     [Fact]
     public void ToContactCenterCallState_ForTheIdleSentinel_TreatsTheCallAsOver()
     {
         // Act
-        var actual = ContactCenterCallStateProjection.ToContactCenterCallState(CallState.Idle);
+        var actual = VoiceCallStateProjection.ToVoiceCallState(CallState.Idle);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Ended, actual);
+        Assert.Equal(VoiceCallState.Ended, actual);
     }
 
     // This is the whole point of carrying a hangup cause: the soft-phone vocabulary has one
     // "disconnected" state, so without the cause every one of these outcomes widened to Ended.
     [Theory]
-    [InlineData(HangupCause.NormalClearing, ContactCenterCallState.Ended)]
-    [InlineData(HangupCause.AnsweringMachine, ContactCenterCallState.Ended)]
-    [InlineData(HangupCause.Busy, ContactCenterCallState.Rejected)]
-    [InlineData(HangupCause.Rejected, ContactCenterCallState.Rejected)]
-    [InlineData(HangupCause.NoAnswer, ContactCenterCallState.NoAnswer)]
-    [InlineData(HangupCause.Canceled, ContactCenterCallState.Canceled)]
-    [InlineData(HangupCause.Congestion, ContactCenterCallState.Failed)]
-    [InlineData(HangupCause.Failed, ContactCenterCallState.Failed)]
+    [InlineData(HangupCause.NormalClearing, VoiceCallState.Ended)]
+    [InlineData(HangupCause.AnsweringMachine, VoiceCallState.Ended)]
+    [InlineData(HangupCause.Busy, VoiceCallState.Rejected)]
+    [InlineData(HangupCause.Rejected, VoiceCallState.Rejected)]
+    [InlineData(HangupCause.NoAnswer, VoiceCallState.NoAnswer)]
+    [InlineData(HangupCause.Canceled, VoiceCallState.Canceled)]
+    [InlineData(HangupCause.Congestion, VoiceCallState.Failed)]
+    [InlineData(HangupCause.Failed, VoiceCallState.Failed)]
     public void ToContactCenterCallState_ForADisconnectedCall_RefinesTheOutcomeFromTheHangupCause(
         HangupCause hangupCause,
-        ContactCenterCallState expected)
+        VoiceCallState expected)
     {
         // Act
-        var actual = ContactCenterCallStateProjection.ToContactCenterCallState(
+        var actual = VoiceCallStateProjection.ToVoiceCallState(
             CallState.Disconnected,
             isOnHold: false,
             hangupCause);
@@ -109,36 +109,36 @@ public sealed class ContactCenterCallStateProjectionTests
     public void ToContactCenterCallState_WhenNoCauseWasReported_KeepsTheUnrefinedTerminalState()
     {
         // Act
-        var disconnected = ContactCenterCallStateProjection.ToContactCenterCallState(CallState.Disconnected);
-        var failed = ContactCenterCallStateProjection.ToContactCenterCallState(CallState.Failed);
-        var unknown = ContactCenterCallStateProjection.ToContactCenterCallState(
+        var disconnected = VoiceCallStateProjection.ToVoiceCallState(CallState.Disconnected);
+        var failed = VoiceCallStateProjection.ToVoiceCallState(CallState.Failed);
+        var unknown = VoiceCallStateProjection.ToVoiceCallState(
             CallState.Disconnected,
             isOnHold: false,
             HangupCause.Unknown);
 
         // Assert
-        Assert.Equal(ContactCenterCallState.Ended, disconnected);
-        Assert.Equal(ContactCenterCallState.Failed, failed);
-        Assert.Equal(ContactCenterCallState.Ended, unknown);
+        Assert.Equal(VoiceCallState.Ended, disconnected);
+        Assert.Equal(VoiceCallState.Failed, failed);
+        Assert.Equal(VoiceCallState.Ended, unknown);
     }
 
     [Fact]
     public void IsTerminal_AgreesWithTheStatesThatCarryAnEndTime()
     {
         // Arrange
-        var expected = new HashSet<ContactCenterCallState>
+        var expected = new HashSet<VoiceCallState>
         {
-            ContactCenterCallState.Ended,
-            ContactCenterCallState.Failed,
-            ContactCenterCallState.NoAnswer,
-            ContactCenterCallState.Rejected,
-            ContactCenterCallState.Canceled,
-            ContactCenterCallState.Transferred,
+            VoiceCallState.Ended,
+            VoiceCallState.Failed,
+            VoiceCallState.NoAnswer,
+            VoiceCallState.Rejected,
+            VoiceCallState.Canceled,
+            VoiceCallState.Transferred,
         };
 
         // Act
-        var actual = Enum.GetValues<ContactCenterCallState>()
-            .Where(ContactCenterCallStateProjection.IsTerminal)
+        var actual = Enum.GetValues<VoiceCallState>()
+            .Where(VoiceCallStateProjection.IsTerminal)
             .ToHashSet();
 
         // Assert

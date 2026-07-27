@@ -1,11 +1,11 @@
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
-/// Identifies the normalized, provider-neutral state of a Contact Center voice call session. Providers
-/// report their own call state, which is normalized into these values so routing, analytics, and the
-/// agent/supervisor UX can reason about calls independently of any specific provider.
+/// Identifies the normalized, provider-neutral state of a voice call. Providers report their own call
+/// state, which is normalized into these values so ingress, routing, analytics, and the agent and
+/// supervisor experiences can reason about calls independently of any specific provider.
 /// </summary>
-public enum ContactCenterCallState
+public enum VoiceCallState
 {
     /// <summary>
     /// The call has been planned (for example reserved for an outbound dial) but not yet placed.

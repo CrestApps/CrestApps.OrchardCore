@@ -1,12 +1,10 @@
-using CrestApps.OrchardCore.Telephony.Models;
-
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
 /// Represents a provider-neutral voice event after a telephony provider or PBX webhook has been
 /// normalized. It is the single entry point through which provider call-state changes (ringing,
-/// answered, held, transferred, ended, failed) flow into the Contact Center so the call session,
-/// interaction, and analytics projections stay in sync regardless of the provider.
+/// answered, held, transferred, ended, failed) flow into every consumer projection, so each projection
+/// built on the same provider stream stays in sync regardless of the provider.
 /// </summary>
 public sealed class ProviderVoiceEvent
 {
@@ -28,7 +26,7 @@ public sealed class ProviderVoiceEvent
     /// <summary>
     /// Gets or sets the normalized call state the event represents.
     /// </summary>
-    public ContactCenterCallState State { get; set; }
+    public VoiceCallState State { get; set; }
 
     /// <summary>
     /// Gets or sets the address of the calling party, when supplied.

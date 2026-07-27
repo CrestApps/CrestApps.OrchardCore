@@ -213,14 +213,14 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             {
                 ProviderName = providerName,
                 ProviderCallId = interaction.ProviderInteractionId,
-                State = ContactCenterCallState.Ended,
+                State = VoiceCallState.Ended,
                 OccurredUtc = _clock.UtcNow,
                 IdempotencyKey = $"reconcile-missing:{providerName}:{interaction.ProviderInteractionId}:ended",
             };
         }
 
         var call = lookup.Call;
-        var state = ContactCenterCallStateProjection.ToContactCenterCallState(call.State, call.IsOnHold);
+        var state = VoiceCallStateProjection.ToVoiceCallState(call.State, call.IsOnHold);
 
         return new ProviderVoiceEvent
         {
@@ -248,27 +248,27 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             return false;
         }
 
-        var mappedState = ContactCenterCallStateProjection.ToContactCenterCallState(call.State, call.IsOnHold);
+        var mappedState = VoiceCallStateProjection.ToVoiceCallState(call.State, call.IsOnHold);
 
         return session.State == mappedState &&
             session.IsMuted == call.IsMuted &&
-            session.IsOnHold == (mappedState == ContactCenterCallState.OnHold);
+            session.IsOnHold == (mappedState == VoiceCallState.OnHold);
     }
 
     private static bool TryMapTerminalInteractionStatus(
-        ContactCenterCallState? callState,
+        VoiceCallState? callState,
         out InteractionStatus interactionStatus)
     {
         switch (callState)
         {
-            case ContactCenterCallState.Ended:
+            case VoiceCallState.Ended:
                 interactionStatus = InteractionStatus.Ended;
 
                 return true;
-            case ContactCenterCallState.Failed:
-            case ContactCenterCallState.NoAnswer:
-            case ContactCenterCallState.Rejected:
-            case ContactCenterCallState.Canceled:
+            case VoiceCallState.Failed:
+            case VoiceCallState.NoAnswer:
+            case VoiceCallState.Rejected:
+            case VoiceCallState.Canceled:
                 interactionStatus = InteractionStatus.Failed;
 
                 return true;

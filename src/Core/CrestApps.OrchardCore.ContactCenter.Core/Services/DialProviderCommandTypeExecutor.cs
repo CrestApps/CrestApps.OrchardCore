@@ -1,13 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter;
+using System;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules;
 
@@ -195,7 +196,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             ownedSession.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
                 ? command.ProviderName
                 : result.ProviderName;
-            ownedSession.State = ContactCenterCallState.Ringing;
+            ownedSession.State = VoiceCallState.Ringing;
 
             await _callSessionManager.UpdateAsync(ownedSession, cancellationToken: cancellationToken);
         }
@@ -325,7 +326,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         session.QueueId = request.QueueId;
         session.FromAddress = request.CallerId;
         session.ToAddress = request.Destination;
-        session.State = ContactCenterCallState.Planned;
+        session.State = VoiceCallState.Planned;
         session.DurableCommandId = command.CommandId;
         session.CreatedUtc = now;
 

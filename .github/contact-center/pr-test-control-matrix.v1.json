@@ -1487,6 +1487,34 @@
         ]
       },
       "evidenceLocation": "ProviderNeutralContractArchitectureTests, plus the MergeRequest.GetCallIds cases in TelephonyHubAuthorizationTests."
+    },
+    {
+      "id": "V010",
+      "severity": "P0",
+      "planFinding": "W1.2-one-provider-ingest-many-projections",
+      "category": "voice-provider",
+      "gate": "Two consumers of one provider call stream race to claim it, so enabling one silently blinds the other",
+      "invariant": "One provider delivery is ingested once and observed by every projection. The telephony call-history projection and the Contact Center projection are peers on a provider-neutral normalized stream, not alternatives on a first-wins chain, so enabling Contact Center cannot stop telephony call history from recording an outcome. Ingestion takes exactly one lease per delivery no matter how many projections consume it, including when a projection re-enters ingestion from a fresh scope, and exactly one durable de-duplication record is written per delivery. Only internal call-control orchestration may absorb an event before it reaches the normalized stream.",
+      "testId": "CC-V010",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "VoiceEventFanOutIntegrationTests, plus the normalized-stream ownership case in ContactCenterFeatureDependencyArchitectureTests."
     }
   ]
 }

@@ -264,8 +264,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         if (session is not null)
         {
             session.State = request.ReofferOnFailure
-                ? ContactCenterCallState.Ringing
-                : ContactCenterCallState.Ended;
+                ? VoiceCallState.Ringing
+                : VoiceCallState.Ended;
             session.EndedUtc = request.ReofferOnFailure ? null : now;
 
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
@@ -474,14 +474,14 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         return status is InteractionStatus.Ended or InteractionStatus.Failed;
     }
 
-    private static bool IsTerminal(ContactCenterCallState state)
+    private static bool IsTerminal(VoiceCallState state)
     {
-        return state is ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled or
-            ContactCenterCallState.Transferred;
+        return state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred;
     }
 
     private Task PublishAsync(

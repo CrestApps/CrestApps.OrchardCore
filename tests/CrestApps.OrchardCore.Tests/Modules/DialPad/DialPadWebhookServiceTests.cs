@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.Modules;
 
@@ -196,7 +197,7 @@ public sealed class DialPadWebhookServiceTests
         // Assert
         Assert.Equal(DialPadWebhookResult.Updated, result);
         Assert.NotNull(captured);
-        Assert.Equal(ContactCenterCallState.Ended, captured.State);
+        Assert.Equal(VoiceCallState.Ended, captured.State);
         Assert.Equal(AnswerClassification.Machine, captured.AnswerClassification);
     }
 
@@ -220,7 +221,7 @@ public sealed class DialPadWebhookServiceTests
         // Assert
         Assert.Equal(DialPadWebhookResult.Updated, result);
         Assert.NotNull(captured);
-        Assert.Equal(ContactCenterCallState.Ended, captured.State);
+        Assert.Equal(VoiceCallState.Ended, captured.State);
         Assert.Equal(AnswerClassification.Fax, captured.AnswerClassification);
     }
 
@@ -243,7 +244,7 @@ public sealed class DialPadWebhookServiceTests
 
         // Assert
         Assert.NotNull(captured);
-        Assert.Equal(ContactCenterCallState.Connected, captured.State);
+        Assert.Equal(VoiceCallState.Connected, captured.State);
         Assert.Null(captured.AnswerClassification);
     }
 

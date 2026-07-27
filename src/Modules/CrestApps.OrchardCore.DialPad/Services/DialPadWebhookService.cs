@@ -105,26 +105,26 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
         return string.Equals(direction?.Trim(), "inbound", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsLive(ContactCenterCallState state)
+    private static bool IsLive(VoiceCallState state)
     {
-        return state is ContactCenterCallState.Dialing or ContactCenterCallState.Ringing or ContactCenterCallState.Connected;
+        return state is VoiceCallState.Dialing or VoiceCallState.Ringing or VoiceCallState.Connected;
     }
 
-    private static bool TryMapState(string state, out ContactCenterCallState mapped)
+    private static bool TryMapState(string state, out VoiceCallState mapped)
     {
         mapped = state?.Trim().ToLowerInvariant() switch
         {
-            "calling" or "dialing" or "connecting" or "preanswer" => ContactCenterCallState.Dialing,
-            "ringing" => ContactCenterCallState.Ringing,
-            "connected" or "active" or "human" or "live" => ContactCenterCallState.Connected,
-            "hold" or "on_hold" or "parked" => ContactCenterCallState.OnHold,
+            "calling" or "dialing" or "connecting" or "preanswer" => VoiceCallState.Dialing,
+            "ringing" => VoiceCallState.Ringing,
+            "connected" or "active" or "human" or "live" => VoiceCallState.Connected,
+            "hold" or "on_hold" or "parked" => VoiceCallState.OnHold,
             "hangup" or "ended" or "disconnected" or "completed" or "voicemail"
-                or "voicemail_greeting" or "machine" or "answering_machine" or "fax" or "fax_detected" => ContactCenterCallState.Ended,
-            "missed" or "no_answer" or "noanswer" => ContactCenterCallState.NoAnswer,
-            "rejected" or "declined" or "busy" => ContactCenterCallState.Rejected,
-            "canceled" or "cancelled" or "abandoned" => ContactCenterCallState.Canceled,
-            "transferred" => ContactCenterCallState.Transferred,
-            _ => (ContactCenterCallState)(-1),
+                or "voicemail_greeting" or "machine" or "answering_machine" or "fax" or "fax_detected" => VoiceCallState.Ended,
+            "missed" or "no_answer" or "noanswer" => VoiceCallState.NoAnswer,
+            "rejected" or "declined" or "busy" => VoiceCallState.Rejected,
+            "canceled" or "cancelled" or "abandoned" => VoiceCallState.Canceled,
+            "transferred" => VoiceCallState.Transferred,
+            _ => (VoiceCallState)(-1),
         };
 
         return Enum.IsDefined(mapped);
@@ -134,7 +134,7 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
     // provider-neutral cause is derived from the normalized state rather than from a second token vocabulary
     // that would have to be kept in step with the first. A completed call that answer detection classified as
     // a machine or a fax is the one case the state alone cannot express.
-    private static HangupCause? ResolveHangupCause(ContactCenterCallState state, AnswerClassification? answerClassification)
+    private static HangupCause? ResolveHangupCause(VoiceCallState state, AnswerClassification? answerClassification)
     {
         if (answerClassification is AnswerClassification.Machine or AnswerClassification.Fax)
         {
@@ -143,12 +143,12 @@ public sealed class DialPadWebhookService : IDialPadWebhookService
 
         return state switch
         {
-            ContactCenterCallState.Ended => HangupCause.NormalClearing,
-            ContactCenterCallState.Transferred => HangupCause.NormalClearing,
-            ContactCenterCallState.NoAnswer => HangupCause.NoAnswer,
-            ContactCenterCallState.Rejected => HangupCause.Rejected,
-            ContactCenterCallState.Canceled => HangupCause.Canceled,
-            ContactCenterCallState.Failed => HangupCause.Failed,
+            VoiceCallState.Ended => HangupCause.NormalClearing,
+            VoiceCallState.Transferred => HangupCause.NormalClearing,
+            VoiceCallState.NoAnswer => HangupCause.NoAnswer,
+            VoiceCallState.Rejected => HangupCause.Rejected,
+            VoiceCallState.Canceled => HangupCause.Canceled,
+            VoiceCallState.Failed => HangupCause.Failed,
             _ => null,
         };
     }

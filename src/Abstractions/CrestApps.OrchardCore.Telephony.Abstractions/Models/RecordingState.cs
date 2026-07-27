@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
 /// Identifies the recording state of an interaction.

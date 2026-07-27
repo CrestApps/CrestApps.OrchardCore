@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -165,7 +166,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
-            .AddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
             .AddScoped<IContactCenterProjectionCheckpointStore, ContactCenterProjectionCheckpointStore>()
@@ -203,6 +203,10 @@ public sealed class Startup : StartupBase
         services
             .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
             .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();
+
+        // The call-session index and its migration canonicalize provider identity, and this feature does not
+        // depend on Telephony, so the resolver must also be available without the Telephony module.
+        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
 
         services
             .AddIndexProvider<CallSessionIndexProvider>()
@@ -707,6 +711,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<IProviderVoiceEventSink, ProviderVoiceEventSink>()
+            .AddScoped<INormalizedVoiceEventHandler, ContactCenterVoiceProjection>()
             .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
             .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()

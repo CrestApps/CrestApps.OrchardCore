@@ -1,10 +1,11 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.ContactCenter;
+using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using Moq;
 using OrchardCore.Modules;
@@ -41,7 +42,7 @@ public sealed class DialPadWebhookContractTests
         }
 
         // Act
-        var interpreted = ExtractSwitchTokens("private static bool TryMapState", "(ContactCenterCallState)(-1)");
+        var interpreted = ExtractSwitchTokens("private static bool TryMapState", "(VoiceCallState)(-1)");
 
         // Assert
         Assert.NotEmpty(interpreted);
@@ -106,7 +107,7 @@ public sealed class DialPadWebhookContractTests
 
             Assert.Equal(DialPadWebhookResult.Updated, captured.Result);
             Assert.Equal(
-                Enum.Parse<ContactCenterCallState>(entry.GetProperty("contactCenterCallState").GetString()),
+                Enum.Parse<VoiceCallState>(entry.GetProperty("contactCenterCallState").GetString()),
                 captured.ProviderEvent.State);
 
             if (entry.TryGetProperty("answerClassification", out var classification))
@@ -256,7 +257,7 @@ public sealed class DialPadWebhookContractTests
                 case "providerHandled":
                     break;
                 case "state":
-                    Assert.Equal(Enum.Parse<ContactCenterCallState>(property.Value.GetString()), captured.ProviderEvent.State);
+                    Assert.Equal(Enum.Parse<VoiceCallState>(property.Value.GetString()), captured.ProviderEvent.State);
 
                     break;
                 case "fromAddress":

@@ -257,7 +257,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             : null;
     }
 
-    private static CallState MapCallState(ContactCenterCallState? sessionState, InteractionStatus interactionStatus)
+    private static CallState MapCallState(VoiceCallState? sessionState, InteractionStatus interactionStatus)
     {
         if (interactionStatus == InteractionStatus.Ringing)
         {
@@ -266,7 +266,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
         if (sessionState.HasValue)
         {
-            return ContactCenterCallStateProjection.ToTelephonyCallState(sessionState.Value);
+            return VoiceCallStateProjection.ToTelephonyCallState(sessionState.Value);
         }
 
         return interactionStatus switch
@@ -290,17 +290,17 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         };
     }
 
-    private static CallOutcome ResolveOutcome(ContactCenterCallState? sessionState, CallState callState, InteractionDirection direction)
+    private static CallOutcome ResolveOutcome(VoiceCallState? sessionState, CallState callState, InteractionDirection direction)
     {
         if (sessionState.HasValue)
         {
             return sessionState.Value switch
             {
-                ContactCenterCallState.Ended or ContactCenterCallState.Transferred => CallOutcome.Completed,
-                ContactCenterCallState.NoAnswer => direction == InteractionDirection.Inbound ? CallOutcome.Missed : CallOutcome.Failed,
-                ContactCenterCallState.Rejected => CallOutcome.Rejected,
-                ContactCenterCallState.Canceled => CallOutcome.Canceled,
-                ContactCenterCallState.Failed => CallOutcome.Failed,
+                VoiceCallState.Ended or VoiceCallState.Transferred => CallOutcome.Completed,
+                VoiceCallState.NoAnswer => direction == InteractionDirection.Inbound ? CallOutcome.Missed : CallOutcome.Failed,
+                VoiceCallState.Rejected => CallOutcome.Rejected,
+                VoiceCallState.Canceled => CallOutcome.Canceled,
+                VoiceCallState.Failed => CallOutcome.Failed,
                 _ => CallOutcome.InProgress,
             };
         }

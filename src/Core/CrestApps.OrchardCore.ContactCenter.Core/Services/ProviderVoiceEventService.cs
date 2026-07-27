@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -21,9 +20,6 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 {
     private const int MaxIngestionAttempts = 3;
 
-    private static readonly TimeSpan _ingestionLockTimeout = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan _ingestionLockExpiration = TimeSpan.FromMinutes(2);
-
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -35,7 +31,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly ISession _session;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IVoiceIngressGate _ingressGate;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -53,7 +49,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="providerCommandStateService">The service used to persist outbound bridge intent.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="session">The YesSql session used to commit provider truth before releasing the ingestion lock.</param>
-    /// <param name="distributedLock">The tenant-scoped distributed lock used to serialize each provider call stream.</param>
+    /// <param name="ingressGate">The provider-neutral gate that serializes each provider call stream.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
@@ -68,7 +64,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IProviderCommandStateService providerCommandStateService,
         IContactCenterScopeExecutor scopeExecutor,
         ISession session,
-        IDistributedLock distributedLock,
+        IVoiceIngressGate ingressGate,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger)
     {
@@ -83,7 +79,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _providerCommandStateService = providerCommandStateService;
         _scopeExecutor = scopeExecutor;
         _session = session;
-        _distributedLock = distributedLock;
+        _ingressGate = ingressGate;
         _clock = clock;
         _logger = logger;
     }
@@ -128,17 +124,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             providerEvent.ProviderName,
             legacyIdempotencyKey);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-            VoiceIngressKeys.BuildIngestionLockKey(providerEvent.ProviderName, providerEvent.ProviderCallId),
-            _ingestionLockTimeout,
-            _ingestionLockExpiration);
+        // The gate is the single lock authority for the stream. When ingestion was reached through the
+        // provider-neutral fan-out the lease is already held, and the gate satisfies this request
+        // re-entrantly instead of taking a second lock on the same call.
+        await using var acquiredLock = await _ingressGate.AcquireAsync(
+            providerEvent.ProviderName,
+            providerEvent.ProviderCallId,
+            cancellationToken);
 
-        if (!locked)
-        {
-            throw new TimeoutException("The provider call event could not acquire its ingestion lock.");
-        }
-
-        await using var acquiredLock = locker;
         Interaction interaction = null;
         var matchedByCallIdOnly = false;
 
@@ -324,7 +317,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             await PublishAsync(eventType, interaction.ItemId, session.AgentId, idempotencyKey, cancellationToken);
         }
 
-        if (providerEvent.State == ContactCenterCallState.Connected)
+        if (providerEvent.State == VoiceCallState.Connected)
         {
             await StageAnsweredOutboundBridgeAsync(session, interaction, cancellationToken);
         }
@@ -449,54 +442,54 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             });
     }
 
-    private static VoiceCallLifecyclePhase GetLifecyclePhase(ContactCenterCallState state)
+    private static VoiceCallLifecyclePhase GetLifecyclePhase(VoiceCallState state)
     {
         return state switch
         {
-            ContactCenterCallState.Planned => VoiceCallLifecyclePhase.Planned,
-            ContactCenterCallState.Dialing => VoiceCallLifecyclePhase.Alerting,
-            ContactCenterCallState.Ringing => VoiceCallLifecyclePhase.Alerting,
-            ContactCenterCallState.Connected => VoiceCallLifecyclePhase.Established,
-            ContactCenterCallState.OnHold => VoiceCallLifecyclePhase.Established,
-            ContactCenterCallState.Ending => VoiceCallLifecyclePhase.Ending,
+            VoiceCallState.Planned => VoiceCallLifecyclePhase.Planned,
+            VoiceCallState.Dialing => VoiceCallLifecyclePhase.Alerting,
+            VoiceCallState.Ringing => VoiceCallLifecyclePhase.Alerting,
+            VoiceCallState.Connected => VoiceCallLifecyclePhase.Established,
+            VoiceCallState.OnHold => VoiceCallLifecyclePhase.Established,
+            VoiceCallState.Ending => VoiceCallLifecyclePhase.Ending,
             _ => VoiceCallLifecyclePhase.Terminal,
         };
     }
 
-    private static void ApplyState(CallSession session, Interaction interaction, ContactCenterCallState state, DateTime now)
+    private static void ApplyState(CallSession session, Interaction interaction, VoiceCallState state, DateTime now)
     {
         session.State = state;
-        session.IsMuted = state is ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled or
-            ContactCenterCallState.Transferred
+        session.IsMuted = state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred
             ? false
             : session.IsMuted;
 
         switch (state)
         {
-            case ContactCenterCallState.Dialing:
-            case ContactCenterCallState.Ringing:
+            case VoiceCallState.Dialing:
+            case VoiceCallState.Ringing:
                 session.StartedUtc ??= now;
                 break;
-            case ContactCenterCallState.Connected:
+            case VoiceCallState.Connected:
                 session.StartedUtc ??= now;
                 session.AnsweredUtc ??= now;
                 session.IsOnHold = false;
                 break;
-            case ContactCenterCallState.OnHold:
+            case VoiceCallState.OnHold:
                 session.IsOnHold = true;
                 break;
-            case ContactCenterCallState.Ending:
+            case VoiceCallState.Ending:
                 break;
-            case ContactCenterCallState.Ended:
-            case ContactCenterCallState.Failed:
-            case ContactCenterCallState.NoAnswer:
-            case ContactCenterCallState.Rejected:
-            case ContactCenterCallState.Canceled:
-            case ContactCenterCallState.Transferred:
+            case VoiceCallState.Ended:
+            case VoiceCallState.Failed:
+            case VoiceCallState.NoAnswer:
+            case VoiceCallState.Rejected:
+            case VoiceCallState.Canceled:
+            case VoiceCallState.Transferred:
                 session.EndedUtc ??= now;
                 session.IsOnHold = false;
 
@@ -512,16 +505,16 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         switch (state)
         {
-            case ContactCenterCallState.Connected:
+            case VoiceCallState.Connected:
                 interaction.StartedUtc ??= now;
                 interaction.AnsweredUtc ??= now;
                 break;
-            case ContactCenterCallState.Ended:
-            case ContactCenterCallState.Failed:
-            case ContactCenterCallState.NoAnswer:
-            case ContactCenterCallState.Rejected:
-            case ContactCenterCallState.Canceled:
-            case ContactCenterCallState.Transferred:
+            case VoiceCallState.Ended:
+            case VoiceCallState.Failed:
+            case VoiceCallState.NoAnswer:
+            case VoiceCallState.Rejected:
+            case VoiceCallState.Canceled:
+            case VoiceCallState.Transferred:
                 interaction.EndedUtc ??= now;
                 break;
         }
@@ -592,41 +585,41 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
     }
 
-    private static InteractionStatus MapInteractionStatus(ContactCenterCallState state)
+    private static InteractionStatus MapInteractionStatus(VoiceCallState state)
     {
         return state switch
         {
-            ContactCenterCallState.Planned => InteractionStatus.Created,
-            ContactCenterCallState.Dialing => InteractionStatus.Ringing,
-            ContactCenterCallState.Ringing => InteractionStatus.Ringing,
-            ContactCenterCallState.Connected => InteractionStatus.Connected,
-            ContactCenterCallState.OnHold => InteractionStatus.Held,
-            ContactCenterCallState.Ending => InteractionStatus.Connected,
-            ContactCenterCallState.Transferred => InteractionStatus.Transferring,
-            ContactCenterCallState.Ended => InteractionStatus.Ended,
-            ContactCenterCallState.Failed => InteractionStatus.Failed,
-            ContactCenterCallState.NoAnswer => InteractionStatus.Failed,
-            ContactCenterCallState.Rejected => InteractionStatus.Failed,
-            ContactCenterCallState.Canceled => InteractionStatus.Failed,
+            VoiceCallState.Planned => InteractionStatus.Created,
+            VoiceCallState.Dialing => InteractionStatus.Ringing,
+            VoiceCallState.Ringing => InteractionStatus.Ringing,
+            VoiceCallState.Connected => InteractionStatus.Connected,
+            VoiceCallState.OnHold => InteractionStatus.Held,
+            VoiceCallState.Ending => InteractionStatus.Connected,
+            VoiceCallState.Transferred => InteractionStatus.Transferring,
+            VoiceCallState.Ended => InteractionStatus.Ended,
+            VoiceCallState.Failed => InteractionStatus.Failed,
+            VoiceCallState.NoAnswer => InteractionStatus.Failed,
+            VoiceCallState.Rejected => InteractionStatus.Failed,
+            VoiceCallState.Canceled => InteractionStatus.Failed,
             _ => InteractionStatus.Created,
         };
     }
 
-    private static ContactCenterCallState ResolveInitialSessionState(Interaction interaction)
+    private static VoiceCallState ResolveInitialSessionState(Interaction interaction)
     {
         return interaction.Status switch
         {
-            InteractionStatus.Connected => ContactCenterCallState.Connected,
-            InteractionStatus.Held => ContactCenterCallState.OnHold,
-            InteractionStatus.Transferring => ContactCenterCallState.Connected,
-            InteractionStatus.Conferenced => ContactCenterCallState.Connected,
-            _ => ContactCenterCallState.Ringing,
+            InteractionStatus.Connected => VoiceCallState.Connected,
+            InteractionStatus.Held => VoiceCallState.OnHold,
+            InteractionStatus.Transferring => VoiceCallState.Connected,
+            InteractionStatus.Conferenced => VoiceCallState.Connected,
+            _ => VoiceCallState.Ringing,
         };
     }
 
     private static List<string> ResolveEventTypes(
-        ContactCenterCallState previousState,
-        ContactCenterCallState currentState,
+        VoiceCallState previousState,
+        VoiceCallState currentState,
         bool previousIsMuted,
         bool currentIsMuted,
         RecordingState previousRecordingState,
@@ -641,17 +634,17 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             ContactCenterConstants.Events.CallSessionUpdated,
         };
 
-        if (currentState == ContactCenterCallState.Connected && previousState != ContactCenterCallState.Connected)
+        if (currentState == VoiceCallState.Connected && previousState != VoiceCallState.Connected)
         {
             eventTypes.Add(ContactCenterConstants.Events.CallConnected);
         }
 
-        if (currentState == ContactCenterCallState.OnHold && previousState != ContactCenterCallState.OnHold)
+        if (currentState == VoiceCallState.OnHold && previousState != VoiceCallState.OnHold)
         {
             eventTypes.Add(ContactCenterConstants.Events.CallHeld);
         }
 
-        if (previousState == ContactCenterCallState.OnHold && currentState == ContactCenterCallState.Connected)
+        if (previousState == VoiceCallState.OnHold && currentState == VoiceCallState.Connected)
         {
             eventTypes.Add(ContactCenterConstants.Events.CallResumed);
         }
@@ -733,27 +726,27 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     // through the state itself, so the cause is derived from it rather than left unset. No call may end
     // without a recorded cause, because an unrecorded one cannot be counted in compliance or abandon
     // reporting later.
-    private static HangupCause InferHangupCause(ContactCenterCallState state)
+    private static HangupCause InferHangupCause(VoiceCallState state)
     {
         return state switch
         {
-            ContactCenterCallState.Ended => HangupCause.NormalClearing,
-            ContactCenterCallState.Transferred => HangupCause.NormalClearing,
-            ContactCenterCallState.NoAnswer => HangupCause.NoAnswer,
-            ContactCenterCallState.Rejected => HangupCause.Rejected,
-            ContactCenterCallState.Canceled => HangupCause.Canceled,
+            VoiceCallState.Ended => HangupCause.NormalClearing,
+            VoiceCallState.Transferred => HangupCause.NormalClearing,
+            VoiceCallState.NoAnswer => HangupCause.NoAnswer,
+            VoiceCallState.Rejected => HangupCause.Rejected,
+            VoiceCallState.Canceled => HangupCause.Canceled,
             _ => HangupCause.Failed,
         };
     }
 
-    private static bool IsTerminalState(ContactCenterCallState state)
+    private static bool IsTerminalState(VoiceCallState state)
     {
-        return state is ContactCenterCallState.Ended or
-            ContactCenterCallState.Failed or
-            ContactCenterCallState.NoAnswer or
-            ContactCenterCallState.Rejected or
-            ContactCenterCallState.Canceled or
-            ContactCenterCallState.Transferred;
+        return state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred;
     }
 
     private static string ResolveEventIdempotencyKey(string providerEventKey, string eventType)

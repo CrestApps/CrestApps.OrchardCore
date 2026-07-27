@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
 /// Identifies the provider-neutral outcome of automated answer detection for an outbound voice call.

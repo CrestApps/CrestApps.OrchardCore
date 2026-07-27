@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>

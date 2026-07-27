@@ -11,9 +11,18 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 internal sealed class FakeDistributedLock : IDistributedLock
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<string> _acquiredKeys = new();
+
+    /// <summary>
+    /// Gets every key an acquisition was actually attempted for, in acquisition order. A caller that takes a
+    /// lock it already holds appears twice here, which is what makes a redundant acquisition observable.
+    /// </summary>
+    public IReadOnlyCollection<string> AcquiredKeys => _acquiredKeys;
 
     public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
     {
+        _acquiredKeys.Enqueue(key);
+
         var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await semaphore.WaitAsync();
 
@@ -25,6 +34,8 @@ internal sealed class FakeDistributedLock : IDistributedLock
         TimeSpan timeout,
         TimeSpan? expiration = null)
     {
+        _acquiredKeys.Enqueue(key);
+
         var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         var locked = await semaphore.WaitAsync(timeout);
 

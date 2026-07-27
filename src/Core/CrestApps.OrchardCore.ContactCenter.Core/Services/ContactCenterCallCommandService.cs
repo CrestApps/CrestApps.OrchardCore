@@ -3,9 +3,10 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony;
-using OrchardCore;
 using OrchardCore.Modules;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -172,8 +173,8 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             reservation,
             deliveryModel,
             interaction.Status == InteractionStatus.Connected
-                ? ContactCenterCallState.Connected
-                : ContactCenterCallState.Ringing,
+                ? VoiceCallState.Connected
+                : VoiceCallState.Ringing,
             interaction.Status == InteractionStatus.Connected,
             now,
             cancellationToken);
@@ -299,7 +300,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         Interaction interaction,
         ActivityReservation reservation,
         VoiceProviderDeliveryModel deliveryModel,
-        ContactCenterCallState state,
+        VoiceCallState state,
         bool answered,
         DateTime now,
         CancellationToken cancellationToken)
