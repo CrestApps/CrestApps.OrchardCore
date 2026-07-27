@@ -17,6 +17,31 @@ Each gate resolves:
 
 It is expected and acceptable for most CI jobs and evidence paths to be `planned` this early in the remediation program; every P0/P1 finding must still be represented so no gate can be silently dropped.
 
+## Every status claim is bound to a real CI job
+
+A gate status is only meaningful if the CI job it names actually exists. `LedgerEvidenceTests` parses the top-level `jobs:` mapping of every workflow in `.github/workflows` and enforces the binding in both directions:
+
+- A gate marked `implemented` or `partial` must name a workflow and job that resolve, and its `additionalJobs` must resolve too.
+- A gate marked `planned` must carry the `planned:` prefix on its workflow and must **not** resolve.
+
+The second rule is what keeps the matrix honest over time. When an anticipated job finally lands, the `planned` gate that named it starts resolving, the test fails, and the matrix cannot stay stale - the status has to be upgraded to match reality.
+
+Evidence is checked as well, not just status:
+
+- With the default `"evidenceKind": "tests"`, the gate's `evidenceLocation` must cite at least one test class that exists in the repository, and every cited class that exists must live in a test project one of the gate's own CI jobs actually runs. A gate cannot borrow credibility from tests that never execute in it.
+- With `"evidenceKind": "workflow"`, the cited workflow files must exist and one of them must declare the job the gate names.
+
+The workflow parser is itself pinned against the known job set of ten workflows, so a parser that silently returned nothing (making every `planned` gate trivially "unresolved") or returned every YAML key (making every enforced gate trivially "resolved") fails the build instead of passing vacuously.
+
+## Ledger authority
+
+Exactly one Contact Center plan document may be release-authoritative. Each Markdown ledger in `.github/contact-center` declares itself with a machine-readable marker:
+
+- `<!-- ledger-authority: release-authoritative -->` - the current release ledger. Every item it marks `[x]` or `[~]` must carry a `` `gate:<workflow>.yml#<job>` `` annotation naming a CI job that resolves, and every item still open must **not** claim an enforcing job.
+- `<!-- ledger-authority: historical -->` - retained for architecture and completed history, but not used for release scoping.
+
+`LedgerEvidenceTests` fails the build if no document claims authority, if more than one does, or if any document declares both or neither.
+
 ## Gate categories
 
 | Prefix | Category | DRI role | Approver roles |
@@ -31,7 +56,7 @@ It is expected and acceptable for most CI jobs and evidence paths to be `planned
 
 ## Current gate count
 
-The matrix currently tracks 41 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review: `C001`-`C008` (correctness), `D001`-`D009` (data), `F001`-`F006` (feature/package graph), `O001`-`O006` (operations), `S001`-`S005` (security), `T001`-`T003` (test/topology), and `V001`-`V004` (voice/provider).
+The matrix currently tracks 42 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review: `C001`-`C008` (correctness), `D001`-`D009` (data), `F001`-`F007` (feature/package graph), `O001`-`O006` (operations), `S001`-`S005` (security), `T001`-`T003` (test/topology), and `V001`-`V004` (voice/provider).
 
 A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, centralized operational PII redaction, webhook body limits, the declared recording/monitoring prohibitions in the support matrix, and the static feature-dependency architecture ledger). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
 
@@ -63,7 +88,7 @@ The O003 R0a operational-log gap is closed. The shared `OperationalLogFieldKind`
 
 `ContactCenterPrTestControlMatrixTests` in `tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter` fails the build if:
 
-- The matrix does not contain exactly 41 gates, or the per-category gate counts drift from the table above.
+- The matrix does not contain exactly 42 gates, or the per-category gate counts drift from the table above.
 - Any gate id is duplicated, or any of the 41 current P0/P1 gate ids is missing, has the wrong severity, or has drifted from its authoritative title in the production-readiness review.
 - A gate's category has no DRI role or no approver roles.
 - A gate's execution context omits providers, databases, or topologies.

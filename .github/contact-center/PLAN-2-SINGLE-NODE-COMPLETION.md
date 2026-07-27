@@ -1,5 +1,7 @@
 # Contact Center — Plan 2: Single-Node Completion & Credibility
 
+<!-- ledger-authority: historical -->
+
 > **Status:** Active, executable. This is the **second** durable Contact Center plan, tracked separately from [`PLAN.md`](PLAN.md). Where `PLAN.md` tracks the R0–R9 architectural remediation program (R0–R7 complete; **R8** end-to-end proof and **R9** advanced capabilities not done), **Plan 2** is the functional-completion and credibility plan: it makes the bundled Asterisk provider actually carry live browser audio and run a *credible* contact center on a **single node first**, then feeds the distributed work back into `PLAN.md` R8.
 >
 > **How to use this document:**

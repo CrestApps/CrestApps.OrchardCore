@@ -1,5 +1,7 @@
 # Contact Center R0 baseline
 
+<!-- ledger-authority: historical -->
+
 This file pins the production-readiness remediation baseline. Later phase evidence must identify its tested commit and commands explicitly rather than assuming these counts remain current.
 
 ## Source identity

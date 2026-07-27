@@ -77,8 +77,8 @@
       "invariant": "A provider that does not register an executable recording contract must return NotSupported and must never publish a recording-started/stopped success event or flip Interaction.RecordingState; a provider that does register the contract must prove a real provider media command was issued and a durable recording session was persisted, not just a state flag. Today `ContactCenterRecordingService.StartAsync`/`StopAsync` flips `RecordingState` and publishes success events with no provider media command (`ContactCenterRecordingService.cs:28-79`) and `IContactCenterVoiceProvider` exposes no recording operation.",
       "testId": "CC-C001",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -103,8 +103,8 @@
       "invariant": "A provider that advertises only the Whisper capability must expose and execute only Whisper; Monitor, Barge, and TakeOver must each fail with NotSupported unless that specific operation is separately certified and executed by the provider, never inferred from a single combined capability flag. Today `ContactCenterMonitoringService.EngageAsync` checks `ContactCenterVoiceProviderCapabilities` and publishes `SupervisorMonitorStarted` with no per-operation provider execution proof (`ContactCenterMonitoringService.cs:33-74`).",
       "testId": "CC-C002",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -156,8 +156,8 @@
       "invariant": "Outbox completed-handler keys are stable, explicit, versioned ids; under a rolling deployment that reorders or renames handler registrations, only handlers that were never recorded as completed under their stable id may replay, and a permanently failing handler is isolated so it never blocks other due work.",
       "testId": "CC-C004",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "implemented"
       },
       "context": {
@@ -182,8 +182,8 @@
       "invariant": "When inbound contact lookup returns more than one match, the activity must persist a deterministic candidate set and an explicit ambiguous-resolution state instead of auto-assigning the first match. The call may continue through contact-independent routing, but completion must require an authorized explicit candidate selection and no contact-bound subject action may run before resolution.",
       "testId": "CC-C005",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -208,8 +208,8 @@
       "invariant": "Outbound dialing eligibility must evaluate the reused business-hours calendar (day-of-week, holidays, minute precision, time zone), rolling abandonment rate, and safe-harbor behavior before any attempt, and the automatic Power/Progressive/Predictive dialing modes must remain unavailable until every one of those checks is certified by tests and legal/product policy. `DefaultDialerEligibilityService.cs:153-173` evaluates only an hour-only window today and omits day-of-week, holidays, minute precision, regional policy, abandonment caps, and safe-harbor behavior.",
       "testId": "CC-C006",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -260,8 +260,8 @@
       "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that provider work occurred. Live media is exposed only by a matching `IContactCenterVoiceMediaProvider` registration under the dependency-only media features, while Recording, Monitor, Whisper, Barge, and TakeOver require both their capability metadata and matching executable contracts.",
       "testId": "CC-C008",
       "ciJob": {
-        "id": "contact-center-domain-invariants",
-        "workflow": "planned:.github/workflows/contact_center_domain_invariants.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -445,8 +445,8 @@
       "invariant": "Every projection increment is guarded by a unique `(Projection, EventId)` processed-event record committed atomically with the effect, while metric rows use optimistic concurrency and portable date/event uniqueness. Every replayable projection must also support a versioned checkpoint, a documented rebuild operation, and a drift-detection check; that rebuild tooling remains incomplete.",
       "testId": "CC-D007",
       "ciJob": {
-        "id": "contact-center-database-matrix",
-        "workflow": "planned:.github/workflows/contact_center_database_matrix.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -471,7 +471,7 @@
       "invariant": "Under two background workers crashing and restarting concurrently, callback promotion must claim a bounded batch with owner/lease expiry so exactly one activity/callback results, never a duplicate promotion or an unbounded scan. Callback promotion is unbounded and duplicate-prone today with no lease-based claim.",
       "testId": "CC-D008",
       "ciJob": {
-        "id": "contact-center-operations-gates",
+        "id": "exactly-once-callback-promotion",
         "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
         "status": "planned"
       },
@@ -497,7 +497,7 @@
       "invariant": "Under a chaos scenario with a slow provider and overlapping worker executions across 100,000 calls, provider reconciliation must checkpoint its scan and rate-limit external lookups so overlapping runs never duplicate work or fall behind unboundedly. Provider reconciliation is unbounded today with no checkpointed, overlap-safe scan.",
       "testId": "CC-D009",
       "ciJob": {
-        "id": "contact-center-operations-gates",
+        "id": "provider-reconciliation-chaos",
         "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
         "status": "planned"
       },
@@ -524,8 +524,8 @@
       "invariant": "The base `CrestApps.OrchardCore.ContactCenter` feature must boot and activate in a tenant alone, resolving every service from only its own declared manifest dependencies, without requiring `CrestApps.OrchardCore.Omnichannel.Managements` or any other admin-integration assembly. Today the base feature depends on `CrestApps.OrchardCore.Omnichannel.Managements` (`ContactCenter/Manifest.cs`).",
       "testId": "CC-F001",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -550,8 +550,8 @@
       "invariant": "Every service registered by a feature's Startup class must resolve using only that feature's declared transitive manifest dependencies. A singleton and supported-combination activation matrix must prove that enabling Queues, Voice, RealTime, and SoftPhone in every approved combination never fails to resolve a service. Today `QueuesStartup` registers a Telephony soft-phone driver requiring `HubRouteManager` without declaring Telephony or SignalR/RealTime, and Voice depends on `Telephony.SoftPhone` (`ContactCenter/Startup.cs:210-262,337-420`; `ContactCenterSoftPhoneWidgetDisplayDriver.cs:24-80`).",
       "testId": "CC-F002",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -576,7 +576,7 @@
       "invariant": "A tenant must be able to enable or disable a real `CrestApps.OrchardCore.ContactCenter.Workflows` feature independently of the base Contact Center features. Today the Workflows bridge activates only implicitly through `[RequireFeatures(\"OrchardCore.Workflows\")]` with no independently selectable Contact Center feature.",
       "testId": "CC-F003",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
+        "id": "workflows-bridge-activation",
         "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
         "status": "planned"
       },
@@ -602,7 +602,7 @@
       "invariant": "Asterisk and DialPad provider assemblies must reference only `CrestApps.OrchardCore.ContactCenter.Abstractions` (or another stable abstraction package), never a Contact Center implementation assembly, and each provider's base/adapter features must boot independently. Provider modules currently reference Contact Center implementation assemblies, and Asterisk registers Contact Center adapters from its base feature.",
       "testId": "CC-F004",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
+        "id": "provider-adapter-boundary",
         "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
         "status": "planned"
       },
@@ -628,7 +628,7 @@
       "invariant": "`CrestApps.OrchardCore.Omnichannel.Managements` must run standalone with Contact Center features disabled and must resolve optional Contact Center contributors (for example dialer services) only through an Omnichannel-owned contributor contract, never through reverse references or ad hoc service location that assumes Contact Center is present. Omnichannel Managements currently resolves optional dialer services dynamically via service location.",
       "testId": "CC-F005",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
+        "id": "managements-only-activation",
         "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
         "status": "planned"
       },
@@ -654,7 +654,7 @@
       "invariant": "Post-commit handler and hub execution must become an explicit, testable dispatcher abstraction; before that refactor lands, the current `IServiceProvider`/ad hoc shell-child-scope execution path must be characterized by tests so the refactor cannot silently change behavior. Concrete orchestration types and post-commit/hub execution currently hide dependencies behind service location and child scopes.",
       "testId": "CC-F006",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
+        "id": "post-commit-scope-characterization",
         "workflow": "planned:.github/workflows/contact_center_feature_activation_matrix.yml",
         "status": "planned"
       },
@@ -680,9 +680,15 @@
       "invariant": "Every feature-owned Contact Center task, hub, listener, adapter, and media provider must declare how it stops accepting work, drains admitted work, and reconciles in a fresh scope after shell activation. Orchard pre-disable callbacks must quiesce matching participants before descriptor mutation, activation must not perform provider or database work inline, and inactive or idle disable/re-enable must not retain tenant-local runtime state.",
       "testId": "CC-F007",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
-        "status": "implemented"
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
       },
       "context": {
         "providers": [
@@ -707,9 +713,9 @@
       "invariant": "Contact Center must publish an `ActivitySource` with structured correlation, a `Meter` with counters/histograms for routing/queue/reservation/outbox/provider-command outcomes, and a health endpoint reporting degraded/unhealthy state for database, outbox/dead-letter, background-task lag, provider connectivity, listener lease, and SignalR backplane connectivity. No Contact Center `ActivitySource`, `Meter`, liveness, or readiness model exists today; `DialerActivitySourceHelper` only classifies business activity sources, not distributed traces.",
       "testId": "CC-O001",
       "ciJob": {
-        "id": "contact-center-operations-gates",
-        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
-        "status": "planned"
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -722,7 +728,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "No trace/metric/health contract test exists yet for Contact Center; this is a planned:contact-center-operations-gates dependency."
+      "evidenceLocation": "ContactCenterHealthEndpointsTests, ContactCenterNodeHealthCheckTests, ContactCenterNodeServingHealthCheckTests, ContactCenterTopologyHealthCheckTests, ContactCenterOutboxHealthCheckTests, ContactCenterProcessHealthMiddlewareTests, ContactCenterProcessLivenessPathValidatorTests, NodeServingStateTrackerTests, and SharedHealthCheckEndpointGuardTests prove the liveness/readiness/dependency probe split, the tag-to-predicate binding, node-local readiness, the declared-topology readiness verdict, and the outbox and provider-ingress dependency thresholds. The Meter and its outbox counters are published and asserted. The trace half of this gate is not met: the ActivitySource is declared but no Contact Center span is ever started, so R7 is re-opened by Plan 3 and this gate stays partial until distributed tracing exists."
     },
     {
       "id": "O002",
@@ -733,9 +739,15 @@
       "invariant": "Under two application nodes, a hub offer, a supervisor dashboard watch, an agent reconnect, and a supervisor fan-out broadcast must all reach the correct connections through the supported `CrestApps.OrchardCore.SignalR.Redis` backplane; in-memory single-node behavior must not be used to claim multi-node correctness.",
       "testId": "CC-O002",
       "ciJob": {
-        "id": "contact-center-operations-gates",
+        "id": "redis-backplane-two-node",
         "workflow": ".github/workflows/contact_center_operations_gates.yml",
-        "status": "partial"
+        "status": "partial",
+        "additionalJobs": [
+          {
+            "id": "build_test",
+            "workflow": ".github/workflows/pr_ci.yml"
+          }
+        ]
       },
       "context": {
         "providers": [
@@ -759,9 +771,9 @@
       "invariant": "No log entry emitted by a Contact Center or Telephony/SMS provider path may contain an E.164 customer address, another stable personal identifier, a token, or a secret; centralized structured PII classification/redaction must be enforced with negative log tests across every path, not only the Asterisk event-subscription URI. Telephony/SMS logs can currently include raw addresses outside the Asterisk URI case covered by S003.",
       "testId": "CC-O003",
       "ciJob": {
-        "id": "contact-center-operations-gates",
-        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
-        "status": "planned"
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -785,8 +797,8 @@
       "invariant": "The Asterisk dashboard development host must reject startup in a Production-configured process, and any request reaching its diagnostics, origination, hangup, or bridge-deletion endpoints anonymously must be unavailable or return 401/403, not succeed. `AsteriskWebSecurity.EnsureDevelopmentOnly` already throws in Production (`CrestApps.OrchardCore.Asterisk.Web/Program.cs:9`), but the dashboard, channel-disconnect, bridge-disconnect, and simulation endpoints in that Program.cs enforce no per-request authorization, so 401/403 defense-in-depth is still missing if the process guard is ever bypassed.",
       "testId": "CC-O004",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -811,9 +823,9 @@
       "invariant": "Each regression class (browser/E2E, provider contract, feature-activation, and performance) must run in its own owning CI workflow and fail with retained diagnostic artifacts when that class regresses; a single generic build-and-unit-test job must not be relied on to catch them. `pr_ci.yml` currently defines only one `build_test` job that runs `dotnet build` and `dotnet test`, with no browser install step, provider-contract job, feature-activation job, or performance/chaos job.",
       "testId": "CC-O005",
       "ciJob": {
-        "id": "contact-center-operations-gates",
-        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
-        "status": "planned"
+        "id": "fresh-tenant-activation",
+        "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml",
+        "status": "partial"
       },
       "context": {
         "providers": [
@@ -826,7 +838,8 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": ".github/workflows/pr_ci.yml retains only the Build & Test artifact today; dedicated browser, provider-contract, feature-activation, and performance workflows with retained per-class artifacts are a planned:contact-center-operations-gates dependency."
+      "evidenceLocation": "`.github/workflows/contact_center_feature_activation_matrix.yml` runs the feature-activation class in its own workflow and uploads retained per-run trx artifacts with `if-no-files-found: error`, and `.github/workflows/contact_center_operations_gates.yml` runs the distributed class in its own workflow. The browser/E2E, provider-contract, and performance/chaos classes still have no owning workflow, so this gate stays partial.",
+      "evidenceKind": "workflow"
     },
     {
       "id": "O006",
@@ -837,8 +850,8 @@
       "invariant": "Every entity carrying customer data (call sessions, Telephony history, metrics, recordings) must define a retention horizon and an erasure transformation, proven by purge and erasure tests, and every destructive schema migration must be proven safe for a mixed-version rolling upgrade using expand-migrate-contract, or the release must explicitly document a required downtime window. Retention today covers only interaction events; call sessions, Telephony history, metrics, recordings, and PII erasure remain undefined, and destructive migrations are unproven for rolling deployment.",
       "testId": "CC-O006",
       "ciJob": {
-        "id": "contact-center-operations-gates",
-        "workflow": "planned:.github/workflows/contact_center_operations_gates.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -863,8 +876,8 @@
       "invariant": "Given two tenant shells sharing one SignalR hub lifetime manager or production backplane, a supervisor broadcast or user-targeted message scoped to tenant A must never be delivered to any connection belonging to tenant B. `ContactCenterHub` now qualifies the supervisors group and user identifiers with the shell's tenant name through `TenantSignalRGroupName` (`Hubs/ContactCenterHub.cs:32,47,108,121,502-504`).",
       "testId": "CC-S001",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -889,8 +902,8 @@
       "invariant": "A hub membership, subscription, or routing-candidacy request for a queue or campaign id must be rejected unless the requesting agent has a manager-owned `QueueMembership`/`CampaignMembership` entitlement for that id; an agent entitled only to queue A must never gain access to queue B.",
       "testId": "CC-S002",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -915,8 +928,8 @@
       "invariant": "No log entry produced when subscribing to or logging the Asterisk ARI event stream may contain the `api_key` query-string credential or any other secret; the logged URI representation must have credentials stripped before it reaches any logger.",
       "testId": "CC-S003",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "implemented"
       },
       "context": {
@@ -941,8 +954,8 @@
       "invariant": "Stored subject/activity text rendered in the activity completion preview must render as literal text with no script execution even when the stored value contains an HTML/script payload; the view must use encoded DOM/text APIs, never raw `innerHTML` concatenation of untrusted stored text.",
       "testId": "CC-S004",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "implemented"
       },
       "context": {
@@ -967,8 +980,8 @@
       "invariant": "The Asterisk dashboard development host must refuse to start in a Production-configured process, so its anonymous diagnostics, call-origination, hangup, and bridge-deletion controls are unavailable in production; the host must never ship as a privileged, anonymously reachable production surface.",
       "testId": "CC-S005",
       "ciJob": {
-        "id": "pr-ci-build-and-test",
-        "workflow": ".github/workflows/pr_ci.yml (Build & Test)",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "implemented"
       },
       "context": {
@@ -993,9 +1006,15 @@
       "invariant": "Every Contact Center feature must, on a fresh Orchard tenant, enable, run its migrations, resolve every registered service, participate in routing, and disable cleanly, for every legal manifest combination; no feature may compile while failing as soon as a tenant enables it.",
       "testId": "CC-T001",
       "ciJob": {
-        "id": "contact-center-feature-activation-matrix",
+        "id": "fresh-tenant-activation",
         "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml",
-        "status": "partial"
+        "status": "partial",
+        "additionalJobs": [
+          {
+            "id": "build_test",
+            "workflow": ".github/workflows/pr_ci.yml"
+          }
+        ]
       },
       "context": {
         "providers": [
@@ -1125,8 +1144,8 @@
       "invariant": "Every provider webhook route must enforce provider-specific body-size and authenticated rate limits, a tenant-local concurrency ceiling, and a bounded provider-signed freshness window, then accept the event into a durable inbox before returning success independent of the inbound HTTP request. Oversize, over-limit, missing-timestamp, malformed-timestamp, stale, or excessively future payloads must be rejected, unauthenticated traffic must not consume a provider's authenticated budget, and a client aborting after durable acceptance must never roll back that acceptance.",
       "testId": "CC-V003",
       "ciJob": {
-        "id": "contact-center-provider-contract-suite",
-        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
         "status": "partial"
       },
       "context": {
@@ -1151,9 +1170,15 @@
       "invariant": "No GA-Core profile may enable, advertise, resolve, or expose bidirectional media until Asterisk RTP has a documented secure deployment boundary and certified loss, reordering, jitter, capacity, failover, and node-affinity behavior. The media features remain dependency-only and absent from every approved profile; full transport certification is deferred to R9.",
       "testId": "CC-V004",
       "ciJob": {
-        "id": "contact-center-provider-contract-suite",
-        "workflow": "planned:.github/workflows/contact_center_provider_contract_suite.yml",
-        "status": "partial"
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "partial",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
       },
       "context": {
         "providers": [
