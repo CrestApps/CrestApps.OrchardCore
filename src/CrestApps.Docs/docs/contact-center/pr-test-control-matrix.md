@@ -42,6 +42,15 @@ A control matrix can only describe gates that run. Four further checks in `Ledge
 - **Gates watch the whole tree.** The Contact Center gate workflows must filter on `src/**` and `tests/**`. They previously listed individual module folders, so a change to a shared Core project skipped the very gate that proved it.
 - **Failures cannot be swallowed.** Any workflow step piping a command into `tee` must set `pipefail` or inspect `PIPESTATUS`; otherwise the step reports the exit status of `tee` and a failing build passes. Comment lines are stripped before this check, so a comment mentioning `pipefail` cannot satisfy it.
 
+A gate is also only as good as the tests it runs. A test that reads production source as text, or that asserts a value it stubbed itself, satisfies a gate without proving anything, so the Contact Center suites that behaved that way were rebuilt to invoke the code they describe:
+
+- `ContactCenterHubSecurityTests` constructs the real `ContactCenterHub` and invokes `OnConnectedAsync`, rather than searching `ContactCenterHub.cs` for substrings in the expected order.
+- `ContactCenterMigrationSqlTests` runs the migration SQL builder against the four real YesSql dialects and executes the generated statement on a live SQLite database, rather than asserting a string shaped by its own `Mock<ISqlDialect>`. The mock had encoded quoting and index-prefix rules that no supported engine actually uses.
+- `ActivityQueueServiceConcurrencyTests` races eight workers against one activity on a real store and proves a single queue claim survives, rather than making one call against one stub.
+- `ContactCenterOperationalLogPrivacyTests` parses every logging call in the guarded trees with Roslyn instead of pinning twenty exact source strings, so the redaction rule applies to code written after the audit.
+
+Governance suites that validate the shape of a JSON document are retained as schema guards, but they are not counted as behavioural coverage for any control.
+
 ## Ledger authority
 
 Exactly one Contact Center plan document may be release-authoritative. Each Markdown ledger in `.github/contact-center` declares itself with a machine-readable marker:
