@@ -295,12 +295,19 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         }
 
         var call = NormalizeCall(interaction, lookup.Call);
-        var changed = ApplyProviderState(interaction, call);
+        var changed = false;
 
-        if (changed)
-        {
-            await _interactionStore.UpdateAsync(interaction, cancellationToken);
-        }
+        // The mutation runs against the version the store reads inside its own retry scope, so a provider snapshot
+        // can never overwrite a newer state that a real-time event committed while this reconciliation pass ran.
+        await _interactionStore.UpdateByIdAsync(
+            interaction.InteractionId,
+            candidate =>
+            {
+                changed = ApplyProviderState(candidate, call);
+
+                return changed;
+            },
+            cancellationToken);
 
         if (notifyProviderState)
         {

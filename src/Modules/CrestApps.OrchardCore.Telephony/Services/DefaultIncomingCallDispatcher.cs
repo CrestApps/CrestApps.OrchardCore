@@ -111,16 +111,22 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
             return;
         }
 
-        existing.ProviderName = call.ProviderName;
-        existing.From = string.IsNullOrEmpty(call.From) ? existing.From : call.From;
-        existing.To = string.IsNullOrEmpty(call.To) ? existing.To : call.To;
-        existing.Direction = call.Direction;
+        await _interactionStore.UpdateByIdAsync(
+            existing.InteractionId,
+            candidate =>
+            {
+                candidate.ProviderName = call.ProviderName;
+                candidate.From = string.IsNullOrEmpty(call.From) ? candidate.From : call.From;
+                candidate.To = string.IsNullOrEmpty(call.To) ? candidate.To : call.To;
+                candidate.Direction = call.Direction;
 
-        if (!existing.EndedUtc.HasValue)
-        {
-            existing.Outcome = CallOutcome.InProgress;
-        }
+                if (!candidate.EndedUtc.HasValue)
+                {
+                    candidate.Outcome = CallOutcome.InProgress;
+                }
 
-        await _interactionStore.UpdateAsync(existing, cancellationToken);
+                return true;
+            },
+            cancellationToken);
     }
 }

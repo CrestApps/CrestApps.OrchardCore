@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -244,6 +245,57 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
                 Assert.Equal("call-2", call.CallId);
                 Assert.Equal("+15550002000", call.To);
             });
+    }
+
+    [Fact]
+    public async Task ReconcileProviderInteractionsAsync_WhenProviderStateChanged_PersistsThroughTheRetryingUpdate()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.ListActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    ProviderName = "provider-1",
+                    From = "+15559990000",
+                    State = CallState.Connected,
+                },
+            },
+            lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileProviderInteractionsAsync(
+            "provider-1",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, changed);
+        Assert.Equal("+15559990000", interaction.From);
+
+        store.Verify(
+            value => value.UpdateByIdAsync(
+                "interaction-1",
+                It.IsAny<Func<TelephonyInteraction, bool>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        store.Verify(
+            value => value.UpdateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

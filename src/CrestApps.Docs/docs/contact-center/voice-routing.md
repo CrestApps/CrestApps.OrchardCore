@@ -461,6 +461,20 @@ Q.850 has no distinct cause for an abandoned call — a caller who hangs up whil
 
 **No call may end without a cause.** A provider that reports a terminal state without one has the cause derived from the state itself, and the property suite asserts over every generated adversarial delivery sequence that a terminated session always carries both a cause and an end time. A cause that is never written at the source cannot be reconstructed later, which is what previously made outbound compliance reporting and abandon analytics impossible to compute.
 
+## Three writers, one telephony interaction
+
+The soft phone's interaction record is written from three independent directions, and none of them coordinates with the others:
+
+- **Real-time provider events** arrive as the call progresses and move the interaction through ringing, answered, and hangup.
+- **The reconciliation pass** periodically asks the provider for authoritative call state and repairs anything a dropped event left behind.
+- **Inbound dispatch** refreshes the record when a call is offered to an agent.
+
+Each of these used to read the interaction, mutate the copy it was holding, and save it. Whichever one committed last won, and everything the others had written in the meantime was discarded. The damaging case is not a lost cosmetic field: the reconciliation pass carries a provider snapshot that was already seconds old by the time it was applied, so it could reinstate a live call over a hangup that a real-time event had committed while the pass was running. The call then looked active to the agent until the next pass happened to catch it.
+
+Every write to a telephony interaction is now guarded by an optimistic-concurrency check, so a writer holding a version that has already been replaced fails instead of overwriting the winner. Read-modify-write callers do not perform their own read anymore; they hand the store a mutation, and the store opens a dedicated session, reads the current version, applies the mutation, and commits. If another writer commits first, the store re-reads and reapplies the mutation against the version that actually won, up to a bounded number of attempts.
+
+The mutation is also allowed to decline after seeing the fresh version. That is what makes the guards correct rather than merely retried: the real-time dispatcher re-evaluates "is this interaction already terminal?" against the version that won the race, so an event that arrives just behind a hangup declines instead of resurrecting the call.
+
 ## Related guides
 
 - [Contact Center overview](index.md)

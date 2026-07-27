@@ -78,7 +78,26 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
-        var interaction = await _telephonyInteractionStore.FindByProviderCallIdAsync(voiceEvent.ProviderName, voiceEvent.CallId, cancellationToken);
+        var alreadyTerminal = false;
+        var interaction = await _telephonyInteractionStore.UpdateByProviderCallIdAsync(
+            voiceEvent.ProviderName,
+            voiceEvent.CallId,
+            candidate =>
+            {
+                // The terminal check has to run against the version this attempt actually read. Evaluating it on a
+                // copy loaded earlier would let a hangup that committed in between be overwritten by a stale state.
+                alreadyTerminal = candidate.Outcome != CallOutcome.InProgress;
+
+                if (alreadyTerminal)
+                {
+                    return false;
+                }
+
+                ApplyInteractionState(candidate, voiceEvent);
+
+                return true;
+            },
+            cancellationToken);
 
         if (interaction is null)
         {
@@ -94,7 +113,7 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
-        if (interaction.Outcome != CallOutcome.InProgress)
+        if (alreadyTerminal)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -109,8 +128,6 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
             return;
         }
 
-        ApplyInteractionState(interaction, voiceEvent);
-        await _telephonyInteractionStore.UpdateAsync(interaction, cancellationToken);
         await _hubContext.Clients
             .Group(TenantSignalRGroupName.ForUser(_tenantName, interaction.UserId))
             .CallStateChanged(BuildTelephonyCall(interaction, voiceEvent));

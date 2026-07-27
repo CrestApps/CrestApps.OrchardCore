@@ -10,16 +10,20 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStore
 {
     private const int DefaultReconciliationBatchSize = 200;
+    private const int ConcurrencyRetryLimit = 5;
 
     private readonly ISession _session;
+    private readonly IStore _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyInteractionStore"/> class.
     /// </summary>
-    /// <param name="session">The YesSql session.</param>
-    public DefaultTelephonyInteractionStore(ISession session)
+    /// <param name="session">The ambient YesSql session used for reads and creates.</param>
+    /// <param name="store">The YesSql store used to open the short isolated sessions that concurrency retries require.</param>
+    public DefaultTelephonyInteractionStore(ISession session, IStore store)
     {
         _session = session;
+        _store = store;
     }
 
     /// <inheritdoc/>
@@ -35,7 +39,85 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
-        return _session.SaveAsync(interaction, cancellationToken: cancellationToken);
+        return _session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TelephonyInteraction> UpdateByIdAsync(
+        string interactionId,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(interactionId);
+        ArgumentNullException.ThrowIfNull(mutate);
+
+        return MutateWithRetryAsync(
+            session => session
+                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.InteractionId == interactionId)
+                .FirstOrDefaultAsync(cancellationToken),
+            mutate,
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TelephonyInteraction> UpdateByProviderCallIdAsync(
+        string providerName,
+        string callId,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(callId);
+        ArgumentNullException.ThrowIfNull(mutate);
+
+        return MutateWithRetryAsync(
+            session => session
+                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == providerName && x.CallId == callId)
+                .FirstOrDefaultAsync(cancellationToken),
+            mutate,
+            cancellationToken);
+    }
+
+    private async Task<TelephonyInteraction> MutateWithRetryAsync(
+        Func<ISession, Task<TelephonyInteraction>> readAsync,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        {
+            // A dedicated session keeps the read-decide-write window as short as the database allows and,
+            // more importantly, gives the retry a session that has not been canceled by a failed commit.
+            await using var session = _store.CreateSession();
+
+            var interaction = await readAsync(session);
+
+            if (interaction is null)
+            {
+                return null;
+            }
+
+            if (!mutate(interaction))
+            {
+                return interaction;
+            }
+
+            try
+            {
+                await session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
+                await session.SaveChangesAsync(cancellationToken);
+            }
+            catch (ConcurrencyException)
+            {
+                // Another writer committed between the read and the save. The mutation was computed from a version
+                // that no longer exists, so it must be recomputed against the winner rather than overwriting it.
+                continue;
+            }
+
+            return interaction;
+        }
+
+        throw new InvalidOperationException(
+            $"Unable to update the telephony interaction after {ConcurrencyRetryLimit} attempts because concurrent writers kept winning the race.");
     }
 
     /// <inheritdoc/>

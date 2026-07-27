@@ -516,6 +516,34 @@
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ProviderCallStateSynchronizationServiceTests.cs and ProviderVoiceOfferSynchronizationServiceTests.cs characterize today's reconciliation logic at unit scale; the slow-provider chaos/overlapping-worker proof at 100,000 calls is a planned:contact-center-operations-gates dependency."
     },
     {
+      "id": "D010",
+      "severity": "P1",
+      "planFinding": "W1.5-telephony-interaction-store-lost-update",
+      "category": "data",
+      "gate": "Telephony interaction writes were last-write-wins",
+      "invariant": "Every write to a telephony interaction is guarded by an optimistic-concurrency check, so a writer that mutated a version another writer has already replaced fails instead of silently discarding the winner's work. Every read-modify-write path re-reads the interaction inside a dedicated session and reapplies its mutation against the committed version, which means a concurrent writer's field survives the retry and a state guard evaluated before the retry is re-evaluated against the version that actually won.",
+      "testId": "CC-D010",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "TelephonyInteractionStoreConcurrencyTests, which exercises DefaultTelephonyInteractionStore against a real SQLite database, plus the retrying-update assertions in AsteriskRealtimeVoiceEventDispatcherTests, DefaultIncomingCallDispatcherTests, and TelephonyInteractionSynchronizationServiceTests."
+    },
+    {
       "id": "F001",
       "severity": "P0",
       "category": "feature-and-package-graph",

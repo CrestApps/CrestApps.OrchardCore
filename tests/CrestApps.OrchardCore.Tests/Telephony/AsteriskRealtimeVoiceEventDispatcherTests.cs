@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -46,9 +47,7 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
             StartedUtc = startedUtc,
         };
 
-        store
-            .Setup(value => value.FindByProviderCallIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(interaction);
+        store.SetupRetryingUpdates(interaction);
         hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
         clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1"))).Returns(client.Object);
         clock.SetupGet(value => value.UtcNow).Returns(endedUtc);
@@ -82,7 +81,13 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
         Assert.Equal(endedUtc, interaction.EndedUtc);
         Assert.Equal(180, interaction.DurationSeconds);
 
-        store.Verify(value => value.UpdateAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(
+            value => value.UpdateByProviderCallIdAsync(
+                "Asterisk",
+                "call-1",
+                It.IsAny<Func<TelephonyInteraction, bool>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
         client.Verify(
             value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
                 call.CallId == "call-1" &&
@@ -129,7 +134,13 @@ public sealed class AsteriskRealtimeVoiceEventDispatcherTests
         await dispatcher.HandleAsync(voiceEvent, TestContext.Current.CancellationToken);
 
         // Assert
-        store.Verify(value => value.FindByProviderCallIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        store.Verify(
+            value => value.UpdateByProviderCallIdAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<TelephonyInteraction, bool>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
         hubContext.VerifyGet(value => value.Clients, Times.Never);
     }
 

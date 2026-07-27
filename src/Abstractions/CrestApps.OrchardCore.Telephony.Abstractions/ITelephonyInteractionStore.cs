@@ -16,12 +16,51 @@ public interface ITelephonyInteractionStore
     Task CreateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing interaction.
+    /// Updates an existing interaction. The write is guarded by an optimistic-concurrency check, so a
+    /// caller that mutated a stale copy fails loudly instead of silently discarding a concurrent update.
     /// </summary>
     /// <param name="interaction">The interaction to update.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     Task UpdateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a mutation to the interaction with the given identifier inside a dedicated session, re-reading
+    /// and reapplying the mutation whenever a concurrent writer commits first.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="mutate">
+    /// The mutation to apply to the freshly read interaction. Returning <see langword="false"/> abandons the
+    /// attempt without writing, which lets a caller decline based on state it can only observe after the read.
+    /// </param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// The interaction as it was read and mutated, or <see langword="null"/> when no interaction matches.
+    /// </returns>
+    Task<TelephonyInteraction> UpdateByIdAsync(
+        string interactionId,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a mutation to the interaction for the given provider and provider call identifier inside a
+    /// dedicated session, re-reading and reapplying the mutation whenever a concurrent writer commits first.
+    /// </summary>
+    /// <param name="providerName">The technical provider name.</param>
+    /// <param name="callId">The provider-specific call identifier.</param>
+    /// <param name="mutate">
+    /// The mutation to apply to the freshly read interaction. Returning <see langword="false"/> abandons the
+    /// attempt without writing, which lets a caller decline based on state it can only observe after the read.
+    /// </param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// The interaction as it was read and mutated, or <see langword="null"/> when no interaction matches.
+    /// </returns>
+    Task<TelephonyInteraction> UpdateByProviderCallIdAsync(
+        string providerName,
+        string callId,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes an interaction that no longer exists at the telephony provider.

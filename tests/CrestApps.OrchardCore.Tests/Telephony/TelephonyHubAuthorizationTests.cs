@@ -422,6 +422,40 @@ public sealed class TelephonyHubAuthorizationTests
             CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
+        public Task<TelephonyInteraction> UpdateByIdAsync(
+            string interactionId,
+            Func<TelephonyInteraction, bool> mutate,
+            CancellationToken cancellationToken = default)
+        {
+            var interaction = _interactions.FirstOrDefault(value =>
+                string.Equals(value.InteractionId, interactionId, StringComparison.Ordinal));
+
+            if (interaction is not null)
+            {
+                mutate(interaction);
+            }
+
+            return Task.FromResult(interaction);
+        }
+
+        public Task<TelephonyInteraction> UpdateByProviderCallIdAsync(
+            string providerName,
+            string callId,
+            Func<TelephonyInteraction, bool> mutate,
+            CancellationToken cancellationToken = default)
+        {
+            var interaction = _interactions.FirstOrDefault(value =>
+                string.Equals(value.ProviderName, providerName, StringComparison.Ordinal) &&
+                string.Equals(value.CallId, callId, StringComparison.Ordinal));
+
+            if (interaction is not null)
+            {
+                mutate(interaction);
+            }
+
+            return Task.FromResult(interaction);
+        }
+
         public Task DeleteAsync(
             TelephonyInteraction interaction,
             CancellationToken cancellationToken = default)

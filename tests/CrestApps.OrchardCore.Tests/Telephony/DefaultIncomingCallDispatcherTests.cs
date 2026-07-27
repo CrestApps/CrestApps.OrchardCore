@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -105,6 +106,7 @@ public sealed class DefaultIncomingCallDispatcherTests
         clock.SetupGet(value => value.UtcNow).Returns(_now.UtcDateTime);
         store.Setup(value => value.FindByCallIdAsync("user-1", "call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
+        store.SetupRetryingUpdates(existing);
 
         var dispatcher = new DefaultIncomingCallDispatcher(
             hubContext.Object,
@@ -130,7 +132,12 @@ public sealed class DefaultIncomingCallDispatcherTests
         Assert.Equal("+15550002000", existing.To);
         Assert.Equal(CallDirection.Inbound, existing.Direction);
 
-        store.Verify(value => value.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(
+            value => value.UpdateByIdAsync(
+                "int-1",
+                It.IsAny<Func<TelephonyInteraction, bool>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         store.Verify(value => value.CreateAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
