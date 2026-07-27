@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -205,7 +206,7 @@ public sealed class ContactCenterFeatureLifecycleTests
     public async Task WorkManager_QuiesceRejectsNewWorkAndDrainWaitsForAdmittedWork()
     {
         // Arrange
-        var manager = new ContactCenterFeatureWorkManager();
+        var manager = CreateAdmissibleWorkManager();
         var lease = manager.TryEnter("feature-a");
         manager.Quiesce("feature-a");
 
@@ -228,7 +229,7 @@ public sealed class ContactCenterFeatureLifecycleTests
     public async Task WorkManager_DrainTimeoutFailsClosedUntilActivated()
     {
         // Arrange
-        var manager = new ContactCenterFeatureWorkManager();
+        var manager = CreateAdmissibleWorkManager();
         using var lease = manager.TryEnter("feature-a");
         manager.Quiesce("feature-a");
 
@@ -279,7 +280,7 @@ public sealed class ContactCenterFeatureLifecycleTests
     public async Task WorkLifecycleParticipant_DrainTimeoutPropagates()
     {
         // Arrange
-        var manager = new ContactCenterFeatureWorkManager();
+        var manager = CreateAdmissibleWorkManager();
         using var lease = manager.TryEnter("feature-a");
         var participant = new ContactCenterFeatureWorkLifecycleParticipant(
             "feature-a",
@@ -299,7 +300,7 @@ public sealed class ContactCenterFeatureLifecycleTests
     public async Task RealTimeParticipant_QuiesceAbortsConnectionsAndRejectsNewRegistrations()
     {
         // Arrange
-        var manager = new ContactCenterFeatureWorkManager();
+        var manager = CreateAdmissibleWorkManager();
         var registry = new ContactCenterHubConnectionRegistry();
         var participant = new ContactCenterRealTimeLifecycleParticipant(
             manager,
@@ -407,6 +408,56 @@ public sealed class ContactCenterFeatureLifecycleTests
         synchronizationService.Verify(
             service => service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken),
             Times.Once);
+    }
+
+    [Fact]
+    public void WorkManager_RefusesAllWork_WhenTheTopologyVerdictHasNotBeenRecorded()
+    {
+        // Activation records the verdict. Until it does, the deployment is unverified, and an unverified
+        // deployment must not take calls it may be unable to complete correctly.
+        var manager = new ContactCenterFeatureWorkManager(new ContactCenterTopologyState());
+
+        Assert.Null(manager.TryEnter("feature-a"));
+    }
+
+    [Fact]
+    public void WorkManager_RefusesAllWork_WhenTheDeploymentDoesNotSatisfyItsDeclaredTopology()
+    {
+        // Arrange
+        var state = new ContactCenterTopologyState();
+        state.Record(new ContactCenterTopologyValidationResult
+        {
+            DeclaredProfileId = ContactCenterTopologyProfiles.SingleNodeDistributedId,
+            IsProductionTopology = true,
+            Failures = ["The 'OrchardCore.Redis.Lock' feature is not enabled."],
+        });
+
+        var manager = new ContactCenterFeatureWorkManager(state);
+
+        // Act & Assert
+        Assert.Null(manager.TryEnter("feature-a"));
+    }
+
+    [Fact]
+    public void WorkManager_AdmitsWork_OnceTheDeclaredTopologyIsSatisfied()
+    {
+        var manager = CreateAdmissibleWorkManager();
+
+        using var lease = manager.TryEnter("feature-a");
+
+        Assert.NotNull(lease);
+    }
+
+    private static ContactCenterFeatureWorkManager CreateAdmissibleWorkManager()
+    {
+        var state = new ContactCenterTopologyState();
+        state.Record(new ContactCenterTopologyValidationResult
+        {
+            DeclaredProfileId = ContactCenterTopologyProfiles.SingleNodeDistributedId,
+            IsProductionTopology = true,
+        });
+
+        return new ContactCenterFeatureWorkManager(state);
     }
 
     private sealed class TestFeatureLifecycleParticipant : IContactCenterFeatureLifecycleParticipant

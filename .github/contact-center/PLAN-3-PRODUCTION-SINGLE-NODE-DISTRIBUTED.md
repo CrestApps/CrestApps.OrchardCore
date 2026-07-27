@@ -596,13 +596,14 @@ buildable offline. Prior coverage claims in earlier plans were never executed lo
 | Date | Command | Result |
 | --- | --- | --- |
 | Wave 1 | `dotnet test tests/CrestApps.OrchardCore.Tests -c Debug` | **2,435 passed · 0 failed · 1 skipped** (2m51s) |
+| Wave 1 (after W15.2, W0.1, W0.2) | `dotnet test tests/CrestApps.OrchardCore.Tests -c Debug` | **2,697 passed · 0 failed · 1 skipped** (2m40s) |
 
 The single skip is `AsteriskBrowserAudioE2ETests.BrowserToAsteriskWebRtcAudio_WithDirectIceAndForcedTurn_VerifiesReceivedToneFrequencies`,
 which requires live Asterisk and TURN infrastructure. Counting it as coverage is prohibited until R-series certification runs it.
 
 ### Wave 1 — Truth & containment
-- [ ] W0.1 Topology profile added to support matrix `gate:`
-- [ ] W0.2 Startup topology validation `gate:`
+- [x] W0.1 Topology profile added to support matrix `gate: ContactCenterSupportMatrixTests — 11 executed cases, 0 failed. Falsified: reverting the single-region-multi-node demotion fails 2 tests.`
+- [x] W0.2 Startup topology validation `gate: ContactCenterTopologyEvaluatorTests (37), ContactCenterTopologyHealthCheckTests (11), ContactCenterFeatureLifecycleTests topology admission (3) — 51 executed cases, 0 failed; full suite 2,697 passed / 0 failed / 1 skipped. Falsified: disabling the admission check, promoting single-region-multi-node in code, and removing the production-host branch fail 8 tests.`
 - [ ] W0.3 Evidence-bound ledger `gate:`
 - [ ] W0.4 CI gates repaired `gate:`
 - [~] W0.5 Supply chain `gate: hermetic build only — CopilotSkipCliDownload default in Directory.Build.props; solution builds with no network. NuGetAudit / SBOM / gitleaks / Trivy / licenses / Dependabot still open.`
@@ -667,6 +668,16 @@ which requires live Asterisk and TURN infrastructure. Counting it as coverage is
 - [ ] W7.5 Data-residency contract `gate:`
 - [ ] W8.1–W8.7 Docs, diagrams, runbooks, reference deployment `gate:`
 - [ ] §9 Release exit checklist fully green `gate:`
+
+### Recorded deviations from the task text
+
+Where an implementation differs from the wording of a W-task, the deviation is recorded here rather than being
+absorbed silently, so a later reader can tell an intentional correction from a drift.
+
+| Task | Plan text | Implemented as | Reason |
+| --- | --- | --- | --- |
+| W0.2 | Configuration key `ContactCenter:Topology:ProfileId` | `CrestApps_ContactCenter:Topology:ProfileId` | Every other Contact Center option already binds under `CrestApps_ContactCenter:*` (`:HealthChecks`, `:FeatureLifecycle`, `:Retention`). A second root would give the module two configuration namespaces and make the topology key the one an operator forgets. |
+| W0.2 | "mark the readiness health check `Unhealthy`" | New dedicated `contactcenter-topology` readiness check | The existing readiness checks are node-local by contract and their tests enforce that. Overloading one of them would have silently broken that invariant; a separate check keeps the exception explicit, named, and individually testable. |
 
 ---
 

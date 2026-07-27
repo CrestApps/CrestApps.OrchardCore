@@ -73,6 +73,9 @@ public sealed class Startup : StartupBase
 
         services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
         services.Configure<ContactCenterHealthCheckOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"));
+        services.Configure<ContactCenterTopologyOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Topology"));
+        services.AddSingleton<ContactCenterTopologyState>();
+        services.AddScoped<IModularTenantEvents, ContactCenterTopologyValidator>();
         services.AddContactCenterHealthChecks();
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()

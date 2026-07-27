@@ -1,14 +1,33 @@
 using System.Collections.Concurrent;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWorkManager
 {
+    private readonly ContactCenterTopologyState _topologyState;
     private readonly ConcurrentDictionary<string, FeatureWorkState> _states = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterFeatureWorkManager"/> class.
+    /// </summary>
+    /// <param name="topologyState">The recorded deployment topology verdict for this tenant.</param>
+    public ContactCenterFeatureWorkManager(ContactCenterTopologyState topologyState)
+    {
+        _topologyState = topologyState;
+    }
 
     public IContactCenterFeatureWorkLease TryEnter(string featureId)
     {
         ArgumentException.ThrowIfNullOrEmpty(featureId);
+
+        // A deployment that does not satisfy the topology it declared is not a supported deployment, so it must
+        // not accept work. Refusing here rather than at each call site means a new entry point cannot forget the
+        // check: every admission already funnels through this gate.
+        if (!_topologyState.IsAdmissible)
+        {
+            return null;
+        }
 
         var state = _states.GetOrAdd(featureId, static _ => new FeatureWorkState());
 

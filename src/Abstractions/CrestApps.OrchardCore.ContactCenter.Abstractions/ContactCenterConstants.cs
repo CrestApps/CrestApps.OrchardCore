@@ -91,6 +91,17 @@ public static class ContactCenterConstants
         public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
 
         /// <summary>
+        /// The registration name of the deployment topology check.
+        /// </summary>
+        /// <remarks>
+        /// This is the only readiness check that observes a condition every node shares. The exception is
+        /// deliberate: a topology violation cannot self-heal, and serving traffic from a deployment that does
+        /// not satisfy its declared support contract is the failure being prevented rather than collateral
+        /// damage from preventing it.
+        /// </remarks>
+        public const string TopologyCheckName = "contactcenter-topology";
+
+        /// <summary>
         /// The default path of the process liveness probe. It reports only that the process can serve a
         /// request and never consults a dependency, so a failing database or a growing backlog cannot trigger a
         /// restart.

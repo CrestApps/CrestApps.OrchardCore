@@ -32,8 +32,33 @@ Configure the tenant drain timeout under `CrestApps_ContactCenter:FeatureLifecyc
 
 - PostgreSQL 16.x is the only initial production database target.
 - SQLite is for local development, demonstrations, and tests only.
-- Production requires one region, two to four application nodes, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature so real-time messages and Contact Center idempotency/orchestration locks are distributed across nodes.
-- Single-node production, multi-node operation without the backplane or Redis distributed locking, and multi-region active-active operation are unsupported.
+- The supported production topology is `single-node-distributed`: one region, exactly one application node, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature. The node count is one, but the distributed contract is mandatory rather than optional, because a single node already meets the distributed failure modes: a rolling restart overlaps two instances, and an Orchard shell reload tears down and rebuilds the shell in-process on every feature toggle.
+- Multi-node operation is **not** production-supported in this release. Two to four nodes remain the architectural direction and the code path is backplane- and lock-agnostic, but multi-node capacity certification has not been earned, so `single-region-multi-node` is declared non-production in the matrix. Scaling out later is configuration and certification, not a rewrite.
+- Production without the backplane or Redis distributed locking, and multi-region active-active operation, are unsupported.
+
+### The declared topology is enforced at startup
+
+The support matrix above is not advisory. Each tenant declares the topology it intends to run, and the tenant refuses to admit Contact Center work unless the running deployment actually satisfies that declaration:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "Topology": {
+      "ProfileId": "single-node-distributed"
+    }
+  }
+}
+```
+
+- When the declared profile is `single-node-distributed`, activation verifies the tenant is on the `Postgres` database provider and that the `OrchardCore.Redis`, `OrchardCore.Redis.Lock`, and `CrestApps.OrchardCore.SignalR.Redis` features are enabled. It also verifies that the distributed lock the container actually resolves is not the process-local implementation, because a feature can be enabled while the container still hands out the local lock, and the lock that is injected is the one that decides whether two overlapping processes can enter the same critical section.
+- Every unmet requirement is reported at once. Fixing one requirement per deployment would make each intermediate deployment another unsupported production release.
+- An unrecognized profile identifier is a validation failure rather than a fallback to the development profile, so a typo cannot silently downgrade a production deployment to the profile that requires nothing.
+- Omitting `ProfileId` is normal for development, tests, and demonstrations and imposes no requirements. It is a validation failure when the host environment is `Production`, because otherwise the entire check could be bypassed by setting nothing.
+- Declaring a non-production profile such as `single-node-development` imposes no infrastructure requirements. It is a statement that the deployment is not claiming production support.
+
+A tenant that does not satisfy its declared topology logs a critical message naming each unmet requirement, refuses every Contact Center work admission, and reports **unready** on the tenant readiness probe. Validation runs once per shell activation, because every input to the verdict — declared profile, database provider, enabled features, resolved lock — can only change by rebuilding the shell. Until the verdict is recorded the tenant is treated as inadmissible; starting admissible and tightening afterwards would open a window in which an unverified deployment accepts work, and that window is exactly when a shell reload is in progress.
+
+The topology profiles the product enforces are a shipped mirror of the governance matrix in `.github/contact-center/support-matrix.v1.json`, which is not deployed with the product. A contract test asserts the two are identical, so the running application cannot enforce a second, more permissive definition of what "production" means.
 
 Queue and reservation correctness does not depend on Redis lock exclusivity. YesSql document versions provide compare-and-set updates, and portable unique claim keys enforce active queue-item and reservation ownership in the relational database. Upgrade migrations reject missing identifiers or duplicate legacy active claims with explicit repair guidance instead of failing later with an opaque unique-index error. SQLite regression tests force overlapping lock holders and synchronized stale reads and retain exactly one reservation; production certification still requires the planned database matrix to repeat the invariant on PostgreSQL and any subsequently supported database.
 
@@ -129,8 +154,10 @@ A third, the [node serving gate](#optional-the-node-serving-gate), is available 
 
 Dependency health is still observed — that is what the dependency probe and the metrics are for — but it is an **alerting** signal that pages a human, never a **routing** signal that drains capacity.
 
+The topology check is the one deliberate exception to the "readiness must differ between nodes" rule, and the distinction is between a *live dependency* and a *static verdict*. A dependency probe is transient and self-healing, so draining every node on it turns a recoverable blip into a total outage. A topology violation is fixed configuration that no amount of waiting repairs, there is no degraded-but-serviceable state to preserve, and continuing to serve on an uncertified deployment is precisely the failure being prevented. Draining is the intended outcome, not collateral damage. The narrower invariant still holds without exception: readiness never consults a dependency check.
+
 :::tip
-The rule generalizes: an orchestrator probe may only consult state that differs between instances. If two healthy instances would always answer identically, the check belongs on the dependency probe.
+The rule generalizes: an orchestrator probe may only consult state that differs between instances, or a static support verdict that cannot self-heal. If two healthy instances would always answer identically *and* the condition can recover on its own, the check belongs on the dependency probe.
 :::
 
 #### The tenant probes inherit the tenant prefix
@@ -177,6 +204,7 @@ The dependency report contains only what the tenant's enabled features registere
 
 | Check | Probe | Registered by | Signal | Degraded | Unhealthy |
 | --- | --- | --- | --- | --- | --- |
+| `contactcenter-topology` | Readiness | Contact Center | Whether this deployment satisfies the [topology it declared](#the-declared-topology-is-enforced-at-startup). A static verdict established once per shell activation; performs no I/O. | — | Validation has not run yet, or a declared requirement is unmet. |
 | `contactcenter-node` | Readiness | Contact Center | Node-local lifetime: startup complete and not shutting down. Consults no dependency and performs no I/O. | — | Startup incomplete, or shutdown in progress. |
 | `contactcenter-node-serving` | Readiness | Contact Center | Opt-in node serving gate (see above). Disabled by default, in which case it performs no I/O and is always healthy. | — | Enabled, and this node failed `ConsecutiveFailuresBeforeUnready` consecutive store probes. |
 | `contactcenter-storage` | Dependency | Contact Center | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
@@ -238,13 +266,13 @@ On a single node the in-memory backplane needs no separate check.
 
 The Contact Center real-time hub is backplane-agnostic. It is hosted through `HubRouteManager.MapHub<ContactCenterHub>` and addresses connections through tenant-qualified `TenantSignalRGroupName` groups, so the same code path serves both single-node and multi-node deployments without change. What makes it correct across nodes is the shared backplane, not the hub.
 
-The supported multi-node real-time topology is:
+The supported production real-time topology is:
 
-- Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange real-time messages across application nodes. It wires the SignalR Redis backplane (`AddStackExchangeRedis`) using the `OrchardCore_Redis` connection settings and a dedicated SignalR connection, and it namespaces the backplane channel with both `InstancePrefix` and the immutable shell name so two nodes serving one tenant share a channel while different tenants never do. See [SignalR module — Redis backplane](../modules/signalr.md#redis-backplane) for configuration.
+- Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange real-time messages. It wires the SignalR Redis backplane (`AddStackExchangeRedis`) using the `OrchardCore_Redis` connection settings and a dedicated SignalR connection, and it namespaces the backplane channel with both `InstancePrefix` and the immutable shell name so two nodes serving one tenant share a channel while different tenants never do. See [SignalR module — Redis backplane](../modules/signalr.md#redis-backplane) for configuration.
 - Enable `OrchardCore.Redis.Lock` as well. The SignalR backplane distributes real-time messages, but Contact Center routing, provider webhook inbox acceptance, and other distributed critical sections require the Redis distributed lock independently of the backplane. A backplane without distributed locking is an unsupported configuration.
 - Use a deployment-unique `InstancePrefix` (application, environment, region) whenever Redis infrastructure is shared, so tenants with the same shell name in different deployments cannot merge backplane channels.
 
-Single-node production uses the default in-memory backplane and requires neither feature. Multi-node operation without the backplane, or without Redis distributed locking, and multi-region active-active operation are unsupported.
+Both features are required in production even on the single supported node. The in-memory backplane and local lock are development-only: a rolling restart overlaps two instances, and an Orchard shell reload rebuilds the shell in-process, so process-local state is not a safe substitute for the distributed contract. Production without the backplane, without Redis distributed locking, on more than one node, or in a multi-region active-active configuration is unsupported.
 
 ## Retention, legal holds, and replay horizon
 
@@ -356,6 +384,9 @@ Bringing the non-voice webhooks to full parity is a tracked R9 item. Because the
 - Power, Progressive, and Predictive dialing.
 - Recording, monitor, whisper, barge, take-over, and bidirectional media.
 - More than one voice provider profile in one tenant.
+- Production on SQLite.
+- Production on a single application node without Redis distributed locking and a Redis SignalR backplane.
+- Production on more than one application node, until multi-node capacity certification is earned.
 - Elasticsearch in routing, assignment, provider ingest, or another correctness path.
 - Any feature, provider, database, or topology combination not listed in the versioned matrix.
 

@@ -27,14 +27,15 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// nodes.</description></item>
 /// <item><description>If readiness were wired to a dependency, every node would fail readiness at the same
 /// moment, because a shared dependency evaluates identically everywhere. That converts a degraded dependency
-/// into a total outage, so readiness must select node-local state only.</description></item>
+/// into a total outage, so readiness must select node-local state and static support verdicts only, never a
+/// live dependency probe.</description></item>
 /// </list>
 /// Both the registrations and, for behavior, real HTTP responses are asserted.
 /// </remarks>
 public sealed class ContactCenterHealthEndpointsTests
 {
     [Fact]
-    public void ReadinessPredicate_SelectsOnlyNodeLocalChecks()
+    public void ReadinessPredicate_SelectsOnlyNodeLocalChecksAndTheStaticSupportVerdict()
     {
         // Arrange
         var registrations = GetRegisteredHealthChecks(services => services
@@ -45,10 +46,21 @@ public sealed class ContactCenterHealthEndpointsTests
         var selected = SelectNames(registrations, ContactCenterHealthEndpoints.IsReadinessCheck);
 
         // Assert
-        // Both are node-local: one reflects this node's lifetime, the other this node's own ability to reach
-        // the store. Neither reports a verdict that every node would share.
+        // Two are node-local: one reflects this node's lifetime, the other this node's own ability to reach the
+        // store. Neither reports a verdict that every node would share.
+        //
+        // The topology check is the one deliberate exception, and the distinction is between a live dependency
+        // and a static verdict. A dependency probe is transient and self-healing, so draining every node on it
+        // turns a recoverable blip into a total outage. A topology violation is fixed configuration that no
+        // amount of waiting repairs, and continuing to serve on an uncertified deployment is the exact failure
+        // being prevented, so draining is the intended outcome rather than collateral damage. The narrower
+        // invariant that survives is asserted below: readiness never selects a dependency check.
         Assert.Equal(
-            [ContactCenterConstants.HealthChecks.NodeCheckName, ContactCenterConstants.HealthChecks.NodeServingCheckName],
+            [
+                ContactCenterConstants.HealthChecks.NodeCheckName,
+                ContactCenterConstants.HealthChecks.NodeServingCheckName,
+                ContactCenterConstants.HealthChecks.TopologyCheckName,
+            ],
             selected);
     }
 
@@ -171,7 +183,7 @@ public sealed class ContactCenterHealthEndpointsTests
             .AddContactCenterVoiceHealthChecks());
 
         // Act & Assert
-        Assert.Equal(5, registrations.Length);
+        Assert.Equal(6, registrations.Length);
 
         Assert.All(registrations, registration =>
         {

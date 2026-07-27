@@ -28,8 +28,17 @@
   ],
   "topologies": [
     {
-      "id": "single-region-multi-node",
+      "id": "single-node-distributed",
       "production": true,
+      "minimumApplicationNodes": 1,
+      "maximumApplicationNodes": 1,
+      "redisBackplaneRequired": true,
+      "redisDistributedLockRequired": true,
+      "sharedRelationalDatabaseRequired": true
+    },
+    {
+      "id": "single-region-multi-node",
+      "production": false,
       "minimumApplicationNodes": 2,
       "maximumApplicationNodes": 4,
       "redisBackplaneRequired": true,
@@ -92,7 +101,7 @@
       "id": "ga-core-asterisk",
       "providerProfile": "asterisk-ga-core",
       "database": "postgresql-16",
-      "topology": "single-region-multi-node",
+      "topology": "single-node-distributed",
       "features": [
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Availability",
@@ -111,7 +120,7 @@
       "id": "ga-core-dialpad",
       "providerProfile": "dialpad-ga-core",
       "database": "postgresql-16",
-      "topology": "single-region-multi-node",
+      "topology": "single-node-distributed",
       "features": [
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Availability",
@@ -129,7 +138,8 @@
   ],
   "prohibitedCombinations": [
     "production with SQLite",
-    "production with a single application node",
+    "production with a single application node without Redis distributed locking and a Redis SignalR backplane",
+    "production with more than one application node",
     "multi-node without a Redis SignalR backplane",
     "multi-node without OrchardCore.Redis.Lock distributed locking",
     "multi-region active-active",

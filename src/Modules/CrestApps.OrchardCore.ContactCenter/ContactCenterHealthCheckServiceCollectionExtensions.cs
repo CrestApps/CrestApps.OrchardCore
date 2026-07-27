@@ -49,6 +49,9 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
 
         services
             .AddHealthChecks()
+            .AddCheck<ContactCenterTopologyHealthCheck>(
+                ContactCenterConstants.HealthChecks.TopologyCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.ReadyTag])
             .AddCheck<ContactCenterNodeServingHealthCheck>(
                 ContactCenterConstants.HealthChecks.NodeServingCheckName,
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.ReadyTag])

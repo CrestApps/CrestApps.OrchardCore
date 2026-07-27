@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DialPad;
 
@@ -7,6 +9,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ContactCenterSupportMatrixTests
 {
+    private const string SingleNodeDistributedTopologyId = "single-node-distributed";
+
     [Fact]
     public void SupportMatrix_DefinesFiniteBlockedGaProfiles()
     {
@@ -147,6 +151,146 @@ public sealed class ContactCenterSupportMatrixTests
         // Act & Assert
         Assert.Contains(AsteriskConstants.Feature.ContactCenterVoice, profiles["ga-core-asterisk"]);
         Assert.Contains(DialPadConstants.Feature.ContactCenterVoice, profiles["ga-core-dialpad"]);
+    }
+
+    /// <summary>
+    /// Verifies the production topology this release earns exists and carries the distributed requirements that define it.
+    /// </summary>
+    [Fact]
+    public void SupportMatrix_DeclaresSingleNodeDistributedAsAProductionTopology()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+
+        // Act
+        var topology = Assert.Single(
+            matrix["topologies"]?.AsArray()
+                .Where(candidate => string.Equals(candidate?["id"]?.GetValue<string>(), SingleNodeDistributedTopologyId, StringComparison.Ordinal)));
+
+        // Assert
+        Assert.True(topology?["production"]?.GetValue<bool>());
+        Assert.Equal(1, topology?["minimumApplicationNodes"]?.GetValue<int>());
+        Assert.Equal(1, topology?["maximumApplicationNodes"]?.GetValue<int>());
+        Assert.True(topology?["redisBackplaneRequired"]?.GetValue<bool>());
+        Assert.True(topology?["redisDistributedLockRequired"]?.GetValue<bool>());
+        Assert.True(topology?["sharedRelationalDatabaseRequired"]?.GetValue<bool>());
+    }
+
+    /// <summary>
+    /// Verifies no declared production topology contradicts a prohibited combination. A matrix that supports what it also
+    /// prohibits is worse than one that does neither, because both statements read as authoritative to an operator.
+    /// </summary>
+    [Fact]
+    public void SupportMatrix_ProductionTopologiesDoNotContradictProhibitedCombinations()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+        var prohibitedCombinations = matrix["prohibitedCombinations"]?.AsArray()
+            .Select(item => item?.GetValue<string>())
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Act
+        var productionTopologies = matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true);
+
+        // Assert
+        Assert.Contains("production with more than one application node", prohibitedCombinations);
+        Assert.Contains(
+            "production with a single application node without Redis distributed locking and a Redis SignalR backplane",
+            prohibitedCombinations);
+
+        // The blanket single-node prohibition is what this release replaces; leaving it would prohibit the profile it earns.
+        Assert.DoesNotContain("production with a single application node", prohibitedCombinations);
+
+        foreach (var topology in productionTopologies)
+        {
+            var id = topology?["id"]?.GetValue<string>();
+
+            // Consequence of prohibiting production on more than one application node.
+            Assert.Equal(1, topology?["minimumApplicationNodes"]?.GetValue<int>());
+            Assert.Equal(1, topology?["maximumApplicationNodes"]?.GetValue<int>());
+
+            // Consequence of prohibiting a production node that does not run the distributed contract.
+            Assert.True(topology?["redisBackplaneRequired"]?.GetValue<bool>(), $"'{id}' is production without a Redis backplane.");
+            Assert.True(topology?["redisDistributedLockRequired"]?.GetValue<bool>(), $"'{id}' is production without Redis distributed locking.");
+            Assert.True(topology?["sharedRelationalDatabaseRequired"]?.GetValue<bool>(), $"'{id}' is production without a shared relational database.");
+        }
+    }
+
+    /// <summary>
+    /// Verifies production status is not silently widened. Every supported tenant profile must run the one certified topology.
+    /// </summary>
+    [Fact]
+    public void SupportMatrix_SupportedTenantProfilesRunTheCertifiedTopology()
+    {
+        // Arrange
+        var matrix = LoadMatrix();
+
+        // Act
+        var productionTopologyIds = matrix["topologies"]?.AsArray()
+            .Where(topology => topology?["production"]?.GetValue<bool>() == true)
+            .Select(topology => topology?["id"]?.GetValue<string>())
+            .ToList();
+
+        // Assert
+        Assert.Equal([SingleNodeDistributedTopologyId], productionTopologyIds);
+
+        foreach (var profile in matrix["tenantProfiles"]?.AsArray())
+        {
+            Assert.Equal(SingleNodeDistributedTopologyId, profile?["topology"]?.GetValue<string>());
+        }
+    }
+
+    [Fact]
+    public void ShippedTopologyProfiles_AreIdenticalToTheSupportMatrix()
+    {
+        // The support matrix is a governance document that is not deployed with the product, so the running
+        // application enforces the shipped copy in ContactCenterTopologyProfiles. If the two are allowed to
+        // drift, the product enforces a second, private definition of "production" that nobody reviewed.
+        var matrix = LoadMatrix();
+
+        var declared = matrix["topologies"]?.AsArray()
+            .Select(topology => new
+            {
+                Id = topology?["id"]?.GetValue<string>(),
+                Production = topology?["production"]?.GetValue<bool>(),
+                Minimum = topology?["minimumApplicationNodes"]?.GetValue<int>(),
+                Maximum = topology?["maximumApplicationNodes"]?.GetValue<int>(),
+                Backplane = topology?["redisBackplaneRequired"]?.GetValue<bool>(),
+                Lock = topology?["redisDistributedLockRequired"]?.GetValue<bool>(),
+                Database = topology?["sharedRelationalDatabaseRequired"]?.GetValue<bool>(),
+            })
+            .OrderBy(topology => topology.Id, StringComparer.Ordinal);
+
+        var shipped = ContactCenterTopologyProfiles.All
+            .Select(profile => new
+            {
+                Id = profile.Id,
+                Production = (bool?)profile.IsProduction,
+                Minimum = (int?)profile.MinimumApplicationNodes,
+                Maximum = (int?)profile.MaximumApplicationNodes,
+                Backplane = (bool?)profile.RequiresRedisBackplane,
+                Lock = (bool?)profile.RequiresRedisDistributedLock,
+                Database = (bool?)profile.RequiresSharedRelationalDatabase,
+            })
+            .OrderBy(profile => profile.Id, StringComparer.Ordinal);
+
+        Assert.Equal(declared, shipped);
+    }
+
+    [Fact]
+    public void ShippedProductionDatabaseProvider_MatchesTheOnlyProductionDatabaseInTheSupportMatrix()
+    {
+        // The evaluator compares the tenant's configured Orchard provider against a literal, because the pure
+        // decision layer carries no data-layer dependency. This test is what keeps that literal honest.
+        var matrix = LoadMatrix();
+
+        var productionDatabaseIds = matrix["databases"]?.AsArray()
+            .Where(database => database?["production"]?.GetValue<bool>() == true)
+            .Select(database => database?["id"]?.GetValue<string>());
+
+        Assert.Equal(["postgresql-16"], productionDatabaseIds);
+        Assert.Equal("Postgres", ContactCenterTopologyEvaluator.RequiredProductionDatabaseProvider);
     }
 
     private static JsonObject LoadMatrix()
