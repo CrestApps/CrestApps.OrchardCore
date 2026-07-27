@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Caching.Distributed;
 using OrchardCore;
 using OrchardCore.Environment.Cache;
@@ -27,9 +28,6 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
     /// </summary>
     private const int MaxLiveCredentialsPerUser = 3;
 
-    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
-
     private readonly IDistributedCache _cache;
     private readonly ITagCache _tagCache;
     private readonly IDistributedLock _distributedLock;
@@ -38,6 +36,8 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
     private readonly IAsteriskPjsipRealtimeCredentialStore _realtimeStore;
     private readonly IAsteriskPjsipCredentialLeaseStore _leaseStore;
     private readonly IAsteriskPjsipDialogTerminator _dialogTerminator;
+    private readonly TimeSpan _lockTimeout;
+    private readonly TimeSpan _lockExpiration;
 
     public AsteriskPjsipCredentialIssuer(
         IDistributedCache cache,
@@ -47,7 +47,8 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         ShellSettings shellSettings,
         IAsteriskPjsipRealtimeCredentialStore realtimeStore,
         IAsteriskPjsipCredentialLeaseStore leaseStore,
-        IAsteriskPjsipDialogTerminator dialogTerminator)
+        IAsteriskPjsipDialogTerminator dialogTerminator,
+        IOptions<AsteriskCoordinationOptions> coordinationOptions)
     {
         _cache = cache;
         _tagCache = tagCache;
@@ -57,6 +58,8 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         _realtimeStore = realtimeStore;
         _leaseStore = leaseStore;
         _dialogTerminator = dialogTerminator;
+        _lockTimeout = coordinationOptions.Value.CredentialLockTimeout;
+        _lockExpiration = coordinationOptions.Value.CredentialLockExpiration;
     }
 
     public async Task<AsteriskPjsipCredential> IssueAsync(

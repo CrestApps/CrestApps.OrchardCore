@@ -53,7 +53,22 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         .Addresses
         .First());
 
-    public static async Task<ContactCenterFeatureActivationHost> StartAsync()    {
+    /// <summary>
+    /// Starts a real Orchard Core host that the tests create tenants inside.
+    /// </summary>
+    /// <param name="environmentName">
+    /// The hosting environment the host reports. Defaults to development. Pass <see cref="Environments.Production"/>
+    /// to exercise the guards that only refuse a value outside development.
+    /// </param>
+    /// <param name="shellConfiguration">
+    /// Configuration entries applied to every tenant's shell configuration, keyed without the <c>OrchardCore:</c>
+    /// prefix, so a test can supply the deployment configuration an operator would write.
+    /// </param>
+    /// <returns>The started host.</returns>
+    public static async Task<ContactCenterFeatureActivationHost> StartAsync(
+        string environmentName = null,
+        IReadOnlyDictionary<string, string> shellConfiguration = null)
+    {
         var applicationDataPath = Path.Combine(Path.GetTempPath(), $"crestapps-contact-center-{Guid.NewGuid():N}");
         var webRootPath = Path.Combine(applicationDataPath, "wwwroot");
         Directory.CreateDirectory(webRootPath);
@@ -62,7 +77,7 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         {
             ApplicationName = typeof(ContactCenterFeatureActivationHost).Assembly.FullName,
             ContentRootPath = applicationDataPath,
-            EnvironmentName = Environments.Development,
+            EnvironmentName = environmentName ?? Environments.Development,
             WebRootPath = webRootPath,
         });
 
@@ -72,6 +87,11 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         builder.Services.AddContactCenterProcessLiveness();
         builder.Services.Configure<ShellOptions>(options => options.ShellsApplicationDataPath = applicationDataPath);
         builder.Configuration["OrchardCore:OrchardCore_Documents:CheckConcurrency"] = bool.FalseString;
+
+        foreach (var entry in shellConfiguration ?? new Dictionary<string, string>())
+        {
+            builder.Configuration[$"OrchardCore:{entry.Key}"] = entry.Value;
+        }
 
         var application = builder.Build();
 
@@ -141,6 +161,19 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         });
 
         return result;
+    }
+
+    /// <summary>
+    /// Forces the tenant's shell to activate, which is what the first request to that tenant does. Activation
+    /// is where <see cref="OrchardCore.Modules.IModularTenantEvents.ActivatingAsync"/> runs, so a guard that
+    /// refuses a configuration surfaces here rather than during setup.
+    /// </summary>
+    /// <param name="tenant">The tenant to activate.</param>
+    public Task ActivateTenantAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        return ExecuteInTenantScopeAsync(tenant, _ => Task.CompletedTask);
     }
 
     public async Task AssertTenantAsync(ContactCenterTenant tenant)

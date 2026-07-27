@@ -868,6 +868,40 @@
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterRetentionServiceTests.cs proves purge behavior for interaction events only; per-entity classification/erasure for call sessions, Telephony history, metrics, recordings, and the mixed-version rolling-upgrade migration proof are a planned:contact-center-operations-gates dependency."
     },
     {
+      "id": "O007",
+      "severity": "P1",
+      "category": "operations",
+      "planFinding": "W18-configuration-validation-fail-closed",
+      "gate": "Options validated on start; invalid configuration refuses the tenant",
+      "invariant": "Every operator-supplied options class in the Contact Center, Telephony and provider assemblies is registered with a validator, and an invalid value refuses tenant activation rather than surfacing later through whichever code path reads the option first. Distributed-lock waits, lease expiries, reclamation thresholds and provider HTTP budgets are configuration rather than compiled constants, and each lease expiry must exceed its acquisition timeout.",
+      "testId": "CC-O007",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ContactCenterOptionsValidationTests enumerates every *Options type in the governed assemblies by reflection and fails when one accepts operator input without a registered IValidateOptions, with discovery pinned by a floor so it cannot pass vacuously and exemptions asserted to name real types; it also pins that ValidateOnStart is inert inside a per-tenant container, which is why TenantOptionsStartupValidator exists. ContactCenterConfigurationFailClosedTests boots a real Orchard host and proves a tenant carrying a negative retention window, a sub-one health threshold or an unrecognized topology profile refuses to activate, with a valid-configuration control proving activation is otherwise reachable."
+    },
+    {
       "id": "S001",
       "severity": "P0",
       "category": "security",
@@ -996,6 +1030,39 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/AsteriskWebSecurityTests.cs proves `EnsureDevelopmentOnly_WhenProduction_Throws` and `EnsureDevelopmentOnly_WhenDevelopment_DoesNotThrow`. The pr_ci.yml job executes the tests but does not yet upload a durable result artifact; retained CI output is planned: .github/contact-center/evidence/S005/. Per-endpoint 401/403 defense-in-depth is tracked separately under O004."
+    },
+    {
+      "id": "S006",
+      "severity": "P1",
+      "category": "security",
+      "planFinding": "W18-development-secrets-refused-in-production",
+      "gate": "Production refuses checked-in development credentials",
+      "invariant": "A tenant running outside development refuses to activate while the Asterisk provider configuration still carries a credential published in this repository, including the Coturn static authentication secret and the Asterisk ARI password, or an unreplaced placeholder. The same values continue to work in development. Where a published secret only derives a client-visible artifact, the guard degrades to STUN-only ICE rather than issuing a forgeable relay credential.",
+      "testId": "CC-S006",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "KnownDevelopmentValuesTests walks the tracked configuration files in this repository, extracts every published credential assignment and asserts each is recognised, and asserts no registered digest has gone stale, so a new sample credential cannot ship unguarded. ContactCenterConfigurationFailClosedTests boots a real host in Production and proves a tenant refuses to activate while carrying the ARI password or the Coturn static authentication secret read from the checked-in files at test time, and proves the identical configuration still activates in Development. AsteriskSoftPhoneRegistrationConfigContributorTests proves the TURN relay credential is withheld in production and still issued in development."
     },
     {
       "id": "T001",

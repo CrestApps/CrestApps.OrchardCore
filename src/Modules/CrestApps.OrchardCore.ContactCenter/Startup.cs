@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -71,9 +72,68 @@ public sealed class Startup : StartupBase
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterConstants.CollectionName));
 
-        services.Configure<ContactCenterRetentionOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"));
-        services.Configure<ContactCenterHealthCheckOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"));
-        services.Configure<ContactCenterTopologyOptions>(_shellConfiguration.GetSection("CrestApps_ContactCenter:Topology"));
+        services.ValidateTenantOptionsOnActivation();
+
+        services
+            .AddOptions<ContactCenterRetentionOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"))
+            .Validate(
+                options => options.InteractionEventRetentionDays >= 0,
+                "'CrestApps_ContactCenter:Retention:InteractionEventRetentionDays' cannot be negative. Use zero to keep interaction events indefinitely.")
+            .Validate(
+                options => options.ProjectionReplayHorizonDays >= 0,
+                "'CrestApps_ContactCenter:Retention:ProjectionReplayHorizonDays' cannot be negative. Use zero to apply no replay floor.")
+            .Validate(
+                options => options.LegalHoldMinimumDays >= 0,
+                "'CrestApps_ContactCenter:Retention:LegalHoldMinimumDays' cannot be negative. Use zero to apply no legal-hold floor.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<ContactCenterHealthCheckOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"))
+            .Validate(
+                options => options.DeadLetterDegradedThreshold >= 1,
+                "'CrestApps_ContactCenter:HealthChecks:DeadLetterDegradedThreshold' must be at least one.")
+            .Validate(
+                options => options.OverdueBacklogDegradedThreshold >= 1,
+                "'CrestApps_ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold' must be at least one.")
+            .Validate(
+                options => options.ConsecutiveFailuresBeforeUnready >= 1,
+                "'CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready' must be at least one.")
+            .Validate(
+                options => options.ConsecutiveSuccessesBeforeReady >= 1,
+                "'CrestApps_ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady' must be at least one.")
+            .Validate(
+                options => options.DeadLetterUnhealthyThreshold >= options.DeadLetterDegradedThreshold,
+                "'CrestApps_ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold' cannot be lower than 'DeadLetterDegradedThreshold'.")
+            .Validate(
+                options => options.OverdueBacklogUnhealthyThreshold >= options.OverdueBacklogDegradedThreshold,
+                "'CrestApps_ContactCenter:HealthChecks:OverdueBacklogUnhealthyThreshold' cannot be lower than 'OverdueBacklogDegradedThreshold'.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<ContactCenterCoordinationOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Coordination"))
+            .Validate(
+                options => options.InboundLockTimeout > TimeSpan.Zero,
+                "'CrestApps_ContactCenter:Coordination:InboundLockTimeout' must be greater than zero.")
+            .Validate(
+                options => options.InboundLockExpiration > TimeSpan.Zero,
+                "'CrestApps_ContactCenter:Coordination:InboundLockExpiration' must be greater than zero.")
+            .Validate(
+                options => options.InboundLockExpiration > options.InboundLockTimeout,
+                "'CrestApps_ContactCenter:Coordination:InboundLockExpiration' must exceed 'InboundLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes route the same call.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<ContactCenterTopologyOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Topology"))
+            .Validate(
+                options => string.IsNullOrWhiteSpace(options.ProfileId)
+                    || ContactCenterTopologyProfiles.Find(options.ProfileId) is not null,
+                $"'CrestApps_ContactCenter:Topology:ProfileId' is not recognized. Recognized profiles are: {string.Join(", ", ContactCenterTopologyProfiles.All.Select(profile => profile.Id).Order(StringComparer.Ordinal))}.")
+            .ValidateOnStart();
+
         services.AddSingleton<ContactCenterTopologyState>();
         services.AddScoped<IModularTenantEvents, ContactCenterTopologyValidator>();
         services.AddContactCenterHealthChecks();

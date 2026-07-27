@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -24,7 +25,8 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
     // promotes or retracts its Joining destination leg on the same order of magnitude. A provisioning binding still
     // present well beyond that window can only be the residue of a connect or transfer that crashed before it could
     // finalize or compensate, so reclaiming it cannot tear down an in-flight allocator.
-    private static readonly TimeSpan _pendingReclamationThreshold = TimeSpan.FromMinutes(5);
+    // The default is five minutes; a deployment whose routing is slower raises it through configuration.
+    private readonly TimeSpan _pendingReclamationThreshold;
 
     private readonly IAsteriskChannelTenantBindingStore _bindingStore;
     private readonly IAsteriskAriClient _ariClient;
@@ -42,13 +44,15 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
     /// <param name="interactionProbe">The probe used to recover an aged offering leg that is still a routed call.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="coordinationOptions">The reconciliation timings this deployment coordinates with.</param>
     public AsteriskInboundReconciler(
         IAsteriskChannelTenantBindingStore bindingStore,
         IAsteriskAriClient ariClient,
         IProviderVoiceEventSink providerVoiceEventSink,
         IInboundVoiceInteractionProbe interactionProbe,
         IClock clock,
-        ILogger<AsteriskInboundReconciler> logger)
+        ILogger<AsteriskInboundReconciler> logger,
+        IOptions<AsteriskCoordinationOptions> coordinationOptions)
     {
         _bindingStore = bindingStore;
         _ariClient = ariClient;
@@ -56,6 +60,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         _interactionProbe = interactionProbe;
         _clock = clock;
         _logger = logger;
+        _pendingReclamationThreshold = coordinationOptions.Value.PendingReclamationThreshold;
     }
 
     /// <inheritdoc/>

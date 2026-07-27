@@ -1,10 +1,12 @@
 using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Navigation;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
@@ -45,6 +47,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.ValidateTenantOptionsOnActivation();
+
         services
             .AddOptions<TelephonyCommandOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps_Telephony:Commands"))
@@ -52,6 +56,20 @@ public sealed class Startup : StartupBase
                 options => options.Timeout >= TimeSpan.FromSeconds(TelephonyCommandOptions.MinimumTimeoutSeconds) &&
                     options.Timeout <= TimeSpan.FromSeconds(TelephonyCommandOptions.MaximumTimeoutSeconds),
                 "The Telephony command timeout must be between one second and two minutes.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<TelephonyCoordinationOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_Telephony:Coordination"))
+            .Validate(
+                options => options.InteractionLockTimeout > TimeSpan.Zero,
+                "'CrestApps_Telephony:Coordination:InteractionLockTimeout' must be greater than zero.")
+            .Validate(
+                options => options.InteractionLockExpiration > options.InteractionLockTimeout,
+                "'CrestApps_Telephony:Coordination:InteractionLockExpiration' must exceed 'InteractionLockTimeout', otherwise the reconciliation lease expires while a peer is still waiting for it and two sweeps run at once.")
+            .Validate(
+                options => options.NewInteractionGracePeriod > TimeSpan.Zero,
+                "'CrestApps_Telephony:Coordination:NewInteractionGracePeriod' must be greater than zero, otherwise reconciliation can terminate an interaction another node has only just written.")
             .ValidateOnStart();
 
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();

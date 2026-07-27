@@ -1,9 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -17,19 +20,25 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
     private readonly DefaultAsteriskOptions _defaultOptions;
     private readonly IAsteriskPjsipCredentialIssuer _credentialIssuer;
     private readonly IClock _clock;
+    private readonly IHostEnvironment _hostEnvironment;
+    private readonly ILogger _logger;
 
     public AsteriskSoftPhoneRegistrationConfigContributor(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DefaultAsteriskOptions> defaultOptions,
         IAsteriskPjsipCredentialIssuer credentialIssuer,
-        IClock clock)
+        IClock clock,
+        IHostEnvironment hostEnvironment,
+        ILogger<AsteriskSoftPhoneRegistrationConfigContributor> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _defaultOptions = defaultOptions.Value;
         _credentialIssuer = credentialIssuer;
         _clock = clock;
+        _hostEnvironment = hostEnvironment;
+        _logger = logger;
     }
 
     public string ProviderName => AsteriskConstants.ProviderTechnicalName;
@@ -155,6 +164,22 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
 
         if (string.IsNullOrWhiteSpace(settings.TurnSharedSecret))
         {
+            return [new SoftPhoneIceServerConfig { Urls = urls.ToArray() }];
+        }
+
+        // A shared secret that is published in this repository authenticates nobody: anyone who can read the
+        // source can mint the same relay credential. Issuing STUN-only ICE degrades connectivity on restrictive
+        // networks, which is strictly better than handing every reader of the repository a working relay.
+        if (_hostEnvironment.IsProduction() && KnownDevelopmentValues.IsDevelopmentValue(settings.TurnSharedSecret, out var reason))
+        {
+            if (_logger.IsEnabled(LogLevel.Critical))
+            {
+                _logger.LogCritical(
+                    "The Asterisk TURN shared secret configured for provider '{ProviderName}' was refused in a production environment because {Reason}. Soft phone clients are being issued STUN-only ICE servers until a real secret is configured.",
+                    ProviderName,
+                    reason);
+            }
+
             return [new SoftPhoneIceServerConfig { Urls = urls.ToArray() }];
         }
 

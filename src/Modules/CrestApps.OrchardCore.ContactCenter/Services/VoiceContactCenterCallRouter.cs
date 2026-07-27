@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
@@ -28,9 +29,6 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private const string TargetQueueDisabledReasonCode = "target_queue_disabled";
     private const string InboundQueueUnavailableReasonCode = "inbound_queue_unavailable";
     private const int MaxOfferAttempts = 25;
-    private static readonly TimeSpan _inboundLockTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan _inboundLockExpiration = TimeSpan.FromMinutes(1);
-
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IOmnichannelActivityManager _activityManager;
@@ -51,6 +49,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly IClock _clock;
+    private readonly TimeSpan _inboundLockTimeout;
+    private readonly TimeSpan _inboundLockExpiration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceContactCenterCallRouter"/> class.
@@ -75,6 +75,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
     /// <param name="clock">The clock used to stamp times.</param>
+    /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
     public VoiceContactCenterCallRouter(
         IOmnichannelChannelEndpointManager channelEndpointManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
@@ -95,7 +96,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
-        IClock clock)
+        IClock clock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions)
     {
         _channelEndpointManager = channelEndpointManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -117,6 +119,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _clock = clock;
+        _inboundLockTimeout = coordinationOptions.Value.InboundLockTimeout;
+        _inboundLockExpiration = coordinationOptions.Value.InboundLockExpiration;
     }
 
     /// <inheritdoc/>

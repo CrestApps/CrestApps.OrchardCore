@@ -6,6 +6,7 @@ using Moq;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -349,7 +350,8 @@ public sealed class AsteriskPjsipCredentialIssuerTests
                 new ShellSettings { Name = tenantName },
                 store,
                 leaseStore,
-                terminator),
+                terminator,
+                Options.Create(new AsteriskCoordinationOptions())),
             tenantName);
     }
 

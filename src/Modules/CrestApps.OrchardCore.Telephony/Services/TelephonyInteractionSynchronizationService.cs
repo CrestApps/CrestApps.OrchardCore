@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -17,10 +18,6 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 {
     private const string ReconciliationLockKey = "TelephonyInteractionStateReconciliation";
     private const int MaxReconciliationBatchSize = 200;
-    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan _newInteractionGracePeriod = TimeSpan.FromSeconds(15);
-
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
@@ -28,6 +25,9 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly string _tenantName;
+    private readonly TimeSpan _lockTimeout;
+    private readonly TimeSpan _lockExpiration;
+    private readonly TimeSpan _newInteractionGracePeriod;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyInteractionSynchronizationService"/> class.
@@ -39,6 +39,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     /// <param name="clock">The clock used to stamp terminal interactions.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
     public TelephonyInteractionSynchronizationService(
         ITelephonyInteractionStore interactionStore,
         ITelephonyProviderResolver providerResolver,
@@ -46,7 +47,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         IDistributedLock distributedLock,
         IClock clock,
         ILogger<TelephonyInteractionSynchronizationService> logger,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IOptions<TelephonyCoordinationOptions> coordinationOptions)
     {
         _interactionStore = interactionStore;
         _providerResolver = providerResolver;
@@ -55,6 +57,9 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         _clock = clock;
         _logger = logger;
         _tenantName = shellSettings.Name;
+        _lockTimeout = coordinationOptions.Value.InteractionLockTimeout;
+        _lockExpiration = coordinationOptions.Value.InteractionLockExpiration;
+        _newInteractionGracePeriod = coordinationOptions.Value.NewInteractionGracePeriod;
     }
 
     /// <inheritdoc/>

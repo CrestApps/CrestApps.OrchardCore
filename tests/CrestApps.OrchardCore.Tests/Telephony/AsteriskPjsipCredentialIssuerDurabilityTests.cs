@@ -7,6 +7,7 @@ using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -178,7 +179,8 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
             new ShellSettings { Name = tenantName },
             realtimeStore,
             leaseStore,
-            new StubDialogTerminator());
+            new StubDialogTerminator(),
+            Options.Create(new AsteriskCoordinationOptions()));
     }
 
     private static AsteriskPjsipCredentialIssueRequest CreateRequest(

@@ -12,6 +12,7 @@ using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -359,7 +360,8 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             new ShellSettings
             {
                 Name = "TenantA",
-            });
+            },
+            Options.Create(new TelephonyCoordinationOptions()));
     }
 
     private static (Mock<IHubContext<TelephonyHub, ITelephonyClient>> HubContext, Mock<ITelephonyClient> Client) CreateHubContext()

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -732,7 +733,8 @@ public sealed class AsteriskInboundReconcilerTests
             sink,
             interactionProbe ?? new TestInteractionProbe(),
             clock.Object,
-            NullLogger<AsteriskInboundReconciler>.Instance);
+            NullLogger<AsteriskInboundReconciler>.Instance,
+            Options.Create(new AsteriskCoordinationOptions()));
     }
 
     private sealed class TestInteractionProbe : IInboundVoiceInteractionProbe

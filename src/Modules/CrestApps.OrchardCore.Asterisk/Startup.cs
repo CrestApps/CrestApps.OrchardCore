@@ -4,15 +4,18 @@ using CrestApps.OrchardCore.Asterisk.Indexes;
 using CrestApps.OrchardCore.Asterisk.Migrations;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using Polly;
 
@@ -23,13 +26,30 @@ namespace CrestApps.OrchardCore.Asterisk;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration used to bind the Asterisk options.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The resilience pipeline is constructed before any tenant request, so its timings are read here rather
+        // than resolved per call. The same section backs AsteriskCoordinationOptions below, so the validated
+        // values and the values the pipeline uses cannot diverge.
+        var coordination = new AsteriskCoordinationOptions();
+        _shellConfiguration.GetSection(AsteriskConstants.CoordinationConfigurationSectionPath).Bind(coordination);
+
         services.AddHttpClient(AsteriskConstants.HttpClientName)
             .AddStandardResilienceHandler(options =>
             {
-                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
-                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+                options.TotalRequestTimeout.Timeout = coordination.HttpTotalRequestTimeout;
+                options.AttemptTimeout.Timeout = coordination.HttpAttemptTimeout;
 
                 options.Retry.MaxRetryAttempts = 3;
                 options.Retry.Delay = TimeSpan.FromSeconds(2);
@@ -42,10 +62,34 @@ public sealed class Startup : StartupBase
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
             });
 
+        services.ValidateTenantOptionsOnActivation();
+        services.AddOptions<DefaultAsteriskOptions>().ValidateOnStart();
+
+        services
+            .AddOptions<AsteriskCoordinationOptions>()
+            .Bind(_shellConfiguration.GetSection(AsteriskConstants.CoordinationConfigurationSectionPath))
+            .Validate(
+                options => options.CredentialLockTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:CredentialLockTimeout' must be greater than zero.")
+            .Validate(
+                options => options.CredentialLockExpiration > options.CredentialLockTimeout,
+                "'CrestApps:Asterisk:Coordination:CredentialLockExpiration' must exceed 'CredentialLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes issue credentials for the same endpoint.")
+            .Validate(
+                options => options.PendingReclamationThreshold > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:PendingReclamationThreshold' must be greater than zero, otherwise reconciliation reclaims a call that is still being answered.")
+            .Validate(
+                options => options.HttpAttemptTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:HttpAttemptTimeout' must be greater than zero.")
+            .Validate(
+                options => options.HttpTotalRequestTimeout > options.HttpAttemptTimeout,
+                "'CrestApps:Asterisk:Coordination:HttpTotalRequestTimeout' must exceed 'HttpAttemptTimeout', otherwise no attempt can complete within the total budget.")
+            .ValidateOnStart();
+
         services
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
+            .AddTransient<IValidateOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsValidator>()
             .AddScoped<IAsteriskPjsipCredentialIssuer, AsteriskPjsipCredentialIssuer>()
             .AddScoped<IAsteriskPjsipRealtimeCredentialStore, AsteriskPjsipRealtimeCredentialStore>()
             .AddScoped<IAsteriskPjsipCredentialLeaseStore, AsteriskPjsipCredentialLeaseStore>()

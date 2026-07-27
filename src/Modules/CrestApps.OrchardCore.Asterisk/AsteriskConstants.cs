@@ -119,6 +119,11 @@ public static class AsteriskConstants
     public const string DefaultConfigurationSectionPath = "CrestApps:Asterisk:Default";
 
     /// <summary>
+    /// The configuration section holding the Asterisk timings a deployment tunes.
+    /// </summary>
+    public const string CoordinationConfigurationSectionPath = "CrestApps:Asterisk:Coordination";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Asterisk module.
     /// </summary>
     public static class Feature

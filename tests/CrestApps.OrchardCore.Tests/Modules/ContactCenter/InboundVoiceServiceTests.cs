@@ -13,6 +13,7 @@ using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -1231,7 +1232,8 @@ public sealed class InboundVoiceServiceTests
                 DistributedLock.Object,
                 ScopeExecutor,
                 new TestContactCenterFeatureWorkManager(),
-                clock.Object);
+                clock.Object,
+                Options.Create(new ContactCenterCoordinationOptions()));
         }
     }
 }

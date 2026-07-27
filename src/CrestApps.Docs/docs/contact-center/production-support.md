@@ -274,6 +274,41 @@ The supported production real-time topology is:
 
 Both features are required in production even on the single supported node. The in-memory backplane and local lock are development-only: a rolling restart overlaps two instances, and an Orchard shell reload rebuilds the shell in-process, so process-local state is not a safe substitute for the distributed contract. Production without the backplane, without Redis distributed locking, on more than one node, or in a multi-region active-active configuration is unsupported.
 
+## Configuration validation
+
+Every operator-supplied option in the Contact Center, Telephony and provider modules is validated, and an invalid value stops the tenant instead of being discovered later by whichever code path happens to read it first.
+
+Validation runs when the tenant activates, which is what the first request to that tenant triggers. Declaring `ValidateOnStart()` alone is not sufficient here: it records its rules against `IStartupValidator`, which the .NET generic host invokes only against the root container, while Orchard Core builds a service container per tenant. `ValidateTenantOptionsOnActivation()` closes that gap by invoking the validator during tenant activation, so a tenant carrying an invalid configuration fails to activate and never serves a request. A misconfigured tenant does not degrade other tenants on the same host.
+
+Validated settings:
+
+| Section | Rule |
+| --- | --- |
+| `CrestApps_ContactCenter:Retention` | Every window is non-negative. |
+| `CrestApps_ContactCenter:HealthChecks` | Every threshold is at least one, and each unhealthy bound is at or above its degraded bound. |
+| `CrestApps_ContactCenter:Topology` | A declared profile identifier resolves to a known topology profile, so a typo is refused rather than silently falling back to a weaker topology. |
+| `CrestApps_ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
+| `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
+| `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |
+| `CrestApps:Asterisk:Default` | Numeric settings are sane whenever the configuration-backed provider is enabled. |
+| `CrestApps:Asterisk:Coordination` | Lock and HTTP timings are positive, the lease expiry exceeds its acquisition timeout, and the total request budget exceeds a single attempt. |
+
+Each lease expiry must exceed its acquisition timeout because otherwise the lease can lapse while a peer is still waiting to take it, and two nodes then act on the same call, credential or reconciliation sweep at once.
+
+### Development credentials are refused in production
+
+This repository publishes working credentials so the Aspire stack runs without an operator inventing their own — including the Coturn static authentication secret and the Asterisk ARI password. Outside a development environment those values authenticate nobody, because anyone who has read this repository holds them.
+
+When `ASPNETCORE_ENVIRONMENT` is `Production`, a tenant refuses to activate if `CrestApps:Asterisk:Default` supplies a known development value for `Password`, `TurnSharedSecret`, `UserName` or `PjsipRealtimeConnectionString`. The same values keep working in development, so the workflow they were published for is unaffected. Obvious placeholders that were never replaced, such as `changeme` or `<your-secret>`, are refused on the same terms.
+
+The register of known development values stores SHA-256 digests rather than the secrets themselves, and a test walks the tracked configuration files in this repository to assert that every credential they publish is recognised — so adding a new sample credential without registering it fails the build rather than shipping an unguarded value.
+
+Where a credential is only used to derive a client-visible artifact, the guard degrades rather than fails the tenant. A TURN relay credential derived from a published shared secret is withheld in production and the soft phone receives STUN-only ICE servers, which reduces connectivity through restrictive networks but never hands out a forgeable relay credential.
+
+### Timings are configuration, not constants
+
+Distributed-lock waits, lease expiries, the inbound reclamation threshold and the Asterisk HTTP request budget are deployment characteristics: a node under heavier load, or one further from its database or from Asterisk, needs different values than a developer laptop. They are settable under the `Coordination` sections above and validated on the same terms as everything else.
+
 ## Retention, legal holds, and replay horizon
 
 The durable interaction event log is the source of truth from which projections (for example the daily metrics projection) are rebuilt. Purging it therefore bounds how far back a projection can be replayed, so retention is aligned with the replay horizon and legal holds rather than deleting events purely by age.
