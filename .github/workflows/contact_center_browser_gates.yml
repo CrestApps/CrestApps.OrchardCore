@@ -41,7 +41,7 @@ jobs:
         run: >-
           dotnet build
           -c Release
-          -p:NuGetAudit=false
+         
           ./tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj
       - name: Install Playwright browsers
         # The suite also self-installs on first use, but installing here keeps a browser download

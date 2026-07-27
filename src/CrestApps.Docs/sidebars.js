@@ -5,6 +5,7 @@ const sidebars = {
     docsSidebar: [
         'intro',
         'getting-started',
+        'supply-chain',
         'feature-reference',
         {
             type: 'category',

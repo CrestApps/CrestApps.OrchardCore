@@ -37,6 +37,7 @@ public sealed partial class LedgerEvidenceTests
     [InlineData("contact_center_operations_gates.yml", "redis-backplane-two-node")]
     [InlineData("contact_center_feature_activation_matrix.yml", "fresh-tenant-activation")]
     [InlineData("contact_center_browser_gates.yml", "soft-phone-browser")]
+    [InlineData("supply_chain.yml", "vulnerability-audit,secret-scan,license-inventory,sbom,container-scan")]
     [InlineData("validate_docs.yml", "validate-docs")]
     [InlineData("assets_validation.yml", "test-npm-build")]
     public void WorkflowJobParser_ResolvesExactlyTheJobsEachWorkflowDeclares(string workflow, string expectedJobs)

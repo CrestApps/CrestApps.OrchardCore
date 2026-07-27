@@ -30,6 +30,20 @@
     <CopilotSkipCliDownload Condition="'$(CopilotSkipCliDownload)' == '' And '$(CopilotCliBinaryPath)' == ''">true</CopilotSkipCliDownload>
   </PropertyGroup>
 
+  <!--
+    Dependency vulnerability auditing. This has to be a build failure rather than a warning: CI previously
+    passed -p:NuGetAudit=false on every workflow, so advisories against transitive packages went unseen.
+    Auditing every package at the lowest severity is deliberate - a transitive moderate advisory is exactly
+    what the suppressed builds were hiding. When a new advisory appears, pin the patched version in
+    Directory.Packages.props rather than lowering these settings.
+  -->
+  <PropertyGroup>
+    <NuGetAudit Condition="'$(NuGetAudit)' == ''">true</NuGetAudit>
+    <NuGetAuditMode Condition="'$(NuGetAuditMode)' == ''">all</NuGetAuditMode>
+    <NuGetAuditLevel Condition="'$(NuGetAuditLevel)' == ''">low</NuGetAuditLevel>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+
   <!-- Default TFMs to use when building and packaging -->
   <PropertyGroup>
     <TargetFramework Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'False'">$(CommonTargetFrameworks)</TargetFramework>

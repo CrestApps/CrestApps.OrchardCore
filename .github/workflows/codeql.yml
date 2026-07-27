@@ -35,7 +35,7 @@ jobs:
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build solution
-        run: dotnet build CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
+        run: dotnet build CrestApps.OrchardCore.slnx -c Release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

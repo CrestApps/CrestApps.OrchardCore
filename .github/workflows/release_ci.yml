@@ -42,7 +42,7 @@ jobs:
           10.0.x
     - name: Contact Center distributed tests
       run: |
-        dotnet test -c Release -p:NuGetAudit=false ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj
+        dotnet test -c Release ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj
 
   test:
     needs: distributed_test
@@ -75,8 +75,6 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER ))" >> $GITHUB_ENV
     - name: Build
-      # NuGetAudit is intentionally not disabled here like it is for other CI builds, because we need to address any
-      # vulnerable packages before releasing a new version.
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true -p:Version=${{ steps.get_version.outputs.VERSION }}
     - name: Unit Tests
