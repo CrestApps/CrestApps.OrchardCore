@@ -293,3 +293,31 @@ The Asterisk development dashboard also logs the refresh source, refresh-lock wa
 ### What to expect from the bundled local path
 
 The local `Local/{number}@default` endpoint remains useful for keeping the media loop inside Asterisk during development, and the provider now originates those calls directly into the configured Stasis application so ARI events, dashboard telemetry, and the forwarded Contact Center ingress event all describe the same provider call id. Because the same Local loopback call leg stays inside Stasis, the Orchard soft phone can now expose advanced ARI-backed controls there instead of hiding them.
+
+## Provider protocol contract tests
+
+The Asterisk integration is pinned to the protocol Asterisk actually publishes, not to a hand-written stub. The Asterisk project ships its REST Interface as machine-readable Swagger declarations for every release, and the declarations for the release this repository pins its container image to are vendored verbatim under `tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/Asterisk/{version}`.
+
+That directory contains four things:
+
+- `spec-events.json`, `spec-channels.json`, `spec-bridges.json`, and `spec-recordings.json` are the upstream declarations, copied byte for byte.
+- `manifest.json` records the provenance of those copies: the upstream repository, the tag they were taken from, the path and URL of each file, the SHA-256 of each file, and the container image tag and digest the single-node profile runs.
+- `contract.json` binds the realtime voice event mapper to those declarations. For each event the mapper interprets it lists the property paths the mapper depends on, and it separately lists the compatibility fallbacks the mapper only tolerates, together with the reason each one is tolerated.
+- `events/` and `rest/` hold the recorded payloads and REST responses that are replayed through the production code.
+
+Four suites enforce this:
+
+- `AsteriskAriContractProvenanceTests` recomputes every recorded hash, requires the vendored release to match the release parsed out of `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile`, and requires exactly one vendored release directory to exist. An Asterisk version bump therefore breaks the build until the declarations are refreshed.
+- `AsteriskAriEventContractTests` scans `AsteriskRealtimeVoiceEventMapper` for the event types it special-cases and requires `contract.json` and the recorded events to cover exactly that set, requires every declared property path to resolve against the vendored declarations, requires every recorded payload to contain only fields those declarations permit, requires each tolerated fallback to stay absent from the corresponding model, and replays every recorded event through the production mapper.
+- `AsteriskAriRestContractTests` constructs the real `AsteriskAriClient` over the recorded responses, exercises every method `IAsteriskAriClient` publishes, and requires every request the client issues to match an operation the vendored declarations declare, with only query parameters that release accepts.
+- `DialPadWebhookContractTests` covers the other provider; see [DialPad](dialpad.md).
+
+### Refreshing the vendored declarations
+
+1. Change the pinned image in `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile` and record the new digest.
+2. Download `rest-api/api-docs/events.json`, `channels.json`, `bridges.json`, and `recordings.json` from the Asterisk repository at the tag matching the new release.
+3. Rename the version directory to the new release and replace the four `spec-*.json` files.
+4. Update `manifest.json` with the new tag, digest, URLs, and SHA-256 values.
+5. Run the Asterisk contract suites. Any property the mapper depends on that the new release no longer declares, and any request the client issues that the new release no longer accepts, fails immediately and must be resolved before the bump lands.
+
+These gates are not theoretical. They found two real defects. The mapper read channel variables from four locations, none of which was `Channel.channelvars`, the only location a conforming Asterisk release populates, so the interaction correlation identifier could never be recovered from a channel object. Recording duration was read from `StoredRecording`, which Asterisk declares with only a name and a format, so every completed recording reported no duration; the client now reads the live recording, where the duration is declared, before stopping it.

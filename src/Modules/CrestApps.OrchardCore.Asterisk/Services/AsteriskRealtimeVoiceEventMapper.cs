@@ -167,8 +167,12 @@ internal static class AsteriskRealtimeVoiceEventMapper
             ReadString(root, "parent_channel_id") ??
             ReadString(root, "parentChannelId");
 
+    // The Asterisk REST Interface declares channel variables on the Channel model as "channelvars", so that lookup has
+    // to come first: it is the only location a conforming Asterisk release actually populates. The remaining lookups are
+    // tolerated compatibility fallbacks for gateways that re-shape ARI payloads before they reach this mapper.
     private static string ReadChannelVariable(JsonElement root, JsonElement channel, string variableName)
-        => ReadVariable(channel, "variables", variableName) ??
+        => ReadVariable(channel, "channelvars", variableName) ??
+            ReadVariable(channel, "variables", variableName) ??
             ReadVariable(root, "variables", variableName) ??
             ReadVariable(root, "channelvars", variableName) ??
             ReadVariable(root, "channel_variables", variableName) ??

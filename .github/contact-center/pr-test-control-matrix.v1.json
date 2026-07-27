@@ -1319,6 +1319,34 @@
         ]
       },
       "evidenceLocation": "ContactCenterSupportMatrixTests, ContactCenterFeatureDependencyArchitectureTests, and the fresh-tenant activation matrix prove both GA-Core profiles prohibit and do not register media, while AsteriskRtpPacketCodecTests and AsteriskContactCenterVoiceMediaSessionTests remain development-foundation evidence only. Secure boundary, loss/reorder/jitter, capacity, failover, and node-affinity certification are planned:R9-contact-center-media-certification dependencies."
+    },
+    {
+      "id": "V005",
+      "severity": "P1",
+      "planFinding": "W5.4-provider-contract-tests",
+      "category": "voice-provider",
+      "gate": "No provider protocol contract test",
+      "invariant": "Every Asterisk REST Interface event the realtime voice mapper interprets, every property it depends on, and every REST operation and query parameter the ARI client issues must be declared by the Asterisk REST Interface declarations the Asterisk project publishes for the exact release the single-node container image is pinned to, and those declarations must be vendored verbatim under a hash-verified provenance manifest. Compatibility fallbacks the mapper only tolerates must stay absent from those declarations. DialPad has no vendorable schema, so its webhook contract is payload-bound instead: every provider token the normalizer interprets carries a recorded expectation, and every recorded delivery replays through the signed ingress, the production deserializer, and the production normalizer.",
+      "testId": "CC-V005",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "AsteriskAriContractProvenanceTests, AsteriskAriEventContractTests, AsteriskAriRestContractTests, and DialPadWebhookContractTests replay the vendored Asterisk declarations and the recorded DialPad deliveries through the production mapper, ARI client, and webhook normalizer. The cassette set lives at tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes."
     }
   ]
 }

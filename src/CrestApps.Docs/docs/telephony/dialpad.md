@@ -151,3 +151,11 @@ The `DialPadProviderOptionsConfigurations` implementation contributes the DialPa
 the tenant settings enable it. The named HTTP client is resolved by the provider for REST API and OAuth
 token calls, so transient DialPad failures go through the configured retry, timeout, circuit-breaker,
 and attempt-limiter policies.
+
+## Webhook contract tests
+
+DialPad does not publish a machine-readable schema, so its contract cannot be bound to a vendored specification the way [Asterisk](asterisk.md) is. It is bound to recorded deliveries instead, and the manifest at `tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/DialPad/manifest.json` declares that weaker guarantee explicitly rather than implying a protocol proof it cannot make.
+
+The rigor comes from coverage floors that are derived from the production code rather than restated by hand. `DialPadWebhookContractTests` scans the normalizer's own token switches and requires `states.json` to name exactly the call-state, recording-state, and answer-classification tokens the production code interprets, so a newly interpreted token fails the build until a recorded expectation is added for it. Tokens the normalizer deliberately ignores are recorded as such and asserted to stay ignored.
+
+Each recorded scenario is then replayed through the whole ingress path rather than through the normalizer alone: the signed JWT webhook endpoint, the production deserializer, and the production normalizer. A delivery signed with the wrong secret is rejected, and every payload field the recordings use must bind to the property names the production model declares, so renaming a serialized field breaks the build.

@@ -431,6 +431,11 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         ArgumentException.ThrowIfNullOrEmpty(recordingName);
 
         var settings = ResolveSettings(nameof(StopBridgeRecordingAsync));
+
+        // The Asterisk REST Interface declares a duration on LiveRecording only; StoredRecording carries just a name and
+        // a format. Read the live recording before stopping it so the completed recording can still report how long it
+        // ran, instead of silently reporting no duration at all.
+        var live = await GetLiveRecordingAsync(settings, recordingName, nameof(StopBridgeRecordingAsync), cancellationToken);
         using var response = await SendAsync(
             settings,
             HttpMethod.Post,
@@ -448,7 +453,14 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
 
         await EnsureSuccessAsync(response, nameof(StopBridgeRecordingAsync), cancellationToken);
 
-        return await GetStoredRecordingAsync(settings, recordingName, nameof(StopBridgeRecordingAsync), cancellationToken);
+        var stored = await GetStoredRecordingAsync(settings, recordingName, nameof(StopBridgeRecordingAsync), cancellationToken);
+
+        if (stored is not null)
+        {
+            stored.Duration ??= live?.Duration;
+        }
+
+        return stored;
     }
 
     /// <inheritdoc/>
