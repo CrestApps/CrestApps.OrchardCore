@@ -1,8 +1,6 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Tooling;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
-using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.AI.Tools.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
@@ -15,14 +13,9 @@ internal sealed class ChatInteractionToolInstancesDisplayDriver : AIToolInstance
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionToolInstancesDisplayDriver"/> class.
     /// </summary>
-    /// <param name="instancesCatalog">The tool instances catalog.</param>
-    /// <param name="toolAccessEvaluator">The evaluator used to filter out inaccessible instances.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor used to resolve the current user.</param>
-    public ChatInteractionToolInstancesDisplayDriver(
-        ISourceCatalog<AIToolInstance> instancesCatalog,
-        IAIToolAccessEvaluator toolAccessEvaluator,
-        IHttpContextAccessor httpContextAccessor)
-        : base(instancesCatalog, toolAccessEvaluator, httpContextAccessor)
+    /// <param name="instanceAccessor">The accessor used to resolve the instances the current user may assign.</param>
+    public ChatInteractionToolInstancesDisplayDriver(IAIToolInstanceAccessor instanceAccessor)
+        : base(instanceAccessor)
     {
     }
 

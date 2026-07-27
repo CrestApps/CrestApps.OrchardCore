@@ -27,6 +27,7 @@ using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.Core;
@@ -79,6 +80,7 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<Core.Services.CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
+            .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()

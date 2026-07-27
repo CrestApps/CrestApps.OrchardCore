@@ -1,8 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,24 +15,15 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<TModel>
     where TModel : ExtensibleEntity, new()
 {
-    private readonly ISourceCatalog<AIToolInstance> _instancesCatalog;
-    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAIToolInstanceAccessor _instanceAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIToolInstancesDisplayDriverBase{TModel}"/> class.
     /// </summary>
-    /// <param name="instancesCatalog">The tool instances catalog.</param>
-    /// <param name="toolAccessEvaluator">The evaluator used to filter out inaccessible instances.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor used to resolve the current user.</param>
-    protected AIToolInstancesDisplayDriverBase(
-        ISourceCatalog<AIToolInstance> instancesCatalog,
-        IAIToolAccessEvaluator toolAccessEvaluator,
-        IHttpContextAccessor httpContextAccessor)
+    /// <param name="instanceAccessor">The accessor used to resolve the instances the current user may assign.</param>
+    protected AIToolInstancesDisplayDriverBase(IAIToolInstanceAccessor instanceAccessor)
     {
-        _instancesCatalog = instancesCatalog;
-        _toolAccessEvaluator = toolAccessEvaluator;
-        _httpContextAccessor = httpContextAccessor;
+        _instanceAccessor = instanceAccessor;
     }
 
     /// <summary>
@@ -88,7 +78,7 @@ public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<T
             return null;
         }
 
-        var accessibleInstances = await GetAccessibleInstancesAsync();
+        var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
 
         if (accessibleInstances.Count == 0)
         {
@@ -118,7 +108,7 @@ public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<T
             return null;
         }
 
-        var accessibleInstances = await GetAccessibleInstancesAsync();
+        var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
 
         if (accessibleInstances.Count == 0)
         {
@@ -141,26 +131,5 @@ public abstract class AIToolInstancesDisplayDriverBase<TModel> : DisplayDriver<T
                 .ToArray());
 
         return await EditAsync(model, context);
-    }
-
-    private async Task<List<AIToolInstance>> GetAccessibleInstancesAsync()
-    {
-        var user = _httpContextAccessor.HttpContext?.User;
-        var accessible = new List<AIToolInstance>();
-
-        if (user is null)
-        {
-            return accessible;
-        }
-
-        foreach (var instance in await _instancesCatalog.GetAllAsync())
-        {
-            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, instance.GetFunctionName()))
-            {
-                accessible.Add(instance);
-            }
-        }
-
-        return accessible;
     }
 }

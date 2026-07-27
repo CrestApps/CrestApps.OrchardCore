@@ -174,17 +174,3 @@ public sealed class SiteSettingsRecipesSchemaStartup : StartupBase
         services.AddScoped<ISiteSettingsSchemaDefinition, AIVisitorIdentityOptionsSchema>();
     }
 }
-
-/// <summary>
-/// Registers the post-session tool instance editors for the ToolInstances feature.
-/// </summary>
-[RequireFeatures(AIConstants.Feature.ToolInstances)]
-public sealed class ToolInstancesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddDisplayDriver<AIProfile, AIProfilePostSessionToolInstancesDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionToolInstancesDisplayDriver>();
-    }
-}

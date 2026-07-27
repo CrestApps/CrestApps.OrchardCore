@@ -57,7 +57,7 @@ Open a **Chat Interaction** and go to the **Capabilities** tab. The **Tool Insta
 
 ## Using instances during post-session processing
 
-AI profiles and profile templates that use post-session processing can also invoke tool instances while analyzing a closed conversation. Open the **Data Processing & Metrics** tab and use the **Post-Session Tool Instances** section, which sits directly below the post-session processing settings.
+AI profiles and profile templates that use post-session processing can also invoke tool instances while analyzing a closed conversation. Open the **Data Processing & Metrics** tab, then open the post-session **Capabilities** tab, where tools and tool instances are selected together.
 
 This selection is stored separately from the **Capabilities** selection, so an instance that a live conversation may call is not automatically available during post-session analysis, and vice versa. Selecting only tool instances is enough to run post-session processing through the tool-enabled path; no regular tools are required.
 
@@ -166,7 +166,7 @@ The following members are available for customization:
 | `EditorShapeType` | The shape rendered for the picker. Defaults to `EditToolInstances_Edit`. Override it to match your editor's layout. |
 | `EditorLocation` | Where the picker is placed. Defaults to `Content:7#Capabilities;9`. |
 | `CanHandle(TModel)` | Skips the picker entirely for models it should not apply to. |
-| `GetSelectedInstanceNames(TModel)` / `SetSelectedInstanceNames(TModel, string[])` | Where the selection is read from and written to. Defaults to `AIToolInstanceMetadata`, which the framework already honors when building the completion context. Override both when the selection belongs somewhere else, as the post-session editors do. |
+| `GetSelectedInstanceNames(TModel)` / `SetSelectedInstanceNames(TModel, string[])` | Where the selection is read from and written to. Defaults to `AIToolInstanceMetadata`, which the framework already honors when building the completion context. Override both when the selection belongs somewhere else. |
 
 Register the driver from a startup class gated with `[RequireFeatures(AIConstants.Feature.ToolInstances)]` so it only appears when the feature is enabled.
 

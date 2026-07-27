@@ -19,6 +19,11 @@ public class AIProfilePostSessionViewModel
     /// Gets or sets the post session tools.
     /// </summary>
     public Dictionary<string, PostSessionToolEntry[]> PostSessionTools { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the post session tool instances.
+    /// </summary>
+    public PostSessionToolInstanceEntry[] PostSessionToolInstances { get; set; } = [];
 }
 
 /// <summary>
