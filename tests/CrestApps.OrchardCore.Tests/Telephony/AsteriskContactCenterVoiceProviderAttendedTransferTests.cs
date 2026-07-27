@@ -62,8 +62,8 @@ public sealed class AsteriskContactCenterVoiceProviderAttendedTransferTests
         Assert.NotNull(initiating);
         Assert.Equal(AsteriskChannelBindingState.Connected, initiating.State);
 
-        Assert.Equal(_consultChannelId, result.Metadata[ContactCenterConstants.AttendedTransferMetadata.ConsultChannelId]);
-        Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.AttendedTransferMetadata.BridgeId]);
+        Assert.Equal(_consultChannelId, result.Metadata[AsteriskVoiceResultMetadata.AttendedTransferConsultChannelId]);
+        Assert.Equal(_mixingBridgeId, result.Metadata[AsteriskVoiceResultMetadata.AttendedTransferBridgeId]);
     }
 
     [Fact]

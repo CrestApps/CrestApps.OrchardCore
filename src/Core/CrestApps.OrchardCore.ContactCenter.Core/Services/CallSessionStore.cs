@@ -91,10 +91,10 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
         }
 
         if (!string.IsNullOrEmpty(record.SupervisorLegId) &&
-            string.IsNullOrEmpty(record.BridgeId) &&
+            string.IsNullOrEmpty(record.MediaTopologyId) &&
             string.IsNullOrEmpty(record.ConferenceId))
         {
-            throw new InvalidOperationException("A Contact Center call session cannot attach a supervisor leg before the call has a bridge or conference topology.");
+            throw new InvalidOperationException("A Contact Center call session cannot attach a supervisor leg before the call has a media or conference topology.");
         }
 
         if (!string.IsNullOrEmpty(record.SupervisorAgentId) &&

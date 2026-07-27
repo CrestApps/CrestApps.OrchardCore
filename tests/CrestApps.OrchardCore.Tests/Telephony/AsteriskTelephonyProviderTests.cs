@@ -354,8 +354,7 @@ public sealed class AsteriskTelephonyProviderTests
         var result = await provider.MergeAsync(
             new MergeRequest
             {
-                PrimaryCallId = "call-1",
-                SecondaryCallId = "call-2",
+                CallIds = ["call-1", "call-2"],
             },
             TestContext.Current.CancellationToken);
 

@@ -370,7 +370,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 Succeeded = true,
                 Metadata = new Dictionary<string, string>
                 {
-                    [ContactCenterConstants.RecordingMetadata.RecordingName] = "crestapps-recording-int1",
+                    [ContactCenterConstants.RecordingMetadata.ProviderRecordingId] = "crestapps-recording-int1",
                     [ContactCenterConstants.RecordingMetadata.StorageReference] = "crestapps-recording-int1",
                     [ContactCenterConstants.RecordingMetadata.Format] = "wav",
                     [ContactCenterConstants.RecordingMetadata.RetrievalPath] = "recordings/stored/crestapps-recording-int1",

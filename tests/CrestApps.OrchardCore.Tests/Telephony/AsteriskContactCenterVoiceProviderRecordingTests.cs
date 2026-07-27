@@ -43,7 +43,7 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
         Assert.Equal(_recordingName, ariClient.StartedRecordingName);
         Assert.Equal(AsteriskAriConstants.RecordingFormat, ariClient.StartedFormat);
         Assert.Null(ariClient.UnpausedRecordingName);
-        Assert.Equal(_recordingName, result.Metadata[ContactCenterConstants.RecordingMetadata.RecordingName]);
+        Assert.Equal(_recordingName, result.Metadata[ContactCenterConstants.RecordingMetadata.ProviderRecordingId]);
         Assert.Equal(_recordingName, result.Metadata[ContactCenterConstants.RecordingMetadata.StorageReference]);
         Assert.Equal(AsteriskAriConstants.RecordingFormat, result.Metadata[ContactCenterConstants.RecordingMetadata.Format]);
         Assert.Equal(
@@ -175,7 +175,7 @@ public sealed class AsteriskContactCenterVoiceProviderRecordingTests
         // Assert
         Assert.True(result.Succeeded);
         Assert.Equal(_recordingName, ariClient.StoppedRecordingName);
-        Assert.Equal(_recordingName, result.Metadata[ContactCenterConstants.RecordingMetadata.RecordingName]);
+        Assert.Equal(_recordingName, result.Metadata[ContactCenterConstants.RecordingMetadata.ProviderRecordingId]);
         Assert.False(result.Metadata.ContainsKey(ContactCenterConstants.RecordingMetadata.DurationSeconds));
     }
 

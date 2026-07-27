@@ -216,7 +216,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         {
             interaction.RecordingReference = storageReference;
         }
-        else if (metadata.TryGetValue(ContactCenterConstants.RecordingMetadata.RecordingName, out var recordingName) &&
+        else if (metadata.TryGetValue(ContactCenterConstants.RecordingMetadata.ProviderRecordingId, out var recordingName) &&
             !string.IsNullOrWhiteSpace(recordingName))
         {
             interaction.RecordingReference = recordingName;

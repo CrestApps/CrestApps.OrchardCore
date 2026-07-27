@@ -1459,6 +1459,34 @@
         ]
       },
       "evidenceLocation": "TelephonyProviderCapabilityContractTests, plus the capability-gating theories in DefaultTelephonyServiceTests."
+    },
+    {
+      "id": "V009",
+      "severity": "P1",
+      "planFinding": "W1.6-provider-neutral-contracts-carry-no-provider-specific-vocabulary",
+      "category": "voice-provider",
+      "gate": "One vendor's implementation vocabulary is published as the shared platform contract",
+      "invariant": "Provider-neutral telephony and Contact Center contracts declare no vendor product name and no single-provider call-topology vocabulary, so no future provider inherits a metadata key it can never populate. Result metadata that only one provider writes and no neutral consumer reads is declared inside that provider's own module, is referenced nowhere else in the product, and is proven to still be in real use there. The neutral scan covers the whole neutral surface rather than a token subset, and the forbidden vocabulary is proven to match terms a real provider module genuinely writes.",
+      "testId": "CC-V009",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "all-supported-databases"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ProviderNeutralContractArchitectureTests, plus the MergeRequest.GetCallIds cases in TelephonyHubAuthorizationTests."
     }
   ]
 }

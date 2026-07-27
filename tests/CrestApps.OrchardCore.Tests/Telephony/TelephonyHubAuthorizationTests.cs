@@ -140,8 +140,7 @@ public sealed class TelephonyHubAuthorizationTests
             harness,
             hub => hub.Merge(new MergeRequest
             {
-                PrimaryCallId = "call-1",
-                SecondaryCallId = "call-2",
+                CallIds = ["call-1", "call-2"],
             }));
 
         // Assert
@@ -206,8 +205,7 @@ public sealed class TelephonyHubAuthorizationTests
             harness,
             hub => hub.Merge(new MergeRequest
             {
-                PrimaryCallId = "call-1",
-                SecondaryCallId = "call-2",
+                CallIds = ["call-1", "call-2"],
             }));
 
         // Assert
@@ -250,14 +248,29 @@ public sealed class TelephonyHubAuthorizationTests
     }
 
     [Fact]
-    public void MergeRequest_GetCallIds_WithNullCallIds_FallsBackToLegacyIdentifiers()
+    public void MergeRequest_GetCallIds_WithNullCallIds_ReturnsEmpty()
+    {
+        // Arrange: the canonical shape is the only shape, so a request that names no call merges nothing
+        // rather than silently falling back to a second, duplicate representation of the same calls.
+        var request = new MergeRequest
+        {
+            CallIds = null,
+        };
+
+        // Act
+        var callIds = request.GetCallIds();
+
+        // Assert
+        Assert.Empty(callIds);
+    }
+
+    [Fact]
+    public void MergeRequest_GetCallIds_DeduplicatesAndDropsBlankIdentifiers()
     {
         // Arrange
         var request = new MergeRequest
         {
-            CallIds = null,
-            PrimaryCallId = "call-1",
-            SecondaryCallId = "call-2",
+            CallIds = ["call-1", "  ", "call-2", "call-1", null],
         };
 
         // Act

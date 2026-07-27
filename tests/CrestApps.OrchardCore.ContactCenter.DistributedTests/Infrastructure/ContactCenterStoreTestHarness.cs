@@ -90,7 +90,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("AgentSessionId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
-            .Column<string>("BridgeId", column => column.WithLength(128))
+            .Column<string>("MediaTopologyId", column => column.WithLength(128))
             .Column<string>("ConferenceId", column => column.WithLength(128))
             .Column<string>("RecordingId", column => column.WithLength(128))
             .Column<string>("SupervisorAgentId", column => column.WithLength(26))

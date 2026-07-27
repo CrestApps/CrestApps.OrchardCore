@@ -51,9 +51,9 @@ public sealed class CallSessionTopologyStateAuthorityTests
         var firstCallSession = await firstStore.FindByIdAsync("call-session-1", TestContext.Current.CancellationToken);
         var secondCallSession = await secondStore.FindByIdAsync("call-session-1", TestContext.Current.CancellationToken);
 
-        firstCallSession.BridgeId = "bridge-1";
+        firstCallSession.MediaTopologyId = "bridge-1";
         firstCallSession.DurableCommandId = "command-1";
-        secondCallSession.BridgeId = "bridge-2";
+        secondCallSession.MediaTopologyId = "bridge-2";
         secondCallSession.DurableCommandId = "command-2";
         await firstStore.UpdateAsync(firstCallSession, TestContext.Current.CancellationToken);
         await secondStore.UpdateAsync(secondCallSession, TestContext.Current.CancellationToken);

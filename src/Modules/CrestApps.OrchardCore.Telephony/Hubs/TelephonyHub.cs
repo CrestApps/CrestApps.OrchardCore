@@ -705,14 +705,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             return [];
         }
 
-        return request.GetCallIds()
-            .Concat(
-            [
-                request.PrimaryCallId,
-                request.SecondaryCallId,
-            ])
-            .Where(callId => !string.IsNullOrWhiteSpace(callId))
-            .Distinct(StringComparer.Ordinal);
+        return request.GetCallIds();
     }
 
     private static IEnumerable<string> GetCallIds(SendDigitsRequest request)
@@ -753,7 +746,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     {
         return request is null
             ? "(null)"
-            : $"PrimaryCallId={OperationalLogRedactor.Redact(request.PrimaryCallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, SecondaryCallId={OperationalLogRedactor.Redact(request.SecondaryCallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}";
+            : $"CallIds={OperationalLogRedactor.Redact(string.Join(',', request.GetCallIds()), OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}";
     }
 
     private static string DescribeSendDigitsRequest(SendDigitsRequest request)

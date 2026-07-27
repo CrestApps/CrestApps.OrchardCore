@@ -54,10 +54,10 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
         Assert.Contains((_supervisorBridgeId, _snoopChannelId), ariClient.AddedToBridge);
         Assert.Contains((_supervisorBridgeId, _supervisorChannelId), ariClient.AddedToBridge);
 
-        Assert.Equal(_supervisorChannelId, result.Metadata[ContactCenterConstants.MonitoringMetadata.SupervisorChannelId]);
-        Assert.Equal(_snoopChannelId, result.Metadata[ContactCenterConstants.MonitoringMetadata.SnoopChannelId]);
-        Assert.Equal(_supervisorBridgeId, result.Metadata[ContactCenterConstants.MonitoringMetadata.BridgeId]);
-        Assert.Equal(nameof(MonitorMode.Monitor), result.Metadata[ContactCenterConstants.MonitoringMetadata.Mode]);
+        Assert.Equal(_supervisorChannelId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorChannelId]);
+        Assert.Equal(_snoopChannelId, result.Metadata[AsteriskVoiceResultMetadata.SnoopChannelId]);
+        Assert.Equal(_supervisorBridgeId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorBridgeId]);
+        Assert.Equal(nameof(MonitorMode.Monitor), result.Metadata[AsteriskVoiceResultMetadata.MonitoringMode]);
     }
 
     [Fact]
@@ -100,8 +100,8 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
         Assert.Equal(_supervisorChannelId, ariClient.OriginatedChannelId);
         Assert.Contains((_mixingBridgeId, _supervisorChannelId), ariClient.AddedToBridge);
 
-        Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.MonitoringMetadata.BridgeId]);
-        Assert.False(result.Metadata.ContainsKey(ContactCenterConstants.MonitoringMetadata.SnoopChannelId));
+        Assert.Equal(_mixingBridgeId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorBridgeId]);
+        Assert.False(result.Metadata.ContainsKey(AsteriskVoiceResultMetadata.SnoopChannelId));
     }
 
     [Fact]
@@ -312,9 +312,9 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal(_supervisorChannelId, result.Metadata[ContactCenterConstants.MonitoringMetadata.SupervisorChannelId]);
-        Assert.Equal(_snoopChannelId, result.Metadata[ContactCenterConstants.MonitoringMetadata.SnoopChannelId]);
-        Assert.Equal(_supervisorBridgeId, result.Metadata[ContactCenterConstants.MonitoringMetadata.BridgeId]);
+        Assert.Equal(_supervisorChannelId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorChannelId]);
+        Assert.Equal(_snoopChannelId, result.Metadata[AsteriskVoiceResultMetadata.SnoopChannelId]);
+        Assert.Equal(_supervisorBridgeId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorBridgeId]);
 
         // The re-assertion completes/confirms the topology idempotently...
         Assert.Equal(_snoopChannelId, ariClient.SnoopId);
@@ -343,8 +343,8 @@ public sealed class AsteriskContactCenterVoiceProviderMonitoringTests
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.MonitoringMetadata.BridgeId]);
-        Assert.False(result.Metadata.ContainsKey(ContactCenterConstants.MonitoringMetadata.SnoopChannelId));
+        Assert.Equal(_mixingBridgeId, result.Metadata[AsteriskVoiceResultMetadata.SupervisorBridgeId]);
+        Assert.False(result.Metadata.ContainsKey(AsteriskVoiceResultMetadata.SnoopChannelId));
 
         // Barge re-assertion re-confirms the supervisor leg is attached to the main conversation bridge (a no-op
         // when already a member) without snooping, re-originating, or hanging anything up.

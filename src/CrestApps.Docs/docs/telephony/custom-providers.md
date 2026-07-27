@@ -268,7 +268,18 @@ Instead:
 
 This keeps hard phones, provider-native devices, and the browser soft phone synchronized from the same server-side truth.
 
-## 7. Registration checklist
+## 7. Keep provider-private metadata inside your own module
+
+Provider operation results carry a metadata dictionary. It is tempting to declare every key you populate in the shared Contact Center contracts so it looks like part of the platform, but a key that only your module writes and that no provider-neutral code reads is not a shared contract — it is your implementation detail wearing the platform's name. Published there, it silently obligates every future provider to populate a concept that may not exist in its backend at all.
+
+The rule the codebase enforces is:
+
+- **Shared contracts** hold keys the platform itself supplies or consumes. `ContactCenterConstants.TransferMetadata.AgentUserId`, `ConferenceMetadata.AgentUserId`, and `AttendedTransferMetadata.AgentUserId` are shared because the platform passes them *into* every provider. `RecordingMetadata.ProviderRecordingId` and `RecordingMetadata.RecordingUrl` are shared because neutral recording and governance code reads them back out.
+- **Provider-private keys** live in your own module. The Asterisk adapter keeps its channel, snoop, and bridge identifiers in `AsteriskVoiceResultMetadata`, an `internal` class inside `CrestApps.OrchardCore.Asterisk`. Nothing outside that module can reference them, which is exactly right: nothing outside that module knows what they mean.
+
+Provider-neutral projects must also avoid vendor vocabulary in the names they declare. Use platform words for platform concepts — a call session's joined media is `MediaTopologyId`, not a vendor's word for its own grouping primitive. Prose in comments and docs may still name a provider as a concrete example; it is the declared identifiers and metadata key literals that must stay neutral. `ProviderNeutralContractArchitectureTests` fails the build when either rule is broken.
+
+## 8. Registration checklist
 
 For a new provider module, the usual registration checklist is:
 

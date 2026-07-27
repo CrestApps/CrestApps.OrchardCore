@@ -71,8 +71,8 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
         Assert.True(addIndex < swapIndex, "The destination leg must join the canonical bridge before ownership is swapped.");
         Assert.True(swapIndex < hangupOldIndex, "The previous leg must be hung up only after ownership is atomically swapped.");
 
-        Assert.Equal(_newAgentChannelId, result.Metadata[ContactCenterConstants.TransferMetadata.NewChannelId]);
-        Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.TransferMetadata.BridgeId]);
+        Assert.Equal(_newAgentChannelId, result.Metadata[AsteriskVoiceResultMetadata.TransferNewChannelId]);
+        Assert.Equal(_mixingBridgeId, result.Metadata[AsteriskVoiceResultMetadata.TransferBridgeId]);
     }
 
     [Fact]
@@ -246,7 +246,7 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
         Assert.True(result.Succeeded);
         Assert.Null(ariClient.OriginatedChannelId);
         Assert.Empty(ariClient.HungupChannels);
-        Assert.Equal(_newAgentChannelId, result.Metadata[ContactCenterConstants.TransferMetadata.NewChannelId]);
+        Assert.Equal(_newAgentChannelId, result.Metadata[AsteriskVoiceResultMetadata.TransferNewChannelId]);
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public sealed class AsteriskContactCenterVoiceProviderTransferTests
         Assert.Null(ariClient.OriginatedChannelId);
         Assert.DoesNotContain(_newAgentChannelId, ariClient.HungupChannels);
         Assert.NotNull(bindingStore.Find(_newAgentChannelId));
-        Assert.Equal(_newAgentChannelId, result.Metadata[ContactCenterConstants.TransferMetadata.NewChannelId]);
+        Assert.Equal(_newAgentChannelId, result.Metadata[AsteriskVoiceResultMetadata.TransferNewChannelId]);
     }
 
     [Fact]

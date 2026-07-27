@@ -10,7 +10,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
 {
     private static readonly string[] _recordingMetadataKeys =
     [
-        ContactCenterConstants.RecordingMetadata.RecordingName,
+        ContactCenterConstants.RecordingMetadata.ProviderRecordingId,
         ContactCenterConstants.RecordingMetadata.StorageReference,
         ContactCenterConstants.RecordingMetadata.Format,
         ContactCenterConstants.RecordingMetadata.DurationSeconds,

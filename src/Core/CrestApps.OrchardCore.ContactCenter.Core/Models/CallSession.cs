@@ -63,9 +63,11 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public string QueueId { get; set; }
 
     /// <summary>
-    /// Gets or sets the provider bridge identifier that currently joins the customer and agent media legs.
+    /// Gets or sets the provider's identifier for the media topology that currently joins the customer and
+    /// agent legs. Providers name this differently, so the value is opaque here and is only ever compared for
+    /// presence.
     /// </summary>
-    public string BridgeId { get; set; }
+    public string MediaTopologyId { get; set; }
 
     /// <summary>
     /// Gets or sets the provider conference identifier when the call is represented as a multi-party conference.

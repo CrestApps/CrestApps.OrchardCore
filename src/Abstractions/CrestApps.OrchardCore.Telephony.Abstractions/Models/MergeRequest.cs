@@ -11,45 +11,19 @@ public sealed class MergeRequest
     public IReadOnlyList<string> CallIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the legacy identifier of the primary call that hosts the conference.
-    /// </summary>
-    public string PrimaryCallId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the legacy identifier of the secondary call to merge into the conference.
-    /// </summary>
-    public string SecondaryCallId { get; set; }
-
-    /// <summary>
     /// Gets or sets an optional name for the resulting conference.
     /// </summary>
     public string ConferenceName { get; set; }
 
     /// <summary>
-    /// Gets the distinct call identifiers supplied by the current or legacy request shape.
+    /// Gets the distinct, non-empty call identifiers to merge.
     /// </summary>
     /// <returns>The call identifiers to merge.</returns>
     public IReadOnlyList<string> GetCallIds()
     {
-        var callIds = (CallIds ?? [])
+        return (CallIds ?? [])
             .Where(callId => !string.IsNullOrWhiteSpace(callId))
             .Distinct(StringComparer.Ordinal)
             .ToList();
-
-        if (callIds.Count == 0)
-        {
-            if (!string.IsNullOrWhiteSpace(PrimaryCallId))
-            {
-                callIds.Add(PrimaryCallId);
-            }
-
-            if (!string.IsNullOrWhiteSpace(SecondaryCallId) &&
-                !callIds.Contains(SecondaryCallId, StringComparer.Ordinal))
-            {
-                callIds.Add(SecondaryCallId);
-            }
-        }
-
-        return callIds;
     }
 }

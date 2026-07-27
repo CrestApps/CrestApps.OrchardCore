@@ -66,7 +66,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var interaction = CreateInteraction(recordingReference: "storage/int1");
         interaction.TechnicalMetadata = new Dictionary<string, object>
         {
-            [ContactCenterConstants.RecordingMetadata.RecordingName] = "rec-int1",
+            [ContactCenterConstants.RecordingMetadata.ProviderRecordingId] = "rec-int1",
             [ContactCenterConstants.RecordingMetadata.StorageReference] = "storage/int1",
             [ContactCenterConstants.RecordingMetadata.Format] = "wav",
             [ContactCenterConstants.RecordingMetadata.RetrievalPath] = "recordings/stored/rec-int1",
@@ -89,7 +89,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         Assert.True(decision.Erased);
         Assert.Null(interaction.RecordingReference);
         Assert.Equal(erasureInstant, interaction.RecordingErasedUtc);
-        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.RecordingMetadata.RecordingName));
+        Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.RecordingMetadata.ProviderRecordingId));
         Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.RecordingMetadata.RetrievalPath));
         Assert.Equal("keep-me", interaction.TechnicalMetadata["unrelated"]);
         interactionManager.Verify(m => m.UpdateAsync(interaction, null, It.IsAny<CancellationToken>()), Times.Once);

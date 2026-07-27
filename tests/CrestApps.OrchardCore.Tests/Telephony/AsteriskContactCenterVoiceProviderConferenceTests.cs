@@ -75,8 +75,8 @@ public sealed class AsteriskContactCenterVoiceProviderConferenceTests
         Assert.True(addIndex >= 0 && promoteIndex >= 0);
         Assert.True(addIndex < promoteIndex, "The participant leg must join the canonical bridge before it is stabilized as a participant.");
 
-        Assert.Equal(_participantChannelId, result.Metadata[ContactCenterConstants.ConferenceMetadata.ParticipantChannelId]);
-        Assert.Equal(_mixingBridgeId, result.Metadata[ContactCenterConstants.ConferenceMetadata.BridgeId]);
+        Assert.Equal(_participantChannelId, result.Metadata[AsteriskVoiceResultMetadata.ConferenceParticipantChannelId]);
+        Assert.Equal(_mixingBridgeId, result.Metadata[AsteriskVoiceResultMetadata.ConferenceBridgeId]);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class AsteriskContactCenterVoiceProviderConferenceTests
         // The participant is already in the call, so no second leg is originated.
         Assert.Null(ariClient.OriginatedChannelId);
         Assert.Empty(ariClient.AddedToBridge);
-        Assert.Equal(_participantChannelId, result.Metadata[ContactCenterConstants.ConferenceMetadata.ParticipantChannelId]);
+        Assert.Equal(_participantChannelId, result.Metadata[AsteriskVoiceResultMetadata.ConferenceParticipantChannelId]);
     }
 
     [Fact]

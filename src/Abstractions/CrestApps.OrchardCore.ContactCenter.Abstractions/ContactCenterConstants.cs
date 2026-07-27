@@ -312,9 +312,10 @@ public static class ContactCenterConstants
     public static class RecordingMetadata
     {
         /// <summary>
-        /// Identifies the provider-side recording name.
+        /// Identifies the recording as the provider itself names it, used as the retrieval reference when the
+        /// provider reports no durable storage reference.
         /// </summary>
-        public const string RecordingName = "recordingName";
+        public const string ProviderRecordingId = "providerRecordingId";
 
         /// <summary>
         /// Identifies the durable storage reference used to retrieve the recording media.
@@ -372,35 +373,6 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
-    /// Contains stable provider-result metadata keys describing a supervisor monitoring engagement, shared between
-    /// voice providers and the monitoring service.
-    /// </summary>
-    public static class MonitoringMetadata
-    {
-        /// <summary>
-        /// Identifies the originated supervisor endpoint channel that carries the supervisor's audio.
-        /// </summary>
-        public const string SupervisorChannelId = "supervisorChannelId";
-
-        /// <summary>
-        /// Identifies the snoop channel that carries the conversation audio to the supervisor in a listen-only or
-        /// whisper engagement. It is omitted for a barge engagement, which uses no snoop.
-        /// </summary>
-        public const string SnoopChannelId = "snoopChannelId";
-
-        /// <summary>
-        /// Identifies the bridge the supervisor was joined to: a dedicated supervisor bridge for a listen-only or
-        /// whisper engagement, or the main conversation bridge for a barge engagement.
-        /// </summary>
-        public const string BridgeId = "supervisorBridgeId";
-
-        /// <summary>
-        /// Identifies the engagement mode that was executed.
-        /// </summary>
-        public const string Mode = "mode";
-    }
-
-    /// <summary>
     /// Contains stable request-metadata keys the transfer service passes to a voice provider so the provider can
     /// execute a resolved transfer destination without receiving raw client input.
     /// </summary>
@@ -411,17 +383,6 @@ public static class ContactCenterConstants
         /// that agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
         /// </summary>
         public const string AgentUserId = "transferAgentUserId";
-
-        /// <summary>
-        /// Identifies the provider channel of the new leg established for a completed transfer, when the provider
-        /// reports one.
-        /// </summary>
-        public const string NewChannelId = "transferNewChannelId";
-
-        /// <summary>
-        /// Identifies the conversation bridge the transfer was executed on, when the provider reports one.
-        /// </summary>
-        public const string BridgeId = "transferBridgeId";
     }
 
     /// <summary>
@@ -436,17 +397,6 @@ public static class ContactCenterConstants
         /// resolves it server-side.
         /// </summary>
         public const string AgentUserId = "conferenceAgentUserId";
-
-        /// <summary>
-        /// Identifies the provider channel of the participant leg established for a completed conference add, when the
-        /// provider reports one.
-        /// </summary>
-        public const string ParticipantChannelId = "conferenceParticipantChannelId";
-
-        /// <summary>
-        /// Identifies the conversation bridge the conference participant was added to, when the provider reports one.
-        /// </summary>
-        public const string BridgeId = "conferenceBridgeId";
     }
 
     /// <summary>
@@ -461,17 +411,6 @@ public static class ContactCenterConstants
         /// agent's live endpoint. The client never supplies this; the transfer service resolves it server-side.
         /// </summary>
         public const string AgentUserId = "attendedTransferAgentUserId";
-
-        /// <summary>
-        /// Identifies the provider channel of the consult leg established for the destination agent, when the
-        /// provider reports one.
-        /// </summary>
-        public const string ConsultChannelId = "attendedTransferConsultChannelId";
-
-        /// <summary>
-        /// Identifies the conversation bridge the attended transfer was executed on, when the provider reports one.
-        /// </summary>
-        public const string BridgeId = "attendedTransferBridgeId";
     }
 
     /// <summary>

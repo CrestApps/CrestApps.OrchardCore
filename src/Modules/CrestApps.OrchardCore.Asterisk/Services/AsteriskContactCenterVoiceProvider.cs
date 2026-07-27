@@ -537,7 +537,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     {
         var metadata = new Dictionary<string, string>
         {
-            [ContactCenterConstants.RecordingMetadata.RecordingName] = recordingName,
+            [ContactCenterConstants.RecordingMetadata.ProviderRecordingId] = recordingName,
             [ContactCenterConstants.RecordingMetadata.StorageReference] = recordingName,
             [ContactCenterConstants.RecordingMetadata.Format] = format,
             [ContactCenterConstants.RecordingMetadata.RetrievalPath] = AsteriskAriConstants.StoredRecordingRetrievalPathPrefix + recordingName,
@@ -883,8 +883,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             ProviderName = AsteriskConstants.ProviderTechnicalName,
             Metadata = new Dictionary<string, string>
             {
-                [ContactCenterConstants.TransferMetadata.NewChannelId] = newAgentChannelId,
-                [ContactCenterConstants.TransferMetadata.BridgeId] = bridgeId,
+                [AsteriskVoiceResultMetadata.TransferNewChannelId] = newAgentChannelId,
+                [AsteriskVoiceResultMetadata.TransferBridgeId] = bridgeId,
             },
         };
     }
@@ -1192,8 +1192,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             ProviderName = AsteriskConstants.ProviderTechnicalName,
             Metadata = new Dictionary<string, string>
             {
-                [ContactCenterConstants.ConferenceMetadata.ParticipantChannelId] = participantChannelId,
-                [ContactCenterConstants.ConferenceMetadata.BridgeId] = bridgeId,
+                [AsteriskVoiceResultMetadata.ConferenceParticipantChannelId] = participantChannelId,
+                [AsteriskVoiceResultMetadata.ConferenceBridgeId] = bridgeId,
             },
         };
     }
@@ -1424,8 +1424,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             ProviderName = AsteriskConstants.ProviderTechnicalName,
             Metadata = new Dictionary<string, string>
             {
-                [ContactCenterConstants.AttendedTransferMetadata.ConsultChannelId] = consultChannelId,
-                [ContactCenterConstants.AttendedTransferMetadata.BridgeId] = bridgeId,
+                [AsteriskVoiceResultMetadata.AttendedTransferConsultChannelId] = consultChannelId,
+                [AsteriskVoiceResultMetadata.AttendedTransferBridgeId] = bridgeId,
             },
         };
     }
@@ -1733,7 +1733,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 ProviderCallId = request.ProviderCallId,
                 Metadata = new Dictionary<string, string>
                 {
-                    [ContactCenterConstants.MonitoringMetadata.Mode] = request.Mode.ToString(),
+                    [AsteriskVoiceResultMetadata.MonitoringMode] = request.Mode.ToString(),
                 },
             };
         }
@@ -2006,14 +2006,14 @@ internal sealed class AsteriskContactCenterVoiceProvider :
     {
         var metadata = new Dictionary<string, string>
         {
-            [ContactCenterConstants.MonitoringMetadata.SupervisorChannelId] = supervisorChannelId,
-            [ContactCenterConstants.MonitoringMetadata.BridgeId] = bridgeId,
-            [ContactCenterConstants.MonitoringMetadata.Mode] = mode.ToString(),
+            [AsteriskVoiceResultMetadata.SupervisorChannelId] = supervisorChannelId,
+            [AsteriskVoiceResultMetadata.SupervisorBridgeId] = bridgeId,
+            [AsteriskVoiceResultMetadata.MonitoringMode] = mode.ToString(),
         };
 
         if (!string.IsNullOrWhiteSpace(snoopChannelId))
         {
-            metadata[ContactCenterConstants.MonitoringMetadata.SnoopChannelId] = snoopChannelId;
+            metadata[AsteriskVoiceResultMetadata.SnoopChannelId] = snoopChannelId;
         }
 
         return new ContactCenterVoiceProviderResult
