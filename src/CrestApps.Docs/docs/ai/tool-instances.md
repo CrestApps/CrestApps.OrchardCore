@@ -66,27 +66,26 @@ In addition, every configured instance produces a dynamic `AccessAITool_{functio
 
 ## Registering a custom source
 
-A tool instance source is an `IAIToolInstanceSource` that turns an `AIToolInstance` into an `AITool`. Register it through the tool instances builder:
+A tool instance source is an `IAIToolInstanceSource` that turns an `AIToolInstance` into an `AITool`. Register it with `AddAIToolInstanceSource<TSource>` from your own feature's startup:
 
 ```csharp
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.AI.Tooling.Instances;
 
-[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures(AIConstants.Feature.ToolInstances)]
 public sealed class MySourceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIToolInstanceServices(builder => builder
-            .AddSource<WeatherToolInstanceSource>("weather", options =>
-            {
-                options.DisplayName = S["Weather Lookup"];
-                options.Description = S["Looks up the forecast for a configured region."];
-            }));
+        services.AddAIToolInstanceSource<WeatherToolInstanceSource>("weather", options =>
+        {
+            options.DisplayName = S["Weather Lookup"];
+            options.Description = S["Looks up the forecast for a configured region."];
+        });
     }
 }
 ```
 
-`AddAIToolInstanceServices` is safe to call from more than one feature; the built-in HTTP API request source and the YesSql stores are registered only once.
+Register sources with `AddAIToolInstanceSource` rather than calling `AddToolInstances(...)` yourself. Source registration never decides registry policy, whereas `AddToolInstances` defaults to `useDefaultRegistry: true` and would add the built-in registry provider alongside the permission-aware one this feature installs, surfacing every instance to the model regardless of permissions.
 
 To capture the fields your source needs, add a display driver for `AIToolInstance` and gate it on the source name:
 

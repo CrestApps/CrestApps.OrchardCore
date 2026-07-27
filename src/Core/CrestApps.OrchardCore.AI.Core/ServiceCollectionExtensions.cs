@@ -5,7 +5,6 @@ using CrestApps.Core.AI.Markdown;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.Builders;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -84,43 +83,6 @@ public static class ServiceCollectionExtensions
         services
             .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the AI tool instance services. Tool instances are parameterized, user-configured tools built
-    /// from developer-defined <see cref="IAIToolInstanceSource"/> blueprints. The built-in HTTP API request
-    /// source is always registered so users have a usable source out of the box.
-    /// </summary>
-    /// <remarks>
-    /// The feature is registered with <c>useDefaultRegistry: false</c> so the built-in registry provider is
-    /// skipped in favor of <see cref="OrchardCoreToolInstanceRegistryProvider"/>, which only surfaces the
-    /// instances the current user is permitted to access.
-    /// </remarks>
-    /// <param name="services">The services.</param>
-    /// <param name="configure">An optional delegate used to register additional tool instance sources.</param>
-    public static IServiceCollection AddAIToolInstanceServices(
-        this IServiceCollection services,
-        Action<CrestAppsAIToolInstancesBuilder> configure = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.AddCrestAppsCore(crestApps => crestApps
-            .AddAISuite(ai => ai
-                .AddToolInstances(toolInstances =>
-                {
-                    toolInstances
-                        .AddHttpApiRequestSource()
-                        .AddYesSqlStores();
-
-                    configure?.Invoke(toolInstances);
-                },
-                useDefaultRegistry: false)
-            )
-        );
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
 
         return services;
     }

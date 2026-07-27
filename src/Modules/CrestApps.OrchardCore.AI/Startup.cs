@@ -1,10 +1,12 @@
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
@@ -337,7 +339,18 @@ public sealed class ToolInstancesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIToolInstanceServices();
+        // The default registry surfaces every stored instance to the model, so it is skipped in favor of
+        // OrchardCoreToolInstanceRegistryProvider, which only surfaces instances the current user may access.
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddToolInstances(toolInstances => toolInstances
+                    .AddHttpApiRequestSource()
+                    .AddYesSqlStores(),
+                    useDefaultRegistry: false)
+            )
+        );
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
 
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()
