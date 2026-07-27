@@ -1,11 +1,11 @@
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.OrchardCore.Telephony.Core.Services;
 
 /// <summary>
 /// Provides the default <see cref="IProviderIdentityResolver"/> implementation. Canonical identities and
 /// aliases are gathered from every registered <see cref="IProviderIdentityProvider"/> so provider modules
-/// contribute their own identities without the Contact Center referencing provider implementation assemblies.
+/// contribute their own identities without the telephony layer referencing provider implementation assemblies.
 /// </summary>
 public sealed class ProviderIdentityResolver : IProviderIdentityResolver
 {

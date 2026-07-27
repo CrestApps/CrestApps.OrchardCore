@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -59,12 +60,7 @@ public static class ContactCenterClaimKeys
     /// </returns>
     public static string BuildProviderEventIdempotencyKey(string providerName, string idempotencyKey)
     {
-        if (string.IsNullOrEmpty(idempotencyKey) || string.IsNullOrWhiteSpace(providerName))
-        {
-            return idempotencyKey;
-        }
-
-        return BuildHashedKey("provider-event:v1:", $"{providerName}\n{idempotencyKey}");
+        return VoiceIngressKeys.BuildEventIdempotencyKey(providerName, idempotencyKey);
     }
 
     /// <summary>

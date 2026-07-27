@@ -1,10 +1,10 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -129,7 +129,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             legacyIdempotencyKey);
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-            GetIngestionLockKey(providerEvent.ProviderName, providerEvent.ProviderCallId),
+            VoiceIngressKeys.BuildIngestionLockKey(providerEvent.ProviderName, providerEvent.ProviderCallId),
             _ingestionLockTimeout,
             _ingestionLockExpiration);
 
@@ -434,54 +434,32 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private static bool ShouldIgnoreEvent(CallSession session, ProviderVoiceEvent providerEvent, DateTime occurredUtc)
     {
-        if (IsTerminalState(session.State) ||
-            GetLifecycleRank(providerEvent.State) < GetLifecycleRank(session.State))
-        {
-            return true;
-        }
-
-        // A terminal delivery is never stale. Provider nodes do not share a clock and do not all stamp
-        // sequence numbers, so a hangup can carry a timestamp behind the state change that preceded it or
-        // arrive unsequenced after a sequenced delivery. Applying the staleness guards to it would discard
-        // the only notification that the call is over, stranding the session in a live state forever: no
-        // CallEnded is published, wrap-up never starts, and the agent and reservation are never released.
-        // Ending twice is not a risk here, because an already terminal session is rejected above and an
-        // exact redelivery is rejected by the idempotency check before this method runs.
-        if (IsTerminalState(providerEvent.State))
-        {
-            return false;
-        }
-
-        // Once a provider establishes a sequence domain, unsequenced deliveries cannot safely advance it.
-        if (session.HighWaterSequence.HasValue)
-        {
-            if (!providerEvent.SequenceNumber.HasValue ||
-                providerEvent.SequenceNumber.Value <= session.HighWaterSequence.Value)
+        return VoiceStreamOrdering.ShouldDiscard(
+            new VoiceStreamWatermark
             {
-                return true;
-            }
-        }
-
-        if (session.LastProviderEventUtc.HasValue &&
-            occurredUtc < session.LastProviderEventUtc.Value)
-        {
-            return true;
-        }
-
-        return false;
+                Phase = GetLifecyclePhase(session.State),
+                HighWaterSequence = session.HighWaterSequence,
+                LastEventUtc = session.LastProviderEventUtc,
+            },
+            new VoiceStreamDelivery
+            {
+                Phase = GetLifecyclePhase(providerEvent.State),
+                SequenceNumber = providerEvent.SequenceNumber,
+                OccurredUtc = occurredUtc,
+            });
     }
 
-    private static int GetLifecycleRank(ContactCenterCallState state)
+    private static VoiceCallLifecyclePhase GetLifecyclePhase(ContactCenterCallState state)
     {
         return state switch
         {
-            ContactCenterCallState.Planned => 0,
-            ContactCenterCallState.Dialing => 1,
-            ContactCenterCallState.Ringing => 1,
-            ContactCenterCallState.Connected => 2,
-            ContactCenterCallState.OnHold => 2,
-            ContactCenterCallState.Ending => 3,
-            _ => 4,
+            ContactCenterCallState.Planned => VoiceCallLifecyclePhase.Planned,
+            ContactCenterCallState.Dialing => VoiceCallLifecyclePhase.Alerting,
+            ContactCenterCallState.Ringing => VoiceCallLifecyclePhase.Alerting,
+            ContactCenterCallState.Connected => VoiceCallLifecyclePhase.Established,
+            ContactCenterCallState.OnHold => VoiceCallLifecyclePhase.Established,
+            ContactCenterCallState.Ending => VoiceCallLifecyclePhase.Ending,
+            _ => VoiceCallLifecyclePhase.Terminal,
         };
     }
 
@@ -810,13 +788,6 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             AnswerClassification = providerEvent.AnswerClassification,
             Metadata = new Dictionary<string, string>(providerEvent.Metadata, StringComparer.Ordinal),
         };
-    }
-
-    private static string GetIngestionLockKey(string providerName, string providerCallId)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{providerName}\n{providerCallId}"));
-
-        return $"ContactCenterProviderVoiceEvent:{Convert.ToHexString(bytes)}";
     }
 
     private async Task StageAnsweredOutboundBridgeAsync(

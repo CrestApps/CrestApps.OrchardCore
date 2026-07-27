@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
 /// Describes the canonical technical identity of a telephony or voice provider together with the
