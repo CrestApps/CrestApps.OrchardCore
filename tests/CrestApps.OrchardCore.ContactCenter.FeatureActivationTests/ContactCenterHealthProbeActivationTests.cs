@@ -109,8 +109,34 @@ public sealed class ContactCenterHealthProbeActivationTests
                     TestContext.Current.CancellationToken));
 
         Assert.Equal(
-            [ContactCenterConstants.HealthChecks.NodeServingCheckName, ContactCenterConstants.HealthChecks.NodeCheckName],
+            [
+                ContactCenterConstants.HealthChecks.TopologyCheckName,
+                ContactCenterConstants.HealthChecks.NodeServingCheckName,
+                ContactCenterConstants.HealthChecks.NodeCheckName,
+            ],
             readiness.Entries.Keys);
+
+        // The structural invariant behind the regression: no check that observes a shared dependency may
+        // participate in readiness. Pinning the key set alone would still pass if a dependency check were
+        // renamed into the list, so the tags are asserted independently.
+        var dependencyChecks = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => services
+                .GetRequiredService<HealthCheckService>()
+                .CheckHealthAsync(
+                    registration => registration.Tags.Contains(ContactCenterConstants.HealthChecks.DependencyTag),
+                    TestContext.Current.CancellationToken));
+
+        Assert.NotEmpty(dependencyChecks.Entries);
+
+        foreach (var dependencyCheck in dependencyChecks.Entries.Keys)
+        {
+            Assert.DoesNotContain(dependencyCheck, readiness.Entries.Keys);
+        }
+
+        // The test is named for staying healthy, so it has to assert it rather than only assert which
+        // checks ran.
+        Assert.Equal(HealthStatus.Healthy, readiness.Status);
     }
 
     [Fact]

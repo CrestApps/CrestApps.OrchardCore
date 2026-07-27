@@ -31,7 +31,16 @@ Evidence is checked as well, not just status:
 - With the default `"evidenceKind": "tests"`, the gate's `evidenceLocation` must cite at least one test class that exists in the repository, and every cited class that exists must live in a test project one of the gate's own CI jobs actually runs. A gate cannot borrow credibility from tests that never execute in it.
 - With `"evidenceKind": "workflow"`, the cited workflow files must exist and one of them must declare the job the gate names.
 
-The workflow parser is itself pinned against the known job set of ten workflows, so a parser that silently returned nothing (making every `planned` gate trivially "unresolved") or returned every YAML key (making every enforced gate trivially "resolved") fails the build instead of passing vacuously.
+The workflow parser is itself pinned against the known job set of eleven workflows, so a parser that silently returned nothing (making every `planned` gate trivially "unresolved") or returned every YAML key (making every enforced gate trivially "resolved") fails the build instead of passing vacuously.
+
+## The gates themselves are gated
+
+A control matrix can only describe gates that run. Four further checks in `LedgerEvidenceTests` keep the workflows behind the matrix trustworthy:
+
+- **No orphaned suites.** Every project marked `<IsTestProject>true</IsTestProject>` under `tests/` must be executed by at least one workflow. The Telephony browser suite was orphaned in exactly this way and silently carried a failing test until it was adopted by `contact_center_browser_gates.yml`.
+- **Nothing ships untested.** Every test project must also run in `release_ci.yml`, which is the last gate before packages are published.
+- **Gates watch the whole tree.** The Contact Center gate workflows must filter on `src/**` and `tests/**`. They previously listed individual module folders, so a change to a shared Core project skipped the very gate that proved it.
+- **Failures cannot be swallowed.** Any workflow step piping a command into `tee` must set `pipefail` or inspect `PIPESTATUS`; otherwise the step reports the exit status of `tee` and a failing build passes. Comment lines are stripped before this check, so a comment mentioning `pipefail` cannot satisfy it.
 
 ## Ledger authority
 

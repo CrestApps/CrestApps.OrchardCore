@@ -31,11 +31,12 @@ public sealed partial class LedgerEvidenceTests
     [InlineData("pr_ci.yml", "build_test")]
     [InlineData("main_ci.yml", "test")]
     [InlineData("preview_ci.yml", "test")]
-    [InlineData("release_ci.yml", "test")]
+    [InlineData("release_ci.yml", "distributed_test,test")]
     [InlineData("codeql.yml", "analyze-csharp,analyze-javascript")]
     [InlineData("deploy_docs.yml", "prepare,build,deploy")]
     [InlineData("contact_center_operations_gates.yml", "redis-backplane-two-node")]
     [InlineData("contact_center_feature_activation_matrix.yml", "fresh-tenant-activation")]
+    [InlineData("contact_center_browser_gates.yml", "soft-phone-browser")]
     [InlineData("validate_docs.yml", "validate-docs")]
     [InlineData("assets_validation.yml", "test-npm-build")]
     public void WorkflowJobParser_ResolvesExactlyTheJobsEachWorkflowDeclares(string workflow, string expectedJobs)
@@ -89,6 +90,8 @@ public sealed partial class LedgerEvidenceTests
     [InlineData("pr_ci.yml", "build_test", "CrestApps.OrchardCore.Tests")]
     [InlineData("contact_center_operations_gates.yml", "redis-backplane-two-node", "CrestApps.OrchardCore.ContactCenter.DistributedTests")]
     [InlineData("contact_center_feature_activation_matrix.yml", "fresh-tenant-activation", "CrestApps.OrchardCore.ContactCenter.FeatureActivationTests")]
+    [InlineData("contact_center_browser_gates.yml", "soft-phone-browser", "CrestApps.OrchardCore.Telephony.PlaywrightTests")]
+    [InlineData("release_ci.yml", "distributed_test", "CrestApps.OrchardCore.ContactCenter.DistributedTests")]
     public void WorkflowJobParser_AttributesTestProjectsToTheJobThatRunsThem(string workflow, string jobId, string expectedProject)
     {
         // Arrange
@@ -509,6 +512,109 @@ public sealed partial class LedgerEvidenceTests
                 additionalJob?["workflow"]?.GetValue<string>() ?? string.Empty,
                 additionalJob?["id"]?.GetValue<string>() ?? string.Empty);
         }
+    }
+
+    [Fact]
+    public void EveryTestProject_RunsInTheReleasePipeline()
+    {
+        // The release pipeline is the last gate before packages ship, so it must execute every test
+        // project in the repository rather than only the general unit test project.
+        var catalog = WorkflowJobCatalog.Load();
+        var executed = catalog.GetJobs("release_ci.yml")
+            .SelectMany(job => catalog.GetExecutedTestProjects("release_ci.yml", job))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var missing = DiscoverTestProjects(catalog.RepositoryRoot)
+            .Where(project => !executed.Contains(project));
+
+        Assert.True(
+            !missing.Any(),
+            $"release_ci.yml does not run these test projects: {string.Join(", ", missing)}.");
+    }
+
+    [Fact]
+    public void EveryTestProject_IsExecutedByAtLeastOneWorkflow()
+    {
+        // A test project that no workflow runs is dead weight that rots silently: the Telephony browser
+        // suite was orphaned this way and carried a failing test for several commits without anyone noticing.
+        var catalog = WorkflowJobCatalog.Load();
+        var executed = catalog.WorkflowPaths
+            .SelectMany(workflow => catalog.GetJobs(workflow)
+                .SelectMany(job => catalog.GetExecutedTestProjects(workflow, job)))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var orphans = DiscoverTestProjects(catalog.RepositoryRoot)
+            .Where(project => !executed.Contains(project));
+
+        Assert.True(
+            !orphans.Any(),
+            $"These test projects are not executed by any workflow: {string.Join(", ", orphans)}.");
+    }
+
+    private static IEnumerable<string> DiscoverTestProjects(string repositoryRoot)
+    {
+        var testsDirectory = Path.Combine(repositoryRoot, "tests");
+
+        return Directory.EnumerateFiles(testsDirectory, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains("<IsTestProject>true</IsTestProject>", StringComparison.Ordinal))
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(name => name is not null)
+            .Select(name => name!)
+            .OrderBy(name => name, StringComparer.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("contact_center_operations_gates.yml")]
+    [InlineData("contact_center_feature_activation_matrix.yml")]
+    [InlineData("contact_center_browser_gates.yml")]
+    public void ContactCenterGateWorkflows_WatchTheWholeSourceAndTestTrees(string workflow)
+    {
+        // These workflows previously listed individual module directories, so a change to a shared
+        // Core project that broke the gated behaviour never triggered the gate that proves it.
+        var catalog = WorkflowJobCatalog.Load();
+        var text = File.ReadAllText(Path.Combine(catalog.RepositoryRoot, ".github", "workflows", workflow));
+        var triggers = text.Split("paths:", StringSplitOptions.None);
+
+        Assert.True(triggers.Length >= 3, $"{workflow} should declare path filters for both the pull_request and push triggers.");
+
+        foreach (var trigger in triggers.Skip(1))
+        {
+            Assert.Contains("'src/**'", trigger, StringComparison.Ordinal);
+            Assert.Contains("'tests/**'", trigger, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void WorkflowStepsThatPipeIntoTee_PropagateTheFailureOfThePipedCommand()
+    {
+        // Without `set -o pipefail` the exit status of `cmd | tee file` is tee's, so a failing build
+        // is reported as a passing step.
+        var catalog = WorkflowJobCatalog.Load();
+        var offenders = new List<string>();
+
+        foreach (var workflowPath in catalog.WorkflowPaths)
+        {
+            // Comment lines are stripped first: a YAML comment mentioning pipefail is not a guard, and
+            // matching one would let the real command be deleted without failing this test.
+            var executableLines = File.ReadAllLines(Path.Combine(catalog.RepositoryRoot, workflowPath))
+                .Where(line => !line.TrimStart().StartsWith('#'));
+            var script = string.Join('\n', executableLines);
+
+            if (!script.Contains("| tee ", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!script.Contains("set -o pipefail", StringComparison.Ordinal) &&
+                !script.Contains("PIPESTATUS", StringComparison.Ordinal))
+            {
+                offenders.Add(workflowPath);
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            $"These workflows pipe a command into tee without propagating its exit status: {string.Join(", ", offenders)}.");
     }
 
     private static string Id(JsonNode gate)

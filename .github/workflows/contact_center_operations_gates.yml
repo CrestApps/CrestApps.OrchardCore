@@ -9,10 +9,11 @@ on:
       - 'Directory.Build.props'
       - 'Directory.Build.targets'
       - 'Directory.Packages.props'
-      - 'src/Modules/CrestApps.OrchardCore.ContactCenter/**'
-      - 'src/Modules/CrestApps.OrchardCore.SignalR/**'
-      - 'src/Modules/CrestApps.OrchardCore.Telephony/**'
-      - 'tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/**'
+      # Any source change can affect the distributed contract. An explicit module list previously
+      # omitted ContactCenter.Core, ContactCenter.Abstractions, Asterisk, DialPad, and Omnichannel.Core,
+      # so a PR touching only Core silently skipped the only distributed gate.
+      - 'src/**'
+      - 'tests/**'
   push:
     branches: [ main, release/** ]
     paths:
@@ -21,10 +22,11 @@ on:
       - 'Directory.Build.props'
       - 'Directory.Build.targets'
       - 'Directory.Packages.props'
-      - 'src/Modules/CrestApps.OrchardCore.ContactCenter/**'
-      - 'src/Modules/CrestApps.OrchardCore.SignalR/**'
-      - 'src/Modules/CrestApps.OrchardCore.Telephony/**'
-      - 'tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/**'
+      # Any source change can affect the distributed contract. An explicit module list previously
+      # omitted ContactCenter.Core, ContactCenter.Abstractions, Asterisk, DialPad, and Omnichannel.Core,
+      # so a PR touching only Core silently skipped the only distributed gate.
+      - 'src/**'
+      - 'tests/**'
 
 permissions:
   contents: read

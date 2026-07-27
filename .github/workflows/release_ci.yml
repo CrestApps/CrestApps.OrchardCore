@@ -15,7 +15,37 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 jobs:
+  # The distributed gate needs a Redis service container, which GitHub Actions only supports on Linux
+  # runners, so it cannot join the cross-platform matrix below. Publishing depends on it so a release
+  # can never ship without the distributed contract having passed.
+  distributed_test:
+    runs-on: ubuntu-latest
+    name: Distributed Tests
+    timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CONTACT_CENTER_REDIS_CONFIGURATION: localhost:6379,abortConnect=false
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          10.0.x
+    - name: Contact Center distributed tests
+      run: |
+        dotnet test -c Release -p:NuGetAudit=false ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj
+
   test:
+    needs: distributed_test
     runs-on: ${{ matrix.os }}
     name: Build, Test, Deploy
     strategy:
@@ -51,7 +81,14 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true -p:Version=${{ steps.get_version.outputs.VERSION }}
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+    - name: Contact Center feature activation tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj
+    - name: Telephony browser tests
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj
     - name: Deploy release NuGet packages
       if: matrix.os == 'ubuntu-latest'
       run: |

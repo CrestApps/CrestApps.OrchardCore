@@ -81,7 +81,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.EvaluateAsync(
             """
             () => {
-                window.telephonySoftPhone.mediaAdapters['in-memory'] = function (context) {
+                window.telephonySoftPhone.getInstance().registerMediaAdapter('in-memory', function (context) {
                     window.browserAudioState.initialized = !!context.localStream;
                     return {
                         handleCallState: function (call) {
@@ -91,7 +91,7 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
                             window.browserAudioState.disposed = true;
                         }
                     };
-                };
+                });
             }
             """);
         await page.ClickAsync("[data-telephony-toggle]");
@@ -107,6 +107,42 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         Assert.Equal(1, state.GetProperty("getUserMediaCount").GetInt32());
         Assert.True(state.GetProperty("initialized").GetBoolean());
         Assert.True(state.GetProperty("track").GetProperty("enabled").GetBoolean());
+    }
+
+    [Fact]
+    public async Task BrowserAudio_WhenAdapterIsNotRegistered_FailsClosedWithoutAcquiringTheMicrophone()
+    {
+        // Arrange
+        var page = await _browser.NewPageAsync();
+        await page.AddInitScriptAsync(
+            """
+            window.browserAudioState = { getUserMediaCount: 0 };
+            Object.defineProperty(navigator, 'mediaDevices', {
+                configurable: true,
+                value: {
+                    getUserMedia: function () {
+                        window.browserAudioState.getUserMediaCount++;
+                        return Promise.reject(new Error('The microphone must never be requested.'));
+                    }
+                }
+            });
+            """);
+        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
+        await WaitForConnectedAsync(page);
+
+        // No adapter is registered for the configured 'in-memory' name.
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+
+        // Act
+        await page.ClickAsync("[data-telephony-dial]");
+
+        // Assert - the widget surfaces the unavailable adapter and never reaches the microphone.
+        await page.Locator("[data-telephony-error]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var error = await page.Locator("[data-telephony-error]").InnerTextAsync();
+
+        Assert.Equal("The browser audio adapter is unavailable.", error.Trim());
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.browserAudioState.getUserMediaCount"));
     }
 
     [Fact]

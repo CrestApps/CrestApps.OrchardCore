@@ -838,7 +838,7 @@
           "all-topologies"
         ]
       },
-      "evidenceLocation": "`.github/workflows/contact_center_feature_activation_matrix.yml` runs the feature-activation class in its own workflow and uploads retained per-run trx artifacts with `if-no-files-found: error`, and `.github/workflows/contact_center_operations_gates.yml` runs the distributed class in its own workflow. The browser/E2E, provider-contract, and performance/chaos classes still have no owning workflow, so this gate stays partial.",
+      "evidenceLocation": "`.github/workflows/contact_center_feature_activation_matrix.yml` runs the feature-activation class, `.github/workflows/contact_center_browser_gates.yml` runs the browser/E2E class, and `.github/workflows/contact_center_operations_gates.yml` runs the distributed class - each in its own workflow with retained per-run trx artifacts uploaded using `if-no-files-found: error`. The provider-contract and performance/chaos classes still have no owning workflow, so this gate stays partial.",
       "evidenceKind": "workflow"
     },
     {
@@ -1053,7 +1053,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "The 24-test Telephony Playwright suite (documented in R0-BASELINE.md) covers only the soft-phone asset; an Orchard-hosted Contact Center agent/supervisor/provider browser suite is a planned:contact-center-browser-suite dependency."
+      "evidenceLocation": "The 26-test Telephony Playwright suite now runs in its own workflow (`.github/workflows/contact_center_browser_gates.yml`), but it covers only the soft-phone asset; an Orchard-hosted Contact Center agent/supervisor/provider browser suite is still a planned:contact-center-browser-suite dependency."
     },
     {
       "id": "T003",

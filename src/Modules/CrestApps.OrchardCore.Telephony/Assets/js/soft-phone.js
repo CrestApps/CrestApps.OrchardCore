@@ -127,7 +127,10 @@
          *   session: { handleCallState(call), dispose() }
          *
          * The registry is intentionally scoped to this soft-phone instance/page. Providers add server
-         * contributors through shell DI; the browser does not expose a global adapter registry.
+         * contributors through shell DI; the browser does not expose a global adapter registry. A provider
+         * that ships its own browser media stack registers it on the instance through
+         * `registerMediaAdapter`, so one page can host adapters from different providers without a
+         * process-wide registry that any script could silently overwrite.
          */
         adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
 
@@ -2475,6 +2478,15 @@
             clearIncomingOffer: clearIncomingOffer,
             showError: showError,
             getConnection: function () { return connection; },
+            registerMediaAdapter: function (name, adapter) {
+                if (!name || typeof adapter !== 'function') {
+                    return false;
+                }
+
+                mediaAdapters[name] = adapter;
+
+                return true;
+            },
             started: startPromise
         };
     }

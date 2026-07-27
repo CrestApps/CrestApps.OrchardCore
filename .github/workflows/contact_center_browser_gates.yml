@@ -1,0 +1,65 @@
+name: Contact Center - Browser Gates
+
+on:
+  pull_request:
+    branches: [ main, release/** ]
+    paths:
+      - '.github/workflows/contact_center_browser_gates.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'Directory.Packages.props'
+      - 'src/**'
+      - 'tests/**'
+  push:
+    branches: [ main, release/** ]
+    paths:
+      - '.github/workflows/contact_center_browser_gates.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'Directory.Packages.props'
+      - 'src/**'
+      - 'tests/**'
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  soft-phone-browser:
+    name: Soft Phone Browser Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build browser test project
+        run: >-
+          dotnet build
+          -c Release
+          -p:NuGetAudit=false
+          ./tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj
+      - name: Install Playwright browsers
+        # The suite also self-installs on first use, but installing here keeps a browser download
+        # failure reported as an infrastructure step rather than as a test failure.
+        run: pwsh tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Run soft phone browser tests
+        run: >-
+          dotnet test
+          -c Release
+          --no-build
+          --logger "trx;LogFileName=soft-phone-browser.trx"
+          --results-directory ${{ github.workspace }}/artifacts/browser-gates
+          ./tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj
+      - name: Upload browser gate results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contact-center-browser-gates
+          path: ${{ github.workspace }}/artifacts/browser-gates
+          if-no-files-found: error
+          retention-days: 30
