@@ -80,3 +80,15 @@ public sealed class DataSourceStartup : StartupBase
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
     }
 }
+
+/// <summary>
+/// Registers services and configuration for the ToolInstances feature.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ToolInstances)]
+public sealed class ToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionToolInstancesDisplayDriver>();
+    }
+}

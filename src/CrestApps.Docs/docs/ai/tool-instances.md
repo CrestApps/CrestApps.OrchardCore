@@ -51,6 +51,16 @@ Open an **AI Profile** (or an **AI Profile Template** of the *Profile* source) a
 
 Because AI profile templates copy their properties onto the profiles created from them, instances selected on a template are inherited by every profile created from that template.
 
+## Assigning instances to a chat interaction
+
+Open a **Chat Interaction** and go to the **Capabilities** tab. The **Tool Instances** section works exactly like the profile editor and lists every instance the current user is allowed to access. Cloning an interaction carries the selected instances over to the copy.
+
+## Using instances during post-session processing
+
+AI profiles and profile templates that use post-session processing can also invoke tool instances while analyzing a closed conversation. Open the **Data Processing & Metrics** tab and use the **Post-Session Tool Instances** section, which sits directly below the post-session processing settings.
+
+This selection is stored separately from the **Capabilities** selection, so an instance that a live conversation may call is not automatically available during post-session analysis, and vice versa. Selecting only tool instances is enough to run post-session processing through the tool-enabled path; no regular tools are required.
+
 ## Permissions
 
 The feature adds two permissions:
@@ -129,6 +139,36 @@ internal sealed class WeatherToolInstanceDisplayDriver : DisplayDriver<AIToolIns
 ```
 
 Register the driver with `services.AddDisplayDriver<AIToolInstance, WeatherToolInstanceDisplayDriver>();`. Use `Content:1` for the shared name and description fields, and anything after it for source-specific fields, so the shared fields always render first.
+
+## Exposing the selector on your own model
+
+`AIToolInstancesDisplayDriverBase<TModel>` renders the instance picker for any `ExtensibleEntity`, filtering the list down to the instances the current user may access. Derive from it to add the selector to your own model:
+
+```csharp
+internal sealed class MyModelToolInstancesDisplayDriver : AIToolInstancesDisplayDriverBase<MyModel>
+{
+    public MyModelToolInstancesDisplayDriver(
+        ISourceCatalog<AIToolInstance> instancesCatalog,
+        IAIToolAccessEvaluator toolAccessEvaluator,
+        IHttpContextAccessor httpContextAccessor)
+        : base(instancesCatalog, toolAccessEvaluator, httpContextAccessor)
+    {
+    }
+
+    protected override string EditorLocation => "Content:7#Capabilities;9";
+}
+```
+
+The following members are available for customization:
+
+| Member | Purpose |
+| --- | --- |
+| `EditorShapeType` | The shape rendered for the picker. Defaults to `EditToolInstances_Edit`. Override it to match your editor's layout. |
+| `EditorLocation` | Where the picker is placed. Defaults to `Content:7#Capabilities;9`. |
+| `CanHandle(TModel)` | Skips the picker entirely for models it should not apply to. |
+| `GetSelectedInstanceNames(TModel)` / `SetSelectedInstanceNames(TModel, string[])` | Where the selection is read from and written to. Defaults to `AIToolInstanceMetadata`, which the framework already honors when building the completion context. Override both when the selection belongs somewhere else, as the post-session editors do. |
+
+Register the driver from a startup class gated with `[RequireFeatures(AIConstants.Feature.ToolInstances)]` so it only appears when the feature is enabled.
 
 ## Related
 

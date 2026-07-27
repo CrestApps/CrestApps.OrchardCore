@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model EditToolInstancesViewModel
+
+@if (Model.Instances is null || Model.Instances.Length == 0)
+{
+    return;
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Post-Session Tool Instances"]</div>
+    <div class="ocat-end">
+        <span class="hint mb-2 d-block">@T["Configured tool instances the AI model may call while post-session processing runs. Each selected instance is exposed as its own function."]</span>
+
+        @for (var i = 0; i < Model.Instances.Length; i++)
+        {
+            <div class="form-check">
+                <input type="hidden" asp-for="@Model.Instances[i].Name" />
+                <input asp-for="@Model.Instances[i].IsSelected" type="checkbox" class="form-check-input" id="post-session-tool-instance-@i" />
+                <label class="form-check-label" for="post-session-tool-instance-@i">@Model.Instances[i].Name</label>
+                <span class="hint dashed">@Model.Instances[i].Description</span>
+            </div>
+        }
+    </div>
+</div>
