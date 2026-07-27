@@ -5,6 +5,8 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
+using OrchardCore;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -22,31 +24,39 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     ];
 
     private readonly IInteractionManager _interactionManager;
+    private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMonitoringService"/> class.
     /// </summary>
     /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="callSessionManager">The call session manager that owns the live call topology.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to check monitoring capabilities.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
+    /// <param name="clock">The clock used to stamp engagement times.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
+        ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
-        ICallControlAuthorizationService callControlAuthorizationService)
+        ICallControlAuthorizationService callControlAuthorizationService,
+        IClock clock)
     {
         _interactionManager = interactionManager;
+        _callSessionManager = callSessionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -127,6 +137,27 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Failure($"The voice provider does not support the '{mode}' engagement.");
         }
 
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        // A supervisor already engaged on this call would gain a second live leg the platform cannot tell
+        // apart from the first, so a later stop would release an arbitrary one and leave the other listening.
+        if (callSession is not null &&
+            callSession.ActiveMonitorSessions.Any(monitorSession =>
+                string.Equals(monitorSession.SupervisorUserId, supervisorId, StringComparison.Ordinal)))
+        {
+            return SupervisorEngagementResult.Failure("The supervisor is already engaged on this call.");
+        }
+
+        // Supervising one's own call is refused here rather than at persist time. The provider engage command
+        // runs before the engagement is recorded, so leaving this to the store's invariant would bring up a
+        // real snoop or barge channel and then throw, stranding a supervisor leg nothing can later stop.
+        if (callSession is not null &&
+            !string.IsNullOrEmpty(authorization.AgentId) &&
+            string.Equals(authorization.AgentId, callSession.AgentId, StringComparison.Ordinal))
+        {
+            return SupervisorEngagementResult.Failure("A supervisor cannot engage on their own call.");
+        }
+
         try
         {
             var providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
@@ -143,6 +174,14 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                 return SupervisorEngagementResult.Failure(
                     providerResult?.ErrorMessage ?? $"The voice provider did not confirm the '{mode}' engagement.");
             }
+
+            await RecordEngagementStartedAsync(
+                callSession,
+                supervisorId,
+                authorization.AgentId,
+                mode,
+                providerResult.ProviderLegId,
+                cancellationToken);
 
             var interactionEvent = new InteractionEvent
             {
@@ -256,6 +295,8 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
                     providerResult?.ErrorMessage ?? $"The voice provider did not confirm stopping the '{mode}' engagement.");
             }
 
+            await RecordEngagementStoppedAsync(interaction.ItemId, supervisorId, cancellationToken);
+
             var interactionEvent = new InteractionEvent
             {
                 EventType = ContactCenterConstants.Events.SupervisorMonitorStopped,
@@ -286,6 +327,46 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Unknown(
                 $"Stopping the '{mode}' engagement was interrupted before the provider outcome could be confirmed.");
         }
+    }
+
+    private async Task RecordEngagementStartedAsync(
+        CallSession callSession,
+        string supervisorUserId,
+        string supervisorAgentId,
+        MonitorMode mode,
+        string providerLegId,
+        CancellationToken cancellationToken)
+    {
+        if (callSession is null)
+        {
+            return;
+        }
+
+        CallTopologyProjector.StartMonitorSession(
+            callSession,
+            IdGenerator.GenerateId(),
+            supervisorUserId,
+            supervisorAgentId,
+            mode,
+            _clock.UtcNow,
+            providerLegId);
+
+        await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
+    }
+
+    private async Task RecordEngagementStoppedAsync(
+        string interactionId,
+        string supervisorUserId,
+        CancellationToken cancellationToken)
+    {
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interactionId, cancellationToken);
+
+        if (callSession is null || !CallTopologyProjector.EndMonitorSession(callSession, supervisorUserId, _clock.UtcNow))
+        {
+            return;
+        }
+
+        await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
     }
 
     private static ContactCenterVoiceProviderCapabilities ResolveCapability(MonitorMode mode)

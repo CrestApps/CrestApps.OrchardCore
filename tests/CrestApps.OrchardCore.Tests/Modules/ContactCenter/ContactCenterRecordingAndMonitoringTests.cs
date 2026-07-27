@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -443,10 +444,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -480,10 +483,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -495,6 +500,59 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.SupervisorMonitorStarted),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task EngageAsync_WhenTheSupervisorOwnsTheCall_IsRefusedBeforeTheProviderIsCalled()
+    {
+        // Arrange
+        // The store refuses a supervisor monitoring their own agent leg, but the provider engage command runs
+        // before the engagement is recorded. Leaving the refusal to persist time would bring up a real snoop or
+        // barge channel and only then throw, stranding a supervisor leg that no later stop can find.
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Barge);
+        var monitoringProvider = provider.As<IContactCenterVoiceMonitoringProvider>();
+        monitoringProvider
+            .Setup(p => p.EngageAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+
+        var callSession = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "int1",
+            ProviderName = "provider-a",
+            ProviderCallId = "call-1",
+            AgentId = "agent-profile-1",
+        };
+
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            CreateCallSessionManager(callSession).Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService(context => new CallControlAuthorizationResult
+            {
+                Succeeded = true,
+                AgentId = "agent-profile-1",
+                ProviderCallId = context.ProviderCallId,
+            }),
+            new StubClock());
+
+        // Act
+        var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(callSession.MonitorSessions);
+
+        monitoringProvider.Verify(
+            p => p.EngageAsync(It.IsAny<ContactCenterVoiceMonitoringRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -532,10 +590,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             .Returns(Task.CompletedTask);
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             CreateResolver(provider).Object,
             publisher.Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var result = await service.EngageAsync(
@@ -562,10 +622,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             CreateResolver(provider).Object,
             publisher.Object,
             new TimeoutTelephonyCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var result = await service.EngageAsync(
@@ -604,10 +666,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -632,10 +696,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             resolver.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -657,10 +723,12 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var resolver = CreateResolver(provider);
         var service = new ContactCenterMonitoringService(
             interactionManager.Object,
+            CreateCallSessionManager().Object,
             resolver.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
-            new FakeCallControlAuthorizationService());
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -694,6 +762,16 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         resolver.Setup(r => r.Get("p1")).Returns(provider.Object);
 
         return resolver;
+    }
+
+    private static Mock<ICallSessionManager> CreateCallSessionManager(CallSession callSession = null)
+    {
+        var manager = new Mock<ICallSessionManager>();
+        manager
+            .Setup(m => m.FindByInteractionIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callSession);
+
+        return manager;
     }
 
     private static DefaultTelephonyCommandExecutor CreateCommandExecutor()

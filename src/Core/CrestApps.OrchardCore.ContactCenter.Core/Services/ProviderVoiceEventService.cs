@@ -267,7 +267,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         var previousParticipantCount = session.ParticipantCount;
 
         ApplyState(session, interaction, providerEvent.State, now);
-        ApplyProviderDetails(session, interaction, providerEvent);
+        ApplyProviderDetails(session, interaction, providerEvent, now);
         ApplyHangupCause(session, providerEvent);
 
         // The watermark is monotonic. Accepting a late terminal delivery must not rewind it, because a rewound
@@ -520,7 +520,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
     }
 
-    private static void ApplyProviderDetails(CallSession session, Interaction interaction, ProviderVoiceEvent providerEvent)
+    private static void ApplyProviderDetails(CallSession session, Interaction interaction, ProviderVoiceEvent providerEvent, DateTime now)
     {
         if (!string.IsNullOrWhiteSpace(providerEvent.ProviderName))
         {
@@ -558,15 +558,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             interaction.RecordingReference = providerEvent.RecordingReference;
         }
 
-        if (providerEvent.IsConference.HasValue)
-        {
-            session.IsConference = providerEvent.IsConference.Value;
-        }
-
-        if (providerEvent.ParticipantCount.HasValue)
-        {
-            session.ParticipantCount = Math.Max(0, providerEvent.ParticipantCount.Value);
-        }
+        ApplyTopology(session, providerEvent, now);
 
         if (providerEvent.Metadata.Count > 0)
         {
@@ -583,6 +575,80 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             session.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification] = classificationValue;
             interaction.TechnicalMetadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification] = classificationValue;
         }
+    }
+
+    private static void ApplyTopology(CallSession session, ProviderVoiceEvent providerEvent, DateTime now)
+    {
+        CallTopologyProjector.ApplyReportedParticipation(
+            session,
+            providerEvent.IsConference,
+            providerEvent.ParticipantCount,
+            now);
+
+        // Providers that publish per-leg events name the leg; providers that publish per-call events do not,
+        // and for those the call itself is the only leg the platform can honestly claim to have observed.
+        var providerLegId = string.IsNullOrEmpty(providerEvent.ProviderLegId)
+            ? providerEvent.ProviderCallId
+            : providerEvent.ProviderLegId;
+
+        if (string.IsNullOrEmpty(providerLegId))
+        {
+            return;
+        }
+
+        // The leg carried on the session's own call identifier is the party the contact center is serving.
+        // Any other leg on the same session belongs to a party the platform did not originate, so its role is
+        // left undetermined rather than guessed.
+        var role = string.Equals(providerLegId, session.ProviderCallId, StringComparison.Ordinal)
+            ? CallPartyRole.Customer
+            : CallPartyRole.Unknown;
+
+        var address = session.Direction == InteractionDirection.Inbound
+            ? session.FromAddress
+            : session.ToAddress;
+
+        if (IsTerminalState(providerEvent.State))
+        {
+            // The session's own hangup cause is assigned after this projection runs, so the event's cause is
+            // read directly rather than a field that is still null on the delivery that ends the call.
+            CallTopologyProjector.EndLeg(session, providerLegId, now, providerEvent.HangupCause);
+
+            // Every remaining leg ends with the call. A terminal session accepts no further deliveries, so a
+            // leg left open here would stay open, and the bridge would keep claiming a party that has gone.
+            CallTopologyProjector.EndRemainingLegs(session, now);
+
+            // Stopping an engagement is refused once the call is terminal, so an engagement left live here
+            // could never be closed by the supervisor who opened it and would report someone as listening to a
+            // call that has ended.
+            CallTopologyProjector.EndRemainingMonitorSessions(session, now);
+            CallTopologyProjector.DestroyBridge(session, now);
+
+            return;
+        }
+
+        var status = MapCallLegStatus(providerEvent.State);
+
+        CallTopologyProjector.UpsertLeg(session, providerLegId, role, status, now, address);
+
+        if (status is CallLegStatus.Answered or CallLegStatus.OnHold)
+        {
+            CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
+            CallTopologyProjector.Join(session, providerLegId, role, now, address: address);
+        }
+    }
+
+    private static CallLegStatus MapCallLegStatus(VoiceCallState state)
+    {
+        return state switch
+        {
+            VoiceCallState.Planned => CallLegStatus.Unknown,
+            VoiceCallState.Dialing => CallLegStatus.Dialing,
+            VoiceCallState.Ringing => CallLegStatus.Ringing,
+            VoiceCallState.Connected => CallLegStatus.Answered,
+            VoiceCallState.OnHold => CallLegStatus.OnHold,
+            VoiceCallState.Ending => CallLegStatus.Answered,
+            _ => CallLegStatus.Unknown,
+        };
     }
 
     private static InteractionStatus MapInteractionStatus(VoiceCallState state)
@@ -664,7 +730,11 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             eventTypes.AddRange(ResolveRecordingEvents(previousRecordingState, currentRecordingState));
         }
 
-        if (currentIsConference != previousIsConference || currentParticipantCount != previousParticipantCount)
+        // Participation now changes as legs join and leave the bridge, not only when a provider publishes a
+        // conference count. An ordinary two-party call gaining its customer and agent legs is not a conference
+        // change, so the event stays scoped to calls that are, or have just stopped being, a conference.
+        if (currentIsConference != previousIsConference ||
+            ((currentIsConference || previousIsConference) && currentParticipantCount != previousParticipantCount))
         {
             eventTypes.Add(ContactCenterConstants.Events.CallConferenceChanged);
         }
@@ -779,6 +849,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             IsConference = providerEvent.IsConference,
             ParticipantCount = providerEvent.ParticipantCount,
             AnswerClassification = providerEvent.AnswerClassification,
+            HangupCause = providerEvent.HangupCause,
             Metadata = new Dictionary<string, string>(providerEvent.Metadata, StringComparer.Ordinal),
         };
     }

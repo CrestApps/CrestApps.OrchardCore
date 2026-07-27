@@ -204,6 +204,52 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     }
 
     [Fact]
+    public async Task ProjectSuccessAsync_WhenTheCallEndedDuringTheConnect_DoesNotAddTheAgentToTheClosedBridge()
+    {
+        // Arrange
+        // This projection runs after the provider round-trip that connects the agent, so the caller can hang up
+        // while it is in flight. A terminal call has already ended every leg and closed its bridge, and admitting
+        // a live participant to a destroyed bridge is refused by the store — which would fail the whole accept
+        // with an unhandled error and leave the durable command unsettled, rather than skipping one late join.
+        var harness = new Harness();
+        harness.SetupActiveState();
+        harness.SetupPublisher();
+
+        var endedUtc = harness.Session.CreatedUtc.AddMinutes(1);
+
+        CallTopologyProjector.UpsertLeg(
+            harness.Session,
+            "call-1",
+            CallPartyRole.Customer,
+            CallLegStatus.Answered,
+            harness.Session.CreatedUtc);
+
+        CallTopologyProjector.EnsureBridge(harness.Session, "bridge-1", harness.Session.CreatedUtc);
+        CallTopologyProjector.Join(harness.Session, "call-1", CallPartyRole.Customer, harness.Session.CreatedUtc);
+        CallTopologyProjector.EndRemainingLegs(harness.Session, endedUtc);
+        CallTopologyProjector.DestroyBridge(harness.Session, endedUtc);
+
+        harness.Session.State = VoiceCallState.Ended;
+
+        var executor = harness.CreateExecutor();
+        var command = CreateCommand();
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderName = "provider-a",
+            ProviderCallId = "call-1",
+            ProviderLegId = "agent-channel-1",
+        };
+
+        // Act
+        await executor.ProjectSuccessAsync(command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain(harness.Session.Legs, leg => leg.ProviderLegId == "agent-channel-1");
+        Assert.Empty(harness.Session.Bridge.ActiveParticipants);
+    }
+
+    [Fact]
     public async Task ProjectFailureAsync_WhenReofferOnFailureIsTrue_PreservesCallAndPublishesOfferRequeued()
     {
         // Arrange

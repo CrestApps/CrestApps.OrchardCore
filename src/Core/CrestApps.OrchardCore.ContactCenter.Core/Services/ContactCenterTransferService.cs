@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
+using OrchardCore;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -13,6 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterTransferService : IContactCenterTransferService
 {
     private readonly IInteractionManager _interactionManager;
+    private readonly ICallSessionManager _callSessionManager;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
@@ -25,6 +27,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// Initializes a new instance of the <see cref="ContactCenterTransferService"/> class.
     /// </summary>
     /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="callSessionManager">The call session manager that owns live call topology.</param>
     /// <param name="queueService">The queue service used to re-enqueue queue transfers.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
@@ -34,6 +37,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// <param name="transferDestinationResolver">The typed transfer destination resolver.</param>
     public ContactCenterTransferService(
         IInteractionManager interactionManager,
+        ICallSessionManager callSessionManager,
         IActivityQueueService queueService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
@@ -43,6 +47,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         ITransferDestinationResolver transferDestinationResolver)
     {
         _interactionManager = interactionManager;
+        _callSessionManager = callSessionManager;
         _queueService = queueService;
         _voiceProviderResolver = voiceProviderResolver;
         _callControlAuthorizationService = callControlAuthorizationService;
@@ -140,6 +145,15 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             }
 
             var now = _clock.UtcNow;
+
+            await RecordTransferTopologyAsync(
+                interaction,
+                request,
+                destination,
+                providerResult,
+                now,
+                CancellationToken.None);
+
             var entry = new InteractionTransferHistoryEntry
             {
                 FromParticipantId = request.InitiatedByAgentId ?? interaction.AgentId,
@@ -181,6 +195,53 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             return TransferResult.Unknown(
                 "The call transfer was interrupted before the provider outcome could be confirmed.");
         }
+    }
+
+    private async Task RecordTransferTopologyAsync(
+        Interaction interaction,
+        TransferRequest request,
+        TransferDestinationResolutionResult destination,
+        ContactCenterVoiceProviderResult providerResult,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        if (callSession is null)
+        {
+            return;
+        }
+
+        // A consultative transfer opens a private consult leg that the customer cannot hear. Recording it on
+        // the topology is what lets a supervisor see the customer is held while the agent talks to someone
+        // else, and lets reporting tell a completed warm transfer apart from an abandoned consult.
+        if (request.Type == InteractionTransferType.Consultative)
+        {
+            var consultId = IdGenerator.GenerateId();
+
+            CallTopologyProjector.StartConsult(
+                callSession,
+                consultId,
+                request.InitiatedByAgentId ?? interaction.AgentId,
+                destination.TargetType,
+                request.TargetId,
+                destination.ResolvedTarget,
+                now,
+                providerResult?.ProviderLegId);
+
+            CallTopologyProjector.AdvanceConsult(callSession, consultId, ConsultCallStatus.Ringing, now);
+        }
+
+        // The destination has not answered yet, so the only identifier that can link the two sides is the
+        // provider call the provider created for the destination. When the provider does not report one, no
+        // relationship is recorded rather than a fabricated one.
+        CallTopologyProjector.Relate(
+            callSession,
+            CallRelationshipKind.TransferredTo,
+            now,
+            relatedProviderCallId: providerResult?.ProviderCallId);
+
+        await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
     }
 
     private async Task<string> ApplyTargetAsync(

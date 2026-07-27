@@ -1522,7 +1522,7 @@
       "planFinding": "W2.1-contact-center-work-state-extraction",
       "category": "data",
       "gate": "Routing and the CRM wrote the same activity document, so one of the two writes was lost",
-      "invariant": "Routing state \u2014 assignment status, reservation, assignee, and attempt count \u2014 is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
+      "invariant": "Routing state — assignment status, reservation, assignee, and attempt count — is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
       "testId": "CC-D011",
       "ciJob": {
         "id": "build_test",
@@ -1543,6 +1543,62 @@
         ]
       },
       "evidenceLocation": "ContactCenterWorkStateAuthorityTests, which scans every Contact Center source for routing-state writes on the CRM activity, self-tests that scan against the projector as a known-positive control, and exercises a reservation concurrent with a CRM edit against a real SQLite database."
+    },
+    {
+      "id": "D012",
+      "severity": "P0",
+      "planFinding": "W2.2-live-call-topology",
+      "category": "data",
+      "gate": "A live call was summarized by scalars that could not describe who was on it",
+      "invariant": "A call session carries the real topology of the call — legs with roles and lifecycle, a bridge whose membership history is append-only, consults, supervisor engagements, and typed relationships to other calls — and CallTopologyProjector is the only writer of any of it. Conference membership at any past instant is reconstructible from the recorded join and leave times rather than from a live count. A consultative transfer, a supervisor monitor, whisper, and barge each have a durable representation that survives the request that created them, and none of it depends on provider metadata strings.",
+      "testId": "CC-D012",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "CallTopologyAuthorityTests, which scans every Contact Center source for topology mutations outside the projector, self-tests that scan against the projector as a known-positive control, pins that the scanned member names are declared exactly once so the scan cannot become ambiguous, and reconstructs conference membership at a past instant."
+    },
+    {
+      "id": "D013",
+      "severity": "P1",
+      "planFinding": "W2.2-live-call-topology",
+      "category": "data",
+      "gate": "A copy of a provider voice event silently dropped the provider's hangup cause",
+      "invariant": "Copying a provider voice event carries every field the original declared, so a value the provider genuinely reported cannot be replaced by an inferred one without any signal that the real value was lost. The completeness of the copy is proved structurally against the type's own declared properties rather than by a hand-maintained list, so a field added later fails the build until the copy carries it.",
+      "testId": "CC-D013",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ProviderVoiceEventCloneCompletenessTests, which reflects over the settable properties of ProviderVoiceEvent and parses the clone method's object initializer to prove every one of them is assigned."
     }
   ]
 }

@@ -400,8 +400,11 @@ public sealed class ProviderVoiceEventServiceTests
             State = VoiceCallState.Connected,
             IsMuted = false,
             RecordingState = RecordingState.None,
-            IsConference = false,
-            ParticipantCount = 1,
+            Bridge = new Bridge
+            {
+                Kind = BridgeKind.TwoParty,
+                ReportedParticipantCount = 1,
+            },
         };
         var publishedEvents = new List<InteractionEvent>();
 
@@ -585,8 +588,11 @@ public sealed class ProviderVoiceEventServiceTests
             State = VoiceCallState.OnHold,
             IsMuted = true,
             RecordingState = RecordingState.Paused,
-            IsConference = true,
-            ParticipantCount = 3,
+            Bridge = new Bridge
+            {
+                Kind = BridgeKind.Conference,
+                ReportedParticipantCount = 3,
+            },
         };
         var publishedEvents = new List<InteractionEvent>();
 
@@ -1631,6 +1637,190 @@ public sealed class ProviderVoiceEventServiceTests
         // Assert
         Assert.Equal(InteractionStatus.Ended, interaction.Status);
         Assert.Contains(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenCallEnds_ClosesTheAgentLegTheProviderDidNotName()
+    {
+        // Arrange
+        // A hangup names the leg that hung up, which on the inbound path is the customer channel. The agent leg
+        // is recorded under a different provider identifier when the answer command bridges it. Ending only the
+        // named leg left the agent joined to the bridge forever, and because a terminal session accepts no
+        // further deliveries nothing could ever correct it: every completed call would keep claiming the agent
+        // was still on it.
+        var now = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = now.AddMinutes(-5),
+        };
+
+        var session = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            State = VoiceCallState.Connected,
+            AnsweredUtc = now.AddMinutes(-5),
+        };
+
+        CallTopologyProjector.UpsertLeg(session, "call-1", CallPartyRole.Customer, CallLegStatus.Answered, now.AddMinutes(-5));
+        CallTopologyProjector.UpsertLeg(session, "agent-channel-1", CallPartyRole.Agent, CallLegStatus.Answered, now.AddMinutes(-5));
+        CallTopologyProjector.EnsureBridge(session, "bridge-1", now.AddMinutes(-5));
+        CallTopologyProjector.Join(session, "call-1", CallPartyRole.Customer, now.AddMinutes(-5));
+        CallTopologyProjector.Join(session, "agent-channel-1", CallPartyRole.Agent, now.AddMinutes(-5));
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(now);
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = VoiceCallState.Ended,
+            OccurredUtc = now,
+            HangupCause = HangupCause.NormalClearing,
+            IdempotencyKey = "ended-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.All(session.Legs, leg => Assert.True(leg.EndedUtc.HasValue, $"Leg '{leg.ProviderLegId}' was left open."));
+        Assert.Empty(session.Bridge.ActiveParticipants);
+        Assert.Equal(0, session.ParticipantCount);
+        Assert.True(session.Bridge.DestroyedUtc.HasValue);
+
+        // The cause is read from the delivery, because the session's own cause is not assigned until after the
+        // topology has already been projected.
+        Assert.Equal(
+            HangupCause.NormalClearing,
+            Assert.Single(session.Legs, leg => leg.ProviderLegId == "call-1").HangupCause);
+    }
+
+    [Fact]
+    public async Task IngestAsync_WhenCallEnds_ClosesTheSupervisorEngagementNothingElseCanClose()
+    {
+        // Arrange
+        // Stopping an engagement is refused once the call is terminal, so an engagement still live when the call
+        // ends can never be closed by the supervisor who opened it. Left alone the session goes on reporting
+        // someone as listening to a call that finished, while their leg is ended and their bridge membership
+        // released — a record that contradicts itself and that nothing can repair.
+        var now = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Inbound,
+            Status = InteractionStatus.Connected,
+            AnsweredUtc = now.AddMinutes(-5),
+        };
+
+        var session = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            State = VoiceCallState.Connected,
+            AnsweredUtc = now.AddMinutes(-5),
+        };
+
+        CallTopologyProjector.UpsertLeg(session, "call-1", CallPartyRole.Customer, CallLegStatus.Answered, now.AddMinutes(-5));
+        CallTopologyProjector.EnsureBridge(session, "bridge-1", now.AddMinutes(-5));
+        CallTopologyProjector.Join(session, "call-1", CallPartyRole.Customer, now.AddMinutes(-5));
+
+        CallTopologyProjector.StartMonitorSession(
+            session,
+            "monitor-1",
+            "supervisor-user-1",
+            "supervisor-agent-1",
+            MonitorMode.Barge,
+            now.AddMinutes(-1),
+            "supervisor-leg-1");
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(now);
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = VoiceCallState.Ended,
+            OccurredUtc = now,
+            HangupCause = HangupCause.NormalClearing,
+            IdempotencyKey = "ended-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(session.ActiveMonitorSessions);
+        Assert.True(Assert.Single(session.MonitorSessions).EndedUtc.HasValue);
     }
 
     [Fact]

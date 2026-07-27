@@ -325,13 +325,20 @@ public sealed class ContactCenterTransferServiceTests
         Mock<IContactCenterVoiceProviderResolver> voiceProviderResolver,
         ITelephonyCommandExecutor commandExecutor = null,
         ICallControlAuthorizationService callControlAuthorizationService = null,
-        ITransferDestinationResolver transferDestinationResolver = null)
+        ITransferDestinationResolver transferDestinationResolver = null,
+        CallSession callSession = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(m => m.FindByInteractionIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callSession);
+
         return new ContactCenterTransferService(
             interactionManager.Object,
+            callSessionManager.Object,
             queueService.Object,
             voiceProviderResolver.Object,
             publisher.Object,

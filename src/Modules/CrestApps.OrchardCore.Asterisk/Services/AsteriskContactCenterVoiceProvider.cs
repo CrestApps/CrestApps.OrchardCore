@@ -349,6 +349,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 Succeeded = true,
                 ProviderName = TechnicalName,
                 ProviderCallId = callerChannelId,
+                ProviderLegId = agentChannelId,
                 Metadata = new Dictionary<string, string>
                 {
                     [AsteriskAriConstants.AgentChannelMetadataKey] = agentChannelId,
@@ -881,6 +882,8 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         {
             Succeeded = true,
             ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderCallId = newAgentChannelId,
+            ProviderLegId = newAgentChannelId,
             Metadata = new Dictionary<string, string>
             {
                 [AsteriskVoiceResultMetadata.TransferNewChannelId] = newAgentChannelId,
@@ -2020,6 +2023,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         {
             Succeeded = true,
             ProviderName = AsteriskConstants.ProviderTechnicalName,
+            ProviderLegId = supervisorChannelId,
             Metadata = metadata,
         };
     }

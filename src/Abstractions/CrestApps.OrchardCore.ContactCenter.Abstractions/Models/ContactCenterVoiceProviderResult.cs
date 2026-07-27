@@ -21,6 +21,12 @@ public sealed class ContactCenterVoiceProviderResult
     public string ProviderCallId { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider identifier of the call leg the operation created, when it created one, such
+    /// as a supervisor's monitoring leg or the private leg of a consult.
+    /// </summary>
+    public string ProviderLegId { get; set; }
+
+    /// <summary>
     /// Gets or sets the technical name of the provider that executed the operation.
     /// </summary>
     public string ProviderName { get; set; }

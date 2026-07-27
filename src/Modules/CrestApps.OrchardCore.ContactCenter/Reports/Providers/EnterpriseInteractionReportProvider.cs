@@ -1181,7 +1181,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             new ReportColumn(S["Average duration"].Value, ReportColumnAlign.End),
         };
         var rows = legs
-            .GroupBy(leg => DisplayOrUnknown(leg.Status), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(leg => leg.Status.ToString(), StringComparer.Ordinal)
             .Select(group =>
             {
                 var ended = group.Where(leg => leg.EndedUtc.HasValue).ToArray();

@@ -36,7 +36,12 @@ public sealed class InteractionCallLeg
     public DateTime? EndedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the provider status of the leg.
+    /// Gets or sets the part this leg's party played in the call.
     /// </summary>
-    public string Status { get; set; }
+    public CallPartyRole Role { get; set; }
+
+    /// <summary>
+    /// Gets or sets the normalized lifecycle state of the leg.
+    /// </summary>
+    public CallLegStatus Status { get; set; }
 }

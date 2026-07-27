@@ -15,7 +15,7 @@ public sealed class CallSessionTopologyStateAuthorityTests
     private static readonly DateTime _now = new(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task UpdateAsync_SupervisorLegWithoutSupervisorAgent_ThrowsInvalidOperationException()
+    public async Task UpdateAsync_MonitorSessionWithoutSupervisor_ThrowsInvalidOperationException()
     {
         // Arrange
         await using var harness = await ContactCenterStoreTestHarness.CreateAsync(
@@ -26,7 +26,12 @@ public sealed class CallSessionTopologyStateAuthorityTests
         await using var session = harness.Store.CreateSession();
         var store = new CallSessionStore(session);
         var callSession = await store.FindByIdAsync("call-session-1", TestContext.Current.CancellationToken);
-        callSession.SupervisorLegId = "supervisor-leg-1";
+        callSession.MonitorSessions.Add(new MonitorSession
+        {
+            MonitorSessionId = "monitor-1",
+            ProviderLegId = "supervisor-leg-1",
+            StartedUtc = _now,
+        });
 
         // Act
         var exception = await Record.ExceptionAsync(() =>
@@ -53,9 +58,9 @@ public sealed class CallSessionTopologyStateAuthorityTests
         var firstCallSession = await firstStore.FindByIdAsync("call-session-1", TestContext.Current.CancellationToken);
         var secondCallSession = await secondStore.FindByIdAsync("call-session-1", TestContext.Current.CancellationToken);
 
-        firstCallSession.MediaTopologyId = "bridge-1";
+        firstCallSession.Bridge = new Bridge { ProviderBridgeId = "bridge-1", CreatedUtc = _now };
         firstCallSession.DurableCommandId = "command-1";
-        secondCallSession.MediaTopologyId = "bridge-2";
+        secondCallSession.Bridge = new Bridge { ProviderBridgeId = "bridge-2", CreatedUtc = _now };
         secondCallSession.DurableCommandId = "command-2";
         await firstStore.UpdateAsync(firstCallSession, TestContext.Current.CancellationToken);
         await secondStore.UpdateAsync(secondCallSession, TestContext.Current.CancellationToken);

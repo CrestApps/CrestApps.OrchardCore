@@ -230,6 +230,29 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             session.QueueId = request.QueueId;
             session.ProviderName = providerName;
 
+            // The provider reports the leg it created for the agent through the neutral result contract, so the
+            // agent becomes a real party on the topology instead of a name on the session. Without this the
+            // bridge would only ever show the customer and nothing could reconstruct who was talking to whom.
+            // The caller can hang up while the agent is being connected, and this projection runs after that
+            // provider round-trip. A terminal session has already ended every leg and closed its bridge, so
+            // adding the agent now would contradict the record and be refused at persist time, failing the
+            // whole accept rather than the one late join that caused it.
+            if (!string.IsNullOrEmpty(result.ProviderLegId) && !IsTerminal(session.State))
+            {
+                var now = _clock.UtcNow;
+
+                CallTopologyProjector.UpsertLeg(
+                    session,
+                    result.ProviderLegId,
+                    CallPartyRole.Agent,
+                    CallLegStatus.Answered,
+                    now,
+                    agentId: request.AgentId);
+
+                CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
+                CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+            }
+
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         }
     }

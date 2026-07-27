@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -63,31 +64,42 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public string QueueId { get; set; }
 
     /// <summary>
-    /// Gets or sets the provider's identifier for the media topology that currently joins the customer and
-    /// agent legs. Providers name this differently, so the value is opaque here and is only ever compared for
-    /// presence.
+    /// Gets or sets the legs that make up the call. A leg is one party's connection; <see cref="Bridge"/>
+    /// describes which of them currently hear one another.
     /// </summary>
-    public string MediaTopologyId { get; set; }
+    public IList<CallLeg> Legs { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the provider conference identifier when the call is represented as a multi-party conference.
+    /// Gets or sets the media topology that joins the legs, including its full membership history.
     /// </summary>
-    public string ConferenceId { get; set; }
+    public Bridge Bridge { get; set; }
+
+    /// <summary>
+    /// Gets or sets the bridges the call previously occupied, retained so membership at a past instant stays
+    /// reconstructible after the parties were moved to a different media topology.
+    /// </summary>
+    public IList<Bridge> PriorBridges { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the private consults placed from this call.
+    /// </summary>
+    public IList<ConsultCall> Consults { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the links from this call to the calls it was transferred from, transferred to, consulted,
+    /// or conferenced with.
+    /// </summary>
+    public IList<CallRelationship> Relationships { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the supervisor engagements recorded against this call, live and past.
+    /// </summary>
+    public IList<MonitorSession> MonitorSessions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the provider recording identifier for the active or retained call recording.
     /// </summary>
     public string RecordingId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the supervisor agent identifier when a supervisor monitoring leg is attached.
-    /// </summary>
-    public string SupervisorAgentId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the provider call-leg identifier used by the active supervisor monitoring leg.
-    /// </summary>
-    public string SupervisorLegId { get; set; }
 
     /// <summary>
     /// Gets or sets the durable provider-command identifier that last fenced a topology transition.
@@ -123,17 +135,6 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the provider recording reference for the call, when one exists.
     /// </summary>
     public string RecordingReference { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the provider reports the call as a conference or
-    /// multi-party session.
-    /// </summary>
-    public bool IsConference { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of active participants the provider reports for the call.
-    /// </summary>
-    public int ParticipantCount { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time of the latest provider event applied to this call session.
@@ -195,4 +196,52 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the UTC time the call session was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether three or more parties currently hear one another.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsConference => Bridge?.Kind == BridgeKind.Conference;
+
+    /// <summary>
+    /// Gets the number of parties currently present on the media topology. The provider's own live count
+    /// wins when it publishes one, because a provider sees parties the platform never created a leg for.
+    /// </summary>
+    [JsonIgnore]
+    public int ParticipantCount
+        => Bridge?.ReportedParticipantCount ?? Bridge?.ActiveParticipants.Count() ?? 0;
+
+    /// <summary>
+    /// Gets the supervisor engagement that is currently live, when there is one.
+    /// </summary>
+    [JsonIgnore]
+    public IEnumerable<MonitorSession> ActiveMonitorSessions
+        => MonitorSessions.Where(monitorSession => monitorSession.IsActive);
+
+    /// <summary>
+    /// Gets the parties that were joined to any of the call's bridges at the given instant, including bridges
+    /// the call has since been moved off.
+    /// </summary>
+    /// <param name="instant">The UTC instant to reconstruct membership for.</param>
+    /// <returns>The participants that were joined at that instant.</returns>
+    public IEnumerable<BridgeParticipant> ParticipantsAt(DateTime instant)
+    {
+        foreach (var priorBridge in PriorBridges)
+        {
+            foreach (var participant in priorBridge.ParticipantsAt(instant))
+            {
+                yield return participant;
+            }
+        }
+
+        if (Bridge is null)
+        {
+            yield break;
+        }
+
+        foreach (var participant in Bridge.ParticipantsAt(instant))
+        {
+            yield return participant;
+        }
+    }
 }
