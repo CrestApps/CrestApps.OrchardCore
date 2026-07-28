@@ -177,6 +177,22 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
 
+## Tool permissions
+
+Tool access is authorized separately from profile access. Granting a role permission to query a profile is **not** enough to let that role use the tools the profile is configured with.
+
+| Permission | Description |
+| --- | --- |
+| `QueryAnyAIProfile` (or `QueryAIProfile_{profileName}`) | Allows the identity to query the AI profile. |
+| `AccessAnyAITool` | Allows the identity to use every registered AI function. This permission is security critical and is granted only to the `Administrator` role by default. |
+| `AccessAITool_{toolName}` | Allows the identity to use one specific AI function. |
+
+When the current identity is not authorized for a configured tool, the tool is excluded from the request instead of failing it. The model then answers without that capability, which usually looks like an incomplete or degraded answer. Each excluded tool is reported in the logs with a `Warning` entry that lists the tool names and the permissions to grant, so check the application log first when a profile behaves correctly for an administrator but not for another role.
+
+:::tip
+Custom roles and OpenID applications that query tool-enabled profiles need `AccessAnyAITool`, or the matching `AccessAITool_{toolName}` permission for every tool the profile uses, in addition to the profile query permission.
+:::
+
 ## Invocation Context (AIInvocationScope)
 
 `AIInvocationScope` is the shared per-request context for references, tool state, and other invocation-scoped data. For the framework-level explanation, see the shared Core documentation:
