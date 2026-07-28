@@ -166,10 +166,9 @@ public sealed class QueueItemAggregateStoreTests
                 ItemId = itemId,
                 QueueId = queueId,
                 ActivityItemId = $"activity-{itemId}",
-                Status = status,
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = enqueuedUtc,
-            },
+            }.RestorePersistedStatus(status),
             collection: ContactCenterConstants.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }

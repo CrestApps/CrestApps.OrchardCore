@@ -73,19 +73,17 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ended,
             EndedUtc = endedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -152,17 +150,15 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Ringing,
             LastProviderEventUtc = ringingUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -254,9 +250,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Connected,
             AnsweredUtc = new DateTime(2026, 7, 10, 14, 59, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -265,9 +260,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = VoiceCallState.Connected,
             AnsweredUtc = interaction.AnsweredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -329,8 +323,7 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "shared-call-id",
-            Status = InteractionStatus.Connected,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -386,9 +379,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Connected,
             RecordingState = RecordingState.None,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -397,7 +389,6 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = VoiceCallState.Connected,
             IsMuted = false,
             RecordingState = RecordingState.None,
             Bridge = new Bridge
@@ -405,7 +396,7 @@ public sealed class ProviderVoiceEventServiceTests
                 Kind = BridgeKind.TwoParty,
                 ReportedParticipantCount = 1,
             },
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var publishedEvents = new List<InteractionEvent>();
 
         var interactionManager = new Mock<IInteractionManager>();
@@ -500,8 +491,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -510,8 +500,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Dialing,
-        };
+        }.RestorePersistedState(VoiceCallState.Dialing);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -575,9 +564,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Held,
             RecordingState = RecordingState.Paused,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Held);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -585,7 +573,6 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = VoiceCallState.OnHold,
             IsMuted = true,
             RecordingState = RecordingState.Paused,
             Bridge = new Bridge
@@ -593,7 +580,7 @@ public sealed class ProviderVoiceEventServiceTests
                 Kind = BridgeKind.Conference,
                 ReportedParticipantCount = 3,
             },
-        };
+        }.RestorePersistedState(VoiceCallState.OnHold);
         var publishedEvents = new List<InteractionEvent>();
 
         var interactionManager = new Mock<IInteractionManager>();
@@ -659,8 +646,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Connected,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -668,8 +654,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = VoiceCallState.Connected,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var persistedEvents = new List<InteractionEvent>();
         var persistedKeys = new HashSet<string>(StringComparer.Ordinal);
         var interactionManager = new Mock<IInteractionManager>();
@@ -757,18 +742,16 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ended,
             EndedUtc = endedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("call-1", It.IsAny<CancellationToken>()))
@@ -827,19 +810,17 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = occurredUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = occurredUtc,
             LastProviderEventUtc = occurredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -895,19 +876,17 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -974,20 +953,18 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc,
             HighWaterSequence = 6,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -1054,20 +1031,18 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
             LastProviderEventUtc = connectedUtc.AddSeconds(-5),
             HighWaterSequence = 5,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -1125,18 +1100,16 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Ringing,
             LastProviderEventUtc = startedUtc,
             HighWaterSequence = 5,
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
@@ -1188,18 +1161,16 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ended,
             EndedUtc = endedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
             ProviderCallId = "call-1",
-            State = VoiceCallState.Ended,
             EndedUtc = endedUtc,
             LastProviderEventUtc = endedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(manager => manager.FindByProviderInteractionIdAsync("call-1", It.IsAny<CancellationToken>()))
@@ -1454,35 +1425,31 @@ public sealed class ProviderVoiceEventServiceTests
             ItemId = "interaction-asterisk",
             ProviderName = "Asterisk",
             ProviderInteractionId = "call-asterisk",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var dialPadInteraction = new Interaction
         {
             ItemId = "interaction-dialpad",
             ProviderName = "DialPad",
             ProviderInteractionId = "call-dialpad",
-            Status = InteractionStatus.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var asteriskSession = new CallSession
         {
             ItemId = "session-asterisk",
             InteractionId = "interaction-asterisk",
             ProviderName = "Asterisk",
             ProviderCallId = "call-asterisk",
-            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
         var dialPadSession = new CallSession
         {
             ItemId = "session-dialpad",
             InteractionId = "interaction-dialpad",
             ProviderName = "DialPad",
             ProviderCallId = "call-dialpad",
-            State = VoiceCallState.Connected,
             AnsweredUtc = connectedUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -1579,8 +1546,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var publishedEvents = new List<InteractionEvent>();
 
         var interactionManager = new Mock<IInteractionManager>();
@@ -1657,9 +1623,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Connected,
             AnsweredUtc = now.AddMinutes(-5),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
 
         var session = new CallSession
         {
@@ -1668,9 +1633,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
             AgentId = "agent-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = now.AddMinutes(-5),
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         CallTopologyProjector.UpsertLeg(session, "call-1", CallPartyRole.Customer, CallLegStatus.Answered, now.AddMinutes(-5));
         CallTopologyProjector.UpsertLeg(session, "agent-channel-1", CallPartyRole.Agent, CallLegStatus.Answered, now.AddMinutes(-5));
@@ -1749,9 +1713,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderInteractionId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Connected,
             AnsweredUtc = now.AddMinutes(-5),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
 
         var session = new CallSession
         {
@@ -1760,9 +1723,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
             AgentId = "agent-1",
-            State = VoiceCallState.Connected,
             AnsweredUtc = now.AddMinutes(-5),
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         CallTopologyProjector.UpsertLeg(session, "call-1", CallPartyRole.Customer, CallLegStatus.Answered, now.AddMinutes(-5));
         CallTopologyProjector.EnsureBridge(session, "bridge-1", now.AddMinutes(-5));
@@ -1842,8 +1804,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -1854,8 +1815,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Ringing,
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
 
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
@@ -2063,8 +2023,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -2075,8 +2034,7 @@ public sealed class ProviderVoiceEventServiceTests
             AgentId = "agent-1",
             QueueId = "queue-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Ringing,
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
 
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
@@ -2242,8 +2200,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-outbound-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -2251,8 +2208,7 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = null,
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Planned,
-        };
+        }.RestorePersistedState(VoiceCallState.Planned);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -2320,9 +2276,8 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderInteractionId = "call-new",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Connected,
             AnsweredUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -2330,10 +2285,9 @@ public sealed class ProviderVoiceEventServiceTests
             ProviderName = "ProviderA",
             ProviderCallId = "call-existing",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Connected,
             AnsweredUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
             LastProviderEventUtc = new DateTime(2026, 7, 15, 11, 0, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager

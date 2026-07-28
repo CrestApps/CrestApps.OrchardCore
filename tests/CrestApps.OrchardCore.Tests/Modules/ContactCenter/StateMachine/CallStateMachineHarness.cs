@@ -47,10 +47,9 @@ public sealed class CallStateMachineHarness
             ActivityItemId = "activity-1",
             ProviderName = providerName,
             ProviderInteractionId = providerCallId,
-            Status = InteractionStatus.Created,
             Direction = InteractionDirection.Inbound,
             AgentId = agentId,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Created);
 
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(clockUtc);

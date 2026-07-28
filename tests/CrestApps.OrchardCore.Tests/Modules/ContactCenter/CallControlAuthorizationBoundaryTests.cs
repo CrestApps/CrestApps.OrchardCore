@@ -240,10 +240,9 @@ public sealed class CallControlAuthorizationBoundaryTests
             .ReturnsAsync(new Interaction
             {
                 ItemId = "interaction-1",
-                Status = InteractionStatus.Ringing,
                 ProviderName = "ProviderA",
                 ProviderInteractionId = "provider-call-1",
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         var authorization = FakeCallControlAuthorizationService.Resolving("provider-call-1");
         var executor = CreateExecutor(commandType, telephonyService, authorization, interactionManager);

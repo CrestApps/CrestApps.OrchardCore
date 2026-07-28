@@ -34,10 +34,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             QueueId = "queue-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Connected,
             CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -46,12 +45,11 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Connected,
             FromAddress = "+15550002000",
             ToAddress = "+15550001000",
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
             AnsweredUtc = new DateTime(2026, 7, 10, 13, 0, 9, DateTimeKind.Utc),
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -130,11 +128,10 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             QueueId = "queue-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Ended,
             CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
             EndedUtc = new DateTime(2026, 7, 10, 13, 1, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -143,12 +140,11 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.Ended,
             FromAddress = "+15550002000",
             ToAddress = "+15550001000",
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
             EndedUtc = new DateTime(2026, 7, 10, 13, 1, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var existing = new TelephonyInteraction
         {
             InteractionId = "interaction-1",
@@ -229,10 +225,9 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             QueueId = "queue-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            Status = InteractionStatus.Held,
             CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Held);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -241,14 +236,13 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Outbound,
-            State = VoiceCallState.OnHold,
             IsOnHold = true,
             IsMuted = true,
             FromAddress = "+15550002000",
             ToAddress = "+15550001000",
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 5, DateTimeKind.Utc),
             AnsweredUtc = new DateTime(2026, 7, 10, 13, 0, 9, DateTimeKind.Utc),
-        };
+        }.RestorePersistedState(VoiceCallState.OnHold);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -318,9 +312,8 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             QueueId = "queue-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Ringing,
             CreatedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var session = new CallSession
         {
             ItemId = "session-1",
@@ -329,12 +322,11 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
             ProviderCallId = "call-1",
             AgentId = "agent-1",
             Direction = InteractionDirection.Inbound,
-            State = VoiceCallState.Connected,
             FromAddress = "+15550001000",
             ToAddress = "+15550002000",
             StartedUtc = new DateTime(2026, 7, 10, 13, 0, 0, DateTimeKind.Utc),
             AnsweredUtc = new DateTime(2026, 7, 10, 13, 0, 1, DateTimeKind.Utc),
-        };
+        }.RestorePersistedState(VoiceCallState.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))

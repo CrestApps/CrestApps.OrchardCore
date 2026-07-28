@@ -88,12 +88,11 @@ public sealed class CallSessionTopologyStateAuthorityTests
             ActivityItemId = "activity-1",
             ProviderName = "provider",
             ProviderCallId = "provider-call-1",
-            State = VoiceCallState.Connected,
             AgentId = "agent-1",
             AgentSessionId = "agent-session-1",
             QueueId = "queue-1",
             CreatedUtc = _now,
-        }, TestContext.Current.CancellationToken);
+        }.RestorePersistedState(VoiceCallState.Connected), TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

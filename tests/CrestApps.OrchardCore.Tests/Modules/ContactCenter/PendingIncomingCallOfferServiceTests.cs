@@ -39,7 +39,6 @@ public sealed class PendingIncomingCallOfferServiceTests
                 ActivityItemId = "activity-1",
                 AgentId = "agent-1",
                 Direction = InteractionDirection.Inbound,
-                Status = InteractionStatus.Ringing,
                 ProviderInteractionId = "call-1",
                 ProviderName = "Asterisk",
                 CustomerAddress = "+15550001000",
@@ -48,7 +47,7 @@ public sealed class PendingIncomingCallOfferServiceTests
                 {
                     ["serviceAddress"] = "+15550002000",
                 },
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         var provider = new Mock<IIncomingCallContextProvider>();
         provider.Setup(p => p.ContributeAsync(It.IsAny<IncomingCallContributionContext>(), It.IsAny<CancellationToken>()))
@@ -134,9 +133,8 @@ public sealed class PendingIncomingCallOfferServiceTests
                 ActivityItemId = "activity-1",
                 AgentId = "agent-1",
                 Direction = InteractionDirection.Inbound,
-                Status = InteractionStatus.Created,
                 ProviderInteractionId = "call-1",
-            });
+            }.RestorePersistedStatus(InteractionStatus.Created));
 
         var service = CreateService(agentManager, reservationManager, interactionManager, []);
 

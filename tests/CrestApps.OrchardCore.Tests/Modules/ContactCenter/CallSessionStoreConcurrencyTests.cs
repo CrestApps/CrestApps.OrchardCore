@@ -40,13 +40,13 @@ public sealed class CallSessionStoreConcurrencyTests
             // Act
             // Worker A applies sequence N+1 and commits first.
             callFromA.HighWaterSequence = 6;
-            callFromA.State = VoiceCallState.Connected;
+            callFromA.RestorePersistedState(VoiceCallState.Connected);
             await storeA.UpdateAsync(callFromA, TestContext.Current.CancellationToken);
             await sessionA.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Worker B loaded the pre-A version and now tries to commit the lower sequence N.
             callFromB.HighWaterSequence = 5;
-            callFromB.State = VoiceCallState.Ringing;
+            callFromB.RestorePersistedState(VoiceCallState.Ringing);
             await storeB.UpdateAsync(callFromB, TestContext.Current.CancellationToken);
             var exception = await Record.ExceptionAsync(() => sessionB.SaveChangesAsync(TestContext.Current.CancellationToken));
 
@@ -84,9 +84,9 @@ public sealed class CallSessionStoreConcurrencyTests
             var callFromB = await storeB.FindByIdAsync("session-1", TestContext.Current.CancellationToken);
 
             callFromA.HighWaterSequence = 3;
-            callFromA.State = VoiceCallState.Connected;
+            callFromA.RestorePersistedState(VoiceCallState.Connected);
             callFromB.HighWaterSequence = 2;
-            callFromB.State = VoiceCallState.OnHold;
+            callFromB.RestorePersistedState(VoiceCallState.OnHold);
             await storeA.UpdateAsync(callFromA, TestContext.Current.CancellationToken);
             await storeB.UpdateAsync(callFromB, TestContext.Current.CancellationToken);
 
@@ -164,10 +164,9 @@ public sealed class CallSessionStoreConcurrencyTests
             InteractionId = "interaction-1",
             ProviderName = "ProviderA",
             ProviderCallId = "call-1",
-            State = state,
             HighWaterSequence = sequence,
             CreatedUtc = _now,
-        };
+        }.RestorePersistedState(state);
         await callSessionStore.CreateAsync(callSession, TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }

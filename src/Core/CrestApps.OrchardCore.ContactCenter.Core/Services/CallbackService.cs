@@ -167,7 +167,7 @@ public sealed class CallbackService : ICallbackService
 
         await _workStateService.MutateAsync(
             activity.ItemId,
-            workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+            workState => workState.TransitionTo(ActivityAssignmentStatus.Available),
             cancellationToken);
 
         return activity;

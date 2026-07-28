@@ -94,7 +94,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         item.QueueId = queueId;
         item.ActivityItemId = activityItemId;
         item.Priority = priority ?? queue?.DefaultPriority ?? InteractionPriority.Normal;
-        item.Status = QueueItemStatus.Waiting;
+        item.TransitionTo(QueueItemStatus.Waiting);
         var existingWorkState = activity is null
             ? null
             : await _workStateService.GetAsync(activity.ItemId, cancellationToken);
@@ -108,7 +108,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         {
             await _workStateService.MutateAsync(
                 activity.ItemId,
-                workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+                workState => workState.TransitionTo(ActivityAssignmentStatus.Available),
                 cancellationToken);
         }
 
@@ -165,7 +165,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     {
         ArgumentNullException.ThrowIfNull(queueItem);
 
-        queueItem.Status = status;
+        queueItem.TransitionTo(status);
         queueItem.DequeuedUtc = _clock.UtcNow;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 

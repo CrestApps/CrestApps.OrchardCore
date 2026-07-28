@@ -37,8 +37,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
                 ItemId = "interaction-1",
                 ProviderName = "provider-1",
                 ProviderInteractionId = "call-1",
-                Status = InteractionStatus.Ended,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ended));
         var service = CreateService(
             interactionManager,
             new Mock<ICallSessionManager>(),
@@ -79,8 +78,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
                 ItemId = "interaction-1",
                 ProviderName = "Default Asterisk",
                 ProviderInteractionId = "call-1",
-                Status = InteractionStatus.Ended,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ended));
         var provider = new Mock<ITelephonyProvider>();
         provider.SetupGet(value => value.Name)
             .Returns(new Microsoft.Extensions.Localization.LocalizedString("Default Asterisk", "Default Asterisk"));
@@ -125,8 +123,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             {
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = VoiceCallState.Connected,
-            });
+            }.RestorePersistedState(VoiceCallState.Connected));
         var service = CreateService(
             new Mock<IInteractionManager>(),
             callSessionManager,
@@ -167,10 +164,9 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             {
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = VoiceCallState.OnHold,
                 IsOnHold = true,
                 IsMuted = true,
-            });
+            }.RestorePersistedState(VoiceCallState.OnHold));
         var service = CreateService(
             new Mock<IInteractionManager>(),
             callSessionManager,
@@ -203,7 +199,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     {
         // Arrange
         var interaction = CreateInteraction();
-        interaction.Status = InteractionStatus.Ringing;
+        interaction.RestorePersistedStatus(InteractionStatus.Ringing);
         var callSessionManager = new Mock<ICallSessionManager>();
         callSessionManager
             .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -212,10 +208,9 @@ public sealed class ProviderCallStateSynchronizationServiceTests
                 ItemId = "session-1",
                 InteractionId = "interaction-1",
                 ProviderCallId = "call-1",
-                State = VoiceCallState.Ended,
                 StartedUtc = _now.AddMinutes(-2),
                 EndedUtc = _now.AddMinutes(-1),
-            });
+            }.RestorePersistedState(VoiceCallState.Ended));
         var interactionManager = new Mock<IInteractionManager>();
         var eventService = new Mock<IProviderVoiceEventService>();
         var offerSynchronizationService = new Mock<IProviderVoiceOfferSynchronizationService>();
@@ -376,7 +371,6 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             ItemId = "interaction-1",
             ProviderName = "provider-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Connected,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
     }
 }

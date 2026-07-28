@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
@@ -46,7 +47,78 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the normalized call state.
     /// </summary>
-    public VoiceCallState State { get; set; }
+    [JsonInclude]
+    public VoiceCallState State { get; private set; }
+
+    /// <summary>
+    /// Moves the call session to the specified state.
+    /// </summary>
+    /// <param name="state">The state to move to.</param>
+    /// <exception cref="InvalidStateTransitionException">The session cannot reach the state from the one it is in.</exception>
+    public void TransitionTo(VoiceCallState state)
+    {
+        if (!CallSessionLifecycle.CanTransition(State, state))
+        {
+            throw new InvalidStateTransitionException(nameof(CallSession), State, state);
+        }
+
+        State = state;
+    }
+
+    /// <summary>
+    /// Determines whether the call session can move to the specified state.
+    /// </summary>
+    /// <param name="state">The state to test.</param>
+    /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
+    public bool CanTransitionTo(VoiceCallState state)
+        => CallSessionLifecycle.CanTransition(State, state);
+
+    /// <summary>
+    /// Gets a value indicating whether the call has reached an outcome it cannot leave.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsTerminal => CallSessionLifecycle.IsTerminal(State);
+
+    /// <summary>
+    /// Records the state the provider reports the call is in.
+    /// </summary>
+    /// <param name="state">The state observed on the provider.</param>
+    /// <remarks>
+    /// The provider owns what the call is actually doing, so this is a report rather than a decision. Ordering
+    /// for that stream is enforced upstream by <c>VoiceStreamOrdering</c>, which refuses deliveries that would
+    /// move the call backwards; applying a second, narrower rule here would let this record disagree with the
+    /// interaction it is projected onto, which is the divergence <c>CallStateMachinePropertyTests</c> catches.
+    /// </remarks>
+    public void MirrorProviderState(VoiceCallState state)
+    {
+        // Mirroring reports what the provider already did, so it does not consult the table. It still refuses to
+        // bring a terminal session back to life: a call that this system already recorded as over cannot start
+        // alerting again, and a late provider frame that reopened it would merge two calls into one history.
+        if (CallSessionLifecycle.IsTerminal(State) && !CallSessionLifecycle.IsTerminal(state))
+        {
+            return;
+        }
+
+        State = state;
+    }
+
+    /// <summary>
+    /// Restores a state that was decided elsewhere, without consulting the lifecycle.
+    /// </summary>
+    /// <param name="state">The state to restore.</param>
+    /// <returns>The same session, so it can be used at the end of an object initializer.</returns>
+    /// <remarks>
+    /// This bypasses every transition rule and exists only so a test can arrange a state directly. Production code
+    /// must never call it: <c>AggregateLifecycleArchitectureTests</c> fails the build if any file under <c>src/</c>
+    /// does, so the bypass cannot quietly become a shortcut.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public CallSession RestorePersistedState(VoiceCallState state)
+    {
+        State = state;
+
+        return this;
+    }
 
     /// <summary>
     /// Gets or sets the identifier of the agent connected to the call.

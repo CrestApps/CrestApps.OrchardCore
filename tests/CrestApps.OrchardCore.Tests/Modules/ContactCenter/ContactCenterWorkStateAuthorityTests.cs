@@ -448,10 +448,9 @@ public sealed class ContactCenterWorkStateAuthorityTests
         {
             ItemId = "work-state-1",
             ActivityItemId = "activity-1",
-            AssignmentStatus = ActivityAssignmentStatus.Assigned,
             AssignedToId = "agent-9",
             Attempts = 4,
-        };
+        }.RestorePersistedAssignmentStatus(ActivityAssignmentStatus.Assigned);
 
         var service = CreateWorkStateService(activity, workState, out _);
 
@@ -507,7 +506,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         // Act
         await service.MutateAsync(
             "activity-1",
-            state => state.AssignmentStatus = ActivityAssignmentStatus.Reserved,
+            state => state.RestorePersistedAssignmentStatus(ActivityAssignmentStatus.Reserved),
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -740,7 +739,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         queueItem.ItemId = "queue-item-1";
         queueItem.QueueId = "queue-1";
         queueItem.ActivityItemId = "activity-1";
-        queueItem.Status = QueueItemStatus.Waiting;
+        queueItem.RestorePersistedStatus(QueueItemStatus.Waiting);
         await queueItemManager.CreateAsync(queueItem, cancellationToken: TestContext.Current.CancellationToken);
 
         var agent = await agentManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);

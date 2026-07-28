@@ -167,7 +167,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             entry.CompletedUtc = now;
             entry.Result = reason;
             interaction.TransferHistory.Add(entry);
-            interaction.Status = InteractionStatus.Transferring;
+            interaction.TransitionTo(InteractionStatus.Transferring);
 
             await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
 

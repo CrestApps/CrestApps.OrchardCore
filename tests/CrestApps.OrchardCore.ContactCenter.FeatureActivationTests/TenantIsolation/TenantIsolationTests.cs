@@ -128,8 +128,7 @@ public sealed class TenantIsolationTests
                 Direction = InteractionDirection.Inbound,
                 ProviderInteractionId = seed.ProviderCallId,
                 ProviderName = "Asterisk",
-                Status = InteractionStatus.Connected,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Connected));
 
             await agentSessionManager.CreateAsync(new AgentSession
             {

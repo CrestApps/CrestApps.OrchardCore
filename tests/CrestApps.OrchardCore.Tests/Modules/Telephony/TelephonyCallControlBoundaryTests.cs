@@ -24,8 +24,7 @@ public sealed class TelephonyCallControlBoundaryTests
                 InteractionId = "interaction-2",
                 AgentId = "agent-2",
                 ProviderCallId = "provider-call-2",
-                State = VoiceCallState.Connected,
-            });
+            }.RestorePersistedState(VoiceCallState.Connected));
         var service = new CallControlAuthorizationService(
             agentManager.Object,
             callSessionManager.Object,

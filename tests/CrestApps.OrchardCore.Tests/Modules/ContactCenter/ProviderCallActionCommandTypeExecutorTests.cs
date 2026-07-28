@@ -142,8 +142,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             {
                 ItemId = "interaction-1",
                 ProviderInteractionId = "call-1",
-                Status = InteractionStatus.Ended,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ended));
 
         var executor = CreateExecutor(
             commandType,
@@ -180,8 +179,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             {
                 ItemId = "interaction-1",
                 ProviderInteractionId = "call-2",
-                Status = InteractionStatus.Ringing,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         var executor = CreateExecutor(
             commandType,
@@ -214,8 +212,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
             .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -282,8 +279,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
             .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -336,9 +332,8 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
             EndedUtc = _now,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
             .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
@@ -428,8 +423,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         {
             ItemId = "interaction-1",
             ProviderInteractionId = "call-1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         interactionManager
             .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))

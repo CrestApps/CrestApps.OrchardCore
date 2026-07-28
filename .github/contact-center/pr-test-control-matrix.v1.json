@@ -1723,6 +1723,34 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/PhoneNumberTests.cs proves the value object is canonical by construction and has no public constructor that would let a caller assert canonicality without proving it; tests/CrestApps.OrchardCore.Tests/Architecture/PhoneNumberCanonicalizationArchitectureTests.cs scans the Contact Center, Telephony, and do-not-call projects for a second parser or hand-rolled normalization and fails if the roots it claims to cover no longer exist; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerEligibilityServiceTests.cs drives the real libphonenumber-backed service rather than a stub and asserts that a national-format destination reaches the registry as a canonical number, that a destination that cannot be canonicalized suppresses the attempt without querying any registry, and that a registry which cannot answer suppresses with ComplianceScreeningUnavailable; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerAttemptServiceTests.cs asserts that suppression is not terminal so an unverified destination is not cancelled; tests/CrestApps.OrchardCore.Tests/Modules/Omnichannel/Managements/Handlers/OmnichannelContactImportRowFilterTests.cs asserts an unreachable registry skips the row instead of importing an unscreened number; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ExternalDestinationPolicyTests.cs pins the one definition of which external destinations may be dialed after three drifting copies were consolidated; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/SkillTagTests.cs proves an agent skill carrying whitespace or different casing still matches a queue requirement."
+    },
+    {
+      "id": "D018",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "W10.1",
+      "gate": "Aggregate state transition legality",
+      "invariant": "A Contact Center aggregate decides its own status changes, and there is exactly one definition of which changes exist. An interaction, call session, queue item, reservation, and routing work state may only move along a declared edge on every path where this system decides the next status; a move that no edge admits is refused with the aggregate, the status it is in, and the status it was asked to reach, rather than being recorded. The status a settled record holds is final: no settled status has an outgoing edge, so an ended call cannot start ringing again and a completed queue item cannot return to the queue, either of which would merge two pieces of work into one history. The backwards edges that return unanswered work to routing are declared like any other edge and are therefore bound by that rule, so requeueing and re-offering cannot reach a conversation that is over. Re-applying the status a record already holds is not a transition, so at-least-once redelivery is not turned into an error. Three operations report rather than decide - a call session mirroring the provider, an interaction mirroring the call session that is authoritative for it, and a work state adopting the activity it projects - and these do not consult the table, because re-deciding upstream facts with a second, narrower rule is what makes two records disagree. They are named so the exception is visible rather than an unexplained gap, they refuse to bring a settled record back to life, and a structural scan pins the files allowed to call them so the exception cannot spread. No status may carry a public setter, because a public setter is all it takes for the next caller to answer the transition question for itself; the test-only restore seam that arranges a state directly is refused to production code by the same scan.",
+      "testId": "CC-D018",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite",
+          "postgresql"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/Lifecycles/AggregateLifecycleTableTests.cs walks the complete N x N status matrix of all five lifecycles against a transliteration of each table written in a different shape, which detects an edge changed in one place and not the other, and separately asserts properties derived from the enums and the settled predicates rather than from the edge lists: that no settled interaction status and no terminal call state has any outgoing edge, that every unsettled interaction status can still reach an ending, that a planned call is refused the established and unanswered outcomes that imply it was answered, that every declared status is reachable from the starting status, and that re-applying a held status is admitted; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/Lifecycles/AggregateStateTransitionTests.cs asserts a refused move throws InvalidStateTransitionException and leaves the status unchanged, that every live status can be requeued and re-offered while every settled one cannot, that mirroring applies an undeclared provider fact but will not reopen a settled record, and that a connected session can alert again for a queue transfer; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs drives the expiry sweep against an interaction the customer already hung up on and asserts the reservation, queue item and agent are still released, which is the tenant-wide sweep that a refusal escaping from a release path would abandon; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AnswerProviderCommandTypeExecutorTests.cs and DialProviderCommandTypeExecutorTests.cs assert a failure projection against an already-ended call completes rather than throwing, which is what lets a compensating command finish instead of staying compensating forever; tests/CrestApps.OrchardCore.Tests/Architecture/AggregateLifecycleArchitectureTests.cs asserts by reflection that no guarded status has a public setter, round-trips every aggregate through System.Text.Json so a private setter that is silently dropped on deserialize fails the build, scans the Contact Center, Telephony, Asterisk, and DialPad projects for a production call to the test-only restore seam, pins the two files and four call sites allowed to use the three lifecycle bypasses, and fails closed if a guarded root or a named file it claims to scan no longer exists; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/CallStateMachinePropertyTests.cs continues to prove that a call session and the interaction projected from it never disagree under reordered, duplicated, and replayed provider deliveries."
     }
   ]
 }

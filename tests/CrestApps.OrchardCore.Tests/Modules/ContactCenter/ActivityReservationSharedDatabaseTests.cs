@@ -213,7 +213,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         reservation.ItemId = reservationId;
         reservation.ActivityItemId = activityId;
         reservation.AgentId = agentId;
-        reservation.Status = status;
+        reservation.RestorePersistedStatus(status);
         reservation.ExpiresUtc = _now.AddMinutes(1);
         await manager.CreateAsync(reservation, cancellationToken: TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -231,7 +231,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         queueItem.ItemId = queueItemId;
         queueItem.QueueId = "queue-1";
         queueItem.ActivityItemId = activityId;
-        queueItem.Status = status;
+        queueItem.RestorePersistedStatus(status);
         queueItem.EnqueuedUtc = _now;
         await manager.CreateAsync(queueItem, cancellationToken: TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -295,7 +295,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         queueItem.ItemId = "queue-item-1";
         queueItem.QueueId = "queue-1";
         queueItem.ActivityItemId = "activity-1";
-        queueItem.Status = QueueItemStatus.Waiting;
+        queueItem.RestorePersistedStatus(QueueItemStatus.Waiting);
         await queueItemManager.CreateAsync(queueItem, cancellationToken: TestContext.Current.CancellationToken);
 
         var agent = await agentManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);

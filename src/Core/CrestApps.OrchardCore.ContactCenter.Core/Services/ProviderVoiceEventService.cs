@@ -418,7 +418,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         // real non-terminal -> terminal transition so the CallEnded event is still published and queue,
         // reservation, and agent cleanup runs. Without this seed the session would be created already
         // terminal, ResolveEventTypes would see no transition, and the offer would never be released.
-        session.State = ResolveInitialSessionState(interaction);
+        session.MirrorProviderState(ResolveInitialSessionState(interaction));
         session.RecordingState = interaction.RecordingState;
         session.RecordingReference = interaction.RecordingReference;
         session.CreatedUtc = now;
@@ -463,7 +463,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private static void ApplyState(CallSession session, Interaction interaction, VoiceCallState state, DateTime now)
     {
-        session.State = state;
+        session.MirrorProviderState(state);
         session.IsMuted = state is VoiceCallState.Ended or
             VoiceCallState.Failed or
             VoiceCallState.NoAnswer or
@@ -506,7 +506,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 break;
         }
 
-        interaction.Status = MapInteractionStatus(state);
+        // The call session is the authority for a provider-backed call, and this projection keeps the interaction
+        // reporting the same thing the session does. Ordering was already decided upstream, so re-deciding it
+        // here with the interaction lifecycle table would let the two records disagree instead of agreeing.
+        interaction.MirrorSessionStatus(MapInteractionStatus(state));
 
         switch (state)
         {

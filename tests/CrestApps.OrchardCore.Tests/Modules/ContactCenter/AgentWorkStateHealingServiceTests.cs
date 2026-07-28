@@ -55,9 +55,8 @@ public sealed class AgentWorkStateHealingServiceTests
                 ActivityItemId = "act-1",
                 QueueItemId = "qi-1",
                 AgentId = "a1",
-                Status = ReservationStatus.Pending,
                 ExpiresUtc = _now.AddSeconds(30),
-            });
+            }.RestorePersistedStatus(ReservationStatus.Pending));
 
         var reservationService = new Mock<IActivityReservationService>();
         reservationService.Setup(service => service.CancelAsync("r1", It.IsAny<CancellationToken>()))
@@ -70,8 +69,7 @@ public sealed class AgentWorkStateHealingServiceTests
                 ItemId = "qi-1",
                 ReservationId = "r1",
                 AgentId = "a1",
-                Status = QueueItemStatus.Reserved,
-            });
+            }.RestorePersistedStatus(QueueItemStatus.Reserved));
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -80,8 +78,7 @@ public sealed class AgentWorkStateHealingServiceTests
                 ItemId = "i1",
                 ActivityItemId = "act-1",
                 AgentId = null,
-                Status = InteractionStatus.Created,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Created));
 
         var service = CreateService(agentManager, reservationManager, reservationService, queueItemManager, interactionManager);
 
@@ -120,9 +117,8 @@ public sealed class AgentWorkStateHealingServiceTests
                 ActivityItemId = "act-1",
                 QueueItemId = "qi-1",
                 AgentId = "a1",
-                Status = ReservationStatus.Pending,
                 ExpiresUtc = _now.AddSeconds(30),
-            });
+            }.RestorePersistedStatus(ReservationStatus.Pending));
 
         var reservationService = new Mock<IActivityReservationService>();
         var queueItemManager = new Mock<IQueueItemManager>();
@@ -132,8 +128,7 @@ public sealed class AgentWorkStateHealingServiceTests
                 ItemId = "qi-1",
                 ReservationId = "r1",
                 AgentId = "a1",
-                Status = QueueItemStatus.Reserved,
-            });
+            }.RestorePersistedStatus(QueueItemStatus.Reserved));
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -196,8 +191,7 @@ public sealed class AgentWorkStateHealingServiceTests
             QueueId = "q1",
             ReservationId = "r1",
             AgentId = "a1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
 
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -209,8 +203,7 @@ public sealed class AgentWorkStateHealingServiceTests
             ActivityItemId = "act-1",
             QueueId = "q1",
             AgentId = "a1",
-            Status = InteractionStatus.Connected,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
@@ -283,8 +276,7 @@ public sealed class AgentWorkStateHealingServiceTests
             QueueId = "q1",
             ReservationId = "r1",
             AgentId = "a1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(queueItem);
@@ -294,8 +286,7 @@ public sealed class AgentWorkStateHealingServiceTests
             ActivityItemId = "act-1",
             QueueId = "q1",
             AgentId = "a1",
-            Status = InteractionStatus.Connected,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Connected);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
@@ -360,8 +351,7 @@ public sealed class AgentWorkStateHealingServiceTests
             QueueId = "q1",
             ReservationId = "r1",
             AgentId = "a1",
-            Status = QueueItemStatus.Reserved,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Reserved);
 
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -373,8 +363,7 @@ public sealed class AgentWorkStateHealingServiceTests
             ActivityItemId = "act-1",
             QueueId = "q1",
             AgentId = "a1",
-            Status = InteractionStatus.Ringing,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
@@ -434,9 +423,8 @@ public sealed class AgentWorkStateHealingServiceTests
                 ActivityItemId = "act-1",
                 QueueItemId = "qi-1",
                 AgentId = "a1",
-                Status = ReservationStatus.Pending,
                 ExpiresUtc = _now.AddSeconds(30),
-            });
+            }.RestorePersistedStatus(ReservationStatus.Pending));
 
         var reservationService = new Mock<IActivityReservationService>();
         reservationService.Setup(service => service.CancelAsync("r1", It.IsAny<CancellationToken>()))
@@ -449,8 +437,7 @@ public sealed class AgentWorkStateHealingServiceTests
                 ItemId = "qi-1",
                 ReservationId = "r1",
                 AgentId = "a1",
-                Status = QueueItemStatus.Reserved,
-            });
+            }.RestorePersistedStatus(QueueItemStatus.Reserved));
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -459,8 +446,7 @@ public sealed class AgentWorkStateHealingServiceTests
                 ItemId = "i1",
                 ActivityItemId = "act-1",
                 AgentId = "a1",
-                Status = InteractionStatus.Ringing,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         var service = CreateService(agentManager, reservationManager, reservationService, queueItemManager, interactionManager);
 
@@ -500,8 +486,7 @@ public sealed class AgentWorkStateHealingServiceTests
             QueueId = "q1",
             ReservationId = "r1",
             AgentId = "a1",
-            Status = QueueItemStatus.Reserved,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Reserved);
 
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
@@ -513,10 +498,9 @@ public sealed class AgentWorkStateHealingServiceTests
             ActivityItemId = "act-1",
             QueueId = "q1",
             AgentId = "a1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider-1",
             ProviderInteractionId = "call-1",
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
@@ -578,10 +562,9 @@ public sealed class AgentWorkStateHealingServiceTests
         {
             ItemId = "i1",
             AgentId = "a1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "asterisk",
             ProviderInteractionId = "provider-call-1",
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(manager => manager.FindActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))

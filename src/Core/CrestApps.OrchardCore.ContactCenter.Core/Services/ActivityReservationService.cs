@@ -163,13 +163,13 @@ public sealed class ActivityReservationService : IActivityReservationService
         reservation.QueueId = queueItem.QueueId;
         reservation.QueueItemId = queueItem.ItemId;
         reservation.AgentId = agent.ItemId;
-        reservation.Status = ReservationStatus.Pending;
+        reservation.TransitionTo(ReservationStatus.Pending);
         reservation.CreatedUtc = now;
         reservation.ExpiresUtc = now.AddSeconds(timeoutSeconds);
 
         await _reservationManager.CreateAsync(reservation, cancellationToken: cancellationToken);
 
-        queueItem.Status = QueueItemStatus.Reserved;
+        queueItem.TransitionTo(QueueItemStatus.Reserved);
         queueItem.ReservationId = reservation.ItemId;
         queueItem.AgentId = agent.ItemId;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
@@ -190,7 +190,7 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await _workStateService.MutateAsync(queueItem.ActivityItemId, workState =>
         {
-            workState.AssignmentStatus = ActivityAssignmentStatus.Reserved;
+            workState.TransitionTo(ActivityAssignmentStatus.Reserved);
             workState.ReservationId = reservation.ItemId;
             workState.ReservedById = agent.UserId;
             workState.ReservedByUsername = agent.UserName;
@@ -245,14 +245,14 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await using var acquiredAgentLock = agentLocker;
 
-        reservation.Status = ReservationStatus.Accepted;
+        reservation.TransitionTo(ReservationStatus.Accepted);
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
 
         if (queueItem is not null)
         {
-            queueItem.Status = QueueItemStatus.Assigned;
+            queueItem.TransitionTo(QueueItemStatus.Assigned);
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
         }
 
@@ -268,7 +268,7 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await _workStateService.MutateAsync(reservation.ActivityItemId, workState =>
         {
-            workState.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+            workState.TransitionTo(ActivityAssignmentStatus.Assigned);
             workState.AssignedToId = agent?.UserId;
             workState.AssignedToUsername = agent?.UserName;
             workState.AssignedToUtc = _clock.UtcNow;
@@ -400,7 +400,7 @@ public sealed class ActivityReservationService : IActivityReservationService
             !string.Equals(candidate.ItemId, reservation.ItemId, StringComparison.Ordinal));
         var now = _clock.UtcNow;
         var wasAccepted = reservation.Status == ReservationStatus.Accepted;
-        reservation.Status = ReservationStatus.Canceled;
+        reservation.TransitionTo(ReservationStatus.Canceled);
 
         // This is the age settled reservations are purged by. Without it the row is never selected by retention.
         reservation.ModifiedUtc = now;
@@ -421,7 +421,7 @@ public sealed class ActivityReservationService : IActivityReservationService
             }
             else
             {
-                queueItem.Status = QueueItemStatus.Waiting;
+                queueItem.TransitionTo(QueueItemStatus.Waiting);
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
         }
@@ -455,9 +455,9 @@ public sealed class ActivityReservationService : IActivityReservationService
                 return;
             }
 
-            workState.AssignmentStatus = removeFromQueue
+            workState.TransitionTo(removeFromQueue
                 ? ActivityAssignmentStatus.Released
-                : ActivityAssignmentStatus.Available;
+                : ActivityAssignmentStatus.Available);
             workState.ReservationId = null;
             workState.ReservedById = null;
             workState.ReservedByUsername = null;
@@ -525,7 +525,7 @@ public sealed class ActivityReservationService : IActivityReservationService
     private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
-        reservation.Status = status;
+        reservation.TransitionTo(status);
 
         // This is the age settled reservations are purged by. Without it the row is never selected by retention.
         reservation.ModifiedUtc = now;
@@ -624,7 +624,7 @@ public sealed class ActivityReservationService : IActivityReservationService
 
             if (requeue)
             {
-                queueItem.Status = QueueItemStatus.Waiting;
+                queueItem.TransitionTo(QueueItemStatus.Waiting);
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
             else
@@ -645,9 +645,9 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         await _workStateService.MutateAsync(reservation.ActivityItemId, workState =>
         {
-            workState.AssignmentStatus = requeue
+            workState.TransitionTo(requeue
                 ? ActivityAssignmentStatus.Available
-                : ActivityAssignmentStatus.Released;
+                : ActivityAssignmentStatus.Released);
             workState.ReservationId = null;
             workState.ReservedById = null;
             workState.ReservedByUsername = null;
@@ -668,23 +668,28 @@ public sealed class ActivityReservationService : IActivityReservationService
             }, cancellationToken);
         }
 
-        if (interaction is not null)
+        // Releasing an offer races the conversation ending. The customer can abandon while the offer is still
+        // ringing an agent, the provider event settles the interaction, and this sweep then arrives to return
+        // work that no longer exists to routing. Returning a settled interaction to routing is refused by the
+        // lifecycle, and this path runs from a background sweep that releases every due reservation, so letting
+        // that refusal escape would abandon the rest of the sweep over one call that had already hung up. The
+        // reservation, queue item, agent and work state are still released; only the re-offer is skipped.
+        if (interaction is not null && !interaction.IsSettled)
         {
             if (requeue)
             {
-                interaction.Status = InteractionStatus.Created;
-                interaction.AgentId = null;
+                interaction.Requeue();
             }
             else if (providerCommand is not null)
             {
-                interaction.Status = InteractionStatus.Ringing;
+                interaction.Reoffer();
                 interaction.EndedUtc = null;
                 interaction.AgentId = null;
                 interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
             }
             else
             {
-                interaction.Status = InteractionStatus.Ended;
+                interaction.TransitionTo(InteractionStatus.Ended);
                 interaction.EndedUtc ??= now;
                 interaction.TechnicalMetadata["unansweredOfferAction"] = unansweredAction.ToString();
             }

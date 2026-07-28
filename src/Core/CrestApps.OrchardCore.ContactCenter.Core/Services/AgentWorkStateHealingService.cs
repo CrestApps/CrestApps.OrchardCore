@@ -293,19 +293,18 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         if (queueItem is not null &&
             queueItem.Status is QueueItemStatus.Reserved or QueueItemStatus.Assigned)
         {
-            queueItem.Status = QueueItemStatus.Waiting;
+            queueItem.TransitionTo(QueueItemStatus.Waiting);
             queueItem.ReservationId = null;
             queueItem.AgentId = null;
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
         }
 
-        interaction.Status = InteractionStatus.Created;
-        interaction.AgentId = null;
+        interaction.Requeue();
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
         await _workStateService.MutateAsync(interaction.ActivityItemId, workState =>
         {
-            workState.AssignmentStatus = ActivityAssignmentStatus.Available;
+            workState.TransitionTo(ActivityAssignmentStatus.Available);
             workState.AssignedToId = null;
             workState.AssignedToUsername = null;
             workState.AssignedToUtc = null;

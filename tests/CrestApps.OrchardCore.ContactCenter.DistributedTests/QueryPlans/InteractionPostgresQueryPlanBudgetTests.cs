@@ -150,9 +150,8 @@ public sealed class InteractionPostgresQueryPlanBudgetTests
             {
                 ItemId = itemId,
                 AgentId = agentId,
-                Status = status,
                 CreatedUtc = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc),
-            },
+            }.RestorePersistedStatus(status),
             collection: ContactCenterConstants.CollectionName,
             cancellationToken: cancellationToken);
     }

@@ -23,9 +23,8 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             ActivityItemId = "activity-1",
             ProviderName = "provider",
             ProviderInteractionId = "canonical-call-1",
-            Status = InteractionStatus.Ringing,
             CreatedUtc = _now,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
         var callSession = new CallSession
         {
             ItemId = "call-session-1",
@@ -33,9 +32,8 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             ActivityItemId = "activity-1",
             ProviderName = "provider",
             ProviderCallId = "canonical-call-1",
-            State = VoiceCallState.Ringing,
             CreatedUtc = _now,
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
             .Setup(service => service.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))

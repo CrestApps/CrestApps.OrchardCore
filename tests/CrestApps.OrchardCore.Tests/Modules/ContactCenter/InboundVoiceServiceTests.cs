@@ -881,8 +881,7 @@ public sealed class InboundVoiceServiceTests
             {
                 ActivityItemId = "activity-1",
                 QueueId = "queue-1",
-                Status = QueueItemStatus.Removed,
-            });
+            }.RestorePersistedStatus(QueueItemStatus.Removed));
         var service = harness.CreateService();
 
         // Act
@@ -1104,8 +1103,7 @@ public sealed class InboundVoiceServiceTests
                 ItemId = "int-dead",
                 ActivityItemId = "act-dead",
                 ProviderInteractionId = "call-dead",
-                Status = InteractionStatus.Ended,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ended));
 
         harness.InteractionManager
             .Setup(m => m.FindByActivityIdAsync("act-live", It.IsAny<CancellationToken>()))
@@ -1114,8 +1112,7 @@ public sealed class InboundVoiceServiceTests
                 ItemId = "int-live",
                 ActivityItemId = "act-live",
                 ProviderInteractionId = "call-live",
-                Status = InteractionStatus.Ringing,
-            });
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         var service = harness.CreateService();
 

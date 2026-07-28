@@ -128,8 +128,8 @@ public sealed class ActivityQueueServiceTests
     public async Task OverflowDueAsync_MovesOnlyItemsWaitingPastThreshold()
     {
         // Arrange
-        var overdue = new QueueItem { ItemId = "i1", QueueId = "q1", Status = QueueItemStatus.Waiting, EnqueuedUtc = _now.AddSeconds(-60) };
-        var fresh = new QueueItem { ItemId = "i2", QueueId = "q1", Status = QueueItemStatus.Waiting, EnqueuedUtc = _now.AddSeconds(-10) };
+        var overdue = new QueueItem { ItemId = "i1", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-60) }.RestorePersistedStatus(QueueItemStatus.Waiting);
+        var fresh = new QueueItem { ItemId = "i2", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-10) }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([overdue, fresh]);
@@ -158,11 +158,10 @@ public sealed class ActivityQueueServiceTests
         {
             ItemId = "i1",
             QueueId = "q2",
-            Status = QueueItemStatus.Waiting,
             EnqueuedUtc = _now.AddMinutes(-10),
             QueueEnteredUtc = _now.AddSeconds(-10),
             OverflowHistory = ["q1"],
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.ListWaitingAsync("q2", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
         var service = CreateService(
@@ -191,10 +190,9 @@ public sealed class ActivityQueueServiceTests
         {
             ItemId = "i1",
             QueueId = "q1",
-            Status = QueueItemStatus.Waiting,
             EnqueuedUtc = _now.AddSeconds(-60),
             OverflowHistory = ["q2"],
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
         var service = CreateService(
@@ -219,8 +217,8 @@ public sealed class ActivityQueueServiceTests
     public async Task OverflowDueAsync_WhenClosedAndAfterHoursOverflow_MovesAllWaitingItems()
     {
         // Arrange
-        var item1 = new QueueItem { ItemId = "i1", QueueId = "q1", Status = QueueItemStatus.Waiting, EnqueuedUtc = _now.AddSeconds(-10) };
-        var item2 = new QueueItem { ItemId = "i2", QueueId = "q1", Status = QueueItemStatus.Waiting, EnqueuedUtc = _now.AddSeconds(-5) };
+        var item1 = new QueueItem { ItemId = "i1", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-10) }.RestorePersistedStatus(QueueItemStatus.Waiting);
+        var item2 = new QueueItem { ItemId = "i2", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-5) }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item1, item2]);

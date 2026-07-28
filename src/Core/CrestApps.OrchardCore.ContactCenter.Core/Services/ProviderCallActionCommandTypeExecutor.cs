@@ -187,7 +187,14 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         }
 
         var now = _clock.UtcNow;
-        interaction.Status = InteractionStatus.Ended;
+
+        // A hangup that succeeds at the provider can land after the call had already been recorded as failed,
+        // and a settled interaction keeps whichever ending it recorded first.
+        if (!interaction.IsSettled)
+        {
+            interaction.TransitionTo(InteractionStatus.Ended);
+        }
+
         interaction.EndedUtc ??= now;
         ApplyProjectionMetadata(interaction, command, request, "Succeeded", null, null, now);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
@@ -212,7 +219,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             await _queueService.EnqueueAsync(request.ActivityItemId, request.QueueId, null, cancellationToken);
             await _workStateService.MutateAsync(
                 request.ActivityItemId,
-                workState => workState.AssignmentStatus = ActivityAssignmentStatus.Available,
+                workState => workState.TransitionTo(ActivityAssignmentStatus.Available),
                 cancellationToken);
 
             await _activityWriter.ScheduleUpdateAsync(request.ActivityItemId, activity =>
@@ -221,7 +228,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
                 activity.CompletedUtc = null;
             }, cancellationToken);
 
-            interaction.Status = InteractionStatus.Created;
+            interaction.Requeue();
             interaction.EndedUtc = null;
             ApplyProjectionMetadata(
                 interaction,

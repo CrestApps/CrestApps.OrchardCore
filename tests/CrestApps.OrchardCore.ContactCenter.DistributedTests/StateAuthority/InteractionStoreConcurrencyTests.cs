@@ -29,8 +29,8 @@ public sealed class InteractionStoreConcurrencyTests
         var firstInteraction = await firstStore.FindByIdAsync("interaction-1", TestContext.Current.CancellationToken);
         var secondInteraction = await secondStore.FindByIdAsync("interaction-1", TestContext.Current.CancellationToken);
 
-        firstInteraction.Status = InteractionStatus.Connected;
-        secondInteraction.Status = InteractionStatus.Failed;
+        firstInteraction.RestorePersistedStatus(InteractionStatus.Connected);
+        secondInteraction.RestorePersistedStatus(InteractionStatus.Failed);
         await firstStore.UpdateAsync(firstInteraction, TestContext.Current.CancellationToken);
         await secondStore.UpdateAsync(secondInteraction, TestContext.Current.CancellationToken);
 
@@ -73,9 +73,8 @@ public sealed class InteractionStoreConcurrencyTests
             ActivityItemId = "activity-1",
             Channel = InteractionChannel.Voice,
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Created,
             CreatedUtc = _now,
-        }, TestContext.Current.CancellationToken);
+        }.RestorePersistedStatus(InteractionStatus.Created), TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

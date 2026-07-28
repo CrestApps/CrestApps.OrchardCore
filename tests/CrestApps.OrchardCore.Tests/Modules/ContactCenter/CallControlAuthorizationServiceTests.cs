@@ -25,8 +25,7 @@ public sealed class CallControlAuthorizationServiceTests
                 AgentId = "agent-1",
                 ProviderName = "provider",
                 ProviderCallId = "provider-call-1",
-                State = VoiceCallState.Connected,
-            });
+            }.RestorePersistedState(VoiceCallState.Connected));
         var service = new CallControlAuthorizationService(
             agentManager.Object,
             callSessionManager.Object,
@@ -60,10 +59,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -87,10 +85,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "server-owned-call",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -112,10 +109,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -145,10 +141,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -169,10 +164,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -196,10 +190,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = status,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(status));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -221,18 +214,16 @@ public sealed class CallControlAuthorizationServiceTests
             interaction: new Interaction
             {
                 ItemId = "interaction-1",
-                Status = InteractionStatus.Ringing,
                 ProviderName = "provider",
                 ProviderInteractionId = "provider-call-1",
-            },
+            }.RestorePersistedStatus(InteractionStatus.Ringing),
             session: new CallSession
             {
                 InteractionId = "interaction-1",
                 AgentId = "agent-1",
                 ProviderName = "provider",
                 ProviderCallId = "provider-call-1",
-                State = VoiceCallState.Connected,
-            });
+            }.RestorePersistedState(VoiceCallState.Connected));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext
@@ -258,10 +249,9 @@ public sealed class CallControlAuthorizationServiceTests
         var service = CreateService(interaction: new Interaction
         {
             ItemId = "interaction-1",
-            Status = InteractionStatus.Ringing,
             ProviderName = "provider",
             ProviderInteractionId = "provider-call-1",
-        });
+        }.RestorePersistedStatus(InteractionStatus.Ringing));
 
         // Act
         var result = await service.AuthorizeAsync(new CallControlAuthorizationContext

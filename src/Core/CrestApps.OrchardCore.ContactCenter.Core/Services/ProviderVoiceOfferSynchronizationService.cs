@@ -100,7 +100,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         foreach (var reservation in reservations)
         {
             reservationAgentId ??= reservation.AgentId;
-            reservation.Status = ReservationStatus.Canceled;
+            reservation.TransitionTo(ReservationStatus.Canceled);
 
             // This is the age settled reservations are purged by.
             reservation.ModifiedUtc = _clock.UtcNow;
@@ -113,7 +113,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         {
             if (queueItem?.Status == QueueItemStatus.Assigned)
             {
-                queueItem.Status = QueueItemStatus.Completed;
+                queueItem.TransitionTo(QueueItemStatus.Completed);
                 queueItem.DequeuedUtc = _clock.UtcNow;
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
@@ -153,7 +153,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         if (queueItem is not null &&
             queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
         {
-            queueItem.Status = QueueItemStatus.Removed;
+            queueItem.TransitionTo(QueueItemStatus.Removed);
             queueItem.DequeuedUtc = _clock.UtcNow;
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
         }
@@ -192,7 +192,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
 
         await _workStateService.MutateAsync(activity.ItemId, workState =>
         {
-            workState.AssignmentStatus = ActivityAssignmentStatus.Released;
+            workState.TransitionTo(ActivityAssignmentStatus.Released);
             workState.AssignedToId = null;
             workState.AssignedToUsername = null;
             workState.AssignedToUtc = null;

@@ -215,11 +215,10 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             {
                 ItemId = itemId,
                 AgentId = agentId,
-                Status = status,
                 CreatedUtc = _now,
                 WrapUpStartedUtc = wrapUpStartedUtc,
                 WrapUpCompletedUtc = wrapUpCompletedUtc,
-            },
+            }.RestorePersistedStatus(status),
             collection: ContactCenterConstants.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }

@@ -20,32 +20,28 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Ended,
             AnsweredUtc = new DateTime(2026, 7, 10, 11, 59, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
             ReservationId = "res-1",
-            Status = QueueItemStatus.Reserved,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var reservation = new ActivityReservation
         {
             ItemId = "res-1",
             AgentId = "agent-1",
             ActivityItemId = "act1",
-            Status = ReservationStatus.Pending,
-        };
+        }.RestorePersistedStatus(ReservationStatus.Pending);
         var agent = new AgentProfile
         {
             ItemId = "agent-1",
@@ -136,14 +132,12 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         {
             ItemId = "int1",
             ActivityItemId = "act1",
-            Status = InteractionStatus.Ended,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
-            Status = QueueItemStatus.Waiting,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
         var activity = new OmnichannelActivity
         {
             ItemId = "act1",
@@ -158,8 +152,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             .ReturnsAsync(new CallSession
             {
                 InteractionId = "int1",
-                State = VoiceCallState.Ended,
-            });
+            }.RestorePersistedState(VoiceCallState.Ended));
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
         var reservationManager = new Mock<IActivityReservationManager>();
@@ -207,25 +200,22 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Ended,
             AnsweredUtc = new DateTime(2026, 7, 10, 11, 59, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
             ReservationId = "res-1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
@@ -289,24 +279,21 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Ended,
             AnsweredUtc = new DateTime(2026, 7, 10, 11, 59, 0, DateTimeKind.Utc),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = VoiceCallState.Ended,
             AnsweredUtc = interaction.AnsweredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
         var agent = new AgentProfile
         {
             ItemId = "agent-1",
@@ -368,25 +355,22 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Transferring,
             AnsweredUtc = answeredUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Transferring);
         var session = new CallSession
         {
             ItemId = "session-1",
             InteractionId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            State = VoiceCallState.Transferred,
             AnsweredUtc = answeredUtc,
-        };
+        }.RestorePersistedState(VoiceCallState.Transferred);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
             ReservationId = "res-1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
@@ -436,20 +420,18 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Ended,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
             ReservationId = "res-2",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
         var reservations = new List<ActivityReservation>
         {
-            new() { ItemId = "res-1", AgentId = "agent-1", ActivityItemId = "act1", Status = ReservationStatus.Pending },
-            new() { ItemId = "res-2", AgentId = "agent-1", ActivityItemId = "act1", Status = ReservationStatus.Accepted },
-            new() { ItemId = "res-3", AgentId = "agent-1", ActivityItemId = "act1", Status = ReservationStatus.Accepted },
+            new ActivityReservation { ItemId = "res-1", AgentId = "agent-1", ActivityItemId = "act1" }.RestorePersistedStatus(ReservationStatus.Pending),
+            new ActivityReservation { ItemId = "res-2", AgentId = "agent-1", ActivityItemId = "act1" }.RestorePersistedStatus(ReservationStatus.Accepted),
+            new ActivityReservation { ItemId = "res-3", AgentId = "agent-1", ActivityItemId = "act1" }.RestorePersistedStatus(ReservationStatus.Accepted),
         };
         var agent = new AgentProfile
         {
@@ -527,23 +509,20 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             ItemId = "int1",
             ActivityItemId = "act1",
             AgentId = "agent-1",
-            Status = InteractionStatus.Ended,
             AnsweredUtc = answeredUtc,
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
         var queueItem = new QueueItem
         {
             ItemId = "queue-1",
             ActivityItemId = "act1",
             ReservationId = "res-1",
-            Status = QueueItemStatus.Assigned,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Assigned);
         var reservation = new ActivityReservation
         {
             ItemId = "res-1",
             AgentId = "agent-1",
             ActivityItemId = "act1",
-            Status = ReservationStatus.Accepted,
-        };
+        }.RestorePersistedStatus(ReservationStatus.Accepted);
         var agent = new AgentProfile
         {
             ItemId = "agent-1",

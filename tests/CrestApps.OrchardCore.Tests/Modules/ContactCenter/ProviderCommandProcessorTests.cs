@@ -899,7 +899,7 @@ public sealed class ProviderCommandProcessorTests
                 It.IsAny<CancellationToken>()))
             .Callback<ProviderCommand, ContactCenterVoiceProviderResult, CancellationToken>((cmd, res, _) =>
             {
-                interaction.Status = InteractionStatus.Ringing;
+                interaction.RestorePersistedStatus(InteractionStatus.Ringing);
                 interaction.ProviderName = string.IsNullOrWhiteSpace(res.ProviderName) ? cmd.ProviderName : res.ProviderName;
                 interaction.ProviderInteractionId = res.ProviderCallId;
                 interaction.StartedUtc = _now;
@@ -912,7 +912,7 @@ public sealed class ProviderCommandProcessorTests
                 It.IsAny<CancellationToken>()))
             .Callback(() =>
             {
-                interaction.Status = InteractionStatus.Failed;
+                interaction.RestorePersistedStatus(InteractionStatus.Failed);
                 activity.Status = ActivityStatus.Failed;
             })
             .Returns(Task.CompletedTask);

@@ -78,7 +78,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             if (interaction.Status != terminalStatus)
             {
                 var previousStatus = interaction.Status;
-                interaction.Status = terminalStatus;
+                interaction.TransitionTo(terminalStatus);
                 interaction.StartedUtc ??= currentSession.StartedUtc;
                 interaction.AnsweredUtc ??= currentSession.AnsweredUtc;
                 interaction.EndedUtc ??= currentSession.EndedUtc ?? _clock.UtcNow;

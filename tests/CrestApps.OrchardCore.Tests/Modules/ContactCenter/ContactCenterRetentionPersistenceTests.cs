@@ -267,18 +267,16 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "reservation-1",
                 ActivityItemId = "activity-1",
                 AgentId = "agent-1",
-                Status = ReservationStatus.Canceled,
                 ModifiedUtc = _nowUtc.AddDays(-40),
-            };
+            }.RestorePersistedStatus(ReservationStatus.Canceled);
 
             var unsettled = new ActivityReservation
             {
                 ItemId = "reservation-2",
                 ActivityItemId = "activity-2",
                 AgentId = "agent-1",
-                Status = ReservationStatus.Pending,
                 ExpiresUtc = _nowUtc.AddMinutes(1),
-            };
+            }.RestorePersistedStatus(ReservationStatus.Pending);
 
             await reservationManager.CreateAsync(settled, cancellationToken: TestContext.Current.CancellationToken);
             await reservationManager.CreateAsync(unsettled, cancellationToken: TestContext.Current.CancellationToken);
@@ -336,16 +334,15 @@ public sealed class ContactCenterRetentionPersistenceTests
     }
 
     private static QueueItem ExpiredQueueItem(string itemId)
-        => new()
+        => new QueueItem()
         {
             ItemId = itemId,
             QueueId = "queue-1",
             ActivityItemId = itemId,
-            Status = QueueItemStatus.Completed,
             Priority = InteractionPriority.Normal,
             EnqueuedUtc = _nowUtc.AddDays(-90),
             DequeuedUtc = _nowUtc.AddDays(-89),
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Completed);
 
     private static async Task SeedAsync(ISession session)
     {
@@ -358,10 +355,9 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "queue-live",
                 QueueId = "queue-1",
                 ActivityItemId = "queue-live",
-                Status = QueueItemStatus.Waiting,
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = _nowUtc.AddDays(-90),
-            },
+            }.RestorePersistedStatus(QueueItemStatus.Waiting),
             collection: ContactCenterConstants.CollectionName);
 
         await session.SaveAsync(
@@ -370,11 +366,10 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "queue-recent",
                 QueueId = "queue-1",
                 ActivityItemId = "queue-recent",
-                Status = QueueItemStatus.Completed,
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = _nowUtc.AddDays(-2),
                 DequeuedUtc = _nowUtc.AddDays(-1),
-            },
+            }.RestorePersistedStatus(QueueItemStatus.Completed),
             collection: ContactCenterConstants.CollectionName);
 
         await session.SaveAsync(
@@ -422,10 +417,9 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "interaction-expired",
                 Channel = InteractionChannel.Voice,
                 Direction = InteractionDirection.Inbound,
-                Status = InteractionStatus.Ended,
                 CreatedUtc = _nowUtc.AddDays(-95),
                 EndedUtc = _nowUtc.AddDays(-89),
-            },
+            }.RestorePersistedStatus(InteractionStatus.Ended),
             collection: ContactCenterConstants.CollectionName);
 
         // A conversation that started three months ago and has not ended is still live.
@@ -435,9 +429,8 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "interaction-live",
                 Channel = InteractionChannel.Voice,
                 Direction = InteractionDirection.Inbound,
-                Status = InteractionStatus.Connected,
                 CreatedUtc = _nowUtc.AddDays(-95),
-            },
+            }.RestorePersistedStatus(InteractionStatus.Connected),
             collection: ContactCenterConstants.CollectionName);
 
         await session.SaveAsync(
@@ -446,10 +439,9 @@ public sealed class ContactCenterRetentionPersistenceTests
                 ItemId = "interaction-recent",
                 Channel = InteractionChannel.Voice,
                 Direction = InteractionDirection.Inbound,
-                Status = InteractionStatus.Ended,
                 CreatedUtc = _nowUtc.AddDays(-3),
                 EndedUtc = _nowUtc.AddDays(-1),
-            },
+            }.RestorePersistedStatus(InteractionStatus.Ended),
             collection: ContactCenterConstants.CollectionName);
     }
 

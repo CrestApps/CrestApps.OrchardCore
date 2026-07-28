@@ -392,7 +392,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
             var queueItem = await queueItemManager.NewAsync(cancellationToken: cancellationToken);
             queueItem.QueueId = queue.ItemId;
             queueItem.ActivityItemId = "activity-search-independence";
-            queueItem.Status = QueueItemStatus.Waiting;
+            queueItem.RestorePersistedStatus(QueueItemStatus.Waiting);
             queueItem.Priority = InteractionPriority.Normal;
             queueItem.EnqueuedUtc = now;
             queueItem.QueueEnteredUtc = now;
@@ -465,7 +465,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
             var interaction = await interactionManager.NewAsync(cancellationToken: cancellationToken);
             interaction.Channel = InteractionChannel.Voice;
             interaction.Direction = InteractionDirection.Inbound;
-            interaction.Status = InteractionStatus.Ringing;
+            interaction.RestorePersistedStatus(InteractionStatus.Ringing);
             interaction.QueueId = queue.ItemId;
             interaction.ActivityItemId = queueItem.ActivityItemId;
             interaction.ProviderName = profile.ProviderProfile;

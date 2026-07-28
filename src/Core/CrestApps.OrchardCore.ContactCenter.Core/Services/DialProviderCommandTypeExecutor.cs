@@ -169,7 +169,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
             if (interaction is not null)
             {
-                interaction.Status = InteractionStatus.Ringing;
+                interaction.TransitionTo(InteractionStatus.Ringing);
                 interaction.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
                     ? command.ProviderName
                     : result.ProviderName;
@@ -193,7 +193,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             ownedSession.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
                 ? command.ProviderName
                 : result.ProviderName;
-            ownedSession.State = VoiceCallState.Ringing;
+            ownedSession.TransitionTo(VoiceCallState.Ringing);
 
             await _callSessionManager.UpdateAsync(ownedSession, cancellationToken: cancellationToken);
         }
@@ -208,9 +208,14 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         {
             var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
 
-            if (interaction is not null)
+            // A dial can fail because the interaction already ended: an outbound attempt is cancelled while the
+            // provider request is in flight, or the compensation for an unproven dial arrives after the record
+            // was closed. A settled interaction already carries its real outcome, and this projection is what
+            // lets a compensating command finish, so refusing to overwrite that outcome matters more than
+            // recording a second failure.
+            if (interaction is not null && !interaction.IsSettled)
             {
-                interaction.Status = InteractionStatus.Failed;
+                interaction.TransitionTo(InteractionStatus.Failed);
                 interaction.EndedUtc = _clock.UtcNow;
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
@@ -317,7 +322,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         session.QueueId = request.QueueId;
         session.FromAddress = request.CallerId;
         session.ToAddress = request.Destination;
-        session.State = VoiceCallState.Planned;
+        session.TransitionTo(VoiceCallState.Planned);
         session.DurableCommandId = command.CommandId;
         session.CreatedUtc = now;
 

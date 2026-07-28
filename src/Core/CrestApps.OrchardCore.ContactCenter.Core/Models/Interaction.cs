@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.Core;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -34,9 +36,12 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public InteractionDirection Direction { get; set; }
 
     /// <summary>
-    /// Gets or sets the communication-session status of the interaction.
+    /// Gets the communication-session status of the interaction. It is changed only through
+    /// <see cref="TransitionTo(InteractionStatus)"/>, so a status the lifecycle does not admit cannot be
+    /// recorded by any caller.
     /// </summary>
-    public InteractionStatus Status { get; set; }
+    [JsonInclude]
+    public InteractionStatus Status { get; private set; }
 
     /// <summary>
     /// Gets or sets the identifier of the CRM activity this communication event belongs to.
@@ -196,4 +201,103 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// Gets or sets the participants involved in the interaction.
     /// </summary>
     public IList<InteractionParticipant> Participants { get; set; } = [];
+
+    /// <summary>
+    /// Moves the interaction to the specified communication-session status.
+    /// </summary>
+    /// <param name="status">The status to move to.</param>
+    /// <exception cref="InvalidStateTransitionException">The interaction cannot reach the status from the one it is in.</exception>
+    public void TransitionTo(InteractionStatus status)
+    {
+        if (!InteractionLifecycle.CanTransition(Status, status))
+        {
+            throw new InvalidStateTransitionException(nameof(Interaction), Status, status);
+        }
+
+        Status = status;
+    }
+
+    /// <summary>
+    /// Restores a communication-session status that was decided elsewhere, without consulting the lifecycle.
+    /// </summary>
+    /// <param name="status">The status to restore.</param>
+    /// <returns>The same interaction, so it can be used at the end of an object initializer.</returns>
+    /// <remarks>
+    /// This bypasses every transition rule and exists only so a test can put an interaction directly into the
+    /// state it wants to exercise. Production code must never call it: <c>AggregateLifecycleArchitectureTests</c>
+    /// fails the build if any file under <c>src/</c> does, so the bypass cannot quietly become a shortcut.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public Interaction RestorePersistedStatus(InteractionStatus status)
+    {
+        Status = status;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Mirrors the communication-session status implied by the authoritative call session.
+    /// </summary>
+    /// <param name="status">The status implied by the call session's current state.</param>
+    /// <remarks>
+    /// For a provider-backed voice interaction the call session is the authority on what the call is doing, and
+    /// the interaction's status is a projection of it rather than an independent decision. Ordering for that
+    /// stream is enforced upstream by <c>VoiceStreamOrdering</c>, which rejects deliveries that would move the
+    /// call backwards; re-deciding the same question here with a second, narrower rule would let the two records
+    /// disagree, which is the divergence <c>CallStateMachinePropertyTests</c> exists to catch. The lifecycle
+    /// table therefore governs the paths where this system decides the next status, not the ones where it is
+    /// reporting what a provider already did.
+    /// </remarks>
+    public void MirrorSessionStatus(InteractionStatus status)
+    {
+        // Mirroring reports what the provider already did, so it does not consult the table. It still refuses to
+        // bring a settled interaction back to life: the interaction can settle on a path the call session never
+        // sees, such as an offer released after the customer abandoned, and a late provider frame that reopened
+        // it would put a finished conversation back into the agent's live work.
+        if (InteractionLifecycle.IsSettled(Status) && !InteractionLifecycle.IsSettled(status))
+        {
+            return;
+        }
+
+        Status = status;
+    }
+
+    /// <summary>
+    /// Returns the interaction to routing so it can be offered again, clearing the agent it was offered to.
+    /// </summary>
+    /// <exception cref="InvalidStateTransitionException">The interaction's communication session has already settled.</exception>
+    /// <remarks>
+    /// This names the one thing several call sites were each spelling out for themselves. It moves along the
+    /// declared backwards edge like any other transition, so it is refused once the session has settled: a
+    /// settled status has no outgoing edge, and re-offering a call that is over creates work for a conversation
+    /// nobody can join.
+    /// </remarks>
+    public void Requeue()
+    {
+        TransitionTo(InteractionStatus.Created);
+        AgentId = null;
+    }
+
+    /// <summary>
+    /// Returns the interaction to the alerting state so it can be offered to another agent.
+    /// </summary>
+    /// <exception cref="InvalidStateTransitionException">The interaction's communication session has already settled.</exception>
+    public void Reoffer()
+    {
+        TransitionTo(InteractionStatus.Ringing);
+    }
+
+    /// <summary>
+    /// Determines whether the interaction can move to the specified communication-session status.
+    /// </summary>
+    /// <param name="status">The status to test.</param>
+    /// <returns><see langword="true"/> when the transition is admitted; otherwise <see langword="false"/>.</returns>
+    public bool CanTransitionTo(InteractionStatus status)
+        => InteractionLifecycle.CanTransition(Status, status);
+
+    /// <summary>
+    /// Gets a value indicating whether the interaction's communication session has reached an outcome.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsSettled => InteractionLifecycle.IsSettled(Status);
 }

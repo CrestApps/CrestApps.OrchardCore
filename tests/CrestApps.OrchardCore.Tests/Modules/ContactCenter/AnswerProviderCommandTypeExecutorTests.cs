@@ -229,7 +229,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         CallTopologyProjector.EndRemainingLegs(harness.Session, endedUtc);
         CallTopologyProjector.DestroyBridge(harness.Session, endedUtc);
 
-        harness.Session.State = VoiceCallState.Ended;
+        harness.Session.RestorePersistedState(VoiceCallState.Ended);
 
         var executor = harness.CreateExecutor();
         var command = CreateCommand();
@@ -273,6 +273,32 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Equal("reservation-1", harness.PublishedEvents[0].AggregateId);
         Assert.Equal("queue-1", harness.PublishedEvents[0].GetData<OfferDeclinedEventData>().QueueId);
         Assert.Equal(ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(command.CommandId, ContactCenterConstants.Events.OfferRequeued), harness.PublishedEvents[0].IdempotencyKey);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProjectFailureAsync_WhenTheCallAlreadyEnded_CompletesWithoutOverwritingTheRecordedEnding(bool reofferOnFailure)
+    {
+        // Arrange
+        // A caller hanging up while the agent is being connected is the most likely reason an answer failed, so
+        // this projection routinely runs against a call that is already over. It is also what lets a compensating
+        // command finish: if it threw, the command would stay compensating forever and the failure would be
+        // swallowed by the dispatcher's catch, so the poisoning would be silent.
+        var harness = new Harness();
+        harness.SetupActiveState();
+        harness.SetupPublisher();
+        harness.Interaction.RestorePersistedStatus(InteractionStatus.Ended);
+        harness.Session.RestorePersistedState(VoiceCallState.Ended);
+        var executor = harness.CreateExecutor();
+        var command = CreateCommand(reofferOnFailure: reofferOnFailure);
+
+        // Act
+        await executor.ProjectFailureAsync(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, harness.Interaction.Status);
+        Assert.Equal(VoiceCallState.Ended, harness.Session.State);
     }
 
     [Fact]
@@ -418,7 +444,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public void SetupActiveState()
         {
-            Interaction.Status = InteractionStatus.Ringing;
+            Interaction.RestorePersistedStatus(InteractionStatus.Ringing);
             Interaction.StartedUtc = null;
             Interaction.AnsweredUtc = null;
             Interaction.EndedUtc = null;
@@ -428,7 +454,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
             Interaction.ProviderInteractionId = "call-1";
             Interaction.TechnicalMetadata.Clear();
 
-            Session.State = VoiceCallState.Ringing;
+            Session.RestorePersistedState(VoiceCallState.Ringing);
             Session.StartedUtc = null;
             Session.AnsweredUtc = null;
             Session.EndedUtc = null;
@@ -458,8 +484,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         public void SetupDispatchableState(InteractionStatus interactionStatus, VoiceCallState sessionState)
         {
             SetupActiveState();
-            Interaction.Status = interactionStatus;
-            Session.State = sessionState;
+            Interaction.RestorePersistedStatus(interactionStatus);
+            Session.RestorePersistedState(sessionState);
         }
 
         public void SetupProviderResult(ContactCenterVoiceProviderResult result)

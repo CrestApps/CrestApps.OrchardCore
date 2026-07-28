@@ -172,8 +172,7 @@ public sealed class ContactCenterRealTimeEventHandlerTests
                 ItemId = "r1",
                 AgentId = "a1",
                 QueueId = "q1",
-                Status = ReservationStatus.Accepted,
-            });
+            }.RestorePersistedStatus(ReservationStatus.Accepted));
 
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))

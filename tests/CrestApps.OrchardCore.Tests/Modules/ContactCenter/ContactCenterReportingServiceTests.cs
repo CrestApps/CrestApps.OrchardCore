@@ -662,11 +662,10 @@ public sealed class ContactCenterReportingServiceTests
             ItemId = Guid.NewGuid().ToString("n"),
             Channel = InteractionChannel.Voice,
             Direction = direction,
-            Status = status,
             CreatedUtc = created,
             AnsweredUtc = answeredAfter.HasValue ? created.AddSeconds(answeredAfter.Value) : null,
             EndedUtc = endedAfter.HasValue ? created.AddSeconds(endedAfter.Value) : null,
-        };
+        }.RestorePersistedStatus(status);
     }
 
     private static Interaction AgentInteraction(string agentId, InteractionDirection direction, int? answeredAfter, int? endedAfter)

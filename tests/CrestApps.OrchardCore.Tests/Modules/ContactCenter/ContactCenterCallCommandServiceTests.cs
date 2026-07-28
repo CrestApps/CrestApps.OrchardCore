@@ -111,7 +111,7 @@ public sealed class ContactCenterCallCommandServiceTests
         var harness = new Harness();
         harness.SetupPendingReservation();
         harness.SetupInteraction();
-        harness.Interaction.Status = terminalStatus;
+        harness.Interaction.RestorePersistedStatus(terminalStatus);
 
         var service = harness.CreateService();
 
@@ -509,8 +509,7 @@ public sealed class ContactCenterCallCommandServiceTests
             AgentId = "a1",
             ActivityItemId = "act1",
             QueueId = "q1",
-            Status = ReservationStatus.Pending,
-        };
+        }.RestorePersistedStatus(ReservationStatus.Pending);
     }
 
     private static AgentProfile CreateAgentProfile()

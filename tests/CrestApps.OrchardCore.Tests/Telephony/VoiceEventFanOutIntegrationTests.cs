@@ -292,10 +292,9 @@ public sealed class VoiceEventFanOutIntegrationTests
                 ActivityItemId = "activity-1",
                 ProviderName = _providerName,
                 ProviderInteractionId = _providerCallId,
-                Status = InteractionStatus.Created,
                 Direction = InteractionDirection.Inbound,
                 AgentId = "agent-1",
-            };
+            }.RestorePersistedStatus(InteractionStatus.Created);
 
             CallSession session = null;
 

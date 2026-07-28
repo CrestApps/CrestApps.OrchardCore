@@ -295,6 +295,23 @@ public sealed class DialProviderCommandTypeExecutorTests
     }
 
     [Fact]
+    public async Task ProjectFailureAsync_WhenTheInteractionAlreadyEnded_CompletesWithoutOverwritingTheRecordedEnding()
+    {
+        // Arrange
+        // An outbound attempt can be cancelled while the dial request is in flight, and the compensation for an
+        // unproven dial arrives after the record was closed. This projection is what lets that compensating
+        // command finish, so it has to tolerate the ending it finds rather than replace it.
+        var harness = CreateHarness();
+        harness.Interaction.RestorePersistedStatus(InteractionStatus.Ended);
+
+        // Act
+        await harness.Executor.ProjectFailureAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, harness.Interaction.Status);
+    }
+
+    [Fact]
     public async Task ProjectFailureAsync_SetsInteractionEndedUtc()
     {
         // Arrange
@@ -360,7 +377,7 @@ public sealed class DialProviderCommandTypeExecutorTests
     public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_HydratesProviderCallIdFromResult()
     {
         // Arrange
-        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = VoiceCallState.Planned };
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1" }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult
         {
@@ -380,7 +397,7 @@ public sealed class DialProviderCommandTypeExecutorTests
     public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsSessionStateToRinging()
     {
         // Arrange
-        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = VoiceCallState.Planned };
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1" }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1" };
 
@@ -395,7 +412,7 @@ public sealed class DialProviderCommandTypeExecutorTests
     public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsProviderNameFromResult()
     {
         // Arrange
-        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = VoiceCallState.Planned };
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1" }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult
         {
@@ -415,7 +432,7 @@ public sealed class DialProviderCommandTypeExecutorTests
     public async Task ProjectSuccessAsync_WhenSessionHasNoProviderCallId_SetsProviderNameFromCommandWhenResultProviderNameIsEmpty()
     {
         // Arrange
-        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = VoiceCallState.Planned };
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1" }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult
         {
@@ -439,9 +456,8 @@ public sealed class DialProviderCommandTypeExecutorTests
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
-            State = VoiceCallState.Ringing,
             ProviderCallId = "existing-call-id",
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "new-call-id" };
 
@@ -463,9 +479,8 @@ public sealed class DialProviderCommandTypeExecutorTests
         {
             ItemId = "session-1",
             InteractionId = "interaction-1",
-            State = VoiceCallState.Ringing,
             ProviderCallId = "call-old",
-        };
+        }.RestorePersistedState(VoiceCallState.Ringing);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult
         {
@@ -496,7 +511,7 @@ public sealed class DialProviderCommandTypeExecutorTests
     public async Task ProjectSuccessAsync_WhenResultHasNoProviderCallId_DoesNotUpdateSession()
     {
         // Arrange
-        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1", State = VoiceCallState.Planned };
+        var session = new CallSession { ItemId = "session-1", InteractionId = "interaction-1" }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = string.Empty };
 
@@ -532,8 +547,7 @@ public sealed class DialProviderCommandTypeExecutorTests
             ItemId = "session-1",
             InteractionId = "interaction-1",
             AgentId = agentId,
-            State = VoiceCallState.Planned,
-        };
+        }.RestorePersistedState(VoiceCallState.Planned);
         var harness = CreateHarness(callSession: session);
         var result = new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-99", ProviderName = "provider" };
 

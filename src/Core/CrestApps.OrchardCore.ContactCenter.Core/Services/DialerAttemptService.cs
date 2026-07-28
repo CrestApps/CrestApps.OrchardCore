@@ -127,7 +127,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         var interaction = await _interactionManager.NewAsync(cancellationToken: cancellationToken);
         interaction.Channel = InteractionChannel.Voice;
         interaction.Direction = InteractionDirection.Outbound;
-        interaction.Status = InteractionStatus.Created;
+        interaction.TransitionTo(InteractionStatus.Created);
         interaction.ActivityItemId = activity.ItemId;
         interaction.QueueId = profile.QueueId;
         interaction.AgentId = reservation.AgentId;

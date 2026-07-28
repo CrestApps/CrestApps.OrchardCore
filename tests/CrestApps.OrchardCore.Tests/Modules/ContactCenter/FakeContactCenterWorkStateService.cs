@@ -130,7 +130,6 @@ internal sealed class FakeContactCenterWorkStateService : IContactCenterWorkStat
         {
             ItemId = "work-state-" + activity.ItemId,
             ActivityItemId = activity.ItemId,
-            AssignmentStatus = activity.AssignmentStatus,
             ReservationId = activity.ReservationId,
             ReservedById = activity.ReservedById,
             ReservedByUsername = activity.ReservedByUsername,
@@ -140,6 +139,6 @@ internal sealed class FakeContactCenterWorkStateService : IContactCenterWorkStat
             AssignedToUsername = activity.AssignedToUsername,
             AssignedToUtc = activity.AssignedToUtc,
             Attempts = activity.Attempts,
-        };
+        }.RestorePersistedAssignmentStatus(activity.AssignmentStatus);
     }
 }

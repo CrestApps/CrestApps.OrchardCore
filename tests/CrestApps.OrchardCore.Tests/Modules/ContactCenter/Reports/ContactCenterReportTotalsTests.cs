@@ -157,12 +157,11 @@ public sealed class ContactCenterReportTotalsTests
         return new Interaction
         {
             Direction = InteractionDirection.Inbound,
-            Status = InteractionStatus.Ended,
             CreatedUtc = startedUtc,
             AnsweredUtc = answeredAfterSeconds.HasValue
                 ? startedUtc.AddSeconds(answeredAfterSeconds.Value)
                 : null,
             EndedUtc = startedUtc.AddSeconds(endedAfterSeconds),
-        };
+        }.RestorePersistedStatus(InteractionStatus.Ended);
     }
 }

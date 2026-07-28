@@ -44,7 +44,7 @@ public static class ContactCenterWorkStateProjector
         ArgumentNullException.ThrowIfNull(workState);
         ArgumentNullException.ThrowIfNull(activity);
 
-        workState.AssignmentStatus = activity.AssignmentStatus;
+        workState.AdoptActivityAssignmentStatus(activity.AssignmentStatus);
         workState.ReservationId = activity.ReservationId;
         workState.ReservedById = activity.ReservedById;
         workState.ReservedByUsername = activity.ReservedByUsername;

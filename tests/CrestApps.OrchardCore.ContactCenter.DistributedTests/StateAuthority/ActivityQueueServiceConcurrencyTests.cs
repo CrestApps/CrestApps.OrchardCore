@@ -82,9 +82,8 @@ public sealed class ActivityQueueServiceConcurrencyTests
             ItemId = "queue-item-1",
             ActivityItemId = ActivityItemId,
             QueueId = QueueId,
-            Status = QueueItemStatus.Waiting,
             EnqueuedUtc = _now,
-        };
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var scopedService = Mock.Of<IActivityQueueService>(service =>
             service.EnqueueAsync(ActivityItemId, QueueId, null, It.IsAny<CancellationToken>()) == Task.FromResult(existing));

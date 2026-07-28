@@ -451,12 +451,18 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
 
         await _workStateService.MutateAsync(
             activity.ItemId,
-            workState => workState.AssignmentStatus = ActivityAssignmentStatus.Released,
+            workState => workState.TransitionTo(ActivityAssignmentStatus.Released),
             cancellationToken);
 
-        interaction.Status = providerCommand is null
-            ? interactionStatus
-            : InteractionStatus.Ringing;
+        if (providerCommand is null)
+        {
+            interaction.TransitionTo(interactionStatus);
+        }
+        else
+        {
+            interaction.Reoffer();
+        }
+
         interaction.EndedUtc = providerCommand is null
             ? endedUtc
             : null;
@@ -540,7 +546,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
                 continue;
             }
 
-            interaction.Status = InteractionStatus.Ringing;
+            interaction.Reoffer();
             interaction.AgentId = agent.ItemId;
             interaction.QueueId = reservation.QueueId;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
@@ -640,7 +646,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         // reconciled on its first write, instead of costing a second write to converge.
         var workState = await _workStateService.MutateAsync(
             activity.ItemId,
-            state => state.AssignmentStatus = ActivityAssignmentStatus.Available);
+            state => state.TransitionTo(ActivityAssignmentStatus.Available));
 
         if (workState is not null)
         {
@@ -662,7 +668,6 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         var interaction = await _interactionManager.NewAsync();
         interaction.Channel = InteractionChannel.Voice;
         interaction.Direction = InteractionDirection.Inbound;
-        interaction.Status = InteractionStatus.Created;
         interaction.ActivityItemId = activity.ItemId;
         interaction.ProviderName = inboundEvent.ProviderName;
         interaction.ProviderInteractionId = inboundEvent.ProviderCallId;

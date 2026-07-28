@@ -147,12 +147,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         if (interaction.Status != InteractionStatus.Connected)
         {
-            interaction.Status = InteractionStatus.Ringing;
+            interaction.TransitionTo(InteractionStatus.Ringing);
             interaction.StartedUtc ??= now;
         }
         else
         {
-            interaction.Status = InteractionStatus.Connected;
+            interaction.TransitionTo(InteractionStatus.Connected);
             interaction.StartedUtc ??= now;
             interaction.AnsweredUtc ??= now;
         }
@@ -319,7 +319,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             session.FromAddress = interaction.CustomerAddress;
             session.QueueId = reservation.QueueId;
             session.AgentId = reservation.AgentId;
-            session.State = state;
+            session.TransitionTo(state);
             session.CreatedUtc = now;
             session.StartedUtc = now;
 
@@ -335,7 +335,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return session;
         }
 
-        session.State = state;
+        session.TransitionTo(state);
         session.AgentId = reservation.AgentId;
         session.StartedUtc ??= now;
 

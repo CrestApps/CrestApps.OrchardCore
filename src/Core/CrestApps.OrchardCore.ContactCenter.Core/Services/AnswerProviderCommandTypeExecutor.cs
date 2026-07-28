@@ -274,21 +274,34 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
 
         if (interaction is not null)
         {
-            interaction.Status = request.ReofferOnFailure
-                ? InteractionStatus.Ringing
-                : InteractionStatus.Failed;
-            interaction.EndedUtc = request.ReofferOnFailure ? null : now;
+            // The caller can hang up while the agent is being connected, and this projection runs after that
+            // provider round-trip, so a gone call is the most likely reason the answer failed in the first
+            // place. A settled interaction has already recorded its outcome; overwriting it with the failure of
+            // an answer nobody was waiting for would replace the real ending with an artifact of the retry.
+            if (!interaction.IsSettled)
+            {
+                if (request.ReofferOnFailure)
+                {
+                    interaction.Reoffer();
+                }
+                else
+                {
+                    interaction.TransitionTo(InteractionStatus.Failed);
+                }
+
+                interaction.EndedUtc = request.ReofferOnFailure ? null : now;
+            }
 
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 
         var session = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
 
-        if (session is not null)
+        if (session is not null && !CallSessionLifecycle.IsTerminal(session.State))
         {
-            session.State = request.ReofferOnFailure
+            session.TransitionTo(request.ReofferOnFailure
                 ? VoiceCallState.Ringing
-                : VoiceCallState.Ended;
+                : VoiceCallState.Ended);
             session.EndedUtc = request.ReofferOnFailure ? null : now;
 
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
