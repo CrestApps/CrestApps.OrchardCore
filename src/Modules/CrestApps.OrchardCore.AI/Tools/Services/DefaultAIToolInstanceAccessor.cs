@@ -38,7 +38,8 @@ public sealed class DefaultAIToolInstanceAccessor : IAIToolInstanceAccessor
     public async Task<IList<AIToolInstance>> GetAccessibleInstancesAsync(CancellationToken cancellationToken = default)
     {
         var accessible = new List<AIToolInstance>();
-        var catalog = _instanceCatalogs.FirstOrDefault();
+        // The last registration wins when the container resolves a single catalog, so the same one is used here.
+        var catalog = _instanceCatalogs.LastOrDefault();
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (catalog is null || user is null)
