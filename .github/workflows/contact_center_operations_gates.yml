@@ -33,6 +33,10 @@ permissions:
 
 env:
   CONTACT_CENTER_REDIS_CONFIGURATION: localhost:6379,abortConnect=false
+  # The query-plan budget is asserted on the engine single-node production deployments run. SQLite's planner is
+  # not PostgreSQL's, so a statement that seeks an index on one can sequentially scan on the other, and the
+  # results are identical either way: only the plan on the deployed engine is evidence.
+  CONTACT_CENTER_POSTGRES_CONNECTION: Server=localhost;Port=5432;User Id=postgres;Password=postgres;Database=postgres;
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
@@ -48,6 +52,17 @@ jobs:
           - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10

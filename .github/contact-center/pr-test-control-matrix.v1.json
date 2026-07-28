@@ -1627,6 +1627,40 @@
         ]
       },
       "evidenceLocation": "ContactCenterRetentionCoverageTests, which reflects over every index and every policy to prove coverage, registration, settlement-time ageing, liveness guarding, the declared terminal-status sets, the governance floors and the settlement-column backfills; and ContactCenterRetentionPersistenceTests, which runs the real policies against a SQLite database and asserts on the survivors rather than on a deletion count, including that a tight budget starves no entity."
+    },
+    {
+      "id": "D015",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "W2.4",
+      "gate": "Reservation-path query-plan budget",
+      "invariant": "The statement routing runs before every offer — the per-agent count of live work — must be answered by seeking an index that constrains both the agent and the interaction status, on SQLite and on PostgreSQL, and must never read the interaction index table end to end. The statements measured are the ones the store executes: the hand-written statement is taken from the same builder and measured verbatim without rewriting its bound parameters, and the reservation queries the store issues through the query pipeline are captured from a recording connection, so a plan cannot be proven for a query nobody runs. The schema measured is built by the shipped migrations, so a plan cannot be proven for indexes nobody deploys. The hand-written statement must also execute successfully and return correct counts on PostgreSQL, because a plan budget cannot detect a statement that is a syntax error on the engine it targets. The declared status sets must partition InteractionStatus exactly, so a new status cannot silently drop out of \"occupying an agent\" and make a busy agent look idle.",
+      "testId": "CC-D015",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "redis-backplane-two-node",
+            "workflow": ".github/workflows/contact_center_operations_gates.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite",
+          "postgresql"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionQueryPlanBudgetTests.cs asserts the SQLite plan seeks IDX_InteractionIndex_ActiveByAgent as a covering index with both AgentId and Status as seek constraints for the hand-written statement and for the pipeline-generated reservation queries captured through RecordingConnectionFactory, and that the declared status sets partition InteractionStatus; tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/QueryPlans/InteractionPostgresQueryPlanBudgetTests.cs asserts the same budget on PostgreSQL via EXPLAIN (FORMAT JSON) and separately executes InteractionStore.CountActiveByAgentIdsAsync against a real PostgreSQL service asserting its counts, enforced by the Contact Center Operations Gates workflow's postgres service; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AvailabilityStoreSharedDatabaseTests.cs proves the raw statement observes work written in the same uncommitted unit of work."
     }
   ]
 }

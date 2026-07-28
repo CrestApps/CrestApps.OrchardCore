@@ -124,6 +124,39 @@ public sealed class AvailabilityStoreSharedDatabaseTests
         }
     }
 
+    [Fact]
+    public async Task InteractionStore_CountActiveByAgentIds_SeesWorkWrittenInTheSameUncommittedUnitOfWork()
+    {
+        // The count is answered by a statement issued on the session's own transaction rather than through the
+        // document query pipeline, so it only sees what has actually reached the database. A caller that reserves
+        // an interaction and then asks for the agent's load in the same unit of work must not be told the agent
+        // is free: that is how an agent gets handed a second interaction they are already handling.
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-flush-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var agentId = "agent-uncommitted";
+
+        try
+        {
+            await using var session = store.CreateSession();
+            await SaveInteractionAsync(session, "reserved-in-flight", agentId, InteractionStatus.Ringing);
+
+            var interactionStore = new InteractionStore(session);
+
+            // Act
+            var counts = await interactionStore.CountActiveByAgentIdsAsync(
+                [agentId],
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(1, counts[agentId]);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
     private static async Task<IStore> CreateStoreAsync(string databasePath)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
@@ -148,9 +181,9 @@ public sealed class AvailabilityStoreSharedDatabaseTests
 
         await schemaBuilder.CreateMapIndexTableAsync<InteractionIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Channel", column => column.WithLength(50))
-            .Column<string>("Direction", column => column.WithLength(50))
-            .Column<string>("Status", column => column.WithLength(50))
+            .Column<InteractionChannel>("Channel")
+            .Column<InteractionDirection>("Direction")
+            .Column<InteractionStatus>("Status")
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("ProviderName", column => column.WithLength(128))
             .Column<string>("ProviderInteractionId", column => column.WithLength(128))

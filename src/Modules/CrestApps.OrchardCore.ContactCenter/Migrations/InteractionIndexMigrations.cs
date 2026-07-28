@@ -88,4 +88,24 @@ internal sealed class InteractionIndexMigrations : DataMigration
 
         return 3;
     }
+
+    /// <summary>
+    /// Adds the predicate-led index the reservation path reads. Routing asks how much live work an agent already
+    /// holds before every offer, and the existing composite leads with <c>DocumentId</c>, which serves join-back
+    /// and delete-by-document but answers nothing about an agent: without this index the question is answered by
+    /// scanning every interaction the contact center has ever recorded, on every routing decision.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table => table
+            .CreateIndex(
+                "IDX_InteractionIndex_ActiveByAgent",
+                "AgentId",
+                "Status",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 4;
+    }
 }

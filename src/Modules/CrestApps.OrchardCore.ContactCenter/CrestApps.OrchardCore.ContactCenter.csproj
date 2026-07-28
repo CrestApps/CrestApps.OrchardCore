@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.ContactCenter.DistributedTests" />
   </ItemGroup>
 
   <ItemGroup>

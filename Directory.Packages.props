@@ -34,6 +34,7 @@
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
+    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="5.4.7" />
     <PackageVersion Include="YesSql.Provider.Sqlite" Version="5.4.7" />
   </ItemGroup>
   <ItemGroup>

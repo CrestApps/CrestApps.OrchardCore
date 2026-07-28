@@ -1,10 +1,12 @@
 using CrestApps.Core.Models;
+using Dapper;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 using YesSql.Services;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -110,9 +112,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId &&
-                index.Status != InteractionStatus.Created &&
-                index.Status != InteractionStatus.Ended &&
-                index.Status != InteractionStatus.Failed,
+                index.Status.IsIn(InteractionStatuses.OccupyingAgent),
             collection: ContactCenterConstants.CollectionName)
             .CountAsync(cancellationToken);
     }
@@ -131,19 +131,36 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
 
+        var configuration = Session.Store.Configuration;
+
+        // Counting in the database rather than materializing one row per interaction: an agent's live work is
+        // read on every routing decision, so loading the rows only to group them in memory scales the cost of a
+        // decision with how busy the contact center is, which is exactly when the decision must be cheapest.
+        // The flush is what makes the raw statement safe: it runs on the session's own transaction, so it must
+        // first see the writes the caller has made in this unit of work but not yet committed.
+        await Session.FlushAsync(cancellationToken);
+        var transaction = await Session.BeginTransactionAsync(cancellationToken);
+
         foreach (var agentIdBatch in agentIds.Chunk(QueryBatchSize))
         {
-            var indexes = await Session.QueryIndex<InteractionIndex>(
-                index => index.AgentId.IsIn(agentIdBatch) &&
-                    index.Status != InteractionStatus.Created &&
-                    index.Status != InteractionStatus.Ended &&
-                    index.Status != InteractionStatus.Failed,
-                collection: ContactCenterConstants.CollectionName)
-                .ListAsync(cancellationToken);
+            var sql = InteractionQueries.BuildActiveCountByAgentSql(configuration, agentIdBatch.Length);
+            var parameters = new DynamicParameters();
 
-            foreach (var group in indexes.GroupBy(index => index.AgentId, StringComparer.Ordinal))
+            for (var index = 0; index < agentIdBatch.Length; index++)
             {
-                counts[group.Key] = group.Count();
+                parameters.Add(InteractionQueries.AgentIdParameterName(index), agentIdBatch[index]);
+            }
+
+            var rows = await transaction.Connection.QueryAsync<AgentInteractionCount>(
+                new CommandDefinition(
+                    sql,
+                    parameters,
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+            foreach (var row in rows)
+            {
+                counts[row.AgentId] = row.ActiveCount;
             }
         }
 
@@ -157,9 +174,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId &&
-                index.Status != InteractionStatus.Created &&
-                index.Status != InteractionStatus.Ended &&
-                index.Status != InteractionStatus.Failed,
+                index.Status.IsIn(InteractionStatuses.OccupyingAgent),
             collection: ContactCenterConstants.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
@@ -200,8 +215,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
 
         return (await Session.Query<Interaction, InteractionIndex>(
-            index => index.Status != InteractionStatus.Ended &&
-                index.Status != InteractionStatus.Failed,
+            index => index.Status.IsIn(InteractionStatuses.Unsettled),
             collection: ContactCenterConstants.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
             .OrderBy(index => index.CreatedUtc)
@@ -221,12 +235,18 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.ProviderName == providerName &&
-                index.Status != InteractionStatus.Ended &&
-                index.Status != InteractionStatus.Failed,
+                index.Status.IsIn(InteractionStatuses.Unsettled),
             collection: ContactCenterConstants.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
             .OrderBy(index => index.CreatedUtc)
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();
+    }
+
+    private sealed class AgentInteractionCount
+    {
+        public string AgentId { get; set; }
+
+        public int ActiveCount { get; set; }
     }
 }

@@ -467,6 +467,22 @@ Which data sets belong to which governance category, and which count as operator
 
 Reset is a preview-lifecycle tool, not a retention mechanism. Ordinary data minimization is handled by the retention windows and per-entity governance described above.
 
+## Query-plan budgets
+
+Retention bounds how large a table becomes. It does not bound how much of that table a query reads, and the two failures look nothing alike: a table that grows without limit eventually fills a disk and announces itself, while a query that reads a whole table returns exactly the right answer every time and simply gets slower in proportion to how much history the contact center has. Nothing in a functional test can see the difference, so the plan itself has to be asserted.
+
+The statement under budget is the one routing runs before every offer: how much live work each candidate agent is already holding. Three things make it cheap, and each is enforced.
+
+**The predicate has to be answerable from an index.** Asking for the interactions that are *not* finished — a chain of inequalities — cannot be satisfied by an index on the status column, because an index orders values and an inequality does not name the ones it wants. The statuses that occupy an agent are therefore declared as a set and tested with `IN`. Because that set is inclusive, a status added to the enum and not classified would silently fall out of it, an agent holding work in the new status would look idle, and they would be handed more: a build gate requires the declared sets to partition `InteractionStatus` exactly, so adding a status forces a decision about it.
+
+**The index has to lead with the predicate.** The interaction index already carried a composite index leading with `DocumentId`, which is the YesSql join key and serves join-back and delete-by-document, but answers nothing about an agent. `IDX_InteractionIndex_ActiveByAgent (AgentId, Status, DocumentId)` is added alongside it rather than replacing anything, and it covers the count outright, so the number comes from the index without touching the table at all.
+
+**The count has to happen in the database.** Loading one row per interaction and grouping them in memory makes the cost of a routing decision scale with how busy the contact center is, which is precisely when a routing decision must be cheapest. The count is a SQL `GROUP BY`, issued on the calling session's own transaction so that a caller who reserves an interaction and then asks for that agent's load in the same unit of work is not told the agent is free.
+
+**How the budget is enforced.** Two gates run `EXPLAIN` against the statement — read from the same builder the store executes, so a plan cannot be proven for a query nobody runs — against a schema built by the shipped migrations, so it cannot be proven for indexes nobody deploys, and against enough seeded rows for a planner to have a real choice, since a planner reads a small table end to end because doing so is genuinely cheaper. The SQLite gate runs on every build and requires the plan to seek the covering index with both the agent and the status as seek constraints, rather than seeking by agent and then testing the status row by row. The PostgreSQL gate runs in the operations-gates workflow against a real PostgreSQL service and requires no sequential scan of the interaction index table. Neither gate rewrites the statement before measuring it, and the PostgreSQL job additionally executes the store method and asserts its counts, so a statement that plans well but cannot run is not mistaken for a passing budget. Reservation itself counts live work through the query pipeline rather than the hand-written statement, so a recording connection captures the SQL the pipeline emits for those queries and holds them to the same budget.
+
+Both are needed, because the planners disagree and the results do not. PostgreSQL will choose to read a table end to end where SQLite seeks, so only the plan on the engine a deployment actually runs is evidence for that deployment.
+
 ## Upgrade and migration safety
 
 Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:
