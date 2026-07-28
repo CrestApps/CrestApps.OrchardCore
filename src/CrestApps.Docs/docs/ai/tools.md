@@ -29,6 +29,8 @@ Use this catalog to see which Orchard feature makes each AI function available a
 
 Tools marked as hidden in the shared Core registry are not shown in Orchard Core capability pickers such as AI Profile, AI Profile Template, Chat Interaction, workflow-task, or post-session tool selectors. Hidden tools are reserved for internal orchestration paths such as system agents that reference them explicitly by name.
 
+This catalog only lists functions registered in code. Functions created by administrators from a tool instance source are not listed here because they are tenant data rather than code registrations. See [AI Tool Instances](tool-instances) for that surface.
+
 ### System tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent`

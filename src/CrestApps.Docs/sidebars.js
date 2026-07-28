@@ -23,6 +23,7 @@ const sidebars = {
                 'ai/copilot',
                 'ai/claude',
                 'ai/agent',
+                'ai/tool-instances',
                 'ai/prompt-templates',
                 'ai/profile-templates',
                 'ai/memory',

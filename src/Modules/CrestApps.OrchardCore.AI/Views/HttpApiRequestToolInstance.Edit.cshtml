@@ -1,0 +1,216 @@
+@using CrestApps.Core.AI.Tooling.Instances
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model HttpApiRequestToolInstanceViewModel
+
+@{
+    var authFieldsId = Html.IdFor(m => m.AuthenticationType) + "-fields";
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" class="form-control" placeholder="https://api.example.com/v1/orders" />
+        <span asp-validation-for="BaseUrl" class="text-danger"></span>
+        <span class="hint">@T["The absolute URL the request targets. The AI model may append a relative path when that is allowed below."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="HttpMethod" class="ocat-label">@T["HTTP method"]</label>
+    <div class="ocat-end">
+        <select asp-for="HttpMethod" asp-items="Model.HttpMethods" class="form-select"></select>
+        <span class="hint">@T["The HTTP method used to issue the request."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TimeoutSeconds" class="ocat-label">@T["Timeout"]</label>
+    <div class="ocat-end">
+        <input asp-for="TimeoutSeconds" type="number" min="1" class="form-control" />
+        <span asp-validation-for="TimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["The per-request timeout in seconds. Leave it empty to use the default timeout."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultHeaders" class="ocat-label">@T["Headers"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DefaultHeaders" class="form-control" rows="4" placeholder='{ "Accept": "application/json" }'></textarea>
+        <span asp-validation-for="DefaultHeaders" class="text-danger"></span>
+        <span class="hint">@T["Static headers always added to the request, expressed as a JSON object of header names and values."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Model provided values"]</div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="AllowModelProvidedPath" class="form-check-input" type="checkbox" />
+            <label asp-for="AllowModelProvidedPath" class="form-check-label">@T["Allow the model to provide a relative path"]</label>
+        </div>
+        <div class="form-check">
+            <input asp-for="AllowModelProvidedQuery" class="form-check-input" type="checkbox" />
+            <label asp-for="AllowModelProvidedQuery" class="form-check-label">@T["Allow the model to provide query string parameters"]</label>
+        </div>
+        <div class="form-check">
+            <input asp-for="AllowModelProvidedBody" class="form-check-input" type="checkbox" />
+            <label asp-for="AllowModelProvidedBody" class="form-check-label">@T["Allow the model to provide a request body"]</label>
+        </div>
+        <span class="hint">@T["Anything the model is allowed to provide is chosen by the model at invocation time. Disable what this instance should not expose."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+    <div class="ocat-end">
+        <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select" data-auth-selector="@authFieldsId"></select>
+        <span class="hint">@T["The authentication strategy applied to every request issued by this instance."]</span>
+    </div>
+</div>
+
+<div id="@authFieldsId">
+    <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.ApiKey)">
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeyHeaderName" class="ocat-label">@T["API key header"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiKeyHeaderName" class="form-control" />
+                <span class="hint">@T["The header the API key is sent in."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+            <div class="ocat-end">
+                <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="ApiKey" class="text-danger"></span>
+                <span class="hint">
+                    @if (Model.HasApiKey)
+                    {
+                        @T["An API key is already stored. Leave this field empty to keep it."]
+                    }
+                    else
+                    {
+                        @T["The API key sent with every request. It is encrypted before it is stored."]
+                    }
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.Bearer)">
+        <div class="ocat-wrapper">
+            <label asp-for="BearerToken" class="ocat-label">@T["Bearer token"]</label>
+            <div class="ocat-end">
+                <input asp-for="BearerToken" type="password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="BearerToken" class="text-danger"></span>
+                <span class="hint">
+                    @if (Model.HasBearerToken)
+                    {
+                        @T["A bearer token is already stored. Leave this field empty to keep it."]
+                    }
+                    else
+                    {
+                        @T["The token sent in the Authorization header. It is encrypted before it is stored."]
+                    }
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.Basic) @nameof(HttpApiRequestAuthenticationType.OAuth2)">
+        <div class="ocat-wrapper">
+            <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+            <div class="ocat-end">
+                <input asp-for="Username" class="form-control" autocomplete="off" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+                <span class="hint">@T["The username used for basic authentication, or the resource owner username for the OAuth 2.0 password grant."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+            <div class="ocat-end">
+                <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+                <span class="hint">
+                    @if (Model.HasPassword)
+                    {
+                        @T["A password is already stored. Leave this field empty to keep it."]
+                    }
+                    else
+                    {
+                        @T["The password is encrypted before it is stored."]
+                    }
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-fields" data-auth-type="@nameof(HttpApiRequestAuthenticationType.OAuth2)">
+        <div class="ocat-wrapper">
+            <label asp-for="TokenEndpoint" class="ocat-label">@T["Token endpoint"]</label>
+            <div class="ocat-end">
+                <input asp-for="TokenEndpoint" class="form-control" placeholder="https://login.example.com/oauth2/token" />
+                <span asp-validation-for="TokenEndpoint" class="text-danger"></span>
+                <span class="hint">@T["The endpoint access tokens are requested from."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ClientId" class="ocat-label">@T["Client id"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientId" class="form-control" autocomplete="off" />
+                <span asp-validation-for="ClientId" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ClientSecret" class="ocat-label">@T["Client secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="ClientSecret" type="password" class="form-control" autocomplete="new-password" />
+                <span class="hint">
+                    @if (Model.HasClientSecret)
+                    {
+                        @T["A client secret is already stored. Leave this field empty to keep it."]
+                    }
+                    else
+                    {
+                        @T["The client secret is encrypted before it is stored."]
+                    }
+                </span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Scope" class="ocat-label">@T["Scope"]</label>
+            <div class="ocat-end">
+                <input asp-for="Scope" class="form-control" />
+                <span class="hint">@T["The optional scope requested when acquiring an access token."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const selector = document.querySelector('[data-auth-selector="@authFieldsId"]');
+        const container = document.getElementById('@authFieldsId');
+
+        if (!selector || !container) {
+            return;
+        }
+
+        function toggleAuthFields() {
+            const selected = selector.value;
+
+            container.querySelectorAll('.auth-fields').forEach(group => {
+                const types = (group.dataset.authType || '').split(' ');
+                group.classList.toggle('d-none', types.indexOf(selected) === -1);
+            });
+        }
+
+        selector.addEventListener('change', toggleAuthFields);
+        toggleAuthFields();
+    });
+</script>
