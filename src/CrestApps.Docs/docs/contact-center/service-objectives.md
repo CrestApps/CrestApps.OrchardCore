@@ -35,7 +35,7 @@ Provider-side ringing, carrier setup, and customer answer time are measured sepa
 - Relational database commands: 100 ms p95 and 3-second timeout.
 - Redis operations: 25 ms p95 and 1-second timeout.
 - Provider commands: 2-second p95 application observation and 10-second bounded timeout before durable `OutcomeUnknown` handling.
-- Provider webhook request bodies: maximum 1 MiB before authentication or durable acceptance.
+- Provider webhook request bodies: maximum 1 MiB before authentication or durable acceptance, enforced against the bytes that arrive rather than the length the caller declares, and refused as they arrive rather than after the whole body has been held in memory.
 
 Retries must be bounded, jittered, idempotent, and included in the caller's end-to-end deadline. A dependency timeout cannot be converted into success-shaped state.
 

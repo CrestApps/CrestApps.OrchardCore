@@ -54,6 +54,56 @@ public sealed class ProviderVoiceWebhookEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleAsync_WhenChunkedPayloadExceedsLimit_IsRefusedWithoutBufferingTheWholeBody()
+    {
+        // Arrange
+        var processor = new Mock<IProviderVoiceWebhookProcessor>();
+        var body = new EndlessStream();
+        var httpContext = new DefaultHttpContext();
+
+        // A caller that wants to send more than it is allowed to simply omits the content length.
+        httpContext.Request.Body = body;
+
+        // Act
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, _ingressLimiter, _workManager, httpContext);
+
+        // Assert
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, statusResult.StatusCode);
+        Assert.True(
+            body.BytesProduced < ProviderVoiceWebhookEndpoint.MaximumRequestBodySizeBytes * 2,
+            $"The endpoint read {body.BytesProduced} bytes of a body it is not willing to accept.");
+
+        processor.Verify(
+            value => value.ProcessAsync(It.IsAny<ProviderVoiceWebhookRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenConcurrencyLimitIsExhausted_RefusesWithoutBufferingTheBody()
+    {
+        // Arrange
+        using var limiter = CreateIngressLimiter(concurrencyPermitLimit: 1);
+        using var heldLease = await limiter.AcquireConcurrencyAsync(TestContext.Current.CancellationToken);
+
+        var processor = new Mock<IProviderVoiceWebhookProcessor>();
+        var body = new EndlessStream();
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Body = body;
+
+        // Act
+        var result = await ProviderVoiceWebhookEndpoint.HandleAsync("provider", processor.Object, limiter, _workManager, httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+
+        // Buffering the body is what costs memory, so the permit that bounds how many bodies this tenant holds at
+        // once has to be taken before the body is read rather than after.
+        Assert.Equal(0, body.BytesProduced);
+    }
+
+    [Fact]
     public async Task HandleAsync_WhenPayloadIsAccepted_DoesNotPassRequestCancellationToProcessing()
     {
         // Arrange

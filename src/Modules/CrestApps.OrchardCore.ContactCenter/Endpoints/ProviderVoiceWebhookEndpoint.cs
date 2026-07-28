@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -37,6 +38,9 @@ internal static class ProviderVoiceWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
+        // The body arrives at whatever speed the caller chooses to send it, so buffering it is admission-controlled:
+        // the leases below bound how many bodies this tenant holds at once, and a caller that sends slowly is the
+        // server's minimum-data-rate problem rather than a way to make this process hold unbounded memory.
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
 
         if (workLease is null)
@@ -53,17 +57,14 @@ internal static class ProviderVoiceWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
-        string body;
+        var read = await RequestBodyReader.ReadAsync(httpContext.Request, MaximumRequestBodySizeBytes, httpContext.RequestAborted);
 
-        try
-        {
-            using var reader = new StreamReader(httpContext.Request.Body);
-            body = await reader.ReadToEndAsync(httpContext.RequestAborted);
-        }
-        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        if (read.IsTooLarge)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
+
+        var body = read.Body;
 
         var request = new ProviderVoiceWebhookRequest
         {

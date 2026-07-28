@@ -126,6 +126,40 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task Call_WhenChunkedPayloadExceedsLimit_IsRefusedWithoutBufferingTheWholeBody()
+    {
+        // Arrange
+        var inbox = CreateInbox();
+        var httpContext = CreateHttpContext();
+        var body = new EndlessStream();
+
+        // A caller that wants to send more than it is allowed to simply omits the content length.
+        httpContext.Request.Body = body;
+
+        // Act
+        var result = await DialPadWebhookEndpoint.HandleAsync(
+            inbox.Object,
+            _ingressLimiter,
+            SiteServiceFactory.Create(new DialPadSettings
+            {
+                IsEnabled = true,
+            }),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<DialPadContactCenterStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        Assert.True(
+            body.BytesProduced < DialPadWebhookEndpoint.MaximumRequestBodySizeBytes * 2,
+            $"The endpoint read {body.BytesProduced} bytes of a body it is not willing to accept.");
+
+        inbox.Verify(
+            service => service.AcceptAsync(It.IsAny<ProviderWebhookInboxDelivery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Call_WhenPayloadIsValid_DoesNotPassRequestCancellationToProcessing()
     {
         // Arrange

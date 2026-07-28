@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.DialPad.Services;
 using Microsoft.AspNetCore.Builder;
@@ -50,6 +51,8 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
+        // The body arrives at whatever speed the caller chooses to send it, so buffering it is admission-controlled:
+        // the permit below bounds how many bodies this tenant holds at once.
         using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
 
         if (!concurrencyLease.IsAcquired)
@@ -59,17 +62,14 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
-        string body;
+        var read = await RequestBodyReader.ReadAsync(httpContext.Request, MaximumRequestBodySizeBytes, httpContext.RequestAborted);
 
-        try
-        {
-            using var reader = new StreamReader(httpContext.Request.Body);
-            body = await reader.ReadToEndAsync(httpContext.RequestAborted);
-        }
-        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        if (read.IsTooLarge)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
+
+        var body = read.Body;
 
         if (string.IsNullOrEmpty(settings.WebhookSigningSecret))
         {
