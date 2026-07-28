@@ -33,7 +33,6 @@ internal enum EnterpriseInteractionReportKind
     ProviderUsageBilling,
     ChannelUsageBilling,
     DailyUsageBilling,
-    TranscriptCoverage,
     LongInteractionDetail,
     FailedInteractionDetail,
     AbandonedInteractionDetail,

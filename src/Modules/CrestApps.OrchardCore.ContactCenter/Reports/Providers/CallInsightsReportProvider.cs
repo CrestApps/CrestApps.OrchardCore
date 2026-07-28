@@ -17,11 +17,13 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
     /// Initializes a new instance of the <see cref="CallInsightsReportProvider"/> class.
     /// </summary>
     /// <param name="reportingService">The Contact Center reporting service.</param>
+    /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CallInsightsReportProvider(
         IContactCenterReportingService reportingService,
+        IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer<CallInsightsReportProvider> stringLocalizer)
-        : base(reportingService, stringLocalizer)
+        : base(reportingService, capabilityGuard, stringLocalizer)
     {
     }
 
@@ -45,7 +47,13 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
     ];
 
     /// <inheritdoc/>
-    public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    /// <remarks>Every figure in this report counts voice calls, which only the Voice capability creates.</remarks>
+    public override IReadOnlyCollection<string> RequiredFeatureIds { get; } = [
+        ContactCenterConstants.Feature.Voice,
+    ];
+
+    /// <inheritdoc/>
+    protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var report = await ReportingService.GetCallInsightsAsync(
             context.FromUtc,

@@ -14,26 +14,60 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
-internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata
+internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
     private readonly ISession _session;
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly EnterpriseInteractionReportDefinition _definition;
+    private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
     private Dictionary<string, string> _agentUserNames = [];
+    private HashSet<string> _absentFeatureIds = [];
+
+    private static readonly string[] _executiveMetricRequirements =
+        [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
+
+    private static readonly string[] _interactionDetailRequirements =
+        [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, null, null, null, ContactCenterConstants.Feature.Voice];
+
+    private static readonly string[] _agentPerformanceRequirements =
+    [
+        null,
+        null,
+        null,
+        null,
+        ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.Recording,
+        ContactCenterConstants.Feature.Recording,
+        null,
+    ];
+
+    private static readonly string[] _usageRequirements =
+    [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.Recording,
+    ];
 
     public EnterpriseInteractionReportProvider(
         ISession session,
         IActivityQueueManager queueManager,
         IAgentProfileManager agentManager,
         EnterpriseInteractionReportDefinition definition,
+        IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _queueManager = queueManager;
         _agentManager = agentManager;
         _definition = definition;
+        _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
     }
 
@@ -49,8 +83,24 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
     public IReadOnlyCollection<string> FilterNames => _definition.FilterNames;
 
+    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_definition.Kind);
+
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var missingFeatures = await _capabilityGuard.GetMissingFeaturesAsync(RequiredFeatureIds, cancellationToken);
+
+        if (missingFeatures.Count > 0)
+        {
+            return _capabilityGuard.DescribeUnavailable(missingFeatures);
+        }
+
+        // Reports whose subject matter is only partly produced by a capability are not withheld: their primary
+        // figures are real. What they must not do is publish the capability's columns as zeroes alongside them, so
+        // the columns those capabilities feed are dropped instead of rendered empty.
+        _absentFeatureIds = [.. await _capabilityGuard.GetMissingFeaturesAsync(
+            [ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording],
+            cancellationToken)];
+
         var interactions = (await _session.Query<Interaction, InteractionIndex>(
             index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
             collection: ContactCenterConstants.CollectionName)
@@ -99,16 +149,45 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             EnterpriseInteractionReportKind.ProviderUsageBilling => BuildUsageReport(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
             EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date (UTC)"].Value, interaction => interaction.CreatedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            EnterpriseInteractionReportKind.TranscriptCoverage => BuildReferenceCoverage(filteredInteractions, transcript: true),
             EnterpriseInteractionReportKind.LongInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetTalkSeconds(interaction) >= 900d), S["Long interactions (15+ minutes)"].Value),
             EnterpriseInteractionReportKind.FailedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => interaction.Status == InteractionStatus.Failed), S["Failed interactions"].Value),
             EnterpriseInteractionReportKind.AbandonedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(IsAbandoned), S["Abandoned interactions"].Value),
             EnterpriseInteractionReportKind.HighWaitDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetWaitSeconds(interaction) >= 60d), S["High-wait interactions (60+ seconds)"].Value),
             EnterpriseInteractionReportKind.LifecycleDuration => BuildLifecycleDuration(filteredInteractions),
-            EnterpriseInteractionReportKind.CallLegPerformance => BuildCallLegPerformance(filteredInteractions),
+            EnterpriseInteractionReportKind.CallLegPerformance => await BuildCallLegPerformanceAsync(filteredInteractions, context, cancellationToken),
             _ => new ReportDocument(),
         };
     }
+
+    private bool IsAvailable(string requiredFeatureId)
+        => requiredFeatureId is null || !_absentFeatureIds.Contains(requiredFeatureId);
+
+    /// <summary>
+    /// Keeps the entries of a fixed layout whose producing capability is enabled. The same requirement list drives
+    /// the columns and every row, so a column and its cells cannot drift apart.
+    /// </summary>
+    private T[] SelectAvailable<T>(IReadOnlyList<T> entries, IReadOnlyList<string> requirements)
+    {
+        if (entries.Count != requirements.Count)
+        {
+            throw new InvalidOperationException(
+                $"A report layout declares {entries.Count} entries but {requirements.Count} capability requirements. " +
+                "The requirement list must have one entry per column so a column and its cells cannot drift apart.");
+        }
+
+        if (_absentFeatureIds.Count == 0)
+        {
+            return [.. entries];
+        }
+
+        return [.. entries.Where((_, position) => IsAvailable(requirements[position]))];
+    }
+
+    private ReportRow SelectAvailableRow(
+        IReadOnlyList<string> cells,
+        IReadOnlyList<string> requirements,
+        ReportRowKind kind = ReportRowKind.Detail)
+        => new(SelectAvailable(cells, requirements), kind);
 
     private IStringLocalizer S => _stringLocalizer;
 
@@ -118,19 +197,21 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     {
         var totals = Aggregate(interactions);
 
+        ReportMetric[] metrics =
+        [
+            new ReportMetric(S["Interactions"].Value, ReportFormat.Number(totals.Total)),
+            new ReportMetric(S["Inbound offered"].Value, ReportFormat.Number(totals.InboundOffered)),
+            new ReportMetric(S["Inbound answered"].Value, ReportFormat.Number(totals.InboundAnswered), ReportFormat.Percent(totals.InboundAnswerRate)),
+            new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(totals.Abandoned), ReportFormat.Percent(totals.AbandonmentRate)),
+            new ReportMetric(S["Failed"].Value, ReportFormat.Number(totals.Failed)),
+            new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(totals.AverageSpeedOfAnswerSeconds)),
+            new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(totals.AverageHandleTimeSeconds)),
+            new ReportMetric(S["Transfer rate"].Value, ReportFormat.Percent(totals.TransferRate)),
+            new ReportMetric(S["Recording coverage"].Value, ReportFormat.Percent(totals.RecordingCoverage)),
+        ];
+
         return new ReportDocument()
-            .Add(ReportSection.ForMetrics(S["Executive performance"].Value,
-            [
-                new ReportMetric(S["Interactions"].Value, ReportFormat.Number(totals.Total)),
-                new ReportMetric(S["Inbound offered"].Value, ReportFormat.Number(totals.InboundOffered)),
-                new ReportMetric(S["Inbound answered"].Value, ReportFormat.Number(totals.InboundAnswered), ReportFormat.Percent(totals.InboundAnswerRate)),
-                new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(totals.Abandoned), ReportFormat.Percent(totals.AbandonmentRate)),
-                new ReportMetric(S["Failed"].Value, ReportFormat.Number(totals.Failed)),
-                new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(totals.AverageSpeedOfAnswerSeconds)),
-                new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(totals.AverageHandleTimeSeconds)),
-                new ReportMetric(S["Transfer rate"].Value, ReportFormat.Percent(totals.TransferRate)),
-                new ReportMetric(S["Recording coverage"].Value, ReportFormat.Percent(totals.RecordingCoverage)),
-            ]))
+            .Add(ReportSection.ForMetrics(S["Executive performance"].Value, SelectAvailable(metrics, _executiveMetricRequirements)))
             .Add(BuildDailyTrendChart(interactions))
             .Add(BuildChannelMixChart(interactions))
             .Add(BuildQueueServiceLevelChart(interactions, queues))
@@ -427,7 +508,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         var rows = interactions
             .OrderByDescending(interaction => interaction.CreatedUtc)
-            .Select(interaction => new ReportRow(
+            .Select(interaction => SelectAvailableRow(
             [
                 interaction.CreatedUtc.ToString("u", CultureInfo.InvariantCulture),
                 interaction.ItemId,
@@ -441,10 +522,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 ReportFormat.Duration(GetTalkSeconds(interaction)),
                 ReportFormat.Duration(GetWrapUpSeconds(interaction)),
                 ReportFormat.Number(interaction.TransferHistory.Count),
-            ]));
+            ], _interactionDetailRequirements));
 
         return new ReportDocument()
-            .Add(ReportSection.ForTable(title ?? S["Interactions"].Value, columns, rows));
+            .Add(ReportSection.ForTable(title ?? S["Interactions"].Value, SelectAvailable(columns, _interactionDetailRequirements), rows));
     }
 
     private ReportDocument BuildTransferAnalysis(IReadOnlyList<Interaction> interactions)
@@ -970,7 +1051,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 return new
                 {
                     Order = (double)order,
-                    Row = new ReportRow(
+                    Row = SelectAvailableRow(
                     [
                         ResolveAgentName(group.Key),
                         ReportFormat.Number(metrics.Total),
@@ -980,7 +1061,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                         ReportFormat.Number(recorded),
                         ReportFormat.Percent(answeredVoice > 0 ? (double)recorded / answeredVoice : 0d),
                         ReportFormat.Duration(metrics.AverageHandleTimeSeconds),
-                    ]),
+                    ], _agentPerformanceRequirements),
                 };
             })
             .OrderByDescending(entry => entry.Order)
@@ -997,7 +1078,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             interaction.AnsweredUtc.HasValue &&
             !string.IsNullOrEmpty(interaction.RecordingReference));
 
-        rows.Add(new ReportRow(
+        rows.Add(SelectAvailableRow(
         [
             S["Grand total"].Value,
             ReportFormat.Number(totals.Total),
@@ -1007,10 +1088,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             ReportFormat.Number(totalRecorded),
             ReportFormat.Percent(totalAnsweredVoice > 0 ? (double)totalRecorded / totalAnsweredVoice : 0d),
             ReportFormat.Duration(totals.AverageHandleTimeSeconds),
-        ], ReportRowKind.GrandTotal));
+        ], _agentPerformanceRequirements, ReportRowKind.GrandTotal));
 
         return new ReportDocument()
-            .Add(ReportSection.ForTable(S["Agent performance"].Value, columns, rows));
+            .Add(ReportSection.ForTable(S["Agent performance"].Value, SelectAvailable(columns, _agentPerformanceRequirements), rows));
     }
 
     private ReportDocument BuildUsageReport(
@@ -1038,7 +1119,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 return new
                 {
                     ConnectedSeconds = connectedSeconds,
-                    Row = new ReportRow(
+                    Row = SelectAvailableRow(
                     [
                         group.Key,
                         ReportFormat.Number(group.LongCount()),
@@ -1048,14 +1129,14 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                         ReportFormat.Duration(group.Sum(GetWaitSeconds)),
                         ReportFormat.Number(group.Sum(interaction => interaction.TransferHistory.Count)),
                         ReportFormat.Number(group.LongCount(interaction => !string.IsNullOrEmpty(interaction.RecordingReference))),
-                    ]),
+                    ], _usageRequirements),
                 };
             })
             .OrderByDescending(entry => entry.ConnectedSeconds)
             .Select(entry => entry.Row)
             .ToList();
 
-        rows.Add(new ReportRow(
+        rows.Add(SelectAvailableRow(
         [
             S["Grand total"].Value,
             ReportFormat.Number(interactions.Count),
@@ -1065,57 +1146,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             ReportFormat.Duration(interactions.Sum(GetWaitSeconds)),
             ReportFormat.Number(interactions.Sum(interaction => interaction.TransferHistory.Count)),
             ReportFormat.Number(interactions.LongCount(interaction => !string.IsNullOrEmpty(interaction.RecordingReference))),
-        ], ReportRowKind.GrandTotal));
+        ], _usageRequirements, ReportRowKind.GrandTotal));
 
         return new ReportDocument()
-            .Add(ReportSection.ForTable(S["Usage summary"].Value, columns, rows));
-    }
-
-    private ReportDocument BuildReferenceCoverage(IReadOnlyList<Interaction> interactions, bool transcript)
-    {
-        var eligible = interactions.Where(interaction => interaction.AnsweredUtc.HasValue).ToArray();
-        var columns = new[]
-        {
-            new ReportColumn(S["Channel"].Value),
-            new ReportColumn(S["Answered"].Value, ReportColumnAlign.End),
-            new ReportColumn(transcript ? S["With transcript"].Value : S["With recording"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Without reference"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Coverage"].Value, ReportColumnAlign.End),
-        };
-        var rows = eligible
-            .GroupBy(interaction => interaction.Channel)
-            .Select(group =>
-            {
-                var answered = group.LongCount();
-                var covered = group.LongCount(interaction => transcript
-                    ? !string.IsNullOrEmpty(interaction.TranscriptReference)
-                    : !string.IsNullOrEmpty(interaction.RecordingReference));
-
-                return new ReportRow(
-                [
-                    group.Key.ToString(),
-                    ReportFormat.Number(answered),
-                    ReportFormat.Number(covered),
-                    ReportFormat.Number(answered - covered),
-                    ReportFormat.Percent(answered > 0 ? (double)covered / answered : 0d),
-                ]);
-            })
-            .ToList();
-
-        var covered = eligible.LongCount(interaction => transcript
-            ? !string.IsNullOrEmpty(interaction.TranscriptReference)
-            : !string.IsNullOrEmpty(interaction.RecordingReference));
-        rows.Add(new ReportRow(
-        [
-            S["Grand total"].Value,
-            ReportFormat.Number(eligible.LongLength),
-            ReportFormat.Number(covered),
-            ReportFormat.Number(eligible.LongLength - covered),
-            ReportFormat.Percent(eligible.Length > 0 ? (double)covered / eligible.LongLength : 0d),
-        ], ReportRowKind.GrandTotal));
-
-        return new ReportDocument()
-            .Add(ReportSection.ForTable(transcript ? S["Transcript coverage"].Value : S["Recording coverage"].Value, columns, rows));
+            .Add(ReportSection.ForTable(S["Usage summary"].Value, SelectAvailable(columns, _usageRequirements), rows));
     }
 
     private ReportDocument BuildExceptionDetail(IEnumerable<Interaction> interactions, string title)
@@ -1170,9 +1204,28 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Add(ReportSection.ForTable(S["Interaction lifecycle duration"].Value, columns, rows));
     }
 
-    private ReportDocument BuildCallLegPerformance(IReadOnlyList<Interaction> interactions)
+    private async Task<ReportDocument> BuildCallLegPerformanceAsync(
+        IReadOnlyList<Interaction> interactions,
+        ReportContext context,
+        CancellationToken cancellationToken)
     {
-        var legs = interactions.SelectMany(interaction => interaction.CallLegs).ToArray();
+        var interactionIds = interactions
+            .Select(interaction => interaction.ItemId)
+            .Where(itemId => !string.IsNullOrEmpty(itemId))
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Legs belong to the call session, which the voice topology projector owns. The report reads them from
+        // there rather than from the interaction, because the interaction never carried them.
+        var callSessions = interactionIds.Count == 0
+            ? []
+            : (await _session.Query<CallSession, CallSessionIndex>(
+                index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
+                collection: ContactCenterConstants.CollectionName)
+                .ListAsync(cancellationToken))
+                .Where(callSession => interactionIds.Contains(callSession.InteractionId))
+                .ToArray();
+
+        var legs = callSessions.SelectMany(callSession => callSession.Legs).ToArray();
         var columns = new[]
         {
             new ReportColumn(S["Leg status"].Value),

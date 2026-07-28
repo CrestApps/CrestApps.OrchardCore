@@ -16,12 +16,13 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
-internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetadata
+internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
     private readonly ISession _session;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly AgentWorkforceReportDefinition _definition;
+    private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
 
     public AgentWorkforceReportProvider(
@@ -29,12 +30,14 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         AgentWorkforceReportDefinition definition,
+        IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer stringLocalizer)
     {
         _session = session;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
         _definition = definition;
+        _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
     }
 
@@ -50,8 +53,17 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 
     public IReadOnlyCollection<string> FilterNames => _definition.FilterNames;
 
+    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_definition.Kind);
+
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var missingFeatures = await _capabilityGuard.GetMissingFeaturesAsync(RequiredFeatureIds, cancellationToken);
+
+        if (missingFeatures.Count > 0)
+        {
+            return _capabilityGuard.DescribeUnavailable(missingFeatures);
+        }
+
         var events = (await _session.Query<InteractionEvent, InteractionEventIndex>(
             index =>
                 index.AggregateType == nameof(AgentProfile) &&

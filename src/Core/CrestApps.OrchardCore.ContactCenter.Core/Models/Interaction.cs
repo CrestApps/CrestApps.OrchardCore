@@ -123,11 +123,6 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public DateTime? RecordingErasedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the transcript reference when a transcript is available for the interaction.
-    /// </summary>
-    public string TranscriptReference { get; set; }
-
-    /// <summary>
     /// Gets or sets the correlation identifier used by the provider webhook or callback, when different from <see cref="CorrelationId"/>.
     /// </summary>
     public string ProviderCorrelationId { get; set; }
@@ -146,11 +141,6 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// Gets or sets the transfer attempts that occurred during the interaction.
     /// </summary>
     public IList<InteractionTransferHistoryEntry> TransferHistory { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the provider call legs that were associated with the interaction.
-    /// </summary>
-    public IList<InteractionCallLeg> CallLegs { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the identifier of the user that created the interaction.

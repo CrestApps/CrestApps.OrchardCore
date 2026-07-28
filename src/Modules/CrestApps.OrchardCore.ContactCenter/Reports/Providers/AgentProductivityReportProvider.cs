@@ -16,11 +16,13 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     /// Initializes a new instance of the <see cref="AgentProductivityReportProvider"/> class.
     /// </summary>
     /// <param name="reportingService">The Contact Center reporting service.</param>
+    /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentProductivityReportProvider(
         IContactCenterReportingService reportingService,
+        IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer<AgentProductivityReportProvider> stringLocalizer)
-        : base(reportingService, stringLocalizer)
+        : base(reportingService, capabilityGuard, stringLocalizer)
     {
     }
 
@@ -47,7 +49,11 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     ];
 
     /// <inheritdoc/>
-    public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    /// <remarks>Presence and handling data is written by the agent and availability capabilities the reporting feature already depends on.</remarks>
+    public override IReadOnlyCollection<string> RequiredFeatureIds { get; } = [];
+
+    /// <inheritdoc/>
+    protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var report = await ReportingService.GetAgentProductivityAsync(
             context.FromUtc,

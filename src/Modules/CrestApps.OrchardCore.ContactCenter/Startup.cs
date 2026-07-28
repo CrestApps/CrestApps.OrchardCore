@@ -1043,6 +1043,7 @@ public sealed class AnalyticsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
+        services.AddScoped<IContactCenterReportCapabilityGuard, ContactCenterReportCapabilityGuard>();
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services
@@ -1083,7 +1084,6 @@ public sealed class AnalyticsStartup : StartupBase
         AddEnterpriseReport(services, "contact-center-provider-usage-billing", () => S["Provider usage for billing"], () => S["Interaction counts and measured service time by communications provider for vendor invoice reconciliation."], EnterpriseInteractionReportKind.ProviderUsageBilling, ReportsConstants.Categories.BillingUsage);
         AddEnterpriseReport(services, "contact-center-channel-usage-billing", () => S["Channel usage for billing"], () => S["Interaction counts and measured service time by channel for service allocation and chargeback."], EnterpriseInteractionReportKind.ChannelUsageBilling, ReportsConstants.Categories.BillingUsage);
         AddEnterpriseReport(services, "contact-center-daily-usage-billing", () => S["Daily usage for billing"], () => S["Daily interaction counts and measured service time for invoice period reconciliation."], EnterpriseInteractionReportKind.DailyUsageBilling, ReportsConstants.Categories.BillingUsage);
-        AddEnterpriseReport(services, "contact-center-transcript-coverage", () => S["Transcript coverage"], () => S["Answered interactions with and without transcript references, grouped by channel."], EnterpriseInteractionReportKind.TranscriptCoverage, ReportsConstants.Categories.ComplianceAudit);
         AddEnterpriseReport(services, "contact-center-long-interactions", () => S["Long interaction detail"], () => S["Interaction-level audit of connected sessions lasting at least 15 minutes."], EnterpriseInteractionReportKind.LongInteractionDetail, ReportsConstants.Categories.ComplianceAudit);
         AddEnterpriseReport(services, "contact-center-failed-interactions", () => S["Failed interaction detail"], () => S["Interaction-level audit of failed communications."], EnterpriseInteractionReportKind.FailedInteractionDetail, ReportsConstants.Categories.Technical);
         AddEnterpriseReport(services, "contact-center-abandoned-interactions", () => S["Abandoned interaction detail"], () => S["Interaction-level audit of inbound customers who left before answer."], EnterpriseInteractionReportKind.AbandonedInteractionDetail, ReportsConstants.Categories.ComplianceAudit);
@@ -1132,6 +1132,7 @@ public sealed class AnalyticsStartup : StartupBase
             serviceProvider.GetRequiredService<IActivityQueueManager>(),
             serviceProvider.GetRequiredService<IAgentProfileManager>(),
             definition,
+            serviceProvider.GetRequiredService<IContactCenterReportCapabilityGuard>(),
             serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>()));
     }
 
@@ -1156,6 +1157,7 @@ public sealed class AnalyticsStartup : StartupBase
             serviceProvider.GetRequiredService<IAgentProfileManager>(),
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
             definition,
+            serviceProvider.GetRequiredService<IContactCenterReportCapabilityGuard>(),
             serviceProvider.GetRequiredService<IStringLocalizer<AgentWorkforceReportProvider>>()));
     }
 }

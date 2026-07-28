@@ -1789,6 +1789,38 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/Lifecycles/AggregateLifecycleTableTests.cs walks the complete N x N status matrix of all five lifecycles against a transliteration of each table written in a different shape, which detects an edge changed in one place and not the other, and separately asserts properties derived from the enums and the settled predicates rather than from the edge lists: that no settled interaction status and no terminal call state has any outgoing edge, that every unsettled interaction status can still reach an ending, that a planned call is refused the established and unanswered outcomes that imply it was answered, that every declared status is reachable from the starting status, and that re-applying a held status is admitted; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/Lifecycles/AggregateStateTransitionTests.cs asserts a refused move throws InvalidStateTransitionException and leaves the status unchanged, that every live status can be requeued and re-offered while every settled one cannot, that mirroring applies an undeclared provider fact but will not reopen a settled record, and that a connected session can alert again for a queue transfer; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs drives the expiry sweep against an interaction the customer already hung up on and asserts the reservation, queue item and agent are still released, which is the tenant-wide sweep that a refusal escaping from a release path would abandon; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AnswerProviderCommandTypeExecutorTests.cs and DialProviderCommandTypeExecutorTests.cs assert a failure projection against an already-ended call completes rather than throwing, which is what lets a compensating command finish instead of staying compensating forever; tests/CrestApps.OrchardCore.Tests/Architecture/AggregateLifecycleArchitectureTests.cs asserts by reflection that no guarded status has a public setter, round-trips every aggregate through System.Text.Json so a private setter that is silently dropped on deserialize fails the build, scans the Contact Center, Telephony, Asterisk, and DialPad projects for a production call to the test-only restore seam, pins the two files and four call sites allowed to use the three lifecycle bypasses, and fails closed if a guarded root or a named file it claims to scan no longer exists; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/CallStateMachinePropertyTests.cs continues to prove that a call session and the interaction projected from it never disagree under reordered, duplicated, and replayed provider deliveries."
+    },
+    {
+      "id": "F009",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "W11.3",
+      "gate": "A report never publishes a figure for a capability the tenant does not run",
+      "invariant": "Reporting must not force the capabilities it measures onto a tenant, and must not report on them anyway. Analytics deliberately depends on neither voice nor recording - making a chat-only tenant run, secure and upgrade telephony to read a queue report would be a worse coupling than the one being removed - so every report declares which capabilities produce its data and degrades when they are absent. Degradation is at the granularity of the claim, not the report: a report whose whole subject belongs to an absent capability returns a notice naming it, and a report whose primary figures are real keeps running but drops the columns and metrics only that capability could fill. Zero is a measurement; an absent capability took none, and a structural zero in a 'Recording coverage' column is read by a compliance officer as an operational result rather than a missing feature, whether it stands alone or sits beside real figures. The declaration is required of every Contact Center report rather than the ones that happen to need it, so a new report cannot be added without deciding what produces its data. Both levels are proven in a live analytics-only tenant, because a report registered without the guard, or a guard registered in the wrong feature, still compiles and still returns zeroes. The converse is proven structurally: for every persisted field a report reads, some production code outside the reports must write it, which is the only thing that distinguishes an empty measurement from a field nothing has ever populated.",
+      "testId": "CC-F009",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/ContactCenterReportCapabilityDegradationTests.cs boots a tenant with only the analytics feature and asserts that every Contact Center IReport implements IContactCenterCapabilityDependentReport, that every report declaring a feature the tenant lacks returns a single section that names the missing feature identifier and carries no rows, metrics, bars or chart, that no report of any kind renders a column, metric or bar whose heading belongs to an absent capability, and that enabling analytics did not activate the voice or recording capabilities; each assertion fails as vacuous if nothing was degraded or every capability was present, so emptying the requirement map or re-coupling analytics to telephony cannot make it pass silently. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterReportDataProvenanceArchitectureTests.cs reflects over the persisted members of Interaction and CallSession, and fails any member that the report sources read but no production source outside the reports assigns or mutates, which is what caught Interaction.CallLegs and Interaction.TranscriptReference being reported on though nothing ever wrote them."
     }
   ]
 }
