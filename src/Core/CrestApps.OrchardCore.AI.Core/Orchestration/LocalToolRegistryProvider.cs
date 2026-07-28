@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Orchestration;
@@ -16,6 +17,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     private readonly IOptions<AIToolDefinitionOptions> _toolDefinitions;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LocalToolRegistryProvider"/> class.
@@ -23,14 +25,17 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     /// <param name="toolDefinitions">The registered AI tool definitions.</param>
     /// <param name="authorizationService">The authorization service for verifying tool access.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="logger">The logger.</param>
     public LocalToolRegistryProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<LocalToolRegistryProvider> logger)
     {
         _toolDefinitions = toolDefinitions;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,6 +59,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
         var toolDefinitions = _toolDefinitions.Value.Tools;
         var entries = new List<ToolRegistryEntry>();
         var user = _httpContextAccessor.HttpContext?.User;
+        List<string> unauthorizedToolNames = null;
 
         foreach (var toolName in configuredToolNames)
         {
@@ -74,6 +80,8 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
             if (user is not null &&
                 !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName as object))
             {
+                (unauthorizedToolNames ??= []).Add(toolName);
+
                 continue;
             }
 
@@ -87,6 +95,11 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
                 Source = ToolRegistryEntrySource.Local,
                 CreateAsync = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });
+        }
+
+        if (unauthorizedToolNames is not null)
+        {
+            _logger.LogWarning("The current user is not authorized to use the following AI tools, which were excluded from the request: {ToolNames}. Grant the 'AccessAnyAITool' permission, or the matching per-tool 'AccessAITool_<tool name>' permission, to the roles that require them.", string.Join(", ", unauthorizedToolNames));
         }
 
         return entries;

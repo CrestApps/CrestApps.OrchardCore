@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -206,6 +207,6 @@ public sealed class LocalToolRegistryProviderTests
         // No HttpContext means no user — permission checks are skipped.
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
 
-        return new LocalToolRegistryProvider(Options.Create(options), authService.Object, httpContextAccessor.Object);
+        return new LocalToolRegistryProvider(Options.Create(options), authService.Object, httpContextAccessor.Object, NullLogger<LocalToolRegistryProvider>.Instance);
     }
 }
