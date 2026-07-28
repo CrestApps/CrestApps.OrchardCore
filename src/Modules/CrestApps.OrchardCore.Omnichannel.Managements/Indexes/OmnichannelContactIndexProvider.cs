@@ -102,9 +102,9 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
     {
         var phoneNumber = field.PhoneNumber?.Trim();
 
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, field.CountryCode, out var e164Number))
+        if (_phoneNumberService.TryParse(phoneNumber, field.CountryCode, out var canonicalNumber))
         {
-            return Truncate(e164Number, 50);
+            return Truncate(canonicalNumber.Value, 50);
         }
 
         if (PhoneNumberSearchTerm.TryParse(phoneNumber, out var searchTerm) && searchTerm.IsE164)

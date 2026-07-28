@@ -113,46 +113,11 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
             return TransferDestinationResolutionResult.Denied();
         }
 
-        if (!IsAllowedExternalAddress(entry.E164Address))
+        if (!ExternalDestinationPolicy.IsAllowed(entry.E164Address))
         {
             return TransferDestinationResolutionResult.Denied();
         }
 
         return TransferDestinationResolutionResult.Success(InteractionTransferTargetType.External, entry.E164Address);
-    }
-
-    private static bool IsAllowedExternalAddress(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address) ||
-            !address.StartsWith('+') ||
-            address.Length < 8 ||
-            address.Length > 16)
-        {
-            return false;
-        }
-
-        var digits = address.Substring(1);
-
-        if (!digits.All(char.IsDigit))
-        {
-            return false;
-        }
-
-        return !IsEmergencyNumber(digits) && !IsPremiumNumber(digits);
-    }
-
-    private static bool IsEmergencyNumber(string digits)
-    {
-        return digits is "911" or "112" or "999" ||
-            digits.EndsWith("911", StringComparison.Ordinal) ||
-            digits.EndsWith("112", StringComparison.Ordinal) ||
-            digits.EndsWith("999", StringComparison.Ordinal);
-    }
-
-    private static bool IsPremiumNumber(string digits)
-    {
-        return digits.StartsWith("1900", StringComparison.Ordinal) ||
-            digits.StartsWith("1976", StringComparison.Ordinal) ||
-            digits.StartsWith("4470", StringComparison.Ordinal);
     }
 }

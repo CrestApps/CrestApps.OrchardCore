@@ -35,14 +35,15 @@ public sealed class InboundContactLookup : IInboundContactLookup
             return [];
         }
 
-        var normalized = Normalize(phoneNumber);
-
-        if (string.IsNullOrEmpty(normalized))
+        // The contact index only ever stores E.164, so a caller identifier that cannot be canonicalized
+        // matches nothing. Saying so plainly is better than searching for a digits-only form that the index
+        // never contains and reporting the empty result as though the contact were unknown.
+        if (!_phoneNumberService.TryParse(phoneNumber, null, out var canonical))
         {
             return [];
         }
 
-        var numbers = new[] { normalized };
+        var numbers = new[] { canonical.Value };
 
         var cellMatches = await _session
             .QueryIndex<OmnichannelContactIndex>(index =>
@@ -65,15 +66,5 @@ public sealed class InboundContactLookup : IInboundContactLookup
         }
 
         return ids;
-    }
-
-    private string Normalize(string phoneNumber)
-    {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164) && !string.IsNullOrEmpty(e164))
-        {
-            return e164;
-        }
-
-        return new string(phoneNumber.Where(char.IsDigit).ToArray());
     }
 }

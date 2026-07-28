@@ -76,7 +76,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         {
             if (context.Model.Channel == OmnichannelConstants.Channels.Phone || context.Model.Channel == OmnichannelConstants.Channels.Sms)
             {
-                if (!_phoneNumberService.TryFormatToE164(context.Model.Value, null, out _))
+                if (!_phoneNumberService.TryParse(context.Model.Value, null, out _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
@@ -155,11 +155,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private string NormalizePhoneValue(string channel, string value)
     {
         if ((channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms) ||
-            !_phoneNumberService.TryFormatToE164(value, null, out var e164Number))
+            !_phoneNumberService.TryParse(value, null, out var canonicalNumber))
         {
             return value;
         }
 
-        return e164Number;
+        return canonicalNumber.Value;
     }
 }

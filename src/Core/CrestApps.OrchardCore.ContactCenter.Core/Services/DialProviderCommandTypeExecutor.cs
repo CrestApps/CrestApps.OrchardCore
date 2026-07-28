@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -281,8 +282,8 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         if (string.IsNullOrWhiteSpace(request.InteractionId) ||
             string.IsNullOrWhiteSpace(request.AgentId) ||
             string.IsNullOrWhiteSpace(request.AgentUserId) ||
-            !IsAllowedAddress(request.Destination) ||
-            (!string.IsNullOrWhiteSpace(request.CallerId) && !IsAllowedAddress(request.CallerId)))
+            !ExternalDestinationPolicy.IsAllowed(request.Destination) ||
+            (!string.IsNullOrWhiteSpace(request.CallerId) && !ExternalDestinationPolicy.IsAllowed(request.CallerId)))
         {
             return false;
         }
@@ -321,30 +322,5 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         session.CreatedUtc = now;
 
         await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
-    }
-
-    private static bool IsAllowedAddress(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address) ||
-            !address.StartsWith('+') ||
-            address.Length < 8 ||
-            address.Length > 16)
-        {
-            return false;
-        }
-
-        var digits = address.Substring(1);
-
-        if (!digits.All(char.IsDigit))
-        {
-            return false;
-        }
-
-        return !digits.EndsWith("911", StringComparison.Ordinal) &&
-            !digits.EndsWith("112", StringComparison.Ordinal) &&
-            !digits.EndsWith("999", StringComparison.Ordinal) &&
-            !digits.StartsWith("1900", StringComparison.Ordinal) &&
-            !digits.StartsWith("1976", StringComparison.Ordinal) &&
-            !digits.StartsWith("4470", StringComparison.Ordinal);
     }
 }

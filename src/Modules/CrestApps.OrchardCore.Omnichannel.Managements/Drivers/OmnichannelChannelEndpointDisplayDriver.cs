@@ -91,13 +91,13 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         {
             if (model.Channel == OmnichannelConstants.Channels.Phone || model.Channel == OmnichannelConstants.Channels.Sms)
             {
-                if (!_phoneNumberService.TryFormatToE164(model.Value, null, out var e164Number))
+                if (!_phoneNumberService.TryParse(model.Value, null, out var canonicalNumber))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."]);
                 }
                 else
                 {
-                    value = e164Number;
+                    value = canonicalNumber.Value;
                 }
             }
             else if (model.Channel == OmnichannelConstants.Channels.Email)

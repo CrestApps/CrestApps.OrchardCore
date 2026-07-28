@@ -120,7 +120,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
                     $"Destinations[{i}].E164Address",
                     S["Enter an E.164 address for destination {0}.", i + 1]);
             }
-            else if (!IsValidE164(address))
+            else if (!ExternalDestinationPolicy.IsAllowed(address))
             {
                 context.Updater.ModelState.AddModelError(
                     Prefix,
@@ -147,45 +147,5 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
         }
 
         return Edit(site, settings, context);
-    }
-
-    private static bool IsValidE164(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address) ||
-            !address.StartsWith('+') ||
-            address.Length < 8 ||
-            address.Length > 16)
-        {
-            return false;
-        }
-
-        var digits = address.Substring(1);
-
-        if (!digits.All(char.IsDigit))
-        {
-            return false;
-        }
-
-        if (IsEmergencyNumber(digits) || IsPremiumNumber(digits))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool IsEmergencyNumber(string digits)
-    {
-        return digits is "911" or "112" or "999" ||
-            digits.EndsWith("911", StringComparison.Ordinal) ||
-            digits.EndsWith("112", StringComparison.Ordinal) ||
-            digits.EndsWith("999", StringComparison.Ordinal);
-    }
-
-    private static bool IsPremiumNumber(string digits)
-    {
-        return digits.StartsWith("1900", StringComparison.Ordinal) ||
-            digits.StartsWith("1976", StringComparison.Ordinal) ||
-            digits.StartsWith("4470", StringComparison.Ordinal);
     }
 }

@@ -109,6 +109,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="DefaultRegionCode">
+    <label asp-for="DefaultRegionCode" class="ocat-label">@T["Default region"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultRegionCode" class="form-control" maxlength="2" />
+        <span class="hint dashed">@T["The ISO 3166-1 alpha-2 region code, such as US or CA, used to read a destination that carries no country calling code. A destination that cannot be read as a phone number is suppressed, because it cannot be checked against a do-not-call registry."]</span>
+        <span asp-validation-for="DefaultRegionCode" class="text-danger"></span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="RespectDoNotCall">
     <div class="ocat-end-offset">
         <div class="form-check">

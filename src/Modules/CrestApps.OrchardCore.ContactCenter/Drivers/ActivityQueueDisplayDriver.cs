@@ -139,7 +139,7 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
         queue.SlaThresholdSeconds = model.SlaThresholdSeconds;
         queue.ReservationTimeoutSeconds = model.ReservationTimeoutSeconds;
         queue.UnansweredOfferAction = model.UnansweredOfferAction;
-        queue.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
+        queue.RequiredSkills = SkillTag.NormalizeAll(model.RequiredSkills);
         queue.InboundChannelEndpointId = string.IsNullOrWhiteSpace(model.InboundChannelEndpointId)
             ? null
             : model.InboundChannelEndpointId.Trim();

@@ -616,13 +616,13 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 continue;
             }
 
-            if (!_phoneNumberService.TryFormatToE164(value, list.CountryCode, out var e164Number))
+            if (!_phoneNumberService.TryParse(value, list.CountryCode, out var canonical))
             {
                 AddRowError(list, rowIndex, "Row ignored because it does not contain a valid phone number.");
                 continue;
             }
 
-            if (!seenNumbers.Add(e164Number))
+            if (!seenNumbers.Add(canonical.Value))
             {
                 AddRowError(list, rowIndex, "Duplicate phone number ignored.");
                 continue;
@@ -633,7 +633,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 EntryId = IdGenerator.GenerateId(),
                 ListId = list.ListId,
                 CountryCode = list.CountryCode,
-                PhoneNumber = e164Number,
+                PhoneNumber = canonical.Value,
             });
 
             list.ImportedCount++;

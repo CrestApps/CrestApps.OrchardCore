@@ -15,12 +15,12 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var requiredSkills = context.Queue.RequiredSkills
-            .Where(skill => !string.IsNullOrWhiteSpace(skill))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        // Both sides are read through the same type, so the queue and the agent cannot disagree about what
+        // counts as the same skill. Comparing the stored strings directly is what let an agent whose skill
+        // was written with surrounding whitespace go unmatched without any sign that something was wrong.
+        var requiredSkills = SkillTag.CreateAll(context.Queue.RequiredSkills);
 
-        if (requiredSkills.Length == 0)
+        if (requiredSkills.Count == 0)
         {
             foreach (var candidate in context.Candidates)
             {
@@ -32,9 +32,7 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
 
         foreach (var candidate in context.Candidates)
         {
-            var agentSkills = new HashSet<string>(
-                candidate.Agent.Skills.Where(skill => !string.IsNullOrWhiteSpace(skill)),
-                StringComparer.OrdinalIgnoreCase);
+            var agentSkills = new HashSet<SkillTag>(SkillTag.CreateAll(candidate.Agent.Skills));
 
             var missingSkills = requiredSkills
                 .Where(skill => !agentSkills.Contains(skill))
@@ -43,7 +41,7 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
             if (missingSkills.Length > 0)
             {
                 candidate.IsEligible = false;
-                candidate.AddReason($"Missing required skills: {string.Join(", ", missingSkills)}.");
+                candidate.AddReason($"Missing required skills: {string.Join(", ", missingSkills.Select(skill => skill.Value))}.");
             }
             else
             {

@@ -196,12 +196,8 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
             return string.Empty;
         }
 
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164))
-        {
-            return e164;
-        }
+        _phoneNumberService.TryParse(phoneNumber, null, out var canonicalNumber);
 
-        // Fallback: strip non-digits for consistent comparison of national-format numbers.
-        return new string(phoneNumber.Where(char.IsDigit).ToArray());
+        return PhoneNumberComparisonKey.For(canonicalNumber, phoneNumber);
     }
 }

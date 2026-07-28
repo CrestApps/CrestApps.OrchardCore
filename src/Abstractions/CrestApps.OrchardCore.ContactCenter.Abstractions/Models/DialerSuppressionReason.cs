@@ -45,4 +45,12 @@ public enum DialerSuppressionReason
     /// abandonment statistics required to prove compliance were unavailable.
     /// </summary>
     AbandonmentRateExceeded,
+
+    /// <summary>
+    /// A compliance check could not be completed, so the attempt was not permitted. This is distinct from a
+    /// check that completed and cleared the destination: a registry that is unreachable has reported nothing,
+    /// and dialing on the strength of nothing is what this reason exists to prevent. The suppression is not
+    /// terminal, because the destination has not been shown to be unreachable — only unverified right now.
+    /// </summary>
+    ComplianceScreeningUnavailable,
 }

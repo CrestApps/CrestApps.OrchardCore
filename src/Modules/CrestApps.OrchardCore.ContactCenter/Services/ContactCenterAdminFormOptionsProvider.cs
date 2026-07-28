@@ -187,7 +187,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task PopulateQueueEditorAsync(QueueViewModel model)
     {
         model.QueueGroupOptions = await GetQueueGroupOptionsAsync(model.QueueGroupId);
-        model.RequiredSkills = ContactCenterFormHelpers.NormalizeList(model.RequiredSkills);
+        model.RequiredSkills = SkillTag.NormalizeAll(model.RequiredSkills);
         model.SkillOptions = await GetSkillOptionsAsync(model.RequiredSkills);
         model.InboundChannelEndpointOptions = await GetInboundChannelEndpointOptionsAsync(model.InboundChannelEndpointId);
         model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);

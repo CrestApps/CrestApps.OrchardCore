@@ -17,7 +17,6 @@ namespace CrestApps.OrchardCore.DncRegistry.Services;
 public sealed class LocalDncRegistry : INationalDoNotCallRegistry
 {
     private readonly ISession _session;
-    private readonly IPhoneNumberService _phoneNumberService;
 
     /// <summary>
     /// Gets the unique key identifying this registry.
@@ -38,58 +37,53 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
     /// Initializes a new instance of the <see cref="LocalDncRegistry"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="S">The string localizer.</param>
     public LocalDncRegistry(
         ISession session,
-        IPhoneNumberService phoneNumberService,
         IStringLocalizer<LocalDncRegistry> S)
     {
         _session = session;
-        _phoneNumberService = phoneNumberService;
 
         DisplayName = S["Local Do Not Call Registry"];
         Description = S["Checks phone numbers against locally uploaded CSV lists organized by country."];
     }
 
     /// <inheritdoc/>
-    public Task<HashSet<string>> GetRegisteredNumbersAsync(
-        IEnumerable<string> phoneNumbers,
+    public Task<HashSet<PhoneNumber>> GetRegisteredNumbersAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
         CancellationToken cancellationToken = default)
         => GetRegisteredNumbersAsync(phoneNumbers, context: null, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<HashSet<string>> GetRegisteredNumbersAsync(
-        IEnumerable<string> phoneNumbers,
+    public async Task<HashSet<PhoneNumber>> GetRegisteredNumbersAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
         NumberSearchContext context,
         CancellationToken cancellationToken = default)
     {
-        var dncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(phoneNumbers);
 
-        // Normalize input numbers to E.164 for comparison.
-        var e164Map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var dncNumbers = new HashSet<PhoneNumber>();
 
-        foreach (var phone in phoneNumbers)
+        // The numbers arrive canonical, so the stored entries and the queried values are in the same form by
+        // construction. They used to be re-normalized here against whatever country the caller happened to
+        // pass, which meant the same national number could be stored under one country and looked up under
+        // another and never match.
+        var queriedNumbers = new Dictionary<string, PhoneNumber>(StringComparer.Ordinal);
+
+        foreach (var phoneNumber in phoneNumbers)
         {
-            if (string.IsNullOrWhiteSpace(phone))
+            if (phoneNumber.HasValue)
             {
-                continue;
-            }
-
-            var e164 = NormalizeToE164(phone, context?.CountryCode);
-
-            if (!string.IsNullOrEmpty(e164) && !e164Map.ContainsKey(e164))
-            {
-                e164Map[e164] = phone;
+                queriedNumbers[phoneNumber.Value] = phoneNumber;
             }
         }
 
-        if (e164Map.Count == 0)
+        if (queriedNumbers.Count == 0)
         {
             return dncNumbers;
         }
 
-        var e164Numbers = e164Map.Keys.ToList();
+        var e164Numbers = queriedNumbers.Keys.ToList();
 
         IQuery<LocalDncEntry> query;
 
@@ -134,23 +128,50 @@ public sealed class LocalDncRegistry : INationalDoNotCallRegistry
                 continue;
             }
 
-            // Return the original input number that matched.
-            if (e164Map.TryGetValue(entry.PhoneNumber, out var originalNumber))
+            if (TryResolveQueriedNumber(queriedNumbers, entry.PhoneNumber, out var registeredNumber))
             {
-                dncNumbers.Add(originalNumber);
+                dncNumbers.Add(registeredNumber);
             }
         }
 
         return dncNumbers;
     }
 
-    private string NormalizeToE164(string phoneNumber, string regionCode)
+    /// <summary>
+    /// Resolves a stored entry that the query matched back to the number the caller asked about.
+    /// </summary>
+    /// <param name="queriedNumbers">The numbers the caller asked about, keyed by their canonical value.</param>
+    /// <param name="storedNumber">The number as it is stored on the matched entry.</param>
+    /// <param name="registeredNumber">When this method returns, the number the caller asked about.</param>
+    /// <returns><see langword="true"/> when the stored entry could be resolved; otherwise <see langword="false"/>.</returns>
+    internal static bool TryResolveQueriedNumber(
+        IReadOnlyDictionary<string, PhoneNumber> queriedNumbers,
+        string storedNumber,
+        out PhoneNumber registeredNumber)
     {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, regionCode, out var e164))
+        // What gets reported as listed is the number that was asked about, never the stored string parsed a
+        // second time. Re-parsing would let a stored value the query still matched — a provider that ignores
+        // trailing blanks in an IN comparison is enough — fail to parse and be dropped, and a dropped match
+        // reads to the dialer as "not listed", which is the exact fail-open this whole change exists to end.
+        if (storedNumber is not null && queriedNumbers.TryGetValue(storedNumber, out registeredNumber))
         {
-            return e164;
+            return true;
         }
 
-        return null;
+        var trimmedStoredNumber = storedNumber?.Trim();
+
+        foreach (var (value, queriedNumber) in queriedNumbers)
+        {
+            if (string.Equals(value, trimmedStoredNumber, StringComparison.Ordinal))
+            {
+                registeredNumber = queriedNumber;
+
+                return true;
+            }
+        }
+
+        registeredNumber = default;
+
+        return false;
     }
 }

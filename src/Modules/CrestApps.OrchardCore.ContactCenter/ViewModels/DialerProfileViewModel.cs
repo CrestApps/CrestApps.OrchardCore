@@ -96,6 +96,11 @@ public class DialerProfileViewModel
     public string CallerId { get; set; }
 
     /// <summary>
+    /// Gets or sets the ISO 3166-1 alpha-2 region a destination without a country calling code is read in.
+    /// </summary>
+    public string DefaultRegionCode { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether do-not-call and communication preferences are honored.
     /// </summary>
     public bool RespectDoNotCall { get; set; } = true;

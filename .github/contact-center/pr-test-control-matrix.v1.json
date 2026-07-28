@@ -1695,6 +1695,34 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/Omnichannel/OmnichannelActivitySchemaConvergenceTests.cs upgrades a tenant from every reachable historical activity-index schema through MigrationChainRunner and asserts the resulting SqliteSchemaSnapshot equals a freshly created tenant's, and asserts every stored enum value round-trips after the column rebuild; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/MigrationStartupBudgetTests.cs runs the call-session claim backfill and the inbox canonicalization backfill against tenants that differ ten-fold in row count through RecordingConnectionFactory and asserts the statement counts are equal; tests/CrestApps.OrchardCore.Tests/Architecture/MigrationAdditiveOnlyGuardTests.cs authorizes the rebuild's removals only as InPlaceRebuild entries and checks the restoring operation is really present in the same migration step; tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/Migrations/OmnichannelActivityPostgresMigrationTests.cs executes the upgrade against a real PostgreSQL instance from both reachable shapes of the historical schema, which is what proves the upgrade runs at all on an engine that resolves operators by type instead of merely producing the right declarations on SQLite."
+    },
+    {
+      "id": "D017",
+      "severity": "P0",
+      "category": "data",
+      "planFinding": "W10.2",
+      "gate": "Phone number canonicalization and fail-closed do-not-call screening",
+      "invariant": "A number that reaches a do-not-call registry must be the same number that will be dialed, and screening that could not be performed must never be read as screening that passed. Canonicalization happens once, through one entry point, producing a value that is in E.164 form by construction; a destination that cannot be canonicalized suppresses the attempt rather than being repaired into an approximation that no registry can compare. Within the calling and compliance path nothing may reimplement normalization or reach past that entry point to the raw parser, because a second definition of canonical form is exactly what let the dialer screen one string while the registry looked up another. A registry that cannot answer raises rather than returning an empty set, the dialer suppresses with a non-terminal reason so an unverified destination is neither dialed nor discarded, and the contact import skips the row instead of importing an unscreened number. Skill identity is subject to the same rule: a queue's requirements and an agent's assignments are read through one definition, so a skill written by a recipe matches one edited in the administration screens.",
+      "testId": "CC-D017",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite",
+          "postgresql"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/PhoneNumberTests.cs proves the value object is canonical by construction and has no public constructor that would let a caller assert canonicality without proving it; tests/CrestApps.OrchardCore.Tests/Architecture/PhoneNumberCanonicalizationArchitectureTests.cs scans the Contact Center, Telephony, and do-not-call projects for a second parser or hand-rolled normalization and fails if the roots it claims to cover no longer exist; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerEligibilityServiceTests.cs drives the real libphonenumber-backed service rather than a stub and asserts that a national-format destination reaches the registry as a canonical number, that a destination that cannot be canonicalized suppresses the attempt without querying any registry, and that a registry which cannot answer suppresses with ComplianceScreeningUnavailable; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/DialerAttemptServiceTests.cs asserts that suppression is not terminal so an unverified destination is not cancelled; tests/CrestApps.OrchardCore.Tests/Modules/Omnichannel/Managements/Handlers/OmnichannelContactImportRowFilterTests.cs asserts an unreachable registry skips the row instead of importing an unscreened number; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ExternalDestinationPolicyTests.cs pins the one definition of which external destinations may be dialed after three drifting copies were consolidated; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/SkillTagTests.cs proves an agent skill carrying whitespace or different casing still matches a queue requirement."
     }
   ]
 }

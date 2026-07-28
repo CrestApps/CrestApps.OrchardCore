@@ -328,6 +328,10 @@ public sealed class DialerAttemptServiceTests
     [InlineData(DialerSuppressionReason.DoNotCall, ActivityStatus.Cancelled, true)]
     [InlineData(DialerSuppressionReason.OutsideCallingWindow, null, false)]
     [InlineData(DialerSuppressionReason.NoDestination, ActivityStatus.Failed, true)]
+    // A compliance check that could not be completed leaves the activity available. The destination was
+    // never shown to be off limits, only unverified, so discarding the work would throw away a callable
+    // contact every time a registry had a bad minute.
+    [InlineData(DialerSuppressionReason.ComplianceScreeningUnavailable, null, false)]
     public async Task TryDialAsync_WhenEligibilitySuppresses_CompensatesAndPublishesSuppressionEvent(
         DialerSuppressionReason reason,
         ActivityStatus? expectedStatus,

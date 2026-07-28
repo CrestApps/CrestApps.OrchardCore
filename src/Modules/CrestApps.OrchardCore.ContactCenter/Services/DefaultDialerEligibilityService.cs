@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 
@@ -25,6 +27,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultDialerEligibilityService"/> class.
@@ -37,6 +40,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="abandonmentPolicyService">The policy service used to evaluate the rolling abandonment-rate cap.</param>
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
     /// <param name="clock">The clock used to evaluate cool-down and calling-window timing.</param>
+    /// <param name="logger">The logger used to record why an attempt could not be screened.</param>
     public DefaultDialerEligibilityService(
         IInteractionManager interactionManager,
         IContactCenterWorkStateService workStateService,
@@ -45,7 +49,8 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IBusinessHoursService businessHoursService,
         IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
-        IClock clock)
+        IClock clock,
+        ILogger<DefaultDialerEligibilityService> logger)
     {
         _interactionManager = interactionManager;
         _workStateService = workStateService;
@@ -55,6 +60,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -72,6 +78,18 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.NoDestination,
                 "The activity has no destination to dial.");
+        }
+
+        // The destination is canonicalized once, here, and every rule below works from the canonical value.
+        // A destination that cannot be canonicalized suppresses the attempt instead of being repaired into a
+        // digits-only approximation: that approximation could not be matched against a do-not-call registry,
+        // and the registry answering "not listed" for a number it never compared is how a call reaches a
+        // number that is on the list.
+        if (!_phoneNumberService.TryParse(activity.PreferredDestination, profile.DefaultRegionCode, out var destination))
+        {
+            return DialerEligibilityResult.Suppressed(
+                DialerSuppressionReason.NoDestination,
+                "The activity destination is not a valid phone number, so it cannot be checked for compliance.");
         }
 
         var workState = await _workStateService.GetAsync(activity.ItemId, cancellationToken);
@@ -102,10 +120,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         if (profile.EnforceCallingWindow)
         {
-            var normalizedDestination = Normalize(activity.PreferredDestination);
-            var regionCode = string.IsNullOrEmpty(normalizedDestination)
-                ? null
-                : _phoneNumberService.GetRegionCode(normalizedDestination);
+            var regionCode = _phoneNumberService.GetRegionCode(destination);
             var calendarId = ResolveCallingCalendarId(profile, regionCode);
             var isOpen = await _businessHoursService.EvaluateAsync(
                 calendarId,
@@ -132,11 +147,36 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
                 abandonment.Description);
         }
 
-        if (profile.RespectDoNotCall && await IsOnNationalRegistryAsync(activity.PreferredDestination, cancellationToken))
+        if (profile.RespectDoNotCall)
         {
-            return DialerEligibilityResult.Suppressed(
-                DialerSuppressionReason.NationalDoNotCallRegistry,
-                "The destination is listed on a national do-not-call registry.");
+            bool isRegistered;
+
+            try
+            {
+                isRegistered = await IsOnNationalRegistryAsync(destination, cancellationToken);
+            }
+            catch (DoNotCallScreeningException ex)
+            {
+                _logger.LogWarning(
+                    OperationalLogRedactor.RedactException(ex),
+                    "Suppressing the dial attempt for activity {ActivityId} because registry {RegistryKey} could not report whether the destination is listed.",
+                    OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
+                    ex.RegistryKey);
+
+                // The registry reported nothing, not "not listed". Suppressing here is not terminal: the
+                // destination has not been shown to be off limits, only unverified, so the activity stays
+                // available for a later cycle once the registry can answer.
+                return DialerEligibilityResult.Suppressed(
+                    DialerSuppressionReason.ComplianceScreeningUnavailable,
+                    ex.Message);
+            }
+
+            if (isRegistered)
+            {
+                return DialerEligibilityResult.Suppressed(
+                    DialerSuppressionReason.NationalDoNotCallRegistry,
+                    "The destination is listed on a national do-not-call registry.");
+            }
         }
 
         return DialerEligibilityResult.Eligible();
@@ -202,21 +242,14 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         return profile.CallingCalendarId;
     }
 
-    private async Task<bool> IsOnNationalRegistryAsync(string destination, CancellationToken cancellationToken)
+    private async Task<bool> IsOnNationalRegistryAsync(PhoneNumber destination, CancellationToken cancellationToken)
     {
         if (!_doNotCallRegistries.Any())
         {
             return false;
         }
 
-        var normalized = Normalize(destination);
-
-        if (string.IsNullOrEmpty(normalized))
-        {
-            return false;
-        }
-
-        var numbers = new[] { normalized };
+        var numbers = new[] { destination };
 
         foreach (var registry in _doNotCallRegistries)
         {
@@ -229,15 +262,5 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         }
 
         return false;
-    }
-
-    private string Normalize(string phoneNumber)
-    {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, null, out var e164) && !string.IsNullOrEmpty(e164))
-        {
-            return e164;
-        }
-
-        return new string(phoneNumber.Where(char.IsDigit).ToArray());
     }
 }
