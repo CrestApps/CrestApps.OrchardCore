@@ -1,6 +1,5 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
-using OrchardCore.Workflows.Activities;
-using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
@@ -9,95 +8,113 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class WorkflowTypeRecipeStep : IRecipeStep
 {
-    private readonly IActivityLibrary _library;
+    private readonly IWorkflowActivitySchemaService _activitySchemaService;
 
     private JsonSchema _cached;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkflowTypeRecipeStep"/> class.
     /// </summary>
-    /// <param name="library">The library.</param>
-    public WorkflowTypeRecipeStep(IActivityLibrary library) => _library = library;
+    /// <param name="activitySchemaService">The workflow activity schema service.</param>
+    public WorkflowTypeRecipeStep(IWorkflowActivitySchemaService activitySchemaService)
+    {
+        _activitySchemaService = activitySchemaService;
+    }
 
     public string Name => "WorkflowType";
 
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         if (_cached is not null)
         {
-            return ValueTask.FromResult(_cached);
+            return _cached;
         }
 
-        var all = _library.ListActivities();
-        var eventNames = all.Where(a => a is IEvent).Select(a => a.Name);
-        var taskNames = all.Where(a => a is ITask).Select(a => a.Name);
+        var descriptors = await _activitySchemaService.GetActivityDescriptorsAsync(cancellationToken);
+        var activitySchema = await _activitySchemaService.GetActivitySchemaAsync(cancellationToken);
 
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("WorkflowType").Description("Recipe step discriminator. Must be 'WorkflowType'.")),
-                ("data", WorkflowDataArray(eventNames, taskNames).Description("Workflow type definitions to create or update.")))
+                ("data", WorkflowDataArray(activitySchema, descriptors).Description("Workflow type definitions to create or update.")))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();
 
-        return ValueTask.FromResult(_cached);
+        return _cached;
     }
 
     private static JsonSchemaBuilder WorkflowDataArray(
-        IEnumerable<string> eventNames,
-        IEnumerable<string> taskNames)
+        JsonSchemaBuilder activitySchema,
+        IReadOnlyList<WorkflowActivityDescriptor> descriptors)
     {
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
                 .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Workflow type name.")),
+                    ("WorkflowTypeId", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Description("A stable unique identifier for the workflow type. Re-running the recipe with the same value replaces the existing workflow type instead of creating a duplicate.")),
+                    ("Name", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Description("Workflow type name.")),
+                    ("IsEnabled", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Boolean)
+                        .Description("Whether the workflow type is enabled. Disabled workflow types never start.")),
+                    ("IsSingleton", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Boolean)
+                        .Description("Whether only a single instance of this workflow type can run at a time.")),
+                    ("LockTimeout", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Integer)
+                        .Description("The timeout in milliseconds to acquire a lock before resuming a workflow instance of this type. Only used when 'IsSingleton' is true.")),
+                    ("LockExpiration", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Integer)
+                        .Description("The expiration in milliseconds of the lock acquired before resuming a workflow instance of this type. Only used when 'IsSingleton' is true.")),
+                    ("DeleteFinishedWorkflows", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Boolean)
+                        .Description("Whether workflow instances are deleted once they complete.")),
                     ("Activities", new JsonSchemaBuilder()
                         .Type(SchemaValueType.Array)
-                        .Items(ActivitySchema(eventNames, taskNames))
-                        .Description("Activities that belong to the workflow type.")),
-                    ("Transitions", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Array)
-                        .Items(new JsonSchemaBuilder()
-                            .Type(SchemaValueType.Object)
-                            .AdditionalProperties(true))
-                        .Description("Transition objects that connect activity outcomes.")))
-                .Required("Name", "Activities", "Transitions")
+                        .Items(activitySchema)
+                        .MinItems(1)
+                        .Description("Activities that belong to the workflow type. Exactly one activity should set 'IsStart' to true.")),
+                    ("Transitions", TransitionsSchema(descriptors)))
+                .Required("WorkflowTypeId", "Name", "Activities", "Transitions")
                 .AdditionalProperties(true));
     }
 
-    private static JsonSchemaBuilder ActivitySchema(
-        IEnumerable<string> eventNames,
-        IEnumerable<string> taskNames)
+    private static JsonSchemaBuilder TransitionsSchema(IReadOnlyList<WorkflowActivityDescriptor> descriptors)
     {
+        var outcomeNames = descriptors
+            .SelectMany(descriptor => descriptor.Outcomes)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(outcome => outcome, StringComparer.Ordinal)
+            .ToArray();
+        var outcomeHint = outcomeNames.Length > 0
+            ? $" Outcomes known to this tenant include: {string.Join(", ", outcomeNames)}."
+            : string.Empty;
+
         return new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Activity type name. Start activities must be events; non-start activities must be tasks.")),
-                ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this activity is a workflow start event.")),
-                ("X", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Number)
-                    .Description("Horizontal pixel position of the activity node in the designer.")),
-                ("Y", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Number)
-                    .Description("Vertical pixel position of the activity node in the designer.")),
-                ("Properties", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .AdditionalProperties(true)
-                    .Description("Activity-specific property bag passed to the workflow activity.")))
-            .Required("Name", "Properties")
-            .AdditionalProperties(true)
-            .If(new JsonSchemaBuilder()
-                .Properties(("IsStart", new JsonSchemaBuilder().Const(true)))
-                .Required("IsStart"))
-            .Then(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(eventNames))))
-            .Else(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(taskNames))));
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("SourceActivityId", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Description("The 'ActivityId' of the activity the transition starts from.")),
+                    ("SourceOutcomeName", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Description($"The outcome produced by the source activity that triggers this transition. Valid values are listed in the description of the source activity's 'Properties' schema.{outcomeHint}")),
+                    ("DestinationActivityId", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Description("The 'ActivityId' of the activity the transition leads to.")))
+                .Required("SourceActivityId", "SourceOutcomeName", "DestinationActivityId")
+                .AdditionalProperties(true))
+            .Description("Transition objects that connect activity outcomes to the next activity.");
     }
 }
