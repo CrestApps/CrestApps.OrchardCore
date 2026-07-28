@@ -5,6 +5,8 @@ using CrestApps.Core.AI.Markdown;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Builders;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;

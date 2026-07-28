@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -20,6 +21,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAIToolInstanceAccessor _instanceAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -29,22 +31,26 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     /// <param name="toolDefinitions">The tool definitions.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="instanceAccessor">The accessor used to resolve the tool instances the current user may assign.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfilePostSessionDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
+        IAIToolInstanceAccessor instanceAccessor,
         IStringLocalizer<AIProfilePostSessionDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _instanceAccessor = instanceAccessor;
         S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
         var accessibleTools = await GetAccessibleToolsAsync();
+        var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
 
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
@@ -82,6 +88,21 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                         Description = entry.Value.Description,
                         IsSelected = selectedToolNames.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
+            }
+
+            if (accessibleInstances.Count > 0)
+            {
+                var selectedInstanceNames = settings.ToolInstanceNames ?? [];
+
+                model.PostSessionToolInstances = accessibleInstances
+                    .Select(instance => new PostSessionToolInstanceEntry
+                    {
+                        Name = instance.Name,
+                        Description = instance.Description,
+                        IsSelected = selectedInstanceNames.Contains(instance.Name, StringComparer.OrdinalIgnoreCase),
+                    })
+                    .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
             }
         }).Location("Content:10#Data Processing & Metrics;10");
     }
@@ -156,10 +177,13 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                 .ToArray();
         }
 
+        var toolInstanceNames = await GetSelectedInstanceNamesAsync(model);
+
         profile.AlterSettings<AIProfilePostSessionSettings>(settings =>
         {
             settings.EnablePostSessionProcessing = model.EnablePostSessionProcessing;
             settings.ToolNames = toolNames;
+            settings.ToolInstanceNames = toolInstanceNames;
             settings.PostSessionTasks = tasks.Select(t => new PostSessionTask
             {
                 Name = t.Name,
@@ -177,6 +201,25 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
         });
 
         return await EditAsync(profile, context);
+    }
+
+    private async Task<string[]> GetSelectedInstanceNamesAsync(AIProfilePostSessionViewModel model)
+    {
+        var selectedNames = model.PostSessionToolInstances?
+            .Where(entry => entry.IsSelected)
+            .Select(entry => entry.Name);
+
+        if (selectedNames is null)
+        {
+            return [];
+        }
+
+        var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
+
+        return accessibleInstances
+            .Select(instance => instance.Name)
+            .Intersect(selectedNames, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private async Task<Dictionary<string, AIToolDefinitionEntry>> GetAccessibleToolsAsync()
