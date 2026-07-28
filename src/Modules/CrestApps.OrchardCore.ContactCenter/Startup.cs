@@ -188,6 +188,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
             .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
             .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
+            .AddScoped<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>()
+            .AddScoped<IContactCenterActivityWriter, ContactCenterActivityWriter>()
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
@@ -258,10 +260,6 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
-
-        services
-            .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
-            .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -305,26 +303,105 @@ public sealed class ContactCenterSharedHealthEndpointStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the seam between Contact Center routing state and the CRM activity.
+/// Registers the Contact Center settings screens and the administration menu every capability screen hangs off.
 /// </summary>
 /// <remarks>
-/// These two services are the only Contact Center services that write a CRM activity, so they are registered by
-/// the one feature that declares a dependency on CRM activity management rather than by the base feature.
+/// This is the root of the administration surface rather than a marker. Each capability's screens live in its own
+/// <c>.Admin</c> feature, and every one of them depends on this feature for the menu they attach to, so enabling a
+/// capability alone leaves a deployment headless.
 /// </remarks>
 [Feature(ContactCenterConstants.Feature.Admin)]
 public sealed class ContactCenterAdminStartup : StartupBase
 {
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>()
-            .AddScoped<IContactCenterActivityWriter, ContactCenterActivityWriter>();
+            .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
+            .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 }
 
 /// <summary>
-/// Registers agent profiles, presence, capacity, skills, and queue/campaign sign-in.
+/// Registers the agent administration screens.
 /// </summary>
+/// <remarks>
+/// The agent capability itself - profiles, presence, capacity, skills and queue sign-in - is usable without any
+/// screens, so the screens are a separate feature. A deployment that drives agents through its own front end or
+/// an API can enable the capability and leave this off.
+/// </remarks>
+[Feature(ContactCenterConstants.Feature.AgentsAdmin)]
+public sealed class ContactCenterAgentsAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>();
+        services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers the queue, skill, business-hours, and agent-entitlement administration screens.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.QueuesAdmin)]
+public sealed class ContactCenterQueuesAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
+            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
+            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
+            .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>();
+
+        services.AddNavigationProvider<ContactCenterAdminMenu>();
+        services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers the outbound dialer administration screens.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.DialerAdmin)]
+public sealed class ContactCenterDialerAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>();
+        services.AddNavigationProvider<ContactCenterDialerAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers the recording and monitoring settings screens.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.RecordingAdmin)]
+public sealed class ContactCenterRecordingAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the inbound entry-point administration screens.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.EntryPointsAdmin)]
+public sealed class ContactCenterEntryPointsAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();
+        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
+    }
+}
+
 [Feature(ContactCenterConstants.Feature.Agents)]
 public sealed class AgentsStartup : StartupBase
 {
@@ -343,12 +420,10 @@ public sealed class AgentsStartup : StartupBase
             .AddDataMigration<AgentQueueMembershipIndexMigrations>();
 
         services
-            .AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<AgentStateReasonCode>, AgentStateReasonCodeHandler>()
             .AddIndexProvider<AgentStateReasonCodeIndexProvider>()
             .AddDataMigration<AgentStateReasonCodeIndexMigrations>();
 
-        services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
     }
 }
 
@@ -531,13 +606,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
-        services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
-
         services
-            .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
-            .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
-            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
-            .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
@@ -555,7 +624,6 @@ public sealed class QueuesStartup : StartupBase
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
-        services.AddNavigationProvider<ContactCenterAdminMenu>();
     }
 }
 
@@ -613,7 +681,6 @@ public sealed class DialerStartup : StartupBase
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
         services
-            .AddDisplayDriver<DialerProfile, DialerProfileDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
             .AddIndexProvider<DialerProfileIndexProvider>()
             .AddDataMigration<DialerProfileIndexMigrations>()
@@ -621,7 +688,6 @@ public sealed class DialerStartup : StartupBase
             .AddDataMigration<CallbackRequestIndexMigrations>();
 
         services.AddSingleton<IBackgroundTask, CallbackDispatchBackgroundTask>();
-        services.AddNavigationProvider<ContactCenterDialerAdminMenu>();
 
         services.Configure<ActivityBatchSourceOptions>(options =>
         {
@@ -844,8 +910,6 @@ public sealed class RecordingStartup : StartupBase
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
         services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
 
-        services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
-        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 }
 
@@ -865,12 +929,10 @@ public sealed class EntryPointsStartup : StartupBase
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()
             .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
-            .AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
 
-        services.AddNavigationProvider<ContactCenterEntryPointsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

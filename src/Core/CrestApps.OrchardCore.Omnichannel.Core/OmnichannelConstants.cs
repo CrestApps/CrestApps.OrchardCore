@@ -97,6 +97,8 @@ public static class OmnichannelConstants
 
         public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
 
+        public const string Activities = "CrestApps.OrchardCore.Omnichannel.Activities";
+
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
     }

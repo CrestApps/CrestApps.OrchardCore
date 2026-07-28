@@ -14,22 +14,33 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Name = "Omnichannel Management",
-    Id = OmnichannelConstants.Features.Managements,
+    Name = "Omnichannel Activities",
+    Id = OmnichannelConstants.Features.Activities,
     Category = "Contact Center",
-    Description = "Adds omnichannel contact, campaign, activity, disposition, subject-flow, and channel-endpoint management.",
+    Description = "Adds the headless omnichannel contact, campaign, activity, disposition, subject-flow, and channel-endpoint services, permissions, and storage without any administration screens.",
     Dependencies =
     [
         OmnichannelConstants.Features.Area,
         UsersConstants.Feature.Area,
         "CrestApps.OrchardCore.ContentFields",
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
-        "CrestApps.OrchardCore.Resources",
-        "OrchardCore.ContentTypes",
         "OrchardCore.Contents",
         "OrchardCore.Flows",
         "OrchardCore.Users",
         TimeZonesConstants.Features.Area,
         "CrestApps.OrchardCore.Users",
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Omnichannel Management",
+    Id = OmnichannelConstants.Features.Managements,
+    Category = "Contact Center",
+    Description = "Adds the omnichannel contact, campaign, activity, disposition, subject-flow, and channel-endpoint administration screens.",
+    Dependencies =
+    [
+        OmnichannelConstants.Features.Activities,
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.ContentTypes",
     ]
 )]

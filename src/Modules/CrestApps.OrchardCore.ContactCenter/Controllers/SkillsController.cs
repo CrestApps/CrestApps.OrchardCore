@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center skills.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.QueuesAdmin)]
 public sealed class SkillsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

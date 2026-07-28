@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of dialer profiles.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterConstants.Feature.DialerAdmin)]
 public sealed class DialerProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";

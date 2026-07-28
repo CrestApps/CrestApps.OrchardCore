@@ -60,33 +60,13 @@ public sealed class Startup : StartupBase
     {
         services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
 
-        services.AddCatalogs()
-            .AddCatalogManagers();
-
-        services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
-        services.AddScoped<DefaultContactActivityBatchLoader>();
-
-        services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
-
-        services
-            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>()
-            .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
-            .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
-            .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
-            .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
-            .AddScoped<IOmnichannelChannelEndpointManager, OmnichannelChannelEndpointManager>()
-            .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
-            .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
-            .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
+        services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
 
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
-        services.AddContentPart<OmnichannelSubjectPart>();
-        services.AddScoped<OmnichannelContactDefinitionService>();
-        services.AddScoped<IContentDefinitionHandler, OmnichannelContactDefinitionHandler>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
@@ -106,102 +86,30 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<BulkManageOmnichannelActivityContainer, BulkManageActivityActionsDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelDisposition, OmnichannelDispositionDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<OmnichannelDisposition>, OmnichannelDispositionHandler>();
+            .AddDisplayDriver<OmnichannelDisposition, OmnichannelDispositionDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelCampaign, OmnichannelCampaignDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<OmnichannelCampaign>, OmnichannelCampaignHandler>();
+            .AddDisplayDriver<OmnichannelCampaign, OmnichannelCampaignDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<OmnichannelCampaignGroup>, OmnichannelCampaignGroupHandler>();
+            .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>();
 
         services
-            .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
+            .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>();
 
-        // Subject Actions.
         services
-            .AddScoped<ISourceCatalog<SubjectAction>, SubjectActionCatalog>()
-            .AddScoped<ICatalog<SubjectAction>>(sp => sp.GetRequiredService<ISourceCatalog<SubjectAction>>())
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
-            .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>()
-            .AddScoped<ISubjectActionExecutor, DefaultSubjectActionExecutor>()
-            .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
-            .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
+            .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>();
 
-        // Subject Flow Settings.
         services
             .AddDisplayDriver<SubjectFlowSettings, SubjectFlowSettingsDisplayDriver>();
 
-        services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
-
-        services.Configure<SubjectActionOptions>(options =>
-        {
-            options.AddActionType(OmnichannelConstants.ActionTypes.Finish, entry =>
-            {
-                entry.DisplayName = S["Finish"];
-                entry.Description = S["Completes the task. No additional actions are taken."];
-            });
-
-            options.AddActionType(OmnichannelConstants.ActionTypes.TryAgain, entry =>
-            {
-                entry.DisplayName = S["Try Again"];
-                entry.Description = S["Creates a retry activity with the same details and an incremented attempt count."];
-            });
-
-            options.AddActionType(OmnichannelConstants.ActionTypes.NewActivity, entry =>
-            {
-                entry.DisplayName = S["New Activity"];
-                entry.Description = S["Creates a brand new activity, optionally targeting a different subject type."];
-            });
-        });
-
-        services.Configure<ActivityBatchSourceOptions>(options =>
-        {
-            options.AddSource(ActivitySources.Manual, entry =>
-            {
-                entry.DisplayName = S["Manual"];
-                entry.Description = S["Loads activities assigned to selected users for manual agent work."];
-                entry.RequiresUserAssignment = true;
-            });
-
-            options.AddSource(ActivitySources.Automatic, entry =>
-            {
-                entry.DisplayName = S["Automatic"];
-                entry.Description = S["Loads unassigned activities that AI automation processes through the configured subject flow."];
-                entry.RequiresUserAssignment = false;
-                entry.ShowInCreationPicker = false;
-            });
-        });
-
-        services.AddPermissionProvider<PermissionProvider>();
-        services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
         services.AddNavigationProvider<AdminMenu>();
 
-        services
-            .AddIndexProvider<OmnichannelContactIndexProvider>()
-            .AddDataMigration<OmnichannelContactsMigrations>();
-
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
-
-        services.AddDataMigration<ContactMethodMigrations>();
-
-        services.AddContentPart<PhoneNumberInfoPart>();
-        services.AddContentPart<EmailInfoPart>();
-        services.AddContentPart<OmnichannelContactInfoPart>();
-
-        services
-            .AddIndexProvider<OmnichannelActivityIndexProvider>()
-            .AddDataMigration<OmnichannelActivityIndexMigrations>();
     }
 
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddSubjectDispositionActionsEndpoint();
-    }
 }
 
 [RequireFeatures("CrestApps.OrchardCore.AI")]

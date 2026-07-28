@@ -549,12 +549,18 @@
       "category": "feature-and-package-graph",
       "planFinding": "PR2",
       "gate": "Base coupled to Omnichannel Managements UI",
-      "invariant": "The base `CrestApps.OrchardCore.ContactCenter` feature must boot and activate in a tenant alone, resolving every service from only its own declared manifest dependencies, without requiring `CrestApps.OrchardCore.Omnichannel.Managements` or any other admin-integration assembly. Today the base feature depends on `CrestApps.OrchardCore.Omnichannel.Managements` (`ContactCenter/Manifest.cs`).",
+      "invariant": "The base `CrestApps.OrchardCore.ContactCenter` feature must boot and activate in a tenant alone, resolving every service from only its own declared manifest dependencies, without requiring `CrestApps.OrchardCore.Omnichannel.Managements` or any other administration-integration assembly. The base feature now declares `CrestApps.OrchardCore.Omnichannel.Activities`, the headless half of the Omnichannel management module, and the administration experience is reachable only through a feature a deployment opts into.",
       "testId": "CC-F001",
       "ciJob": {
         "id": "build_test",
         "workflow": ".github/workflows/pr_ci.yml",
-        "status": "partial"
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
       },
       "context": {
         "providers": [
@@ -567,7 +573,7 @@
           "fresh-tenant"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs and the ledger .github/contact-center/feature-dependency-violations.v1.json (FDV001) statically prove and pin the base feature's declared manifest coupling to Omnichannel Managements from the manifest source, and fail the build if any new undeclared coupling appears. The runtime proof that the base feature actually boots alone in a fresh tenant remains a planned:contact-center-feature-activation-matrix dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs and the ledger .github/contact-center/feature-dependency-violations.v1.json statically prove and pin every declared manifest dependency and the full transitive closure of every Contact Center feature, and fail the build if any new undeclared coupling appears; tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/ContactCenterHeadlessClosureTests.cs supplies the runtime proof by booting a fresh tenant with the whole headless closure and resolving every navigation provider and display driver the tenant can produce."
     },
     {
       "id": "F002",
@@ -731,6 +737,38 @@
         ]
       },
       "evidenceLocation": "`.github/contact-center/feature-lifecycle-contracts.v1.json` defines inactive, idle, and R3 active-work contracts. `ContactCenterFeatureLifecycleTests` proves admission rejection, quiesce-before-drain ordering, bounded timeout signaling, admission remaining closed during teardown, connected-hub abortion, fresh-scope Voice reconciliation, and complete background-task ledger coverage. Provider, endpoint, dialer, command, outbox, and media tests prove new work is rejected after quiesce, admitted work retains a drain lease, provider-feature rejection before provider contact returns a command to delayed Pending, media cleanup retains its lease until success, unavailable expected outbox handlers cannot silently disappear or consume the dead-letter budget, and durable command/inbox/outbox state resumes through existing ownership and fencing. Fresh-tenant activation proves every GA-Core profile resolves the lifecycle manager and participants through its declared dependency closure. Multi-node process-crash and rolling-deployment certification remains an R8 topology gate."
+    },
+    {
+      "id": "F008",
+      "severity": "P1",
+      "category": "feature-and-package-graph",
+      "planFinding": "W11.1",
+      "gate": "Headless deployment carries no administration surface",
+      "invariant": "A deployment that serves no user interface must be able to enable every Contact Center capability without activating one. Screens are not part of a capability: each capability feature registers only services, and the screens it used to register live in a separate administration feature that depends on the capability rather than the other way round, so enabling the capability can never pull the user interface in. This holds across the module boundary as well - the Omnichannel management module is split into a headless activity feature the Contact Center base depends on and the administration experience, and the Telephony provider settings screen is likewise separated from the telephony services - because a capability that transitively drags an administration module in is no more headless than one that registers the screens itself. Routes count as surface as much as services do, because moving a screen's driver without its controller leaves the route registered and authorized while the display pipeline that binds and validates its form no longer resolves, so the write path silently persists whatever the empty editor produced. The proof is structural rather than a list of feature names: the whole headless closure is booted in a tenant and every navigation provider, display driver, and routed administration controller the tenant can resolve is enumerated, so a screen added to a capability feature later fails without anyone remembering to extend the test. The features excluded from that closure are the ones that exist to serve a user interface, and each is required to prove it serves one, so the closure cannot be weakened by moving a headless feature onto the exclusion list. A feature is required to contribute surface of its own rather than inherit it - its declared dependency closure is booted with the feature withheld and that surface subtracted - because every administration feature depends on the administration root and would otherwise satisfy the requirement on the root's screens alone. Every administration feature must in turn register screens of its own beyond those it inherits, because an administration feature that registers nothing is a support liability that silently does nothing when enabled.",
+      "testId": "CC-F008",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "fresh-tenant-activation",
+            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "fresh-tenant"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/ContactCenterHeadlessClosureTests.cs boots one tenant with every Contact Center feature that is not a user experience and asserts that no excluded feature was activated and that the tenant resolves no navigation provider, display driver, or routed [Admin] controller from the Contact Center, Telephony, or Omnichannel assemblies, the controllers being read from the tenant's own IActionDescriptorCollectionProvider so the sweep reflects what the tenant routes rather than what the assembly compiles; EveryUserExperienceFeature_ActuallyServesAUserInterface boots each excluded feature alone and requires it to register Contact Center or Telephony surface of its own, so the exclusion list cannot be padded to weaken the closure; EveryAdministrationFeature_RegistersTheSurfaceItsCapabilityGaveUp boots each administration feature alone and requires screens beyond those inherited from the administration root, which is what proves the root and the five capability administration features are not empty markers; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterFeatureDependencyArchitectureTests.cs pins the resulting manifest graph and the transitive closure of every feature in .github/contact-center/feature-dependency-violations.v1.json."
     },
     {
       "id": "O001",

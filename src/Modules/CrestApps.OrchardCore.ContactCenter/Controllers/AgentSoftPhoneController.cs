@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides Contact Center agent work actions used by the soft phone widget.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.VoiceSoftPhone)]
 public sealed class AgentSoftPhoneController : Controller
 {
     private readonly IAgentPresenceManager _presenceManager;

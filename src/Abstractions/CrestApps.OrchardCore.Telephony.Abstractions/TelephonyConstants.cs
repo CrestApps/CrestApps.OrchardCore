@@ -92,5 +92,9 @@ public static class TelephonyConstants
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
 
+        /// <summary>
+        /// The identifier of the Telephony administration feature.
+        /// </summary>
+        public const string Admin = "CrestApps.OrchardCore.Telephony.Admin";
     }
 }

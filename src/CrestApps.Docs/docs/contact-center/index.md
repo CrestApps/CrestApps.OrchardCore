@@ -9,11 +9,32 @@ description: Provider-agnostic contact center orchestration for Orchard Core - i
 | --- | --- |
 | **Feature Name** | Contact Center |
 | **Headless feature ID** | `CrestApps.OrchardCore.ContactCenter` |
-| **Administration integration feature ID** | `CrestApps.OrchardCore.ContactCenter.Admin` |
+| **Administration feature ID** | `CrestApps.OrchardCore.ContactCenter.Admin` |
 
 The **Contact Center** module set turns the CRM into a full contact center that agents and supervisors operate without leaving Orchard Core. It extends the [Omnichannel](../omnichannel/index.md) CRM instead of introducing a second work model, and it sits between the CRM and the [Telephony](../telephony/index.md) soft phone: the CRM owns business work data, the Contact Center owns orchestration, and Telephony owns media execution.
 
-Enable `CrestApps.OrchardCore.ContactCenter` for the headless interaction lifecycle, durable event log, and baseline permissions. Enable `CrestApps.OrchardCore.ContactCenter.Admin` only when the tenant also needs integration with the Omnichannel administration experience; that feature declares the `CrestApps.OrchardCore.Omnichannel.Managements` dependency instead of forcing it into headless tenants.
+Enable `CrestApps.OrchardCore.ContactCenter` for the headless interaction lifecycle, durable event log, and baseline permissions.
+
+## Headless and administration features
+
+Screens are not part of a capability. Every capability feature registers services only, and the screens it would otherwise register live in a separate administration feature that depends on the capability rather than the other way round. A deployment that drives the contact center through its own front end or an API can therefore enable every capability without activating a single administration page, and without pulling in the Omnichannel management experience.
+
+| Capability feature | Administration feature |
+| --- | --- |
+| `CrestApps.OrchardCore.ContactCenter` | `CrestApps.OrchardCore.ContactCenter.Admin` |
+| `CrestApps.OrchardCore.ContactCenter.Agents` | `CrestApps.OrchardCore.ContactCenter.Agents.Admin` |
+| `CrestApps.OrchardCore.ContactCenter.Queues` | `CrestApps.OrchardCore.ContactCenter.Queues.Admin` |
+| `CrestApps.OrchardCore.ContactCenter.Dialer` | `CrestApps.OrchardCore.ContactCenter.Dialer.Admin` |
+| `CrestApps.OrchardCore.ContactCenter.Recording` | `CrestApps.OrchardCore.ContactCenter.Recording.Admin` |
+| `CrestApps.OrchardCore.ContactCenter.EntryPoints` | `CrestApps.OrchardCore.ContactCenter.EntryPoints.Admin` |
+
+`CrestApps.OrchardCore.ContactCenter.Admin` is the root of the administration surface: it adds the Contact Center settings screens and the administration menu the other administration features attach their screens to, and it is the feature that declares the `CrestApps.OrchardCore.Omnichannel.Managements` dependency. Every other administration feature depends on it, so enabling any one of them brings the menu with it.
+
+The remaining features - the agent desktop, soft phone, supervision, analytics, and maintenance screens - are user experiences in their own right and are not split, because nothing would be left behind if they were.
+
+:::note
+This split changed where the screens live. A tenant created before the split keeps its capability features enabled but no longer shows their screens until the matching administration feature is enabled. Enable `CrestApps.OrchardCore.ContactCenter.Admin` plus the administration feature of each capability you administer through the dashboard.
+:::
 
 The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations, and see the [PR-to-test control matrix](pr-test-control-matrix.md) for the DRI, approver, test id, CI job, and evidence tracked for every P0/P1 production-readiness gate. The [Single-Node Completion Roadmap](single-node-completion.md) describes the phased plan to make a single node fully functional first - real browser audio, inbound routing, supervisor monitoring, and recording - with multi-node hardening following as a secondary phase.
 

@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center queue groups.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.QueuesAdmin)]
 public sealed class QueueGroupsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
