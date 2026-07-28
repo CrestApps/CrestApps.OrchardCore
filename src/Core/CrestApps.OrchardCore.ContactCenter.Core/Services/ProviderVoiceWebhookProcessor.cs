@@ -88,9 +88,14 @@ public sealed class ProviderVoiceWebhookProcessor : IProviderVoiceWebhookProcess
         var accepted = 0;
         var messageIds = new List<string>();
 
-        foreach (var providerEvent in events)
+        foreach (var parsedEvent in events)
         {
-            providerEvent.ProviderName ??= adapter.TechnicalName;
+            // An adapter may leave the provider name unset, because the processor is what knows which adapter
+            // parsed the delivery.
+            var providerEvent = parsedEvent.ProviderName is null
+                ? parsedEvent with { ProviderName = adapter.TechnicalName }
+                : parsedEvent;
+
             var acceptance = await _inbox.AcceptAsync(new ProviderWebhookInboxDelivery
             {
                 ProviderName = adapter.TechnicalName,

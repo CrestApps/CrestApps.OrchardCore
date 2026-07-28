@@ -94,15 +94,15 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return null;
         }
 
-        var originalEvent = CloneProviderEvent(providerEvent);
-
         try
         {
-            return await IngestCoreAsync(CloneProviderEvent(originalEvent), cancellationToken);
+            return await IngestCoreAsync(providerEvent, cancellationToken);
         }
         catch (ConcurrencyException)
         {
-            return await RetryInFreshScopeAsync(originalEvent, cancellationToken);
+            // The retry starts from the event as it was handed in, because the adjustments the attempt made
+            // are derived from it and re-deriving them is what makes the retry equivalent to the first try.
+            return await RetryInFreshScopeAsync(providerEvent, cancellationToken);
         }
     }
 
@@ -113,16 +113,21 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         // Canonicalize the provider identity before any interaction, call, or event key is built so that
         // provider-contributed aliases (for example "Default Asterisk") collapse to a single stable
         // identity ("Asterisk") instead of mutating the stored provider name.
-        providerEvent.ProviderName = _providerIdentityResolver.Canonicalize(providerEvent.ProviderName);
+        var canonicalProviderName = _providerIdentityResolver.Canonicalize(providerEvent.ProviderName);
 
         // Scope the provider-supplied idempotency key by the canonical provider so identical raw delivery
         // identifiers emitted by different providers (for example the same numeric id from Asterisk and
         // DialPad) cannot collide in the shared interaction-event idempotency space. Non-provider domain
         // events are unaffected because this path only runs for normalized provider voice events.
         var legacyIdempotencyKey = providerEvent.IdempotencyKey;
-        providerEvent.IdempotencyKey = ContactCenterClaimKeys.BuildProviderEventIdempotencyKey(
-            providerEvent.ProviderName,
-            legacyIdempotencyKey);
+
+        providerEvent = providerEvent with
+        {
+            ProviderName = canonicalProviderName,
+            IdempotencyKey = ContactCenterClaimKeys.BuildProviderEventIdempotencyKey(
+                canonicalProviderName,
+                legacyIdempotencyKey),
+        };
 
         // The gate is the single lock authority for the stream. When ingestion was reached through the
         // provider-neutral fan-out the lease is already held, and the gate satisfies this request
@@ -341,7 +346,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 await _scopeExecutor.ExecuteAsync<IProviderVoiceEventService>(async service =>
                 {
-                    session = await service.IngestAsync(CloneProviderEvent(providerEvent), cancellationToken);
+                    session = await service.IngestAsync(providerEvent, cancellationToken);
                 });
 
                 return session;
@@ -828,30 +833,6 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         }
 
         return ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(providerEventKey, eventType);
-    }
-
-    private static ProviderVoiceEvent CloneProviderEvent(ProviderVoiceEvent providerEvent)
-    {
-        return new ProviderVoiceEvent
-        {
-            ProviderName = providerEvent.ProviderName,
-            ProviderCallId = providerEvent.ProviderCallId,
-            ProviderLegId = providerEvent.ProviderLegId,
-            State = providerEvent.State,
-            FromAddress = providerEvent.FromAddress,
-            ToAddress = providerEvent.ToAddress,
-            OccurredUtc = providerEvent.OccurredUtc,
-            IdempotencyKey = providerEvent.IdempotencyKey,
-            SequenceNumber = providerEvent.SequenceNumber,
-            IsMuted = providerEvent.IsMuted,
-            RecordingState = providerEvent.RecordingState,
-            RecordingReference = providerEvent.RecordingReference,
-            IsConference = providerEvent.IsConference,
-            ParticipantCount = providerEvent.ParticipantCount,
-            AnswerClassification = providerEvent.AnswerClassification,
-            HangupCause = providerEvent.HangupCause,
-            Metadata = new Dictionary<string, string>(providerEvent.Metadata, StringComparer.Ordinal),
-        };
     }
 
     private async Task StageAnsweredOutboundBridgeAsync(

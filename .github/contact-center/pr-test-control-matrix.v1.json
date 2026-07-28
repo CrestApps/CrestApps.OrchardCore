@@ -1522,7 +1522,7 @@
       "planFinding": "W2.1-contact-center-work-state-extraction",
       "category": "data",
       "gate": "Routing and the CRM wrote the same activity document, so one of the two writes was lost",
-      "invariant": "Routing state \u2014 assignment status, reservation, assignee, and attempt count \u2014 is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
+      "invariant": "Routing state — assignment status, reservation, assignee, and attempt count — is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
       "testId": "CC-D011",
       "ciJob": {
         "id": "build_test",
@@ -1550,7 +1550,7 @@
       "planFinding": "W2.2-live-call-topology",
       "category": "data",
       "gate": "A live call was summarized by scalars that could not describe who was on it",
-      "invariant": "A call session carries the real topology of the call \u2014 legs with roles and lifecycle, a bridge whose membership history is append-only, consults, supervisor engagements, and typed relationships to other calls \u2014 and CallTopologyProjector is the only writer of any of it. Conference membership at any past instant is reconstructible from the recorded join and leave times rather than from a live count. A consultative transfer, a supervisor monitor, whisper, and barge each have a durable representation that survives the request that created them, and none of it depends on provider metadata strings.",
+      "invariant": "A call session carries the real topology of the call — legs with roles and lifecycle, a bridge whose membership history is append-only, consults, supervisor engagements, and typed relationships to other calls — and CallTopologyProjector is the only writer of any of it. Conference membership at any past instant is reconstructible from the recorded join and leave times rather than from a live count. A consultative transfer, a supervisor monitor, whisper, and barge each have a durable representation that survives the request that created them, and none of it depends on provider metadata strings.",
       "testId": "CC-D012",
       "ciJob": {
         "id": "build_test",
@@ -1578,7 +1578,7 @@
       "planFinding": "W2.2-live-call-topology",
       "category": "data",
       "gate": "A copy of a provider voice event silently dropped the provider's hangup cause",
-      "invariant": "Copying a provider voice event carries every field the original declared, so a value the provider genuinely reported cannot be replaced by an inferred one without any signal that the real value was lost. The completeness of the copy is proved structurally against the type's own declared properties rather than by a hand-maintained list, so a field added later fails the build until the copy carries it.",
+      "invariant": "Copying a provider voice event carries every field the original declared, so a value the provider genuinely reported cannot be replaced by an inferred one without any signal that the real value was lost. Completeness is now structural rather than reviewed: the event is an immutable record, so a copy is the language's and carries every member, including any added later. What is proved instead is that the type stays that way — that it remains a record, that no property can be assigned after construction, and that no collection property is aliased from the caller, checked structurally over every property the type declares rather than by name, with a shape the check cannot build reported rather than skipped. Metadata additionally keeps the comparer it was supplied with, including when it is carried over from another event, because a snapshot that quietly became case-sensitive would change what consumers can find without changing anything they wrote.",
       "testId": "CC-D013",
       "ciJob": {
         "id": "build_test",
@@ -1598,7 +1598,7 @@
           "single-node-distributed"
         ]
       },
-      "evidenceLocation": "ProviderVoiceEventCloneCompletenessTests, which reflects over the settable properties of ProviderVoiceEvent and parses the clone method's object initializer to prove every one of them is assigned."
+      "evidenceLocation": "ProviderVoiceEventImmutabilityTests, which reflects over ProviderVoiceEvent to prove it is a record with no property assignable after construction, sweeps every collection property by assigning a mutable instance and growing the caller's copy to prove nothing is aliased, and exercises its metadata to prove the supplied dictionary is snapshotted with its comparer preserved through derivation."
     },
     {
       "id": "D014",
@@ -1634,7 +1634,7 @@
       "category": "data",
       "planFinding": "W2.4",
       "gate": "Reservation-path query-plan budget",
-      "invariant": "The statement routing runs before every offer \u2014 the per-agent count of live work \u2014 must be answered by seeking an index that constrains both the agent and the interaction status, on SQLite and on PostgreSQL, and must never read the interaction index table end to end. The statements measured are the ones the store executes: the hand-written statement is taken from the same builder and measured verbatim without rewriting its bound parameters, and the reservation queries the store issues through the query pipeline are captured from a recording connection, so a plan cannot be proven for a query nobody runs. The schema measured is built by the shipped migrations, so a plan cannot be proven for indexes nobody deploys. The hand-written statement must also execute successfully and return correct counts on PostgreSQL, because a plan budget cannot detect a statement that is a syntax error on the engine it targets. The declared status sets must partition InteractionStatus exactly, so a new status cannot silently drop out of \"occupying an agent\" and make a busy agent look idle.",
+      "invariant": "The statement routing runs before every offer — the per-agent count of live work — must be answered by seeking an index that constrains both the agent and the interaction status, on SQLite and on PostgreSQL, and must never read the interaction index table end to end. The statements measured are the ones the store executes: the hand-written statement is taken from the same builder and measured verbatim without rewriting its bound parameters, and the reservation queries the store issues through the query pipeline are captured from a recording connection, so a plan cannot be proven for a query nobody runs. The schema measured is built by the shipped migrations, so a plan cannot be proven for indexes nobody deploys. The hand-written statement must also execute successfully and return correct counts on PostgreSQL, because a plan budget cannot detect a statement that is a syntax error on the engine it targets. The declared status sets must partition InteractionStatus exactly, so a new status cannot silently drop out of \"occupying an agent\" and make a busy agent look idle.",
       "testId": "CC-D015",
       "ciJob": {
         "id": "build_test",

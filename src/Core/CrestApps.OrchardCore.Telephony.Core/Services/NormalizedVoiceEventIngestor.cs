@@ -55,7 +55,10 @@ public sealed class NormalizedVoiceEventIngestor : INormalizedVoiceEventIngestor
         // differently by each of them. The raw idempotency key is deliberately left untouched: scoping it is
         // the concern of the projection that owns the durable de-duplication record, and rewriting it here
         // would destroy the raw key that projection needs to recognize deliveries stored before scoping.
-        providerEvent.ProviderName = _providerIdentityResolver.Canonicalize(providerEvent.ProviderName);
+        providerEvent = providerEvent with
+        {
+            ProviderName = _providerIdentityResolver.Canonicalize(providerEvent.ProviderName),
+        };
 
         await using var lease = await _ingressGate.AcquireAsync(
             providerEvent.ProviderName,
