@@ -52,34 +52,44 @@ public sealed class HubApiAuthenticationMiddleware
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (IsAnonymousOptedInHubRequest(context))
+        if (IsAnonymousOptedInHubRequest(context, out var hubType))
         {
-            await AuthenticateAsync(context);
+            await AuthenticateAsync(context, hubType);
         }
 
         await _next(context);
     }
 
-    private static bool IsAnonymousOptedInHubRequest(HttpContext context)
+    private static bool IsAnonymousOptedInHubRequest(HttpContext context, out Type hubType)
     {
+        hubType = null;
+
         if (context.User?.Identity?.IsAuthenticated == true)
         {
             return false;
         }
 
         var endpoint = context.GetEndpoint();
+        var hubMetadata = endpoint?.Metadata.GetMetadata<HubMetadata>();
 
-        if (endpoint?.Metadata.GetMetadata<HubMetadata>() is null)
+        if (hubMetadata is null)
         {
             return false;
         }
 
         // MapHub copies the hub's class level attributes onto the hub and negotiate endpoints,
         // which makes the opt-in visible here without inspecting the hub type directly.
-        return endpoint.Metadata.GetMetadata<AllowApiTokenAuthenticationAttribute>() is not null;
+        if (endpoint.Metadata.GetMetadata<AllowApiTokenAuthenticationAttribute>() is null)
+        {
+            return false;
+        }
+
+        hubType = hubMetadata.HubType;
+
+        return true;
     }
 
-    private async Task AuthenticateAsync(HttpContext context)
+    private async Task AuthenticateAsync(HttpContext context, Type hubType)
     {
         var accessToken = GetAccessToken(context.Request);
 
@@ -108,7 +118,9 @@ public sealed class HubApiAuthenticationMiddleware
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug(result.Failure, "Unable to authenticate the hub request '{Path}' using the '{Scheme}' authentication scheme.", context.Request.Path, ApiAuthenticationScheme);
+            // The hub type comes from the endpoint metadata rather than from the request, so nothing
+            // a caller controls is ever written to the log.
+            _logger.LogDebug(result.Failure, "Unable to authenticate a request for the '{Hub}' hub using the '{Scheme}' authentication scheme.", hubType, ApiAuthenticationScheme);
         }
     }
 
