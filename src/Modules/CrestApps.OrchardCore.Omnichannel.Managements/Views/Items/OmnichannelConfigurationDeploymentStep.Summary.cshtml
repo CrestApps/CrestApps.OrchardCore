@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Deployments
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelConfigurationDeploymentStep>
+
+<h5>@T["Omnichannel configuration"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All Omnichannel configuration"]</span>
+}
+else if (Model.Value.CatalogNames?.Length > 0)
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.CatalogNames.Length, "1 selected catalog.", "{0} selected catalogs.", Model.Value.CatalogNames.Length)</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected catalogs."]</span>
+}

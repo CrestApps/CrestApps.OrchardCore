@@ -10,9 +10,12 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Core.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
+using OrchardCore.Recipes.Services;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -371,6 +374,28 @@ public sealed class NamedRecipeStepHandlerTests
         manager.Verify(x => x.CreateAsync(dataSource, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// Builds the shared configuration-catalog step over the reason code catalog. Reason codes used to have a
+    /// hand-written recipe step; they are now imported by the same generic step as every other configuration
+    /// catalog, and these tests keep proving the identity rules that step has to honour.
+    /// </summary>
+    /// <param name="manager">The manager that owns the reason codes.</param>
+    private static ConfigurationCatalogRecipeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
+    {
+        var catalog = new ConfigurationCatalog<AgentStateReasonCode>(
+            manager,
+            new ConfigurationCatalogDescriptor
+            {
+                Group = "ContactCenter",
+                StepName = "AgentStateReasonCode",
+                CollectionName = "ReasonCodes",
+                Order = 70,
+            },
+            new ConfigurationImportIdentityStore(new Clock()));
+
+        return new ConfigurationCatalogRecipeStep([catalog]);
+    }
+
     [Fact]
     public async Task AgentStateReasonCodeStep_WhenReasonCodeExists_ShouldUpdateInsteadOfCreate()
     {
@@ -387,10 +412,7 @@ public sealed class NamedRecipeStepHandlerTests
         manager.Setup(x => x.ValidateAsync(reasonCode, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
-        var handler = CreateHandler(
-            "CrestApps.OrchardCore.ContactCenter.Recipes.AgentStateReasonCodeStep, CrestApps.OrchardCore.ContactCenter",
-            manager.Object,
-            null);
+        var handler = CreateReasonCodeHandler(manager.Object);
 
         var context = CreateContext("AgentStateReasonCode", new JsonObject
         {
@@ -426,10 +448,7 @@ public sealed class NamedRecipeStepHandlerTests
         manager.Setup(x => x.ValidateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
-        var handler = CreateHandler(
-            "CrestApps.OrchardCore.ContactCenter.Recipes.AgentStateReasonCodeStep, CrestApps.OrchardCore.ContactCenter",
-            manager.Object,
-            null);
+        var handler = CreateReasonCodeHandler(manager.Object);
 
         var context = CreateContext("AgentStateReasonCode", new JsonObject
         {

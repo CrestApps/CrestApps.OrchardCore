@@ -1,12 +1,13 @@
 {
   "name": "ContactCenterAgentStateReasonCodes",
   "displayName": "Contact Center agent state reason codes",
-  "description": "Seeds the standard Contact Center agent state reason codes.",
+  "description": "Seeds the standard Contact Center agent state reason codes. The identifiers are fixed so that every tenant agrees on them and a deployment plan that references a standard reason code keeps working when it is replayed on another environment.",
   "steps": [
     {
       "name": "AgentStateReasonCode",
       "ReasonCodes": [
         {
+          "ItemId": "42b517a487px72s6j56ny1dq5y",
           "Name": "Short break",
           "Description": "A short personal break away from active work.",
           "AppliesTo": "Break",
@@ -14,6 +15,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4fy783xxhep6qrqw30d36gzenm",
           "Name": "Lunch",
           "Description": "Scheduled meal break.",
           "AppliesTo": "Break",
@@ -21,6 +23,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4bvk8hph7xb84tz7etqea1035w",
           "Name": "Away from desk",
           "Description": "Temporarily away from the desk.",
           "AppliesTo": "Away",
@@ -28,6 +31,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4erxm680hgje2rhnpvrqztazc6",
           "Name": "Team meeting",
           "Description": "Attending a team or one-on-one meeting.",
           "AppliesTo": "Meeting",
@@ -35,6 +39,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4znpg5ybpcckmtawz3dhxr2mxc",
           "Name": "Training",
           "Description": "Attending training or onboarding.",
           "AppliesTo": "Training",
@@ -42,6 +47,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4n5adcjbrwy0w4xygk2zaqwfds",
           "Name": "Coaching",
           "Description": "In a coaching or quality review session.",
           "AppliesTo": "Meeting",
@@ -49,6 +55,7 @@
           "Enabled": true
         },
         {
+          "ItemId": "4zm0xvghj9pjwrhb6ytg2b4pmc",
           "Name": "System issue",
           "Description": "Unable to take work due to a system or tooling issue.",
           "AppliesTo": "DoNotDisturb",

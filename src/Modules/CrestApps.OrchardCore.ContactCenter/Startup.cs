@@ -3,11 +3,13 @@ using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Configuration;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -15,7 +17,6 @@ using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
-using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -23,6 +24,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -36,8 +38,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -45,6 +47,7 @@ using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data.Migration;
 using OrchardCore.Data;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Environment.Shell;
@@ -414,6 +417,13 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
         services
+            .AddConfigurationCatalog<AgentStateReasonCode, IAgentStateReasonCodeManager>(
+                ContactCenterConfigurationCatalogs.Group,
+                ContactCenterConfigurationCatalogs.AgentStateReasonCode,
+                "ReasonCodes",
+                order: 70);
+
+        services
             .AddIndexProvider<AgentProfileIndexProvider>()
             .AddDataMigration<AgentProfileIndexMigrations>()
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
@@ -564,15 +574,46 @@ public sealed class AvailabilityStartup : StartupBase
 }
 
 /// <summary>
-/// Registers recipe execution support for the agent feature.
+/// Registers recipe execution for every Contact Center configuration catalog, so a tenant can be scripted and
+/// restored from source control.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterConstants.Feature.Area)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class AgentsRecipesStartup : StartupBase
+public sealed class ContactCenterRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddRecipeExecutionStep<AgentStateReasonCodeStep>();
+        services.AddConfigurationCatalogRecipeStep();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step that exports every Contact Center configuration catalog, so configuration can be
+/// promoted between environments.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Area)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ContactCenterDeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ContactCenterConfigurationDeploymentSource, ContactCenterConfigurationDeploymentStep>();
+    }
+}
+
+/// <summary>
+/// Registers the editor for the Contact Center configuration deployment step. The step itself is headless, so a
+/// tenant that runs without an administration surface can still be exported by a script; only the screen that edits
+/// the step needs the administration feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ContactCenterDeploymentAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<DeploymentStep, ContactCenterConfigurationDeploymentStepDisplayDriver>();
     }
 }
 
@@ -605,6 +646,28 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
+
+        services
+            .AddConfigurationCatalog<ContactCenterSkill, IContactCenterSkillManager>(
+                ContactCenterConfigurationCatalogs.Group,
+                ContactCenterConfigurationCatalogs.Skill,
+                "Skills",
+                order: 10)
+            .AddConfigurationCatalog<ActivityQueueGroup, IActivityQueueGroupManager>(
+                ContactCenterConfigurationCatalogs.Group,
+                ContactCenterConfigurationCatalogs.QueueGroup,
+                "QueueGroups",
+                order: 20)
+            .AddConfigurationCatalog<BusinessHoursCalendar, IBusinessHoursCalendarManager>(
+                ContactCenterConfigurationCatalogs.Group,
+                ContactCenterConfigurationCatalogs.BusinessHoursCalendar,
+                "Calendars",
+                order: 30)
+            .AddConfigurationCatalog<ActivityQueue, IActivityQueueManager>(
+                ContactCenterConfigurationCatalogs.Group,
+                ContactCenterConfigurationCatalogs.Queue,
+                "Queues",
+                order: 40);
 
         services
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
@@ -679,6 +742,12 @@ public sealed class DialerStartup : StartupBase
                     ContactCenterConstants.Feature.Dialer,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        services.AddConfigurationCatalog<DialerProfile, IDialerProfileManager>(
+            ContactCenterConfigurationCatalogs.Group,
+            ContactCenterConfigurationCatalogs.DialerProfile,
+            "DialerProfiles",
+            order: 60);
 
         services
             .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
@@ -932,6 +1001,12 @@ public sealed class EntryPointsStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+
+        services.AddConfigurationCatalog<ContactCenterEntryPoint, IContactCenterEntryPointManager>(
+            ContactCenterConfigurationCatalogs.Group,
+            ContactCenterConfigurationCatalogs.EntryPoint,
+            "EntryPoints",
+            order: 50);
 
     }
 
