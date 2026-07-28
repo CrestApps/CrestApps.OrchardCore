@@ -81,7 +81,7 @@ This setup ensures your SignalR hub is properly registered and accessible within
 
 Browser clients that are already signed in are authenticated through the regular authentication cookie, and nothing extra is required.
 
-Headless clients, such as single page applications, mobile applications, and service-to-service callers, authenticate with an access token instead. Enable the **OpenID Token Validation** feature (`OrchardCore.OpenId.Validation`) and send the token when connecting. Hub requests that arrive without an authenticated user and with a bearer token are validated using the same `Api` authentication scheme used by the API endpoints, so the same identity works for both the API and the hubs.
+Headless clients, such as single page applications, mobile applications, and service-to-service callers, authenticate with an access token instead. Enable the **OpenID Token Validation** feature (`OrchardCore.OpenId.Validation`) and send the token when connecting. Requests that arrive at an opted-in hub without an authenticated user and with a bearer token are validated using the same `Api` authentication scheme used by the API endpoints, so the same identity works for both the API and the hubs.
 
 Because browsers cannot set an `Authorization` header on a WebSocket handshake, SignalR clients send the token using the standard `access_token` query string parameter. Both forms are supported:
 
@@ -102,6 +102,30 @@ var connection = new HubConnectionBuilder()
     .Build();
 ```
 
-Requests that already carry an authentication cookie, or that use another authentication scheme, are left untouched. Token validation only runs for hub endpoints, so the rest of the site is unaffected.
+Requests that already carry an authentication cookie, or that use another authentication scheme, are left untouched. Token validation only runs for hubs that opted in, so the rest of the site, including hubs declared by Orchard Core or by your own application, is unaffected.
 
 The token is only authenticated, not authorized. The identity behind the token still needs the permissions each hub requires, such as `QueryAnyAIProfile` and the [AI tool permissions](../ai/tools#tool-permissions) when the profile uses tools.
+
+### Opting a hub in
+
+Hubs are opt-in. Apply `AllowApiTokenAuthenticationAttribute` to the hub class to allow the `Api` scheme to run for its requests:
+
+```csharp
+using CrestApps.OrchardCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
+
+[AllowApiTokenAuthentication]
+public sealed class MyHub : Hub
+{
+}
+```
+
+The following hubs opt in out of the box:
+
+| Hub | Route |
+| --- | --- |
+| `AIChatHub` | `/Communication/Hub/AIChatHub` |
+| `ChatInteractionHub` | `/Communication/Hub/ChatInteractionHub` |
+| `TelephonyHub` | `/Communication/Hub/TelephonyHub` |
+
+The attribute never weakens a hub's authorization requirements. A hub decorated with `[Authorize]` still rejects callers that fail the policy, and a hub that allows anonymous connections still accepts them when no token is supplied. The attribute only allows an otherwise anonymous request that carries a valid bearer token to be associated with the token's user before authorization runs.

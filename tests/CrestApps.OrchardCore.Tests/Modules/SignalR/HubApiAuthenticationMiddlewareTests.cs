@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.SignalR.Middlewares;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -103,6 +104,23 @@ public sealed class HubApiAuthenticationMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WhenHubDidNotOptIn_DoesNotAuthenticate()
+    {
+        // Arrange
+        var authenticationService = new TestAuthenticationService();
+        var context = CreateHubContext(authenticationService, allowsApiToken: false);
+
+        context.Request.QueryString = QueryString.Create("access_token", ValidToken);
+
+        // Act
+        await CreateMiddleware().InvokeAsync(context);
+
+        // Assert
+        Assert.False(context.User.Identity.IsAuthenticated);
+        Assert.Equal(0, authenticationService.AuthenticateCallCount);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WhenNoTokenIsProvided_DoesNotAuthenticate()
     {
         // Arrange
@@ -137,7 +155,10 @@ public sealed class HubApiAuthenticationMiddlewareTests
     private static HubApiAuthenticationMiddleware CreateMiddleware()
         => new(_ => Task.CompletedTask, NullLogger<HubApiAuthenticationMiddleware>.Instance);
 
-    private static DefaultHttpContext CreateHubContext(TestAuthenticationService authenticationService, bool isHubEndpoint = true)
+    private static DefaultHttpContext CreateHubContext(
+        TestAuthenticationService authenticationService,
+        bool isHubEndpoint = true,
+        bool allowsApiToken = true)
     {
         var schemeProvider = new Mock<IAuthenticationSchemeProvider>();
 
@@ -154,15 +175,24 @@ public sealed class HubApiAuthenticationMiddlewareTests
             RequestServices = services,
         };
 
-        var metadata = isHubEndpoint
-            ? new EndpointMetadataCollection(new HubMetadata(typeof(TestHub)))
-            : EndpointMetadataCollection.Empty;
+        var metadata = new List<object>();
 
-        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, metadata, "test"));
+        if (isHubEndpoint)
+        {
+            metadata.Add(new HubMetadata(typeof(TestHub)));
+        }
+
+        if (allowsApiToken)
+        {
+            metadata.Add(new AllowApiTokenAuthenticationAttribute());
+        }
+
+        context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(metadata), "test"));
 
         return context;
     }
 
+    [AllowApiTokenAuthentication]
     private sealed class TestHub : Hub
     {
     }

@@ -13,11 +13,12 @@ namespace CrestApps.OrchardCore.SignalR.Middlewares;
 /// can connect to hubs the same way they call the API endpoints.
 /// </summary>
 /// <remarks>
-/// Cookie authenticated requests are left untouched. The <c>Api</c> scheme is only evaluated when the request
-/// targets a hub endpoint, the caller is still anonymous, and a bearer token was provided. Browsers cannot send
-/// an <c>Authorization</c> header during a WebSocket handshake, so SignalR clients send the token using the
-/// standard <c>access_token</c> query string parameter, which this middleware promotes to an
-/// <c>Authorization</c> header before authenticating.
+/// Hubs opt in by applying <see cref="AllowApiTokenAuthenticationAttribute"/>, so hubs declared by Orchard Core
+/// or by a host application are never affected. Cookie authenticated requests are left untouched. The <c>Api</c>
+/// scheme is only evaluated when the request targets an opted-in hub endpoint, the caller is still anonymous, and
+/// a bearer token was provided. Browsers cannot send an <c>Authorization</c> header during a WebSocket handshake,
+/// so SignalR clients send the token using the standard <c>access_token</c> query string parameter, which this
+/// middleware promotes to an <c>Authorization</c> header before authenticating.
 /// </remarks>
 public sealed class HubApiAuthenticationMiddleware
 {
@@ -51,7 +52,7 @@ public sealed class HubApiAuthenticationMiddleware
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (IsAnonymousHubRequest(context))
+        if (IsAnonymousOptedInHubRequest(context))
         {
             await AuthenticateAsync(context);
         }
@@ -59,14 +60,23 @@ public sealed class HubApiAuthenticationMiddleware
         await _next(context);
     }
 
-    private static bool IsAnonymousHubRequest(HttpContext context)
+    private static bool IsAnonymousOptedInHubRequest(HttpContext context)
     {
         if (context.User?.Identity?.IsAuthenticated == true)
         {
             return false;
         }
 
-        return context.GetEndpoint()?.Metadata.GetMetadata<HubMetadata>() is not null;
+        var endpoint = context.GetEndpoint();
+
+        if (endpoint?.Metadata.GetMetadata<HubMetadata>() is null)
+        {
+            return false;
+        }
+
+        // MapHub copies the hub's class level attributes onto the hub and negotiate endpoints,
+        // which makes the opt-in visible here without inspecting the hub type directly.
+        return endpoint.Metadata.GetMetadata<AllowApiTokenAuthenticationAttribute>() is not null;
     }
 
     private async Task AuthenticateAsync(HttpContext context)
