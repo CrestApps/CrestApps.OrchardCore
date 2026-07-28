@@ -1,7 +1,7 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Security;
 using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +16,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
 {
     private readonly IOptions<AIToolDefinitionOptions> _toolDefinitions;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUserAccessor _userAccessor;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,17 +24,17 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     /// </summary>
     /// <param name="toolDefinitions">The registered AI tool definitions.</param>
     /// <param name="authorizationService">The authorization service for verifying tool access.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="userAccessor">The accessor used to resolve the caller that the tools are being resolved for.</param>
     /// <param name="logger">The logger.</param>
     public LocalToolRegistryProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
+        IUserAccessor userAccessor,
         ILogger<LocalToolRegistryProvider> logger)
     {
         _toolDefinitions = toolDefinitions;
         _authorizationService = authorizationService;
-        _httpContextAccessor = httpContextAccessor;
+        _userAccessor = userAccessor;
         _logger = logger;
     }
 
@@ -58,7 +58,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
 
         var toolDefinitions = _toolDefinitions.Value.Tools;
         var entries = new List<ToolRegistryEntry>();
-        var user = _httpContextAccessor.HttpContext?.User;
+        var user = _userAccessor.User;
         List<string> unauthorizedToolNames = null;
 
         foreach (var toolName in configuredToolNames)
@@ -75,7 +75,9 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
                 continue;
             }
 
-            // Verify user has permission to access this tool.
+            // A null user means there is no caller at all, such as a background task or a recipe,
+            // so authorization is skipped. Unauthenticated callers are still evaluated so that
+            // permissions granted to the Anonymous role continue to apply.
 
             if (user is not null &&
                 !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName as object))

@@ -193,6 +193,15 @@ When the current identity is not authorized for a configured tool, the tool is e
 Custom roles and OpenID applications that query tool-enabled profiles need `AccessAnyAITool`, or the matching `AccessAITool_{toolName}` permission for every tool the profile uses, in addition to the profile query permission.
 :::
 
+### How the caller is resolved
+
+The identity used for these checks comes from the framework's `IUserAccessor` rather than from `IHttpContextAccessor`. This matters for SignalR: `HttpContext` is frequently unavailable inside hub invocations on long-lived transports, on backplane-delivered messages, and behind hosted SignalR services, so resolving the caller from the HTTP request could not be relied upon there. The AI chat and chat interaction hubs publish the connection's principal for the duration of every invocation, which means tool permissions are evaluated the same way over SignalR as they are over a regular HTTP request.
+
+Two cases are treated differently:
+
+- **No caller at all**, such as a background task, a workflow, or a recipe. Permission checks are skipped and every configured tool stays available, because trusted server-side code is not a security boundary.
+- **An unauthenticated caller**, such as an anonymous visitor using a public chat widget. The permission check still runs, so whatever you grant the `Anonymous` role continues to apply exactly as it does elsewhere in Orchard Core.
+
 ## Invocation Context (AIInvocationScope)
 
 `AIInvocationScope` is the shared per-request context for references, tool state, and other invocation-scoped data. For the framework-level explanation, see the shared Core documentation:
