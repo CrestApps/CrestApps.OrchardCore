@@ -1522,7 +1522,7 @@
       "planFinding": "W2.1-contact-center-work-state-extraction",
       "category": "data",
       "gate": "Routing and the CRM wrote the same activity document, so one of the two writes was lost",
-      "invariant": "Routing state — assignment status, reservation, assignee, and attempt count — is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
+      "invariant": "Routing state \u2014 assignment status, reservation, assignee, and attempt count \u2014 is owned by a Contact Center work state document, and no Contact Center source writes those fields onto the CRM activity except the single projector that reconciles the read model. A reservation commits without touching the CRM activity, so a person editing that activity at the same moment neither loses their edit nor forces the routing commit to fail. Routing decisions read the authoritative work state rather than the projected read model, and work that predates the work state document adopts the projection instead of being reported as unassigned with no attempts.",
       "testId": "CC-D011",
       "ciJob": {
         "id": "build_test",
@@ -1550,7 +1550,7 @@
       "planFinding": "W2.2-live-call-topology",
       "category": "data",
       "gate": "A live call was summarized by scalars that could not describe who was on it",
-      "invariant": "A call session carries the real topology of the call — legs with roles and lifecycle, a bridge whose membership history is append-only, consults, supervisor engagements, and typed relationships to other calls — and CallTopologyProjector is the only writer of any of it. Conference membership at any past instant is reconstructible from the recorded join and leave times rather than from a live count. A consultative transfer, a supervisor monitor, whisper, and barge each have a durable representation that survives the request that created them, and none of it depends on provider metadata strings.",
+      "invariant": "A call session carries the real topology of the call \u2014 legs with roles and lifecycle, a bridge whose membership history is append-only, consults, supervisor engagements, and typed relationships to other calls \u2014 and CallTopologyProjector is the only writer of any of it. Conference membership at any past instant is reconstructible from the recorded join and leave times rather than from a live count. A consultative transfer, a supervisor monitor, whisper, and barge each have a durable representation that survives the request that created them, and none of it depends on provider metadata strings.",
       "testId": "CC-D012",
       "ciJob": {
         "id": "build_test",
@@ -1634,7 +1634,7 @@
       "category": "data",
       "planFinding": "W2.4",
       "gate": "Reservation-path query-plan budget",
-      "invariant": "The statement routing runs before every offer — the per-agent count of live work — must be answered by seeking an index that constrains both the agent and the interaction status, on SQLite and on PostgreSQL, and must never read the interaction index table end to end. The statements measured are the ones the store executes: the hand-written statement is taken from the same builder and measured verbatim without rewriting its bound parameters, and the reservation queries the store issues through the query pipeline are captured from a recording connection, so a plan cannot be proven for a query nobody runs. The schema measured is built by the shipped migrations, so a plan cannot be proven for indexes nobody deploys. The hand-written statement must also execute successfully and return correct counts on PostgreSQL, because a plan budget cannot detect a statement that is a syntax error on the engine it targets. The declared status sets must partition InteractionStatus exactly, so a new status cannot silently drop out of \"occupying an agent\" and make a busy agent look idle.",
+      "invariant": "The statement routing runs before every offer \u2014 the per-agent count of live work \u2014 must be answered by seeking an index that constrains both the agent and the interaction status, on SQLite and on PostgreSQL, and must never read the interaction index table end to end. The statements measured are the ones the store executes: the hand-written statement is taken from the same builder and measured verbatim without rewriting its bound parameters, and the reservation queries the store issues through the query pipeline are captured from a recording connection, so a plan cannot be proven for a query nobody runs. The schema measured is built by the shipped migrations, so a plan cannot be proven for indexes nobody deploys. The hand-written statement must also execute successfully and return correct counts on PostgreSQL, because a plan budget cannot detect a statement that is a syntax error on the engine it targets. The declared status sets must partition InteractionStatus exactly, so a new status cannot silently drop out of \"occupying an agent\" and make a busy agent look idle.",
       "testId": "CC-D015",
       "ciJob": {
         "id": "build_test",
@@ -1661,6 +1661,40 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionQueryPlanBudgetTests.cs asserts the SQLite plan seeks IDX_InteractionIndex_ActiveByAgent as a covering index with both AgentId and Status as seek constraints for the hand-written statement and for the pipeline-generated reservation queries captured through RecordingConnectionFactory, and that the declared status sets partition InteractionStatus; tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/QueryPlans/InteractionPostgresQueryPlanBudgetTests.cs asserts the same budget on PostgreSQL via EXPLAIN (FORMAT JSON) and separately executes InteractionStore.CountActiveByAgentIdsAsync against a real PostgreSQL service asserting its counts, enforced by the Contact Center Operations Gates workflow's postgres service; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AvailabilityStoreSharedDatabaseTests.cs proves the raw statement observes work written in the same uncommitted unit of work."
+    },
+    {
+      "id": "D016",
+      "severity": "P1",
+      "category": "data",
+      "planFinding": "W2.5",
+      "gate": "Upgrade schema convergence and startup budget",
+      "invariant": "A tenant that upgraded through any reachable historical schema must end up with byte-identical table and index declarations to a tenant created fresh, asserted by comparing the real declarations rather than the values the columns happen to hold: YesSql writes an enum as an integer whatever the column says, and SQLite's type affinity converts it on the way in, so a diverged column behaves correctly on SQLite forever and fails only on an engine that does not coerce. The upgrade chain is walked by return value exactly as the host walks it, so a step that no version can reach cannot be mistaken for one that runs, and every enum value an upgraded tenant already held must survive the rebuild, with an unreadable value recorded as unknown rather than rewritten to the first member. Upgrade backfills must cost the same number of database round trips regardless of how many rows the tenant holds, because they run inside the transaction that gates tenant startup and a per-row loop turns a large tenant into one that never activates.",
+      "testId": "CC-D016",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "redis-backplane-two-node",
+            "workflow": ".github/workflows/contact_center_operations_gates.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite",
+          "postgresql"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/Omnichannel/OmnichannelActivitySchemaConvergenceTests.cs upgrades a tenant from every reachable historical activity-index schema through MigrationChainRunner and asserts the resulting SqliteSchemaSnapshot equals a freshly created tenant's, and asserts every stored enum value round-trips after the column rebuild; tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/MigrationStartupBudgetTests.cs runs the call-session claim backfill and the inbox canonicalization backfill against tenants that differ ten-fold in row count through RecordingConnectionFactory and asserts the statement counts are equal; tests/CrestApps.OrchardCore.Tests/Architecture/MigrationAdditiveOnlyGuardTests.cs authorizes the rebuild's removals only as InPlaceRebuild entries and checks the restoring operation is really present in the same migration step; tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/Migrations/OmnichannelActivityPostgresMigrationTests.cs executes the upgrade against a real PostgreSQL instance from both reachable shapes of the historical schema, which is what proves the upgrade runs at all on an engine that resolves operators by type instead of merely producing the right declarations on SQLite."
     }
   ]
 }

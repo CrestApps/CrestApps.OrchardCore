@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -133,71 +132,80 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
         return 2;
     }
 
+    /// <remarks>
+    /// Canonicalization is a lookup over a finite alias map, so the table is asked which aliases it actually
+    /// holds and each one is rewritten with a single statement. Reading every row and issuing an UPDATE per
+    /// row would put a round trip per inbox message inside the transaction that gates tenant startup, which a
+    /// tenant with a large delivery history never gets through.
+    /// </remarks>
     private async Task CanonicalizeProviderNamesAsync(string quotedTableName)
     {
-        var documentIdColumn = SchemaBuilder.Dialect.QuoteForColumnName("DocumentId");
         var providerNameColumn = SchemaBuilder.Dialect.QuoteForColumnName("ProviderName");
         var deliveryIdColumn = SchemaBuilder.Dialect.QuoteForColumnName("DeliveryId");
 
-        var rows = new List<(long DocumentId, string CanonicalProviderName, string DeliveryId)>();
+        var aliases = new List<string>();
 
         await using (var selectCommand = SchemaBuilder.Connection.CreateCommand())
         {
             selectCommand.Transaction = SchemaBuilder.Transaction;
             selectCommand.CommandText =
-                $"SELECT {documentIdColumn}, {providerNameColumn}, {deliveryIdColumn} FROM {quotedTableName}";
+                $"SELECT DISTINCT {providerNameColumn} FROM {quotedTableName} WHERE {providerNameColumn} IS NOT NULL";
 
             await using var reader = await selectCommand.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
-                var documentId = reader.GetInt64(0);
-                var providerName = reader.IsDBNull(1) ? null : reader.GetString(1);
-                var deliveryId = reader.IsDBNull(2) ? null : reader.GetString(2);
-
-                // Canonicalize the legacy provider alias before duplicate detection so alias-stored and
-                // canonical deliveries for one provider collapse to a single identity that the composite
-                // (ProviderName, DeliveryId) unique index can enforce.
-                rows.Add((documentId, _providerIdentityResolver.Canonicalize(providerName), deliveryId));
+                if (!reader.IsDBNull(0))
+                {
+                    aliases.Add(reader.GetString(0));
+                }
             }
         }
 
-        DetectDeliveryCollisions(rows);
-
-        foreach (var row in rows)
+        foreach (var alias in aliases)
         {
-            await using var updateCommand = SchemaBuilder.Connection.CreateCommand();
-            updateCommand.Transaction = SchemaBuilder.Transaction;
-            updateCommand.CommandText =
-                $"UPDATE {quotedTableName} SET {providerNameColumn} = @ProviderName WHERE {documentIdColumn} = @DocumentId";
-            AddParameter(updateCommand, "@ProviderName", (object)row.CanonicalProviderName ?? DBNull.Value);
-            AddParameter(updateCommand, "@DocumentId", row.DocumentId);
-            await updateCommand.ExecuteNonQueryAsync();
-        }
-    }
+            var canonical = _providerIdentityResolver.Canonicalize(alias);
 
-    private static void DetectDeliveryCollisions(
-        List<(long DocumentId, string CanonicalProviderName, string DeliveryId)> rows)
-    {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var row in rows)
-        {
-            var key = $"{row.CanonicalProviderName}\n{row.DeliveryId}";
-
-            if (!seen.Add(key))
+            if (string.Equals(canonical, alias, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException(
-                    "The Contact Center provider webhook inbox contains multiple messages for one provider delivery. Resolve the duplicate legacy inbox messages before enabling the provider-delivery uniqueness constraint.");
+                continue;
             }
+
+            // Canonicalize the legacy provider alias before duplicate detection so alias-stored and
+            // canonical deliveries for one provider collapse to a single identity that the composite
+            // (ProviderName, DeliveryId) unique index can enforce.
+            await ContactCenterMigrationSql.ExecuteAsync(
+                SchemaBuilder,
+                $"UPDATE {quotedTableName} SET {providerNameColumn} = @Canonical WHERE {providerNameColumn} = @Alias",
+                ("@Canonical", canonical),
+                ("@Alias", alias));
         }
+
+        await EnsureNoDuplicateDeliveriesAsync(quotedTableName, providerNameColumn, deliveryIdColumn);
     }
 
-    private static void AddParameter(DbCommand command, string name, object value)
+    private async Task EnsureNoDuplicateDeliveriesAsync(
+        string quotedTableName,
+        string providerNameColumn,
+        string deliveryIdColumn)
     {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
+        // A missing provider or delivery identifier is treated as an empty value, matching how the previous
+        // in-memory key was composed, so an upgrade rejects the same tenants it always did. That is stricter
+        // than the unique index itself on the engines that treat nulls as distinct, which is the safe direction:
+        // an upgrade refuses with repair guidance rather than creating an index that hides the ambiguity.
+        var hasDuplicateDeliveries = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
+            $"""
+            SELECT 1
+            FROM {quotedTableName}
+            GROUP BY COALESCE({providerNameColumn}, ''), COALESCE({deliveryIdColumn}, '')
+            HAVING COUNT(*) > 1
+            """);
+
+        if (hasDuplicateDeliveries)
+        {
+            throw new InvalidOperationException(
+                "The Contact Center provider webhook inbox contains multiple messages for one provider delivery. Resolve the duplicate legacy inbox messages before enabling the provider-delivery uniqueness constraint.");
+        }
     }
 }

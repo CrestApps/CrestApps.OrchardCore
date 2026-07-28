@@ -1,13 +1,33 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
 internal sealed class OmnichannelActivityIndexMigrations : DataMigration
 {
+    private readonly IStore _store;
+
+    private static readonly string[] _rebuiltColumnIndexNames =
+    [
+        "IDX_OmnichannelActivityMyActivities_DocumentId",
+        "IDX_OmnichannelActivityMyActivities_BatchLoading",
+        "IDX_OmnichannelActivity_Assignment",
+    ];
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityIndexMigrations"/> class.
+    /// </summary>
+    /// <param name="store">The YesSql store, used to resolve the schema the index table lives in.</param>
+    public OmnichannelActivityIndexMigrations(IStore store)
+    {
+        _store = store;
+    }
+
     /// <summary>
     /// Creates a new async.
     /// </summary>
@@ -87,7 +107,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -143,5 +163,114 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Declares the enum-valued columns as the integer columns they have always held, and restores the
+    /// assignment column to the assigned-activity index, so an upgraded tenant matches a freshly created one.
+    /// </summary>
+    /// <remarks>
+    /// Every one of these columns was created as text while the index property behind it is an enum, and YesSql
+    /// writes an enum as its underlying integer whatever the column says. SQLite reconciles the mismatch through
+    /// column affinity, so an upgraded tenant behaves correctly there and the divergence stays invisible; an
+    /// engine that does not coerce rejects the write, so the same tenant cannot run at all. The assignment
+    /// column is likewise missing from the index that filters an agent's own activities, so that screen reads
+    /// more rows than it selects on exactly the tenants that have the most history.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        // On an engine that resolves an index by name alone the data layer's drop cannot see an index that
+        // belongs to a named schema, so it silently drops nothing and the recreation below fails. The qualified
+        // drop runs first and is a no-op wherever the data layer's own statement is already sufficient.
+        foreach (var indexName in _rebuiltColumnIndexNames)
+        {
+            var qualifiedIndexName = SchemaQualifiedIndexDrop.TryGetQualifiedIndexName(
+                SchemaBuilder,
+                _store,
+                typeof(OmnichannelActivityIndex),
+                indexName,
+                OmnichannelConstants.CollectionName);
+
+            if (qualifiedIndexName is null)
+            {
+                continue;
+            }
+
+            await using var command = SchemaBuilder.Connection.CreateCommand();
+            command.Transaction = SchemaBuilder.Transaction;
+            command.CommandText = "drop index if exists " + qualifiedIndexName;
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        // SQLite refuses to drop a column an index refers to, and the rebuild has to drop the old column to
+        // replace it, so every index over a rebuilt column comes down first and is recreated afterwards. The
+        // drops are tolerant because MySQL commits each schema change on its own and writes this drop without
+        // IF EXISTS, so an attempt that stopped part-way would otherwise fail every activation from here on. A
+        // drop that genuinely fails is still reported, because the recreation below runs on the strict builder.
+        var tolerantSchemaBuilder = new SchemaBuilder(
+            _store.Configuration,
+            SchemaBuilder.Transaction,
+            throwOnError: false);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.DropIndex("IDX_OmnichannelActivityMyActivities_DocumentId");
+            table.DropIndex("IDX_OmnichannelActivityMyActivities_BatchLoading");
+            table.DropIndex("IDX_OmnichannelActivity_Assignment");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityKind>(
+            SchemaBuilder,
+            _store,
+            "Kind",
+            OmnichannelConstants.CollectionName);
+        await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityAssignmentStatus>(
+            SchemaBuilder,
+            _store,
+            "AssignmentStatus",
+            OmnichannelConstants.CollectionName);
+        await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityUrgencyLevel>(
+            SchemaBuilder,
+            _store,
+            "UrgencyLevel",
+            OmnichannelConstants.CollectionName);
+        await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityStatus>(
+            SchemaBuilder,
+            _store,
+            "Status",
+            OmnichannelConstants.CollectionName);
+        await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityInteractionType>(
+            SchemaBuilder,
+            _store,
+            "InteractionType",
+            OmnichannelConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.CreateIndex("IDX_OmnichannelActivityMyActivities_DocumentId",
+                "DocumentId",
+                "AssignedToId",
+                "Status",
+                "AssignmentStatus",
+                "InteractionType",
+                "ScheduledUtc");
+            table.CreateIndex("IDX_OmnichannelActivityMyActivities_BatchLoading",
+                "ContactContentType",
+                "ContactContentItemId",
+                "Status",
+                "DocumentId");
+            table.CreateIndex("IDX_OmnichannelActivity_Assignment",
+                "AssignmentStatus",
+                "ReservationId",
+                "ReservedById",
+                "ScheduledUtc",
+                "DocumentId");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 5;
     }
 }

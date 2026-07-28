@@ -104,8 +104,11 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
 
         public override void Open() => _inner.Open();
 
+        // The transaction has to be wrapped as well. A caller that begins a transaction and then works through
+        // transaction.Connection would otherwise reach the unwrapped connection and every statement it issues
+        // would go unrecorded, which reads as a passing budget rather than as a blind gate.
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
-            => _inner.BeginTransaction(isolationLevel);
+            => new RecordingTransaction(_inner.BeginTransaction(isolationLevel), this);
 
         protected override DbCommand CreateDbCommand()
             => new RecordingCommand(_inner.CreateCommand(), this, _record);
@@ -175,7 +178,12 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
         protected override DbTransaction DbTransaction
         {
             get => _inner.Transaction;
-            set => _inner.Transaction = value as SqliteTransaction;
+            set => _inner.Transaction = value switch
+            {
+                RecordingTransaction recording => recording.Inner,
+                SqliteTransaction sqlite => sqlite,
+                _ => null,
+            };
         }
 
         public override void Cancel() => _inner.Cancel();
@@ -210,6 +218,37 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
             if (disposing)
             {
                 _inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
+    private sealed class RecordingTransaction : DbTransaction
+    {
+        private readonly DbConnection _owner;
+
+        public RecordingTransaction(SqliteTransaction inner, DbConnection owner)
+        {
+            Inner = inner;
+            _owner = owner;
+        }
+
+        public SqliteTransaction Inner { get; }
+
+        public override IsolationLevel IsolationLevel => Inner.IsolationLevel;
+
+        protected override DbConnection DbConnection => _owner;
+
+        public override void Commit() => Inner.Commit();
+
+        public override void Rollback() => Inner.Rollback();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Inner.Dispose();
             }
 
             base.Dispose(disposing);

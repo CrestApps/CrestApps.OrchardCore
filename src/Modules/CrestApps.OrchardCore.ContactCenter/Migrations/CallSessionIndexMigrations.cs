@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -153,83 +152,120 @@ internal sealed class CallSessionIndexMigrations : DataMigration
         }
     }
 
+    /// <remarks>
+    /// Every statement here is whole-table. The obvious implementation reads the table, computes each key in
+    /// C#, and issues one UPDATE per row; that runs inside the transaction that gates tenant startup, so a
+    /// tenant with a million call sessions needs a million round trips and never finishes activating.
+    /// Canonicalization is a lookup over a finite alias map, so it is applied once per distinct alias the
+    /// table actually holds rather than once per row, and the claim key is derived by the database from
+    /// columns it already has.
+    /// </remarks>
     private async Task CanonicalizeAndBackfillClaimKeysAsync(string quotedTableName)
     {
-        var documentIdColumn = SchemaBuilder.Dialect.QuoteForColumnName("DocumentId");
         var itemIdColumn = SchemaBuilder.Dialect.QuoteForColumnName("ItemId");
         var providerNameColumn = SchemaBuilder.Dialect.QuoteForColumnName("ProviderName");
         var providerCallColumn = SchemaBuilder.Dialect.QuoteForColumnName("ProviderCallId");
         var claimColumn = SchemaBuilder.Dialect.QuoteForColumnName("ProviderCallClaimKey");
 
-        var rows = new List<(long DocumentId, string CanonicalProviderName, string ProviderCallId, string ClaimKey)>();
+        await CanonicalizeProviderNamesAsync(quotedTableName, providerNameColumn);
+
+        var claimKeyExpression = BuildClaimKeyExpression(providerNameColumn, providerCallColumn);
+
+        await EnsureNoDuplicateClaimsAsync(quotedTableName, providerCallColumn, claimKeyExpression);
+
+        // A session without a provider call identifier claims its own globally unique item identifier, which
+        // is what BuildProviderCallClaim returns, so rows that cannot participate still satisfy the not-null
+        // unique column.
+        await ContactCenterMigrationSql.ExecuteAsync(
+            SchemaBuilder,
+            $"""
+            UPDATE {quotedTableName}
+            SET {claimColumn} = {itemIdColumn}
+            WHERE {providerCallColumn} IS NULL OR {providerCallColumn} = ''
+            """);
+
+        await ContactCenterMigrationSql.ExecuteAsync(
+            SchemaBuilder,
+            $"""
+            UPDATE {quotedTableName}
+            SET {claimColumn} = {claimKeyExpression}
+            WHERE {providerCallColumn} IS NOT NULL AND {providerCallColumn} <> ''
+            """);
+    }
+
+    private async Task CanonicalizeProviderNamesAsync(string quotedTableName, string providerNameColumn)
+    {
+        var aliases = new List<string>();
 
         await using (var selectCommand = SchemaBuilder.Connection.CreateCommand())
         {
             selectCommand.Transaction = SchemaBuilder.Transaction;
             selectCommand.CommandText =
-                $"SELECT {documentIdColumn}, {itemIdColumn}, {providerNameColumn}, {providerCallColumn} FROM {quotedTableName}";
+                $"SELECT DISTINCT {providerNameColumn} FROM {quotedTableName} WHERE {providerNameColumn} IS NOT NULL";
 
             await using var reader = await selectCommand.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
-                var documentId = reader.GetInt64(0);
-                var itemId = reader.IsDBNull(1) ? null : reader.GetString(1);
-                var providerName = reader.IsDBNull(2) ? null : reader.GetString(2);
-                var providerCallId = reader.IsDBNull(3) ? null : reader.GetString(3);
-
-                // Canonicalize the legacy provider alias before building the claim key so that alias-stored
-                // and canonical rows for the same provider call collapse to one identity and are detected as
-                // duplicates rather than silently persisting distinct alias index values.
-                var canonicalProviderName = _providerIdentityResolver.Canonicalize(providerName);
-                var claimKey = ContactCenterClaimKeys.BuildProviderCallClaim(canonicalProviderName, providerCallId, itemId);
-
-                rows.Add((documentId, canonicalProviderName, providerCallId, claimKey));
+                if (!reader.IsDBNull(0))
+                {
+                    aliases.Add(reader.GetString(0));
+                }
             }
         }
 
-        DetectClaimCollisions(rows);
-
-        foreach (var row in rows)
+        foreach (var alias in aliases)
         {
-            await using var updateCommand = SchemaBuilder.Connection.CreateCommand();
-            updateCommand.Transaction = SchemaBuilder.Transaction;
-            updateCommand.CommandText =
-                $"UPDATE {quotedTableName} SET {claimColumn} = @ClaimKey, {providerNameColumn} = @ProviderName WHERE {documentIdColumn} = @DocumentId";
-            AddParameter(updateCommand, "@ClaimKey", row.ClaimKey);
-            AddParameter(updateCommand, "@ProviderName", (object)row.CanonicalProviderName ?? DBNull.Value);
-            AddParameter(updateCommand, "@DocumentId", row.DocumentId);
-            await updateCommand.ExecuteNonQueryAsync();
-        }
-    }
+            var canonical = _providerIdentityResolver.Canonicalize(alias);
 
-    private static void DetectClaimCollisions(
-        List<(long DocumentId, string CanonicalProviderName, string ProviderCallId, string ClaimKey)> rows)
-    {
-        // Only rows that carry a provider call identifier participate in the provider-call claim; rows without
-        // one fall back to their globally unique item identifier and cannot collide.
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var row in rows)
-        {
-            if (string.IsNullOrEmpty(row.ProviderCallId))
+            if (string.Equals(canonical, alias, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (!seen.Add(row.ClaimKey))
-            {
-                throw new InvalidOperationException(
-                    "The Contact Center call session index contains multiple call sessions for one provider-call identity. Resolve the duplicate legacy call sessions before enabling the provider-call uniqueness constraint.");
-            }
+            await ContactCenterMigrationSql.ExecuteAsync(
+                SchemaBuilder,
+                $"UPDATE {quotedTableName} SET {providerNameColumn} = @Canonical WHERE {providerNameColumn} = @Alias",
+                ("@Canonical", canonical),
+                ("@Alias", alias));
         }
     }
 
-    private static void AddParameter(DbCommand command, string name, object value)
+    private string BuildClaimKeyExpression(string providerNameColumn, string providerCallColumn)
     {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
+        // BuildProviderCallClaim interpolates a null provider name as an empty string, so the database has to
+        // do the same or a backfilled row would carry a different key than the index provider later writes.
+        return ContactCenterMigrationSql.BuildConcat(
+            SchemaBuilder.Dialect,
+            $"COALESCE({providerNameColumn}, '')",
+            "'|'",
+            providerCallColumn);
+    }
+
+    private async Task EnsureNoDuplicateClaimsAsync(
+        string quotedTableName,
+        string providerCallColumn,
+        string claimKeyExpression)
+    {
+        // Grouping by the composed key rather than by the two columns is deliberate: the unique index is over
+        // the composed value, so a pair that collides only once composed is still reported. Rows without a
+        // provider call identifier are excluded because their key falls back to the row's own identifier, which
+        // is unique by construction; a duplicate there would be a corrupt table rather than a legacy claim, and
+        // it surfaces as the index creation failing rather than as this repair message.
+        var hasDuplicateClaims = await ContactCenterMigrationSql.ExistsAsync(
+            SchemaBuilder,
+            $"""
+            SELECT 1
+            FROM {quotedTableName}
+            WHERE {providerCallColumn} IS NOT NULL AND {providerCallColumn} <> ''
+            GROUP BY {claimKeyExpression}
+            HAVING COUNT(*) > 1
+            """);
+
+        if (hasDuplicateClaims)
+        {
+            throw new InvalidOperationException(
+                "The Contact Center call session index contains multiple call sessions for one provider-call identity. Resolve the duplicate legacy call sessions before enabling the provider-call uniqueness constraint.");
+        }
     }
 }

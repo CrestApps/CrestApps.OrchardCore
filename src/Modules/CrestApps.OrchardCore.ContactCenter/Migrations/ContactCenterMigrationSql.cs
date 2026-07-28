@@ -1,6 +1,7 @@
 using OrchardCore.Data.Migration;
 using YesSql;
 using YesSql.Sql;
+using YesSql.Utils;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -72,6 +73,66 @@ internal static class ContactCenterMigrationSql
         parameter.Value = backfillUtc;
 
         command.Parameters.Add(parameter);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Builds a dialect-portable string concatenation expression.
+    /// </summary>
+    /// <remarks>
+    /// String concatenation is one of the few expressions with no shared syntax across the supported engines:
+    /// SQLite and PostgreSQL use <c>||</c>, SQL Server uses <c>+</c>, and MySQL requires <c>concat()</c>. A
+    /// migration that hard-codes any one of them silently produces a wrong value or a syntax error on the
+    /// others, so the dialect is asked to render it.
+    /// </remarks>
+    /// <param name="dialect">The active SQL dialect.</param>
+    /// <param name="fragments">The already-quoted operands, in order.</param>
+    /// <returns>The concatenation expression in the dialect's own syntax.</returns>
+    public static string BuildConcat(ISqlDialect dialect, params string[] fragments)
+    {
+        ArgumentNullException.ThrowIfNull(dialect);
+        ArgumentNullException.ThrowIfNull(fragments);
+
+        var builder = new RentedStringBuilder(256);
+
+        dialect.Concat(builder, fragments.Select<string, Action<IStringBuilder>>(
+            fragment => target => target.Append(fragment)).ToArray());
+
+        var expression = builder.ToString();
+
+        builder.Dispose();
+
+        return expression;
+    }
+
+    /// <summary>
+    /// Executes a set-based statement against the migration's connection and transaction.
+    /// </summary>
+    /// <remarks>
+    /// Backfills run inside the transaction that gates tenant startup, so they are expressed as whole-table
+    /// statements rather than a command per row: a per-row loop turns a one million row tenant into one
+    /// million round trips and the tenant never finishes activating.
+    /// </remarks>
+    /// <param name="schemaBuilder">The active schema builder.</param>
+    /// <param name="commandText">The statement text.</param>
+    /// <param name="parameters">The optional named parameters.</param>
+    public static async Task ExecuteAsync(
+        ISchemaBuilder schemaBuilder,
+        string commandText,
+        params (string Name, object Value)[] parameters)
+    {
+        await using var command = schemaBuilder.Connection.CreateCommand();
+        command.Transaction = schemaBuilder.Transaction;
+        command.CommandText = commandText;
+
+        foreach (var (name, value) in parameters)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            parameter.Value = value ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
 
         await command.ExecuteNonQueryAsync();
     }

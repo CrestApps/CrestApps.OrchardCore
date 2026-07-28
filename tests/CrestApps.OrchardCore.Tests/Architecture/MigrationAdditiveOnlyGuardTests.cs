@@ -83,6 +83,15 @@ public sealed class MigrationAdditiveOnlyGuardTests
 
     private const string QueryBuilderTypeFullName = "YesSql.Sql.SqlBuilder";
 
+    // The operations that can put a removed schema object back. RenameColumn appears in both sets because renaming
+    // removes one column name and creates another, so which role it plays depends on which name is being asked about.
+    private static readonly HashSet<string> _restoringSchemaOperations = new(StringComparer.Ordinal)
+    {
+        "AddColumn",
+        "CreateIndex",
+        "RenameColumn",
+    };
+
     private static readonly HashSet<string> _destructiveSchemaOperations = new(StringComparer.Ordinal)
     {
         "AlterColumn",
@@ -101,6 +110,40 @@ public sealed class MigrationAdditiveOnlyGuardTests
         "RenameColumn",
         "RenameTable",
 
+    };
+
+    // The verbs a reconstructed argument must lead with to be treated as the statement rather than as a
+    // receiver or a bare identifier. Every verb that can begin a statement is listed, including the ones that
+    // are themselves findings, so a destructive or unreadable statement is never mistaken for a plain argument.
+    private static readonly HashSet<string> _statementLeadingVerbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "alter",
+        "analyze",
+        "begin",
+        "call",
+        "comment",
+        "create",
+        "declare",
+        "delete",
+        "do",
+        "drop",
+        "exec",
+        "execute",
+        "explain",
+        "grant",
+        "insert",
+        "merge",
+        "pragma",
+        "rename",
+        "replace",
+        "revoke",
+        "select",
+        "set",
+        "truncate",
+        "update",
+        "vacuum",
+        "values",
+        "with",
     };
 
     private static readonly HashSet<string> _sqlExecutionOperations = new(StringComparer.Ordinal)
@@ -221,6 +264,73 @@ public sealed class MigrationAdditiveOnlyGuardTests
     private static readonly MigrationContractEntry[] _authorizedContractSteps =
     [
         new MigrationContractEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexColumnRebuild.cs",
+            "IndexColumnRebuild",
+            "RebuildAsEnumColumnAsync",
+            "DropColumn",
+            string.Empty,
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "The old column is dropped only after a replacement holding its values has been added, and the replacement takes its name in the same step, so the column exists under the same name before and after. SQLite has no ALTER COLUMN, so add, copy, drop and rename is the only sequence available on every supported engine.",
+            "RenameColumn"),
+        new MigrationContractEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexColumnRebuild.cs",
+            "IndexColumnRebuild",
+            "RebuildAsEnumColumnAsync",
+            "RenameColumn",
+            string.Empty,
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "The rename retires the temporary name the replacement column was created under in this same step, and gives the column back the name callers use. The temporary name is never read by any node, so no version loses an object it depends on.",
+            "AddColumn"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
+            "OmnichannelActivityIndexMigrations",
+            "UpdateFrom4Async",
+            "raw SQL",
+            "drop",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "PostgreSQL and SQLite name only the index in a drop, so the name is resolved against the connection's search path rather than the table's schema, and a tenant whose tables live in a named schema drops nothing at all. The data layer writes that drop with IF EXISTS, so the miss is silent until the recreation below reports the index already exists and the tenant cannot activate. This statement removes only the three indexes this same step recreates, and it is issued only on the engines whose own drop cannot find them.",
+            "CreateIndex",
+            "IDX_OmnichannelActivityMyActivities_DocumentId;IDX_OmnichannelActivityMyActivities_BatchLoading;IDX_OmnichannelActivity_Assignment"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
+            "OmnichannelActivityIndexMigrations",
+            "UpdateFrom4Async",
+            "DropIndex",
+            "IDX_OmnichannelActivityMyActivities_DocumentId",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so the indexes over the rebuilt columns come down and are recreated in the same step. The index is recreated with the assignment column a freshly created tenant already has, which is the divergence this step exists to close.",
+            "CreateIndex"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
+            "OmnichannelActivityIndexMigrations",
+            "UpdateFrom4Async",
+            "DropIndex",
+            "IDX_OmnichannelActivityMyActivities_BatchLoading",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so this index over the rebuilt status column comes down and is recreated over the same columns in the same step.",
+            "CreateIndex"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
+            "OmnichannelActivityIndexMigrations",
+            "UpdateFrom4Async",
+            "DropIndex",
+            "IDX_OmnichannelActivity_Assignment",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so this index over the rebuilt assignment column comes down and is recreated over the same columns in the same step.",
+            "CreateIndex"),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
             "OmnichannelActivityIndexMigrations",
             "UpdateFrom3Async",
@@ -308,13 +418,19 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",
-            "1966765494500e97",
+            "ffc9d55907b0a22a",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
+            "ExecuteAsync",
+            "ffc9d55907b0a22a",
+            "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
+        new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
+            "ContactCenterMigrationSql",
             "CreateUniqueIndexAsync",
-            "1966765494500e97",
+            "ffc9d55907b0a22a",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
     ];
 
@@ -408,6 +524,69 @@ public sealed class MigrationAdditiveOnlyGuardTests
         Assert.True(
             violations.Count == 0,
             $"Contract register justifications are checked against the repository's version and release history rather than trusted.{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+    }
+
+    /// <summary>
+    /// Fails when a step authorized as an in-place rebuild does not actually put the object back.
+    /// </summary>
+    /// <remarks>
+    /// A rebuild is the one destructive shape the release history cannot judge, because the object is removed and
+    /// recreated within a single step and no version boundary is crossed. What makes it safe is only that the
+    /// restoration is really there, so the restoration is looked for in the same method rather than taken on the
+    /// author's word: an entry whose recreation is deleted, renamed, or moved to another step stops being covered.
+    /// </remarks>
+    [Fact]
+    public void ContractRegister_WhenAnInPlaceRebuildDoesNotRestoreTheObject_DoesNotExist()
+    {
+        var restorations = CollectRestorations(FindRepositoryRoot());
+        var violations = new List<string>();
+
+        foreach (var entry in _authorizedContractSteps.Where(entry => entry.Justification == MigrationContractJustification.InPlaceRebuild))
+        {
+            var location = $"{entry.RelativePath}: {entry.TypeName}.{entry.MethodName} authorizes '{entry.Operation}' on '{entry.Target}'";
+
+            if (!_restoringSchemaOperations.Contains(entry.RestoringOperation ?? string.Empty))
+            {
+                violations.Add($"{location} but '{entry.RestoringOperation}' is not an operation that can restore a schema object.");
+
+                continue;
+            }
+
+            var candidates = restorations
+                .Where(restoration => string.Equals(restoration.RelativePath, entry.RelativePath, StringComparison.Ordinal)
+                    && string.Equals(restoration.TypeName, entry.TypeName, StringComparison.Ordinal)
+                    && string.Equals(restoration.MethodName, entry.MethodName, StringComparison.Ordinal)
+                    && string.Equals(restoration.Operation, entry.RestoringOperation, StringComparison.Ordinal))
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                violations.Add($"{location} as an in-place rebuild, but that method contains no '{entry.RestoringOperation}', so the object is removed and never put back.");
+
+                continue;
+            }
+
+            // A removal that names its object literally must be matched by a restoration of that same object.
+            // Where the name is computed there is nothing to compare, and the presence of the restoring operation
+            // in the same method is the strongest statement available. A removal written as SQL is reported by its
+            // leading verb rather than by an object name, so such an entry names the objects it takes away itself
+            // and every one of them is looked for, which is stricter than trusting the verb alone.
+            var removedObjects = string.IsNullOrEmpty(entry.RestoredObjects)
+                ? (entry.Target.Length > 0 ? [entry.Target] : Array.Empty<string>())
+                : entry.RestoredObjects.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var removedObject in removedObjects)
+            {
+                if (!candidates.Exists(restoration => string.Equals(restoration.Target, removedObject, StringComparison.Ordinal)))
+                {
+                    violations.Add($"{location} as an in-place rebuild, but that method does not restore '{removedObject}'; it restores only '{string.Join("', '", candidates.Select(restoration => restoration.Target))}'.");
+                }
+            }
+        }
+
+        Assert.True(
+            violations.Count == 0,
+            $"An in-place rebuild is only safe because the object comes back in the same step, so the restoration is checked rather than trusted.{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
     /// <summary>
@@ -1170,6 +1349,14 @@ public sealed class MigrationAdditiveOnlyGuardTests
             case MigrationContractJustification.ReviewedAdditive:
                 return null;
 
+            // An in-place rebuild removes an object and puts it back under the same name in the same step, so the
+            // release history says nothing about whether it is safe. What makes it safe is that the object is
+            // actually restored, and that is checked against the migration source rather than asserted here.
+            case MigrationContractJustification.InPlaceRebuild:
+                return string.IsNullOrWhiteSpace(entry.RestoringOperation)
+                    ? "an in-place rebuild must name the operation that restores the object, so the restoration can be checked."
+                    : null;
+
             default:
                 return $"'{entry.Justification}' is not a recognized justification.";
         }
@@ -1187,6 +1374,65 @@ public sealed class MigrationAdditiveOnlyGuardTests
         }
 
         return occurrences;
+    }
+
+    /// <summary>
+    /// Collects every schema operation that puts an object into a table, so a claim that a removal is immediately
+    /// undone can be checked against the migration source instead of trusted.
+    /// </summary>
+    private static List<MigrationRestoration> CollectRestorations(string repositoryRoot)
+    {
+        var restorations = new List<MigrationRestoration>();
+
+        foreach (var file in EnumerateMigrationFiles(repositoryRoot))
+        {
+            var relativePath = Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/');
+            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), cancellationToken: TestContext.Current.CancellationToken);
+
+            foreach (var invocation in tree.GetRoot(TestContext.Current.CancellationToken).DescendantNodes().OfType<InvocationExpressionSyntax>())
+            {
+                var name = invocation.Expression switch
+                {
+                    MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.ValueText,
+                    GenericNameSyntax generic => generic.Identifier.ValueText,
+                    IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
+                    _ => null,
+                };
+
+                if (name is null || !_restoringSchemaOperations.Contains(name))
+                {
+                    continue;
+                }
+
+                // A rename creates the name it renames to, which is its second argument. Every other restoring
+                // operation names the object it creates first.
+                var target = string.Equals(name, "RenameColumn", StringComparison.Ordinal)
+                    ? ReadStringArgument(invocation, 1)
+                    : ReadStringArgument(invocation, 0);
+
+                restorations.Add(new MigrationRestoration(
+                    relativePath,
+                    FindEnclosingTypeName(invocation),
+                    FindEnclosingMethodName(invocation),
+                    name,
+                    target ?? string.Empty));
+            }
+        }
+
+        return restorations;
+    }
+
+    private static string ReadStringArgument(InvocationExpressionSyntax invocation, int index)
+    {
+        var literals = invocation.ArgumentList.Arguments
+            .Select(argument => argument.Expression)
+            .OfType<LiteralExpressionSyntax>()
+            .Where(literal => literal.IsKind(SyntaxKind.StringLiteralExpression))
+            .ToList();
+
+        return index < literals.Count
+            ? literals[index].Token.ValueText
+            : null;
     }
 
     private static IEnumerable<string> EnumerateMigrationFiles(string repositoryRoot)
@@ -1271,13 +1517,52 @@ public sealed class MigrationAdditiveOnlyGuardTests
             return null;
         }
 
-        var statement = invocation.ArgumentList.Arguments
+        var reconstructed = invocation.ArgumentList.Arguments
             .Select(argument => ReconstructText(argument.Expression, scope, 0))
-            .FirstOrDefault(text => text is not null);
+            .Where(text => text is not null)
+            .ToList();
 
-        return statement is null
-            ? null
-            : ClassifySql(statement);
+        if (reconstructed.Count == 0)
+        {
+            return null;
+        }
+
+        // An execution helper often takes the connection or the schema builder before the statement, and an
+        // argument the gate cannot read reconstructs to a bare runtime hole. Reading the first argument that
+        // reconstructed would then classify the receiver instead of the SQL and report a plain UPDATE as
+        // unreadable, which would push call sites the gate can read perfectly well into the reviewed register
+        // and exempt them from then on.
+        var withText = reconstructed.Where(text => text.Any(char.IsLetter)).ToList();
+
+        var classifications = withText
+            .Select(text => (Text: text, Classification: ClassifySql(text)))
+            .Where(candidate => candidate.Classification is not null)
+            .ToList();
+
+        // A destructive statement is the most actionable finding, so it is reported ahead of anything else and
+        // a call cannot hide one behind a harmless sibling argument.
+        foreach (var candidate in classifications)
+        {
+            if (!string.Equals(candidate.Classification.Value.Target, UndeterminableTarget, StringComparison.Ordinal))
+            {
+                return candidate.Classification;
+            }
+        }
+
+        if (classifications.Count > 0)
+        {
+            return classifications[0].Classification;
+        }
+
+        // Dismissing an argument the gate could not read is only safe when some other argument is recognizably
+        // the statement. Where none is, the unreadable argument might have been the statement, so the call is
+        // reported as unreadable and has to be reviewed rather than passing silently on the strength of a bare
+        // identifier that happened to be passed alongside it.
+        var hasStatement = withText.Exists(text => ReadLeadingVerb(text) is string verb && _statementLeadingVerbs.Contains(verb));
+
+        return !hasStatement && reconstructed.Exists(text => !text.Any(char.IsLetter))
+            ? ("raw SQL", UndeterminableTarget, reconstructed[0])
+            : null;
     }
 
     private static (string Operation, string Target, string Statement)? DescribeCommandTextAssignment(AssignmentExpressionSyntax assignment, ReconstructionScope scope)
@@ -1824,6 +2109,13 @@ public sealed class MigrationAdditiveOnlyGuardTests
         public bool IsUndeterminable => string.Equals(Target, UndeterminableTarget, StringComparison.Ordinal);
     }
 
+    private sealed record MigrationRestoration(
+        string RelativePath,
+        string TypeName,
+        string MethodName,
+        string Operation,
+        string Target);
+
     private sealed record ReviewedDynamicSqlEntry(
         string RelativePath,
         string TypeName,
@@ -1855,7 +2147,9 @@ public sealed class MigrationAdditiveOnlyGuardTests
         MigrationContractJustification Justification,
         string IntroducedInVersion,
         string NeverReleasedObject,
-        string Rationale)
+        string Rationale,
+        string RestoringOperation = null,
+        string RestoredObjects = null)
     {
         public bool Matches(MigrationOccurrence occurrence)
         {
@@ -1872,6 +2166,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
         ContractPhase,
         NeverReleased,
         ReviewedAdditive,
+        InPlaceRebuild,
     }
 
     private static MetadataReference[] LoadMetadataReferences()
