@@ -45,14 +45,14 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             AIDataSource dataSource = null;
             var isNew = false;
 
-            var sourceType = token[nameof(AIDataSource.Source)]?.GetValue<string>();
-            sourceType = string.IsNullOrWhiteSpace(sourceType)
+            var source = token[nameof(AIDataSource.Source)]?.GetValue<string>();
+            source = string.IsNullOrWhiteSpace(source)
                 ? AIDataSourceSourceTypes.SearchIndexProfile
-                : sourceType;
+                : source;
 
-            if (!TryGetSource(sourceType))
+            if (!TryGetSource(source))
             {
-                context.Errors.Add(S["Invalid source used for AI data source '{0}'.", sourceType]);
+                context.Errors.Add(S["Invalid source used for AI data source '{0}'.", source]);
 
                 continue;
             }
@@ -73,7 +73,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             else
             {
                 isNew = true;
-                dataSource = await _dataManager.NewAsync(sourceType, token);
+                dataSource = await _dataManager.NewAsync(source, token);
 
                 if (hasId && UniqueId.IsValid(id))
                 {

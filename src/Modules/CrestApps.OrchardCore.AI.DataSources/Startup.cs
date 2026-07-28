@@ -3,7 +3,6 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -43,8 +42,6 @@ public sealed class Startup : StartupBase
     {
         services.AddCoreAIDataSourceRag()
             .AddCoreAIDataSourceStoresYesSql();
-
-        services.AddAIDataSourceServices();
 
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
         services.AddDataMigration<AIDataSourceIndexMigrations>();

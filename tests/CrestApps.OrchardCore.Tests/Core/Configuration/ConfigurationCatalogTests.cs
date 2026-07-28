@@ -363,7 +363,7 @@ public sealed class ConfigurationCatalogTests
     private static ConfigurationCatalogRecipeStep CreateStep(ICatalogManager<TestConfigurationEntry> manager)
     {
         var catalog = new ConfigurationCatalog<TestConfigurationEntry>(
-            manager,
+            new CatalogManagerConfigurationCatalogWriter<TestConfigurationEntry>(manager),
             new ConfigurationCatalogDescriptor
             {
                 Group = "Tests",

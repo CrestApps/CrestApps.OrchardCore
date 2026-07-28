@@ -16,13 +16,13 @@ internal sealed class CreateAIProfileFromTemplateStep : NamedRecipeStepHandler
     public const string StepKey = "CreateAIProfileFromTemplate";
 
     private readonly IAIProfileManager _profileManager;
-    private readonly INamedCatalogManager<AIProfileTemplate> _templateManager;
+    private readonly INamedSourceCatalogManager<AIProfileTemplate> _templateManager;
 
     internal readonly IStringLocalizer S;
 
     public CreateAIProfileFromTemplateStep(
         IAIProfileManager profileManager,
-        INamedCatalogManager<AIProfileTemplate> templateManager,
+        INamedSourceCatalogManager<AIProfileTemplate> templateManager,
         IStringLocalizer<CreateAIProfileFromTemplateStep> stringLocalizer)
         : base(StepKey)
     {

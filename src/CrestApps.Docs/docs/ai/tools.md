@@ -29,6 +29,8 @@ Use this catalog to see which Orchard feature makes each AI function available a
 
 Tools marked as hidden in the shared Core registry are not shown in Orchard Core capability pickers such as AI Profile, AI Profile Template, Chat Interaction, workflow-task, or post-session tool selectors. Hidden tools are reserved for internal orchestration paths such as system agents that reference them explicitly by name.
 
+This catalog only lists functions registered in code. Functions created by administrators from a tool instance source are not listed here because they are tenant data rather than code registrations. See [AI Tool Instances](tool-instances) for that surface.
+
 ### System tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent`
@@ -174,6 +176,31 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | List User Memories | Enumerates the current user's existing memories. |
 | Save User Memory | Creates or updates a named memory entry for the current user. |
 | Remove User Memory | Removes a saved memory entry when it should be forgotten. |
+
+## Tool permissions
+
+Tool access is authorized separately from profile access. Granting a role permission to query a profile is **not** enough to let that role use the tools the profile is configured with.
+
+| Permission | Description |
+| --- | --- |
+| `QueryAnyAIProfile` (or `QueryAIProfile_{profileName}`) | Allows the identity to query the AI profile. |
+| `AccessAnyAITool` | Allows the identity to use every registered AI function. This permission is security critical and is granted only to the `Administrator` role by default. |
+| `AccessAITool_{toolName}` | Allows the identity to use one specific AI function. |
+
+When the current identity is not authorized for a configured tool, the tool is excluded from the request instead of failing it. The model then answers without that capability, which usually looks like an incomplete or degraded answer. Each excluded tool is reported in the logs with a `Warning` entry that lists the tool names and the permissions to grant, so check the application log first when a profile behaves correctly for an administrator but not for another role.
+
+:::tip
+Custom roles and OpenID applications that query tool-enabled profiles need `AccessAnyAITool`, or the matching `AccessAITool_{toolName}` permission for every tool the profile uses, in addition to the profile query permission.
+:::
+
+### How the caller is resolved
+
+The identity used for these checks comes from the framework's `IUserAccessor` rather than from `IHttpContextAccessor`. This matters for SignalR: `HttpContext` is frequently unavailable inside hub invocations on long-lived transports, on backplane-delivered messages, and behind hosted SignalR services, so resolving the caller from the HTTP request could not be relied upon there. The AI chat and chat interaction hubs publish the connection's principal for the duration of every invocation, which means tool permissions are evaluated the same way over SignalR as they are over a regular HTTP request.
+
+Two cases are treated differently:
+
+- **No caller at all**, such as a background task, a workflow, or a recipe. Permission checks are skipped and every configured tool stays available, because trusted server-side code is not a security boundary.
+- **An unauthenticated caller**, such as an anonymous visitor using a public chat widget. The permission check still runs, so whatever you grant the `Anonymous` role continues to apply exactly as it does elsewhere in Orchard Core.
 
 ## Invocation Context (AIInvocationScope)
 

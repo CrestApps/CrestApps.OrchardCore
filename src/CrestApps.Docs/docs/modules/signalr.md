@@ -104,3 +104,55 @@ The backplane channel prefix includes both `InstancePrefix` and the immutable Or
 Use a deployment-unique `InstancePrefix` that identifies the application, environment, and region whenever Redis infrastructure is shared. Reusing an empty or generic prefix across deployments can merge the backplane channels of tenants with the same shell name.
 
 For multi-node Contact Center deployments, also enable `OrchardCore.Redis.Lock` because routing, webhook inbox acceptance, and other distributed critical sections require the Redis lock implementation independently of the SignalR backplane.
+## Authenticating with access tokens
+
+Browser clients that are already signed in are authenticated through the regular authentication cookie, and nothing extra is required.
+
+Headless clients, such as single page applications, mobile applications, and service-to-service callers, authenticate with an access token instead. Enable the **OpenID Token Validation** feature (`OrchardCore.OpenId.Validation`) and send the token when connecting. Requests that arrive at an opted-in hub without an authenticated user and with a bearer token are validated using the same `Api` authentication scheme used by the API endpoints, so the same identity works for both the API and the hubs.
+
+Because browsers cannot set an `Authorization` header on a WebSocket handshake, SignalR clients send the token using the standard `access_token` query string parameter. Both forms are supported:
+
+```javascript
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/Communication/Hub/AIChatHub", {
+        accessTokenFactory: () => accessToken,
+    })
+    .build();
+```
+
+```csharp
+var connection = new HubConnectionBuilder()
+    .WithUrl("https://www.example.com/Communication/Hub/AIChatHub", options =>
+    {
+        options.AccessTokenProvider = () => Task.FromResult(accessToken);
+    })
+    .Build();
+```
+
+Requests that already carry an authentication cookie, or that use another authentication scheme, are left untouched. Token validation only runs for hubs that opted in, so the rest of the site, including hubs declared by Orchard Core or by your own application, is unaffected.
+
+The token is only authenticated, not authorized. The identity behind the token still needs the permissions each hub requires, such as `QueryAnyAIProfile` and the [AI tool permissions](../ai/tools#tool-permissions) when the profile uses tools.
+
+### Opting a hub in
+
+Hubs are opt-in. Apply `AllowApiTokenAuthenticationAttribute` to the hub class to allow the `Api` scheme to run for its requests:
+
+```csharp
+using CrestApps.OrchardCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
+
+[AllowApiTokenAuthentication]
+public sealed class MyHub : Hub
+{
+}
+```
+
+The following hubs opt in out of the box:
+
+| Hub | Route |
+| --- | --- |
+| `AIChatHub` | `/Communication/Hub/AIChatHub` |
+| `ChatInteractionHub` | `/Communication/Hub/ChatInteractionHub` |
+| `TelephonyHub` | `/Communication/Hub/TelephonyHub` |
+
+The attribute never weakens a hub's authorization requirements. A hub decorated with `[Authorize]` still rejects callers that fail the policy, and a hub that allows anonymous connections still accepts them when no token is supplied. The attribute only allows an otherwise anonymous request that carries a valid bearer token to be associated with the token's user before authorization runs.

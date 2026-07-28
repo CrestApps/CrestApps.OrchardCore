@@ -117,7 +117,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
                 "SubjectFlows",
                 order: 50,
                 identityProperties: [nameof(SubjectFlowSettings.SubjectContentType)])
-            .AddConfigurationCatalog<SubjectAction, ISourceCatalogManager<SubjectAction>>(
+            .AddSourceConfigurationCatalog<SubjectAction, ISourceCatalogManager<SubjectAction>>(
                 OmnichannelConfigurationCatalogs.Group,
                 OmnichannelConfigurationCatalogs.SubjectAction,
                 "SubjectActions",

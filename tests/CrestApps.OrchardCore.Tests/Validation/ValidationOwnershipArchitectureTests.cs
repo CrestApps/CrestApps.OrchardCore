@@ -16,11 +16,11 @@ public class ValidationOwnershipArchitectureTests
     private static Dictionary<string, HashSet<string>> _stringConstants;
 
     private static readonly Regex _configurationCatalogRegex = new(
-        @"AddConfigurationCatalog<\s*(?<entity>\w+)\s*,",
+        @"Add(?:Source)?ConfigurationCatalog<\s*(?<entity>\w+)\s*,",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex _configurationCatalogDeclarationRegex = new(
-        @"\bstatic\s+[\w<>,\.\[\]\s]+\s+AddConfigurationCatalog<",
+        @"\bstatic\s+[\w<>,\.\[\]\s]+\s+Add(?:Source)?ConfigurationCatalog<",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex _handlerRegistrationRegex = new(

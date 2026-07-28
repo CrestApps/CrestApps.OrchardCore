@@ -1,7 +1,15 @@
 @model CrestApps.OrchardCore.AI.Chat.ViewModels.UsageAnalyticsIndexViewModel
+@using System.Globalization
+
 @{
     ViewData["Title"] = T["AI Usage Analytics"];
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
 }
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="mb-3">
     <h1>@T["AI Usage Analytics"]</h1>
@@ -21,12 +29,12 @@
             @Html.AntiForgeryToken()
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-5 no-gutters">
                 <div class="col p-1">
-                    <label asp-for="StartDateUtc" class="form-label">@T["From"]</label>
-                    <input asp-for="StartDateUtc" class="form-control" type="date" />
+                    <label asp-for="StartDate" class="form-label">@T["From"]</label>
+                    <input type="text" asp-for="StartDate" class="form-control" placeholder="@T["From"]" />
                 </div>
                 <div class="col p-1">
-                    <label asp-for="EndDateUtc" class="form-label">@T["To"]</label>
-                    <input asp-for="EndDateUtc" class="form-control" type="date" />
+                    <label asp-for="EndDate" class="form-label">@T["To"]</label>
+                    <input type="text" asp-for="EndDate" class="form-control" placeholder="@T["To"]" />
                 </div>
                 <div class="col p-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-dark">
@@ -99,3 +107,12 @@
         }
     </div>
 </div>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
+        altInputClass: 'form-control'
+    }));
+    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
+        altInputClass: 'form-control'
+    }));
+</script>

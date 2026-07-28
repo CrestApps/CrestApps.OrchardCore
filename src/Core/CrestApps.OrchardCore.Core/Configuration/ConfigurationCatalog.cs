@@ -14,18 +14,18 @@ namespace CrestApps.OrchardCore.Core.Configuration;
 public sealed class ConfigurationCatalog<T> : IConfigurationCatalog
     where T : CatalogItem
 {
-    private readonly ICatalogManager<T> _manager;
+    private readonly IConfigurationCatalogWriter<T> _manager;
     private readonly ConfigurationCatalogDescriptor _descriptor;
     private readonly ConfigurationImportIdentityStore _identities;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationCatalog{T}"/> class.
     /// </summary>
-    /// <param name="manager">The manager that owns the entries.</param>
+    /// <param name="manager">The writer that carries the entries' manager into the shape the catalog needs.</param>
     /// <param name="descriptor">The descriptor that names the catalog in recipes and deployment plans.</param>
     /// <param name="identities">The store that carries identifier substitutions across the steps of one recipe.</param>
     public ConfigurationCatalog(
-        ICatalogManager<T> manager,
+        IConfigurationCatalogWriter<T> manager,
         ConfigurationCatalogDescriptor descriptor,
         ConfigurationImportIdentityStore identities)
     {

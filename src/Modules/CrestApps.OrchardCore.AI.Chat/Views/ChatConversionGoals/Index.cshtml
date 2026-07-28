@@ -1,4 +1,14 @@
 @model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatConversionGoalsIndexViewModel
+@using System.Globalization
+
+@{
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+}
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 
 <zone Name="Title"><h1>@T["AI Chat Conversion Goals"]</h1></zone>
 
@@ -12,12 +22,12 @@
                     <span asp-validation-for="ProfileId" class="text-danger"></span>
                 </div>
                 <div class="col p-1">
-                    <label class="form-label" asp-for="StartDateUtc">@T["From"]</label>
-                    <input asp-for="StartDateUtc" class="form-control" type="date" />
+                    <label class="form-label" asp-for="StartDate">@T["From"]</label>
+                    <input type="text" asp-for="StartDate" class="form-control" placeholder="@T["From"]" />
                 </div>
                 <div class="col p-1">
-                    <label class="form-label" asp-for="EndDateUtc">@T["To"]</label>
-                    <input asp-for="EndDateUtc" class="form-control" type="date" />
+                    <label class="form-label" asp-for="EndDate">@T["To"]</label>
+                    <input type="text" asp-for="EndDate" class="form-control" placeholder="@T["To"]" />
                 </div>
                 <div class="col p-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-dark">
@@ -42,8 +52,8 @@
             <div class="mb-3">
                 <form asp-action="Export" method="post">
                     <input type="hidden" asp-for="ProfileId" />
-                    <input type="hidden" asp-for="StartDateUtc" />
-                    <input type="hidden" asp-for="EndDateUtc" />
+                    <input type="hidden" asp-for="StartDate" />
+                    <input type="hidden" asp-for="EndDate" />
                     <button type="submit" class="btn btn-outline-secondary">
                         <i class="fa-solid fa-file-csv me-1"></i>@T["Export as CSV"]
                     </button>
@@ -83,3 +93,12 @@
         }
     </div>
 </div>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
+        altInputClass: 'form-control'
+    }));
+    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
+        altInputClass: 'form-control'
+    }));
+</script>

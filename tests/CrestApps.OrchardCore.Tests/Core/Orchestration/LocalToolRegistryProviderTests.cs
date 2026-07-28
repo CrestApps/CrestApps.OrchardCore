@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Security;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -198,14 +200,110 @@ public sealed class LocalToolRegistryProviderTests
         return CreateProviderWithOptions(options);
     }
 
+    [Fact]
+    public async Task GetToolsAsync_WhenThereIsNoCaller_SkipsAuthorization()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        var provider = CreateProviderWithUser(authService.Object, user: null, ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        authService.Verify(
+            x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsAuthorized_ReturnsTheTool()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        var provider = CreateProviderWithUser(authService.Object, CreateUser(), ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("tool1", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsNotAuthorized_ExcludesTheTool()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var provider = CreateProviderWithUser(authService.Object, CreateUser(), ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsAnonymous_StillEvaluatesAuthorization()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
+        var provider = CreateProviderWithUser(authService.Object, anonymousUser, ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        authService.Verify(
+            x => x.AuthorizeAsync(anonymousUser, It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()),
+            Times.Once);
+    }
+
+    private static ClaimsPrincipal CreateUser()
+    {
+        return new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "test-user")], "Test"));
+    }
+
+    private static LocalToolRegistryProvider CreateProviderWithUser(
+        IAuthorizationService authorizationService,
+        ClaimsPrincipal user,
+        params (string Name, string Title, string Description)[] tools)
+    {
+        var options = new AIToolDefinitionOptions();
+
+        foreach (var (name, title, description) in tools)
+        {
+            options.SetTool(name, new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+            {
+                Name = name,
+                Title = title,
+                Description = description,
+            });
+        }
+
+        return CreateProviderWithOptions(options, authorizationService, user);
+    }
+
     private static LocalToolRegistryProvider CreateProviderWithOptions(AIToolDefinitionOptions options)
     {
         var authService = new Mock<IAuthorizationService>();
-        var httpContextAccessor = new Mock<IHttpContextAccessor>();
 
-        // No HttpContext means no user — permission checks are skipped.
-        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+        return CreateProviderWithOptions(options, authService.Object, user: null);
+    }
 
-        return new LocalToolRegistryProvider(Options.Create(options), authService.Object, httpContextAccessor.Object);
+    private static LocalToolRegistryProvider CreateProviderWithOptions(
+        AIToolDefinitionOptions options,
+        IAuthorizationService authorizationService,
+        ClaimsPrincipal user)
+    {
+        var userAccessor = new Mock<IUserAccessor>();
+        userAccessor.Setup(x => x.User).Returns(user);
+
+        return new LocalToolRegistryProvider(Options.Create(options), authorizationService, userAccessor.Object, NullLogger<LocalToolRegistryProvider>.Instance);
     }
 }
