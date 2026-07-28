@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -57,9 +58,36 @@ public sealed class ContactCenterWorkStateAuthorityTests
         nameof(OmnichannelActivity.Attempts),
     ];
 
+    /// <summary>
+    /// The namespaces the SDK imports implicitly, which the scan's own compilation has to import as well.
+    /// </summary>
+    private static readonly string[] _implicitUsings =
+    [
+        "System",
+        "System.Collections.Generic",
+        "System.IO",
+        "System.Linq",
+        "System.Net.Http",
+        "System.Threading",
+        "System.Threading.Tasks",
+    ];
+
+    private static readonly string[] _scannedAssemblyNames =
+    [
+        "CrestApps.OrchardCore.ContactCenter.Abstractions",
+        "CrestApps.OrchardCore.ContactCenter.Core",
+        "CrestApps.OrchardCore.Telephony.Core",
+        "CrestApps.OrchardCore.ContactCenter",
+        "CrestApps.OrchardCore.Telephony",
+        "CrestApps.OrchardCore.Asterisk",
+        "CrestApps.OrchardCore.DialPad",
+    ];
+
     private static readonly string[] _sourceProjectFolders =
     [
+        Path.Combine("Abstractions", "CrestApps.OrchardCore.ContactCenter.Abstractions"),
         Path.Combine("Core", "CrestApps.OrchardCore.ContactCenter.Core"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Telephony.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Asterisk"),
@@ -73,15 +101,16 @@ public sealed class ContactCenterWorkStateAuthorityTests
     private const string ProjectorFileName = "ContactCenterWorkStateProjector.cs";
 
     /// <summary>
-    /// The <see cref="IContactCenterActivityWriter"/> members whose callback receives the CRM activity.
+    /// The scanned sources compiled once, so a receiver is classified by the type the compiler gives it rather
+    /// than by the shape of the identifier that names it.
     /// </summary>
-    private static readonly string[] _activityWriterMethodNames = ["ScheduleUpdateAsync", "UpdateAsync"];
+    private static readonly Lazy<ScannedSources> _scannedSources = new(CompileScannedSources, LazyThreadSafetyMode.ExecutionAndPublication);
 
     [Fact]
     public void NoContactCenterSource_WritesRoutingStateOntoTheCrmActivity_OutsideTheProjector()
     {
         // Arrange
-        var violations = new List<string>();
+        var violations = new List<RoutingStateWrite>();
 
         // Act
         foreach (var file in EnumerateContactCenterSources())
@@ -95,7 +124,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         }
 
         // Assert
-        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations.Select(violation => violation.Description)));
     }
 
     [Fact]
@@ -113,59 +142,277 @@ public sealed class ContactCenterWorkStateAuthorityTests
         var detected = FindRoutingStateWritesOnActivities(projector);
 
         // Assert
+        // Counting alone would be satisfied by ten unresolved reports, which is exactly the blinded scan this
+        // control exists to catch, so each one has to have been recognized as the CRM activity.
         Assert.Equal(_workStateMemberNames.Length, detected.Count);
+        Assert.All(detected, write => Assert.Equal(ReceiverKind.Activity, write.Kind));
+    }
+
+    [Theory]
+    [InlineData("ActivityReservationService.cs")]
+    [InlineData("ProviderCommandStateService.cs")]
+    public void TheAuthorityScan_LeavesRoutingOwnedFieldsAlone_WhenTheyBelongToAnotherDocument(string fileName)
+    {
+        // Arrange
+        // The known-negative control. These files write the same member names onto a queue item and a provider
+        // command, which own them. A scan that reported them would be reporting the member rather than the
+        // receiver, and the fail-closed rule would then have to be relaxed to keep the build green.
+        var file = Directory
+            .EnumerateFiles(Path.Combine(FindRepositoryRoot(), "src"), fileName, SearchOption.AllDirectories)
+            .Single(candidate => !IsGeneratedPath(candidate));
+
+        // Act
+        var detected = FindRoutingStateWritesOnActivities(file);
+
+        // Assert
+        Assert.Empty(detected);
     }
 
     /// <summary>
-    /// Reports every assignment in a file that writes a routing-owned field onto a CRM activity.
+    /// Reports every assignment in a file that writes a routing-owned field onto a CRM activity, and every
+    /// assignment whose receiver the compiler could not resolve.
     /// </summary>
     /// <param name="file">The full path of the source file to scan.</param>
-    /// <returns>One description per write, empty when the file writes none.</returns>
-    private static List<string> FindRoutingStateWritesOnActivities(string file)
+    /// <returns>One report per write, empty when the file writes none.</returns>
+    private static List<RoutingStateWrite> FindRoutingStateWritesOnActivities(string file)
     {
-        var root = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetRoot();
-        var activityIdentifiers = CollectActivityIdentifiers(root);
-        var writes = new List<string>();
+        var sources = _scannedSources.Value;
 
-        foreach (var assignment in root.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+        if (!sources.TreesByPath.TryGetValue(file, out var tree))
         {
-            if (assignment.Left is not MemberAccessExpressionSyntax memberAccess ||
-                !_workStateMemberNames.Contains(memberAccess.Name.Identifier.ValueText, StringComparer.Ordinal) ||
-                memberAccess.Expression is not IdentifierNameSyntax receiver ||
-                !activityIdentifiers.Contains(receiver.Identifier.ValueText))
+            throw new InvalidOperationException(
+                $"'{file}' is not one of the sources the authority scan compiled, so its receivers cannot be classified.");
+        }
+
+        var model = sources.Compilation.GetSemanticModel(tree);
+        var root = tree.GetRoot();
+        var writes = new List<RoutingStateWrite>();
+        var fileName = Path.GetFileName(file);
+
+        foreach (var node in root.DescendantNodes())
+        {
+            // Every form that stores into a member: simple and compound assignment, and increment or decrement,
+            // which is how the one numeric routing field is written everywhere it is written legitimately.
+            var written = node switch
+            {
+                AssignmentExpressionSyntax assignment => assignment.Left as MemberAccessExpressionSyntax,
+                PrefixUnaryExpressionSyntax prefix when IsIncrementOrDecrement(prefix.Kind()) => prefix.Operand as MemberAccessExpressionSyntax,
+                PostfixUnaryExpressionSyntax postfix when IsIncrementOrDecrement(postfix.Kind()) => postfix.Operand as MemberAccessExpressionSyntax,
+                _ => null,
+            };
+
+            if (written is null || !_workStateMemberNames.Contains(written.Name.Identifier.ValueText, StringComparer.Ordinal))
             {
                 continue;
             }
 
-            writes.Add(
-                $"{Path.GetFileName(file)}:{LineOf(assignment)} writes {memberAccess.Name.Identifier.ValueText} " +
-                $"onto the CRM activity '{receiver.Identifier.ValueText}'.");
+            var member = written.Name.Identifier.ValueText;
+            var receiver = written.Expression.ToString();
+            var kind = Classify(model, written.Expression);
+
+            if (kind == ReceiverKind.Activity)
+            {
+                writes.Add(new RoutingStateWrite(
+                    kind,
+                    $"{fileName}:{LineOf(node)} writes {member} onto the CRM activity '{receiver}'."));
+            }
+            else if (kind == ReceiverKind.Unresolved)
+            {
+                writes.Add(new RoutingStateWrite(
+                    kind,
+                    $"{fileName}:{LineOf(node)} writes {member} onto '{receiver}', whose type the authority scan " +
+                    $"could not resolve, so it cannot be shown not to be a CRM activity."));
+            }
         }
 
-        foreach (var creation in root.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
+        // Object initializers write the same fields without a receiver expression to classify, so the created
+        // type is classified instead. Target-typed creations are included, because the type is only inferable.
+        foreach (var creation in root.DescendantNodes().OfType<BaseObjectCreationExpressionSyntax>())
         {
-            if (creation.Type is not IdentifierNameSyntax createdType ||
-                !string.Equals(createdType.Identifier.ValueText, nameof(OmnichannelActivity), StringComparison.Ordinal) ||
-                creation.Initializer is null)
+            if (creation.Initializer is null)
+            {
+                continue;
+            }
+
+            var kind = Classify(model, creation);
+
+            if (kind == ReceiverKind.OtherDocument)
             {
                 continue;
             }
 
             foreach (var initializer in creation.Initializer.Expressions.OfType<AssignmentExpressionSyntax>())
             {
-                if (initializer.Left is IdentifierNameSyntax member &&
-                    _workStateMemberNames.Contains(member.Identifier.ValueText, StringComparer.Ordinal))
+                if (initializer.Left is not IdentifierNameSyntax member ||
+                    !_workStateMemberNames.Contains(member.Identifier.ValueText, StringComparer.Ordinal))
                 {
-                    writes.Add(
-                        $"{Path.GetFileName(file)}:{LineOf(initializer)} initializes {member.Identifier.ValueText} " +
-                        $"on a new {nameof(OmnichannelActivity)}.");
+                    continue;
                 }
+
+                writes.Add(new RoutingStateWrite(
+                    kind,
+                    kind == ReceiverKind.Activity
+                        ? $"{fileName}:{LineOf(initializer)} initializes {member.Identifier.ValueText} on a new {nameof(OmnichannelActivity)}."
+                        : $"{fileName}:{LineOf(initializer)} initializes {member.Identifier.ValueText} on a created object whose " +
+                            $"type the authority scan could not resolve, so it cannot be shown not to be a CRM activity."));
             }
         }
 
         return writes;
     }
 
+    /// <summary>
+    /// Classifies the receiver of a routing-owned member write.
+    /// </summary>
+    /// <param name="model">The semantic model of the file the expression belongs to.</param>
+    /// <param name="expression">The receiver expression to classify.</param>
+    /// <returns>
+    /// The classification. A receiver the compiler cannot type is reported as
+    /// <see cref="ReceiverKind.Unresolved"/> rather than assumed to be something other than a CRM activity.
+    /// </returns>
+    private static bool IsIncrementOrDecrement(SyntaxKind kind)
+        => kind is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression
+            or SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression;
+
+    private static ReceiverKind Classify(SemanticModel model, ExpressionSyntax expression)
+    {
+        var typeInfo = model.GetTypeInfo(expression);
+        var type = typeInfo.Type ?? typeInfo.ConvertedType;
+
+        if (type is null ||
+            type.TypeKind == TypeKind.Error ||
+            type.TypeKind == TypeKind.Dynamic ||
+            type.SpecialType == SpecialType.System_Object)
+        {
+            return ReceiverKind.Unresolved;
+        }
+
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (string.Equals(current.Name, nameof(OmnichannelActivity), StringComparison.Ordinal))
+            {
+                return ReceiverKind.Activity;
+            }
+        }
+
+        return ReceiverKind.OtherDocument;
+    }
+
+    /// <summary>
+    /// Compiles every scanned source so receivers can be classified by their resolved type.
+    /// </summary>
+    /// <returns>The compilation together with the syntax tree of each scanned file.</returns>
+    private static ScannedSources CompileScannedSources()
+    {
+        var trees = new Dictionary<string, SyntaxTree>(StringComparer.Ordinal);
+
+        foreach (var file in EnumerateContactCenterSources())
+        {
+            trees[file] = CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file);
+        }
+
+        // The projector lives in a module the scan deliberately excludes from the violation sweep, but the
+        // known-positive control still has to classify its receivers.
+        foreach (var projector in Directory.EnumerateFiles(Path.Combine(FindRepositoryRoot(), "src"), ProjectorFileName, SearchOption.AllDirectories))
+        {
+            if (!IsGeneratedPath(projector))
+            {
+                trees.TryAdd(projector, CSharpSyntaxTree.ParseText(File.ReadAllText(projector), path: projector));
+            }
+        }
+
+        // The scanned projects are compiled from source, so their own assemblies are left out to keep every
+        // type they declare unambiguous.
+        var excluded = _scannedAssemblyNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var references = new List<MetadataReference>();
+
+        // The shared frameworks come first, because the test's own output folder carries neither the base class
+        // library nor ASP.NET Core and a compilation without them types nothing at all.
+        foreach (var folder in EnumerateReferenceFolders())
+        {
+            foreach (var path in Directory.EnumerateFiles(folder, "*.dll"))
+            {
+                var name = Path.GetFileNameWithoutExtension(path);
+
+                if (excluded.Contains(name) || !seen.Add(name))
+                {
+                    continue;
+                }
+
+                var reference = TryReference(path);
+
+                if (reference is not null)
+                {
+                    references.Add(reference);
+                }
+            }
+        }
+
+        var options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
+
+        // The SDK implements its implicit usings by generating a file, so the scan generates the same one rather
+        // than leaving every source unable to name a task or a cancellation token.
+        var implicitUsings = CSharpSyntaxTree.ParseText(
+            string.Concat(_implicitUsings.Select(name => $"global using global::{name};{Environment.NewLine}")));
+
+        var compilation = CSharpCompilation.Create(
+            "ContactCenterAuthorityScan",
+            trees.Values.Append(implicitUsings),
+            references,
+            options);
+
+        return new ScannedSources(compilation, trees);
+    }
+
+    /// <summary>
+    /// Enumerates the folders whose assemblies the scan compiles against, shared frameworks first.
+    /// </summary>
+    /// <returns>The reference folders, in the order their assemblies win.</returns>
+    private static IEnumerable<string> EnumerateReferenceFolders()
+    {
+        var runtimeDirectory = RuntimeEnvironment.GetRuntimeDirectory();
+
+        yield return runtimeDirectory;
+
+        var sharedRoot = Path.GetDirectoryName(Path.GetDirectoryName(runtimeDirectory.TrimEnd(Path.DirectorySeparatorChar)));
+        var aspNetCoreRoot = sharedRoot is null ? null : Path.Combine(sharedRoot, "Microsoft.AspNetCore.App");
+
+        if (aspNetCoreRoot is not null && Directory.Exists(aspNetCoreRoot))
+        {
+            var version = new DirectoryInfo(runtimeDirectory.TrimEnd(Path.DirectorySeparatorChar)).Name;
+            var matching = Path.Combine(aspNetCoreRoot, version);
+
+            if (Directory.Exists(matching))
+            {
+                yield return matching;
+            }
+            else
+            {
+                var latest = Directory.EnumerateDirectories(aspNetCoreRoot).OrderBy(path => path, StringComparer.Ordinal).LastOrDefault();
+
+                if (latest is not null)
+                {
+                    yield return latest;
+                }
+            }
+        }
+
+        yield return AppContext.BaseDirectory;
+    }
+
+    private static PortableExecutableReference TryReference(string path)
+    {
+        try
+        {
+            return MetadataReference.CreateFromFile(path);
+        }
+        catch (Exception exception) when (exception is BadImageFormatException or IOException)
+        {
+            return null;
+        }
+    }
 
     [Fact]
     public void TheProjector_IsPresentAndCopiesEveryRoutingOwnedField()
@@ -564,107 +811,6 @@ public sealed class ContactCenterWorkStateAuthorityTests
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 
-    /// <summary>
-    /// Collects the identifiers in a file that hold a CRM <see cref="OmnichannelActivity"/>. The routing-owned
-    /// member names are shared with other documents — a queue item and a provider command both carry a
-    /// <c>ReservationId</c> they legitimately own — so the receiver has to be classified rather than the member.
-    /// </summary>
-    /// <param name="root">The parsed syntax root of the file being scanned.</param>
-    /// <returns>The set of identifier names that hold a CRM activity.</returns>
-    private static HashSet<string> CollectActivityIdentifiers(SyntaxNode root)
-    {
-        var identifiers = new HashSet<string>(StringComparer.Ordinal);
-        var activityTypeName = nameof(OmnichannelActivity);
-
-        foreach (var declaration in root.DescendantNodes().OfType<VariableDeclarationSyntax>())
-        {
-            var isActivityTyped = declaration.Type.ToString().Contains(activityTypeName, StringComparison.Ordinal);
-
-            foreach (var variable in declaration.Variables)
-            {
-                if (isActivityTyped || IsActivityProducingInitializer(variable.Initializer?.Value))
-                {
-                    identifiers.Add(variable.Identifier.ValueText);
-                }
-            }
-        }
-
-        foreach (var parameter in root.DescendantNodes().OfType<ParameterSyntax>())
-        {
-            if (parameter.Type?.ToString().Contains(activityTypeName, StringComparison.Ordinal) == true)
-            {
-                identifiers.Add(parameter.Identifier.ValueText);
-            }
-        }
-
-        foreach (var statement in root.DescendantNodes().OfType<ForEachStatementSyntax>())
-        {
-            if (statement.Type.ToString().Contains(activityTypeName, StringComparison.Ordinal))
-            {
-                identifiers.Add(statement.Identifier.ValueText);
-            }
-        }
-
-        // The mutation callback handed to the activity writer has an inferred parameter type, so it is matched
-        // by the invocation it belongs to rather than by a written type.
-        foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            if (invocation.Expression is not MemberAccessExpressionSyntax member ||
-                !_activityWriterMethodNames.Contains(member.Name.Identifier.ValueText, StringComparer.Ordinal) ||
-                member.Expression is not IdentifierNameSyntax writer ||
-                !writer.Identifier.ValueText.Contains("activityWriter", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            foreach (var argument in invocation.ArgumentList.Arguments)
-            {
-                switch (argument.Expression)
-                {
-                    case SimpleLambdaExpressionSyntax simpleLambda:
-                        identifiers.Add(simpleLambda.Parameter.Identifier.ValueText);
-                        break;
-
-                    case ParenthesizedLambdaExpressionSyntax parenthesizedLambda:
-                        foreach (var parameter in parenthesizedLambda.ParameterList.Parameters)
-                        {
-                            identifiers.Add(parameter.Identifier.ValueText);
-                        }
-
-                        break;
-                }
-            }
-        }
-
-        return identifiers;
-    }
-
-    /// <summary>
-    /// Determines whether an initializer produces a CRM activity, covering the <c>var</c> locals that hold one.
-    /// </summary>
-    /// <param name="initializer">The initializer expression, or <see langword="null"/> when there is none.</param>
-    /// <returns><see langword="true"/> when the initializer yields a CRM activity; otherwise, <see langword="false"/>.</returns>
-    private static bool IsActivityProducingInitializer(ExpressionSyntax initializer)
-    {
-        var expression = initializer switch
-        {
-            AwaitExpressionSyntax awaited => awaited.Expression,
-            _ => initializer,
-        };
-
-        return expression switch
-        {
-            ObjectCreationExpressionSyntax creation =>
-                creation.Type.ToString().Contains(nameof(OmnichannelActivity), StringComparison.Ordinal),
-            InvocationExpressionSyntax invocation =>
-                invocation.Expression is MemberAccessExpressionSyntax member &&
-                member.Expression is IdentifierNameSyntax receiver &&
-                receiver.Identifier.ValueText.Contains("activityManager", StringComparison.OrdinalIgnoreCase),
-            _ => false,
-        };
-    }
-
-
     private static IEnumerable<string> EnumerateContactCenterSources()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -690,7 +836,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         }
     }
 
-    private static bool IsGeneratedPath(string file)
+        private static bool IsGeneratedPath(string file)
     {
         var directory = Path.GetDirectoryName(file) ?? string.Empty;
 
@@ -713,4 +859,39 @@ public sealed class ContactCenterWorkStateAuthorityTests
         return directory?.FullName ??
             throw new InvalidOperationException("The repository root could not be located.");
     }
+
+    /// <summary>
+    /// How a routing-owned member write's receiver was classified.
+    /// </summary>
+    private enum ReceiverKind
+    {
+        /// <summary>
+        /// The compiler could not give the receiver a type, so it cannot be shown not to be a CRM activity.
+        /// </summary>
+        Unresolved,
+
+        /// <summary>
+        /// The receiver is a CRM activity.
+        /// </summary>
+        Activity,
+
+        /// <summary>
+        /// The receiver is a document that owns the member itself.
+        /// </summary>
+        OtherDocument,
+    }
+
+    /// <summary>
+    /// One routing-owned field write the authority scan reports.
+    /// </summary>
+    /// <param name="Kind">How the receiver of the write was classified.</param>
+    /// <param name="Description">The human-readable report, naming the file, line, member, and receiver.</param>
+    private sealed record RoutingStateWrite(ReceiverKind Kind, string Description);
+
+    /// <summary>
+    /// The compiled sources the authority scan inspects.
+    /// </summary>
+    /// <param name="Compilation">The compilation the scanned trees belong to.</param>
+    /// <param name="TreesByPath">The syntax tree of each scanned file, keyed by its full path.</param>
+    private sealed record ScannedSources(CSharpCompilation Compilation, IReadOnlyDictionary<string, SyntaxTree> TreesByPath);
 }

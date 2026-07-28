@@ -1542,7 +1542,7 @@
           "single-node-distributed"
         ]
       },
-      "evidenceLocation": "ContactCenterWorkStateAuthorityTests, which scans every Contact Center source for routing-state writes on the CRM activity, self-tests that scan against the projector as a known-positive control, and exercises a reservation concurrent with a CRM edit against a real SQLite database."
+      "evidenceLocation": "ContactCenterWorkStateAuthorityTests, which compiles every Contact Center source and reports each store into a routing-state field — by assignment, compound assignment, increment, decrement, or object initializer — whose receiver resolves to the CRM activity or cannot be resolved at all, self-tests that scan against the projector as a known-positive control and against the queue-item and provider-command writers as known-negative controls, and exercises a reservation concurrent with a CRM edit against a real SQLite database."
     },
     {
       "id": "D012",
