@@ -91,10 +91,6 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();

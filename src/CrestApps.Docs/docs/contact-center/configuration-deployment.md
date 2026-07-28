@@ -114,6 +114,20 @@ The collection is matched without regard to case, so `"Queues"` and `"queues"` b
 
 Omitting a member leaves the existing value untouched on an update, so a step can carry only the members it intends to change; a member present with a `null` value is cleared. Including a store-issued `ItemId` pins the identifier, which is what an exported plan does. Any other `ItemId` is treated as a name the plan invented for its own use: the entry is stored under an identifier the store issues, and every reference the plan makes to the invented name is translated to it. Omitting `ItemId` altogether lets the entry be matched by its identity.
 
+## Rules applied on import
+
+An imported entry is judged by the same rules as one typed into the admin editor. The rules belong to the entry itself rather than to the editor's screen, so a recipe, a deployment plan, the admin editor and any service that writes through the entry's manager all enforce the same set.
+
+This matters because the two paths used to disagree. A rule expressed only in an editor screen never runs when a recipe writes the same entry, so a plan could store a queue pointing at a queue group that does not exist, or a dialer profile in a mode the product does not support. The import reported success, the entry read as configured, and the problem appeared later as traffic that did not route.
+
+Practically, this means a plan you wrote by hand can be refused:
+
+- An entry the rules reject is reported and skipped. The entries around it are still imported, so one bad entry does not abandon the plan.
+- References are checked. A queue naming a queue group the destination does not hold is refused, which is why the plan orders each catalog after the catalogs it references.
+- Values are normalised on the way in. A phone number on a channel endpoint is stored in its canonical form whether it was typed into the editor or written into a recipe, so a recipe-written endpoint matches inbound traffic.
+
+Values outside a permitted range are refused rather than corrected. A dialer profile asking for more concurrent calls per agent than the product allows fails with a message naming the limit, instead of being quietly adjusted to a number nobody asked for.
+
 ## Extending the set
 
 A new Contact Center configuration entity becomes portable by registering its catalog in the module's startup:
@@ -127,3 +141,5 @@ services.AddConfigurationCatalog<ContactCenterSkill, IContactCenterSkillManager>
 ```
 
 The registration is all that is required: the recipe step, the deployment step's contribution, the ordering, and the export and import of every member follow from it. The build fails until the new entity is also declared as configuration or as runtime state, so the decision cannot be skipped.
+
+Registering the catalog also brings the entity under the rule-ownership checks: it must have a handler registered by the same feature that registers the catalog, its editor screens must not carry rules of their own, and every admin action that saves it must run the handlers first. Registering the handler in a different feature is checked because a tenant can enable the feature that carries the recipe step without enabling the one that carries the admin screens, and a handler that is not registered does not run. Runtime state - activities, activity batches, interactions, call sessions, queue items and agent sessions - is outside this, because no plan authors it.

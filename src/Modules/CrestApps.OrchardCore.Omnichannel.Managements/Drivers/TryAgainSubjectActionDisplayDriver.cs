@@ -85,18 +85,7 @@ internal sealed class TryAgainSubjectActionDisplayDriver : DisplayDriver<Subject
 
         var normalizedUserName = model.NormalizedUserName?.Trim();
 
-        if (model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner)
-        {
-            if (string.IsNullOrWhiteSpace(normalizedUserName))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["A user is required when the assignment type is Specific owner."]);
-            }
-            else if (await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync() is null)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.NormalizedUserName), S["The selected user does not exist."]);
-            }
-        }
-        else
+        if (model.AssignmentType != SubjectActionOwnerAssignmentType.SpecificOwner)
         {
             normalizedUserName = null;
         }

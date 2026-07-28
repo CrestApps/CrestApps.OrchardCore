@@ -62,10 +62,6 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         calendar.Name = model.Name?.Trim();
         calendar.Description = model.Description?.Trim();

@@ -118,48 +118,6 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
-
-        if (model.Mode == DialerMode.Predictive)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."]);
-        }
-        else if (model.Mode.RequiresAutomatedDialerFeature() &&
-            !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerAutomated))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Mode), S["Enable the Contact Center Automated Dialer feature before using Power or Progressive dialing."]);
-        }
-
-        if (model.EnforceCallingWindow && string.IsNullOrWhiteSpace(model.CallingCalendarId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CallingCalendarId), S["Select an outbound calling calendar when calling-window enforcement is enabled."]);
-        }
-
-        if (model.MaxAbandonmentRatePercent is < 0 or > 100)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxAbandonmentRatePercent), S["The maximum abandonment rate must be between 0 and 100 percent."]);
-        }
-
-        if (model.AbandonmentSampleFloor < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AbandonmentSampleFloor), S["The abandonment sample floor cannot be negative."]);
-        }
-
-        var automatedMode = model.Mode.IsAutomated();
-
-        if (model.EnforceAbandonmentCap && automatedMode && !model.SafeHarborEnabled)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SafeHarborEnabled), S["Enable safe-harbor messaging when an automated dialing mode enforces an abandonment cap."]);
-        }
-
-        if (model.SafeHarborEnabled && string.IsNullOrWhiteSpace(model.SafeHarborMessage))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SafeHarborMessage), S["Provide a safe-harbor announcement when safe-harbor messaging is enabled."]);
-        }
-
         profile.Name = model.Name?.Trim();
         profile.Description = model.Description?.Trim();
         profile.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId)
@@ -172,7 +130,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         profile.ProviderName = string.IsNullOrWhiteSpace(model.ProviderName)
             ? null
             : model.ProviderName.Trim();
-        profile.CallsPerAgent = Math.Clamp(model.CallsPerAgent, 1, PowerDialerStrategy.MaxCallsPerAgent);
+        profile.CallsPerAgent = model.CallsPerAgent;
         profile.MaxAttempts = model.MaxAttempts;
         profile.RetryDelayMinutes = model.RetryDelayMinutes;
         profile.CallerId = model.CallerId?.Trim();
@@ -183,8 +141,8 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             ? null
             : model.CallingCalendarId.Trim();
         profile.EnforceAbandonmentCap = model.EnforceAbandonmentCap;
-        profile.MaxAbandonmentRatePercent = Math.Clamp(model.MaxAbandonmentRatePercent, 0, 100);
-        profile.AbandonmentSampleFloor = Math.Max(0, model.AbandonmentSampleFloor);
+        profile.MaxAbandonmentRatePercent = model.MaxAbandonmentRatePercent;
+        profile.AbandonmentSampleFloor = model.AbandonmentSampleFloor;
         profile.SafeHarborEnabled = model.SafeHarborEnabled;
         profile.SafeHarborMessage = string.IsNullOrWhiteSpace(model.SafeHarborMessage)
             ? null

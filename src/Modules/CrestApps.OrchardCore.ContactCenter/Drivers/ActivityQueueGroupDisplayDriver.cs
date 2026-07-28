@@ -52,10 +52,6 @@ internal sealed class ActivityQueueGroupDisplayDriver : DisplayDriver<ActivityQu
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         group.Name = model.Name?.Trim();
         group.Description = model.Description?.Trim();

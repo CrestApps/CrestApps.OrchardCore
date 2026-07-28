@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Configuration;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Configuration;
@@ -640,9 +641,13 @@ public sealed class ContactCenterConfigurationPortabilityTests
         var flow = await manager.NewAsync(new JsonObject());
 
         // The display text is left unset on purpose: no screen in the product fills it in, so a gate that set it
-        // would be proving something about the fixture rather than about the configuration the product produces.
+        // would be proving something about the fixture rather than about the configuration the product produces. The
+        // campaign and channel are set for the opposite reason: the editor requires both, so a flow without them is not
+        // configuration the product produces either.
         flow.SubjectContentType = "SupportCase";
         flow.SubjectGoal = goal;
+        flow.CampaignId = "support-campaign";
+        flow.Channel = "voice";
         await manager.CreateAsync(flow);
 
         return true;
@@ -799,20 +804,34 @@ public sealed class ContactCenterConfigurationPortabilityTests
             $"'{first}' at {firstIndex} and '{second}' at {secondIndex}.");
     }
 
+    private static readonly (string OwningStep, string PropertyName, JsonNode Value)[] _seedOverrides =
+    [
+        (ContactCenterConfigurationCatalogs.DialerProfile, nameof(DialerProfile.Mode), JsonValue.Create(nameof(DialerMode.Preview))),
+        (ContactCenterConfigurationCatalogs.DialerProfile, nameof(DialerProfile.CallsPerAgent), JsonValue.Create(PowerDialerStrategy.MaxCallsPerAgent)),
+    ];
+
+    private static readonly (string OwningStep, string PropertyName, string ReferencedStep)[] _references =
+    [
+        (ContactCenterConfigurationCatalogs.Queue, nameof(ActivityQueue.QueueGroupId), ContactCenterConfigurationCatalogs.QueueGroup),
+    ];
+
     private static async Task<int> SeedAsync(ContactCenterFeatureActivationHost host, ContactCenterTenant tenant, string group)
     {
         return await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
         {
             var catalogs = GetCatalogs(serviceProvider, group);
             var handlers = serviceProvider.GetServices<IRecipeStepHandler>().ToArray();
+            var seededIds = new Dictionary<string, string>(StringComparer.Ordinal);
             var assigned = 0;
 
-            foreach (var (stepName, entryType, _) in GetGroup(group).Catalogs)
+            foreach (var (stepName, entryType, managerType) in GetGroup(group).Catalogs)
             {
                 var catalog = catalogs.Single(candidate => candidate.StepName == stepName);
                 var (entry, populated) = BuildFullyPopulated(entryType, stepName);
 
                 assigned += populated;
+                ApplySeedOverrides(entry, stepName);
+                ApplyReferences(entry, stepName, seededIds);
 
                 var context = new RecipeExecutionContext
                 {
@@ -832,6 +851,13 @@ public sealed class ContactCenterConfigurationPortabilityTests
                 Assert.True(
                     context.Errors.Count == 0,
                     $"{stepName}: {string.Join("; ", context.Errors)} :: {entry.ToJsonString()}");
+
+                var stored = (await GetAllAsync(serviceProvider, managerType)).OfType<CatalogItem>().FirstOrDefault();
+
+                if (stored is not null)
+                {
+                    seededIds[stepName] = stored.ItemId;
+                }
             }
 
             return assigned;
@@ -1035,6 +1061,56 @@ public sealed class ContactCenterConfigurationPortabilityTests
             {
                 differences.Add($"{stepName}.{property.Key}: present after replay but absent from the export.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Replaces seed values that the generated shape cannot get right on its own.
+    /// </summary>
+    /// <remarks>
+    /// The generator picks the last enum member and a fixed number so that every property carries a distinguishable
+    /// value. Some of those values are genuinely refused by the entry's rules, so they are replaced with an accepted
+    /// value that still differs from the type's default and therefore still proves the property round-trips.
+    /// </remarks>
+    /// <param name="entry">The entry about to be imported.</param>
+    /// <param name="stepName">The catalog step the entry belongs to.</param>
+    private static void ApplySeedOverrides(JsonObject entry, string stepName)
+    {
+        foreach (var (owningStep, propertyName, value) in _seedOverrides)
+        {
+            if (!string.Equals(owningStep, stepName, StringComparison.Ordinal) || !entry.ContainsKey(propertyName))
+            {
+                continue;
+            }
+
+            entry[propertyName] = value.DeepClone();
+        }
+    }
+
+    /// <summary>
+    /// Points a seeded entry at the identifiers of the entries seeded before it.
+    /// </summary>
+    /// <remarks>
+    /// A synthetic seed value satisfies the shape of a reference but not its meaning. Entries whose handlers require a
+    /// reference to resolve are rejected by the import when the reference points at nothing, so the reference is
+    /// rewritten to the identifier the earlier step actually produced. The plan orders a catalog after the catalogs it
+    /// references, so the target is always present by the time it is needed.
+    /// </remarks>
+    /// <param name="entry">The entry about to be imported.</param>
+    /// <param name="stepName">The catalog step the entry belongs to.</param>
+    /// <param name="seededIds">The identifiers produced by the catalogs seeded so far, keyed by step name.</param>
+    private static void ApplyReferences(JsonObject entry, string stepName, Dictionary<string, string> seededIds)
+    {
+        foreach (var (owningStep, propertyName, referencedStep) in _references)
+        {
+            if (!string.Equals(owningStep, stepName, StringComparison.Ordinal)
+                || !entry.ContainsKey(propertyName)
+                || !seededIds.TryGetValue(referencedStep, out var referencedId))
+            {
+                continue;
+            }
+
+            entry[propertyName] = referencedId;
         }
     }
 

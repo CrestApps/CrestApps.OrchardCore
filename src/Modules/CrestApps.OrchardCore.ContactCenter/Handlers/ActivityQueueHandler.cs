@@ -2,14 +2,21 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
+/// <remarks>
+/// The queue group manager is resolved lazily. The queue group handler depends on the queue manager, so injecting the
+/// queue group manager here would close a container cycle at construction time.
+/// </remarks>
 internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQueue>
 {
     private readonly IClock _clock;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -17,12 +24,15 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     /// Initializes a new instance of the <see cref="ActivityQueueHandler"/> class.
     /// </summary>
     /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="serviceProvider">The service provider used to resolve the queue group manager when a queue is validated.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityQueueHandler(
         IClock clock,
+        IServiceProvider serviceProvider,
         IStringLocalizer<ActivityQueueHandler> stringLocalizer)
     {
         _clock = clock;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -43,13 +53,17 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     }
 
     /// <inheritdoc/>
-    public override Task ValidatingAsync(ValidatingContext<ActivityQueue> context, CancellationToken cancellationToken = default)
+    public override async Task ValidatingAsync(ValidatingContext<ActivityQueue> context, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(ActivityQueue.Name)]));
         }
 
-        return Task.CompletedTask;
+        if (!string.IsNullOrWhiteSpace(context.Model.QueueGroupId) &&
+            await _serviceProvider.GetRequiredService<IActivityQueueGroupManager>().FindByIdAsync(context.Model.QueueGroupId, cancellationToken) is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Select a valid queue group."], [nameof(ActivityQueue.QueueGroupId)]));
+        }
     }
 }

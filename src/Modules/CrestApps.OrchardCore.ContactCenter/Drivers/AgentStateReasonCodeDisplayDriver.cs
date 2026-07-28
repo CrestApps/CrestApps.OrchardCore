@@ -58,10 +58,6 @@ internal sealed class AgentStateReasonCodeDisplayDriver : DisplayDriver<AgentSta
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         reasonCode.Name = model.Name?.Trim();
         reasonCode.Description = model.Description?.Trim();

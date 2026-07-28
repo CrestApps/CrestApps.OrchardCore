@@ -83,42 +83,6 @@ internal sealed class AISubjectFlowSettingsDisplayDriver : DisplayDriver<Subject
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.InteractionType == ActivityInteractionType.Automated)
-        {
-            if (string.IsNullOrWhiteSpace(model.SubjectGoal))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectGoal), S["Subject goal is required for automated interactions."]);
-            }
-
-            if (string.IsNullOrWhiteSpace(model.ProfileId))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["AI profile is required for automated interactions."]);
-            }
-            else
-            {
-                var profile = await _profileManager.FindByIdAsync(model.ProfileId);
-
-                if (profile is null || profile.Type != AIProfileType.Chat)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The selected AI profile is invalid."]);
-                }
-                else if (!HasInitialPrompt(profile))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The selected AI profile must have Add initial prompt enabled."]);
-                }
-            }
-
-            if (model.NoResponseTimeoutInMinutes is <= 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.NoResponseTimeoutInMinutes), S["No-response timeout must be greater than zero minutes."]);
-            }
-
-            if (model.SmsResponseDelayInSeconds is < 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SmsResponseDelayInSeconds), S["SMS response delay cannot be negative."]);
-            }
-        }
-
         flowSettings.InitialOutboundPromptPattern = null;
         flowSettings.SubjectGoal = model.SubjectGoal;
         flowSettings.ProfileId = model.ProfileId;

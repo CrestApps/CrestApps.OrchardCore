@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />

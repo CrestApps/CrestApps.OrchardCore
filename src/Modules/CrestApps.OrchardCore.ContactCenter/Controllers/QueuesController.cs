@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -182,7 +183,9 @@ public sealed class QueuesController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ActivityQueue));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new queue has been created successfully."]);
@@ -250,7 +253,9 @@ public sealed class QueuesController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ActivityQueue));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The queue has been updated successfully."]);

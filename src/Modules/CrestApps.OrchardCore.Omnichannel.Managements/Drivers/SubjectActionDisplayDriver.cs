@@ -38,10 +38,6 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.DispositionId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DispositionId), S["Disposition is a required field."]);
-        }
 
         action.DispositionId = model.DispositionId;
 

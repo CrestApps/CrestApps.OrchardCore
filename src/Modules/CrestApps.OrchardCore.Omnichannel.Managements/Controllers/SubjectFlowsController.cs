@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -210,7 +211,9 @@ public sealed class SubjectFlowsController : Controller
 
         await _flowDisplayDriver.UpdateEditorAsync(flowSettings, _updateModelAccessor.ModelUpdater, isNew: isNew);
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_flowSettingsManager, flowSettings, _updateModelAccessor.ModelUpdater, nameof(SubjectFlowSettings));
+
+        if (isValid && ModelState.IsValid)
         {
             if (isNew)
             {
@@ -375,7 +378,9 @@ public sealed class SubjectFlowsController : Controller
             Editor = await _actionDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_actionManager, model, _updateModelAccessor.ModelUpdater, nameof(SubjectAction));
+
+        if (isValid && ModelState.IsValid)
         {
             await _actionManager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new subject action has been created successfully."]);
@@ -453,7 +458,9 @@ public sealed class SubjectFlowsController : Controller
             Editor = await _actionDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_actionManager, model, _updateModelAccessor.ModelUpdater, nameof(SubjectAction));
+
+        if (isValid && ModelState.IsValid)
         {
             await _actionManager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The subject action has been updated successfully."]);

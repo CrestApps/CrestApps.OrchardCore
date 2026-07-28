@@ -53,10 +53,6 @@ internal sealed class ContactCenterSkillDisplayDriver : DisplayDriver<ContactCen
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         skill.Name = model.Name?.Trim();
         skill.Description = model.Description?.Trim();

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -183,7 +184,9 @@ public sealed class BusinessHoursCalendarsController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(BusinessHoursCalendar));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new business hours calendar has been created successfully."]);
@@ -251,7 +254,9 @@ public sealed class BusinessHoursCalendarsController : Controller
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(BusinessHoursCalendar));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The business hours calendar has been updated successfully."]);

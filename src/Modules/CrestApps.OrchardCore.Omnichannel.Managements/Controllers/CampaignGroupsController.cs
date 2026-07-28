@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -181,7 +182,9 @@ public sealed class CampaignGroupsController : Controller
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelCampaignGroup));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new campaign group has been created successfully."]);
@@ -249,7 +252,9 @@ public sealed class CampaignGroupsController : Controller
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelCampaignGroup));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The campaign group has been updated successfully."]);

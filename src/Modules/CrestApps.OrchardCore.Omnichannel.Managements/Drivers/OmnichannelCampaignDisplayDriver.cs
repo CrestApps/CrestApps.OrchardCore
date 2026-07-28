@@ -61,10 +61,6 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.DisplayText))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Name is a required field."]);
-        }
 
         campaign.DisplayText = model.DisplayText?.Trim();
         campaign.Description = model.Description?.Trim();

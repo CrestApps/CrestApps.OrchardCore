@@ -116,17 +116,6 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.QueueGroupId) &&
-            await _queueGroupManager.FindByIdAsync(model.QueueGroupId) is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.QueueGroupId), S["Select a valid queue group."]);
-        }
-
         queue.Name = model.Name?.Trim();
         queue.QueueGroupId = string.IsNullOrWhiteSpace(model.QueueGroupId)
             ? null
