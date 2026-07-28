@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using YesSql.Sql;
 using YesSql;
 
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
 {
     private readonly IStore _store;
+    private readonly IClock _clock;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
 
     /// <summary>
@@ -24,9 +26,11 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
     /// <param name="providerIdentityResolver">The resolver used to canonicalize legacy provider aliases before duplicate preflight and unique-index creation.</param>
     public ProviderWebhookInboxMessageIndexMigrations(
         IStore store,
-        IProviderIdentityResolver providerIdentityResolver)
+        IProviderIdentityResolver providerIdentityResolver,
+        IClock clock)
     {
         _store = store;
+        _clock = clock;
         _providerIdentityResolver = providerIdentityResolver;
     }
 
@@ -41,7 +45,8 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<ProviderWebhookInboxStatus>("Status")
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime?>("ProcessedUtc"),
             collection: ContactCenterConstants.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table =>
@@ -56,6 +61,11 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
                 "Status",
                 "NextAttemptUtc",
                 "DocumentId");
+            table.CreateIndex(
+                "IDX_ProviderWebhookInboxMessageIndex_Retention",
+                "Status",
+                "ProcessedUtc",
+                "DocumentId");
         },
             collection: ContactCenterConstants.CollectionName);
 
@@ -66,7 +76,39 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             "UQ_ProviderWebhookInboxMessageIndex_Delivery",
             "ProviderName",
             "DeliveryId");
-        return 2;
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the settlement time settled deliveries are purged by. Receipt time cannot serve, because settlement
+    /// lags receipt by the whole retry envelope; the retry time cannot serve either, because a settled delivery
+    /// keeps whatever retry time it last held.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
+            .AddColumn<DateTime?>("ProcessedUtc"),
+            collection: ContactCenterConstants.CollectionName);
+
+        await ContactCenterMigrationSql.AddRetentionColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ProviderWebhookInboxMessageIndex),
+            "ProcessedUtc",
+            _clock.UtcNow,
+            settledRowsFilter: $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({(int)ProviderWebhookInboxStatus.Completed}, {(int)ProviderWebhookInboxStatus.DeadLettered})");
+
+        await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
+            .CreateIndex(
+                "IDX_ProviderWebhookInboxMessageIndex_Retention",
+                "Status",
+                "ProcessedUtc",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 3;
     }
 
     /// <summary>

@@ -1,15 +1,20 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Enforces Contact Center data-governance retention by purging durable data older than a cutoff.
+/// Enforces Contact Center data-governance retention by draining every high-volume table of records that have
+/// aged past their configured window.
 /// </summary>
 public interface IContactCenterRetentionService
 {
     /// <summary>
-    /// Purges durable interaction events that occurred strictly before the supplied cutoff.
+    /// Runs one retention cycle across every registered retention policy, draining each entity until it is
+    /// empty or the cycle budget is exhausted.
     /// </summary>
-    /// <param name="cutoffUtc">The exclusive UTC cutoff; events older than this are deleted.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The number of events purged.</returns>
-    Task<int> PurgeInteractionEventsAsync(DateTime cutoffUtc, CancellationToken cancellationToken = default);
+    /// <returns>
+    /// A report describing what each entity purged and whether the cycle returned the database to steady state.
+    /// </returns>
+    Task<ContactCenterRetentionReport> PurgeAsync(CancellationToken cancellationToken = default);
 }

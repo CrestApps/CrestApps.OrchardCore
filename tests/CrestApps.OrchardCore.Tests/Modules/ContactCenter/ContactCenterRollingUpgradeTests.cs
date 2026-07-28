@@ -12,6 +12,8 @@ using OrchardCore.Recipes.Services;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -438,7 +440,7 @@ public sealed class ContactCenterRollingUpgradeTests
             foreach (var column in columns)
             {
                 names.Add($"\"{column.Name}\"");
-                values.Add(SampleLiteral(column));
+                values.Add(SampleLiteral(column, documentId));
             }
 
             var statement = $"INSERT INTO \"{Prefixed(tableName)}\" ({string.Join(", ", names)}) VALUES ({string.Join(", ", values)})";
@@ -590,23 +592,30 @@ public sealed class ContactCenterRollingUpgradeTests
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
         }
 
-        private static string SampleLiteral(RecordedColumn column)
+        /// <summary>
+        /// Produces a sample value that differs between the two rows this suite writes. Reusing one literal
+        /// would collide on any unique constraint the table already carried, and that collision would be
+        /// reported as the previous version being unable to write, which is a defect the suite does not have.
+        /// </summary>
+        private static string SampleLiteral(RecordedColumn column, int documentId)
         {
             var type = Nullable.GetUnderlyingType(column.DbType) ?? column.DbType;
 
             if (type == typeof(bool))
             {
-                return "1";
+                return documentId % 2 == 0 ? "0" : "1";
             }
 
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
             {
-                return "'2026-01-01 00:00:00'";
+                var day = 1 + (documentId % 27);
+
+                return $"'2026-01-{day:D2} 00:00:00'";
             }
 
             if (type == typeof(string) || type == typeof(Guid))
             {
-                var sample = "s";
+                var sample = $"s{documentId.ToString(CultureInfo.InvariantCulture)}";
 
                 return $"'{sample}'";
             }
@@ -616,7 +625,7 @@ public sealed class ContactCenterRollingUpgradeTests
                 return "0";
             }
 
-            return "1";
+            return documentId.ToString(CultureInfo.InvariantCulture);
         }
 
         private static List<DiscoveredMigration> DiscoverMigrations(IStore store)
@@ -663,6 +672,10 @@ public sealed class ContactCenterRollingUpgradeTests
                     {
                         arguments.Add(recipeMigrator.Object);
                     }
+                    else if (parameter.ParameterType == typeof(IClock))
+                    {
+                        arguments.Add(new StubClock());
+                    }
                     else
                     {
                         supported = false;
@@ -671,10 +684,11 @@ public sealed class ContactCenterRollingUpgradeTests
                     }
                 }
 
-                if (!supported)
-                {
-                    continue;
-                }
+                // Skipping silently would drop the migration from every rolling-upgrade assertion, so a
+                // dependency this harness cannot supply must fail loudly instead.
+                Assert.True(
+                    supported,
+                    $"'{type.Name}' takes a constructor dependency this harness cannot supply, so it would be excluded from every rolling-upgrade assertion. Add support for it here.");
 
                 var instance = (DataMigration)constructor.Invoke([.. arguments]);
 

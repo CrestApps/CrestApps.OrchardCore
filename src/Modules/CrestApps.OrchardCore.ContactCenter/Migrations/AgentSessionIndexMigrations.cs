@@ -52,8 +52,32 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
             "UQ_AgentSessionIndex_UserId",
             "UserId");
 
-        return 2;
+        await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentSessionIndex_Retention",
+                "LastHeartbeatUtc",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 3;
     }
+    /// <summary>
+    /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
+    /// is a full scan of a table that grows with traffic, which is exactly the table size retention exists for.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentSessionIndex_Retention",
+                "LastHeartbeatUtc",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 3;
+    }
+
 
     /// <summary>
     /// Adds the tenant-scoped unique user claim to existing agent session indexes.

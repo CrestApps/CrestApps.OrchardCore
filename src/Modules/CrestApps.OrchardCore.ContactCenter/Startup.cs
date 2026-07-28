@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -90,6 +91,29 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.LegalHoldMinimumDays >= 0,
                 "'CrestApps_ContactCenter:Retention:LegalHoldMinimumDays' cannot be negative. Use zero to apply no legal-hold floor.")
+            .Validate(
+                options => options.InteractionRetentionDays >= 0
+                    && options.CallSessionRetentionDays >= 0
+                    && options.QueueItemRetentionDays >= 0
+                    && options.ActivityReservationRetentionDays >= 0
+                    && options.OutboxMessageRetentionDays >= 0
+                    && options.WebhookInboxMessageRetentionDays >= 0
+                    && options.ProviderCommandRetentionDays >= 0
+                    && options.AgentSessionRetentionDays >= 0
+                    && options.CallbackRequestRetentionDays >= 0
+                    && options.EventMetricRetentionDays >= 0
+                    && options.ProcessedEventRetentionDays >= 0
+                    && options.WorkStateRetentionDays >= 0,
+                "Every 'CrestApps_ContactCenter:Retention' window must be zero or greater. Use zero to keep that entity indefinitely.")
+            .Validate(
+                options => options.ProcessedEventDeliveryEnvelopeDays >= 0,
+                "'CrestApps_ContactCenter:Retention:ProcessedEventDeliveryEnvelopeDays' cannot be negative. Use zero to apply no redelivery floor.")
+            .Validate(
+                options => options.PurgeBatchSize >= 0,
+                "'CrestApps_ContactCenter:Retention:PurgeBatchSize' cannot be negative. Use zero to apply the default batch size.")
+            .Validate(
+                options => options.MaxPurgeBatchesPerCycle >= 0,
+                "'CrestApps_ContactCenter:Retention:MaxPurgeBatchesPerCycle' cannot be negative. Use zero to apply the default batch budget.")
             .ValidateOnStart();
 
         services
@@ -172,7 +196,14 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterMetricsProjectionMaintenanceService, ContactCenterMetricsProjectionMaintenanceService>()
             .AddScoped<IContactCenterEventDeduplicationService, ContactCenterEventDeduplicationService>()
             .AddScoped<IContactCenterEventHandler, ContactCenterMetricsProjectionHandler>()
+            .AddScoped<IContactCenterProcessedEventStore, ContactCenterProcessedEventStore>()
             .AddScoped<IContactCenterRetentionService, ContactCenterRetentionService>()
+            .AddScoped<IContactCenterRetentionPolicy, InteractionEventRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, InteractionRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, CallSessionRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ContactCenterOutboxMessageRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ContactCenterEventMetricRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ContactCenterProcessedEventRetentionPolicy>()
             .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
@@ -210,6 +241,7 @@ public sealed class Startup : StartupBase
         // feature, which is what declares the dependency on CRM activity management.
         services
             .AddScoped<IContactCenterWorkStateStore, ContactCenterWorkStateStore>()
+            .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()
             .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
             .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>()
             .AddIndexProvider<ContactCenterWorkStateIndexProvider>()
@@ -353,7 +385,8 @@ public sealed class AvailabilityStartup : StartupBase
             .AddScoped<IAgentSessionManager, AgentSessionManager>()
             .AddScoped<IAgentSessionService, AgentSessionService>()
             .AddScoped<IAgentAvailabilityService, AgentAvailabilityService>()
-            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>();
+            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>()
+            .AddScoped<IContactCenterRetentionPolicy, AgentSessionRetentionPolicy>();
 
         services
             .AddIndexProvider<AgentSessionIndexProvider>()
@@ -494,6 +527,8 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
             .AddScoped<IActivityReservationService, ActivityReservationService>()
+            .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
@@ -566,6 +601,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerProfileManager, DialerProfileManager>()
             .AddScoped<ICallbackRequestStore, CallbackRequestStore>()
             .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
+            .AddScoped<IContactCenterRetentionPolicy, CallbackRequestRetentionPolicy>()
             .AddScoped<ICallbackService, CallbackService>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
@@ -730,6 +766,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()
             .AddScoped<IProviderCommandManager, ProviderCommandManager>()
+            .AddScoped<IContactCenterRetentionPolicy, ProviderCommandRetentionPolicy>()
             .AddScoped<IProviderCommandStateService, ProviderCommandStateService>()
             .AddScoped<IProviderCommandTypeExecutor, DialProviderCommandTypeExecutor>()
             .AddScoped<IProviderCommandTypeExecutor, AnswerProviderCommandTypeExecutor>()
@@ -743,6 +780,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<INormalizedVoiceEventHandler, ContactCenterVoiceProjection>()
             .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
             .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
+            .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
             .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()

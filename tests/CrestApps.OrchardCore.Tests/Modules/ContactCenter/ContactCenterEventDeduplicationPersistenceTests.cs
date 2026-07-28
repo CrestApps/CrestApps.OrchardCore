@@ -10,6 +10,7 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -161,7 +162,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-        var processedEventMigration = new ContactCenterProcessedEventIndexMigrations(store)
+        var processedEventMigration = new ContactCenterProcessedEventIndexMigrations(store, new StubClock())
         {
             SchemaBuilder = schemaBuilder,
         };
@@ -171,6 +172,10 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         };
 
         await processedEventMigration.CreateAsync();
+
+        // The create step stops at its shipped version, exactly as it does for a real tenant, so the retention
+        // column arrives through the update step here too.
+        await processedEventMigration.UpdateFrom1Async();
         await metricMigration.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

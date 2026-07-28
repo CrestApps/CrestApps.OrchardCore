@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -254,6 +255,7 @@ public sealed class MessageClaimFencingPersistenceTests
                 new ProviderIdentityResolver([]),
                 new Mock<IContactCenterScopeExecutor>().Object,
                 CreateClock(),
+                Options.Create(new ContactCenterRetentionOptions()),
                 NullLogger<ProviderWebhookInbox>.Instance);
             var exception = await Record.ExceptionAsync(() => settlement.SettleClaimAsync(
                 "message-1",
@@ -310,7 +312,8 @@ public sealed class MessageClaimFencingPersistenceTests
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("EventId", column => column.WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime>("CreatedUtc"),
             collection: ContactCenterConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
@@ -325,7 +328,8 @@ public sealed class MessageClaimFencingPersistenceTests
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime?>("ProcessedUtc"),
             collection: ContactCenterConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }

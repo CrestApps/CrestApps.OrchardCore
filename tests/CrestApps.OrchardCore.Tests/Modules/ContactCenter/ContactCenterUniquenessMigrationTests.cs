@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -283,7 +284,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Asterisk", "delivery-1");
             await InsertInboxAsync(schemaBuilder, tableName, 2, "message-2", "Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -312,7 +313,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
             await CreateLegacyInboxIndexAsync(schemaBuilder);
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -344,7 +345,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             await CreateLegacyInboxIndexAsync(schemaBuilder);
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Default Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -379,7 +380,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Default Asterisk", "delivery-1");
             await InsertInboxAsync(schemaBuilder, tableName, 2, "message-2", "Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -467,7 +468,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             await using var session = store.CreateSession();
             var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
             var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-            var migration = new ContactCenterProcessedEventIndexMigrations(store)
+            var migration = new ContactCenterProcessedEventIndexMigrations(store, new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -537,7 +538,8 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime>("CreatedUtc"),
             collection: ContactCenterConstants.CollectionName);
     }
 

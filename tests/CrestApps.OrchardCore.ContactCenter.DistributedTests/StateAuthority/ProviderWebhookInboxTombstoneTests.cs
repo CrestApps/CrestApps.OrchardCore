@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -69,6 +70,7 @@ public sealed class ProviderWebhookInboxTombstoneTests
             new ProviderIdentityResolver([]),
             scopeExecutor,
             clock.Object,
+            Options.Create(new ContactCenterRetentionOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
     }
 

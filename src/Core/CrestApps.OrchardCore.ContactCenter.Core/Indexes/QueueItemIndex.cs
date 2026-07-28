@@ -47,4 +47,11 @@ public sealed class QueueItemIndex : CatalogItemIndex
     /// Gets or sets the UTC time the item entered the queue.
     /// </summary>
     public DateTime EnqueuedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the item left the queue, or <see langword="null"/> while it is still waiting.
+    /// Retention purges settled items by when they left rather than by when they arrived, so an item that
+    /// waited a long time is not purged the moment it is finally handled.
+    /// </summary>
+    public DateTime? DequeuedUtc { get; set; }
 }

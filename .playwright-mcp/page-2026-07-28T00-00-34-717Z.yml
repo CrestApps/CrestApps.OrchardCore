@@ -1,0 +1,136 @@
+- generic [ref=f9e2]:
+  - navigation [ref=f9e3]:
+    - generic [ref=f9e5]:
+      - link "Test Site Test Site" [ref=f9e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f9e9]:
+          - img "Test Site" [ref=f9e10]
+          - generic [ref=f9e11]: Test Site
+      - list [ref=f9e12]:
+        - listitem [ref=f9e13]:
+          - button "Toggle theme (light)" [ref=f9e15] [cursor=pointer]
+        - listitem [ref=f9e18]:
+          - button "Visit Site" [ref=f9e19] [cursor=pointer]
+        - listitem [ref=f9e21]:
+          - button [ref=f9e23] [cursor=pointer]
+  - generic [ref=f9e25]:
+    - navigation [ref=f9e26]:
+      - list [ref=f9e27]:
+        - listitem [ref=f9e28]:
+          - figure [ref=f9e29]:
+            - button "Design" [ref=f9e31] [cursor=pointer]
+        - listitem [ref=f9e37]:
+          - figure [ref=f9e38]:
+            - button "Access Control" [ref=f9e40] [cursor=pointer]
+        - listitem [ref=f9e46]:
+          - figure [ref=f9e47]:
+            - button "Artificial Intelligence" [expanded] [ref=f9e49] [cursor=pointer]
+            - list [ref=f9e55]:
+              - listitem [ref=f9e56]:
+                - figure [ref=f9e57]:
+                  - link "Chat Interactions Chat Interactions" [ref=f9e59] [cursor=pointer]:
+                    - /url: /Admin/ai/chat-interactions
+                    - generic "Chat Interactions" [ref=f9e60]
+                    - generic [ref=f9e61]: Chat Interactions
+              - listitem [ref=f9e62]:
+                - figure [ref=f9e63]:
+                  - link "Deployments Deployments" [ref=f9e65] [cursor=pointer]:
+                    - /url: /Admin/ai/deployments
+                    - generic "Deployments" [ref=f9e66]
+                    - generic [ref=f9e67]: Deployments
+              - listitem [ref=f9e68]:
+                - figure [ref=f9e69]:
+                  - link "Profiles Profiles" [ref=f9e71] [cursor=pointer]:
+                    - /url: /Admin/ai/profiles
+                    - generic "Profiles" [ref=f9e72]
+                    - generic [ref=f9e73]: Profiles
+              - listitem [ref=f9e74]:
+                - figure [ref=f9e75]:
+                  - link "Templates Templates" [ref=f9e77] [cursor=pointer]:
+                    - /url: /Admin/ai/templates
+                    - generic "Templates" [ref=f9e78]
+                    - generic [ref=f9e79]: Templates
+              - listitem [ref=f9e80]:
+                - figure [ref=f9e81]:
+                  - link "Tool Instances Tool Instances" [ref=f9e83] [cursor=pointer]:
+                    - /url: /Admin/ai/tool-instances
+                    - generic "Tool Instances" [ref=f9e84]
+                    - generic [ref=f9e85]: Tool Instances
+        - listitem [ref=f9e86]:
+          - figure [ref=f9e87]:
+            - button "Multi-Tenancy" [ref=f9e89] [cursor=pointer]
+        - listitem [ref=f9e95]:
+          - figure [ref=f9e96]:
+            - button "Tools" [ref=f9e98] [cursor=pointer]
+        - listitem [ref=f9e104]:
+          - figure [ref=f9e105]:
+            - button "Settings" [ref=f9e107] [cursor=pointer]
+    - button "⟪" [ref=f9e114] [cursor=pointer]
+  - generic [ref=f9e115]:
+    - heading "New HTTP API Request Tool Instance" [level=1] [ref=f9e116]
+    - generic [ref=f9e117]:
+      - generic:
+        - list
+      - generic [ref=f9e118]:
+        - generic [ref=f9e119]: Name
+        - generic [ref=f9e120]:
+          - textbox "Name" [ref=f9e121]
+          - text: The unique technical name of this tool instance. It is used to build the function name the AI model calls and cannot be changed once created.
+      - generic [ref=f9e122]:
+        - generic [ref=f9e123]: Description
+        - generic [ref=f9e124]:
+          - textbox "Description" [ref=f9e125]
+          - text: Explain what this specific instance does. The AI model relies on this description to decide when to call it and to tell it apart from other instances of the same source.
+      - generic [ref=f9e126]:
+        - generic [ref=f9e127]: Base URL
+        - generic [ref=f9e128]:
+          - textbox "Base URL" [ref=f9e129]:
+            - /placeholder: https://api.example.com/v1/orders
+          - text: The absolute URL the request targets. The AI model may append a relative path when that is allowed below.
+      - generic [ref=f9e130]:
+        - generic [ref=f9e131]: HTTP method
+        - generic [ref=f9e132]:
+          - combobox "HTTP method" [ref=f9e133]:
+            - option "GET" [selected]
+            - option "POST"
+            - option "PUT"
+            - option "PATCH"
+            - option "DELETE"
+          - text: The HTTP method used to issue the request.
+      - generic [ref=f9e134]:
+        - generic [ref=f9e135]: Timeout
+        - generic [ref=f9e136]:
+          - spinbutton "Timeout" [ref=f9e137]
+          - text: The per-request timeout in seconds. Leave it empty to use the default timeout.
+      - generic [ref=f9e138]:
+        - generic [ref=f9e139]: Headers
+        - generic [ref=f9e140]:
+          - textbox "Headers" [ref=f9e141]:
+            - /placeholder: "{ \"Accept\": \"application/json\" }"
+          - text: Static headers always added to the request, expressed as a JSON object of header names and values.
+      - generic [ref=f9e142]:
+        - generic [ref=f9e143]: Model provided values
+        - generic [ref=f9e144]:
+          - generic [ref=f9e145]:
+            - checkbox "Allow the model to provide a relative path" [checked] [ref=f9e146]
+            - generic [ref=f9e147]: Allow the model to provide a relative path
+          - generic [ref=f9e148]:
+            - checkbox "Allow the model to provide query string parameters" [checked] [ref=f9e149]
+            - generic [ref=f9e150]: Allow the model to provide query string parameters
+          - generic [ref=f9e151]:
+            - checkbox "Allow the model to provide a request body" [checked] [ref=f9e152]
+            - generic [ref=f9e153]: Allow the model to provide a request body
+          - text: Anything the model is allowed to provide is chosen by the model at invocation time. Disable what this instance should not expose.
+      - generic [ref=f9e154]:
+        - generic [ref=f9e155]: Authentication type
+        - generic [ref=f9e156]:
+          - combobox "Authentication type" [ref=f9e157]:
+            - option "None" [selected]
+            - option "API Key"
+            - option "Bearer Token"
+            - option "Basic"
+            - option "OAuth 2.0"
+          - text: The authentication strategy applied to every request issued by this instance.
+      - generic [ref=f9e159]:
+        - button "Save" [ref=f9e160] [cursor=pointer]
+        - button "Cancel" [ref=f9e161] [cursor=pointer]

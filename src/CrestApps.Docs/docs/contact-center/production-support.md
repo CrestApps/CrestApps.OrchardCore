@@ -69,6 +69,7 @@ Contact Center persistence is engine-portable by construction, so the same migra
 - **Enumerations are stored as their string names, never as ordinals**, so reordering or inserting an enum value never silently remaps existing rows, and status filters read the same on every engine.
 - **Every raw-SQL migration quotes all identifiers through the active `ISqlDialect`** (`QuoteForTableName`, `QuoteForColumnName`, `FormatIndexName`) and honors `PrefixIndex`; no migration hardcodes an engine-specific quote character, table prefix, or index-naming rule. Unique-index creation is centralized in the single dialect-aware `ContactCenterMigrationSql` helper, and a unit test pins that the generated `CREATE UNIQUE INDEX` statement is produced entirely from the dialect.
 - **All literal values in backfill and preflight statements are passed as bound command parameters**, never string-concatenated, so they are engine-quoting- and injection-safe.
+- **Every identifier in a hand-written statement is quoted through `SchemaBuilder.Dialect`**, never with a literal quote character. A hardcoded double quote delimits an identifier on some engines and a string literal on others, so a filter that quotes its own column name becomes a comparison between a constant and a set of values on the engines that read it as a literal: it matches nothing, succeeds, and leaves the rows it was meant to touch untouched with nothing to indicate it did nothing. A gate fails the build when a migration that writes raw SQL contains one.
 - **Backfill and duplicate-detection statements use only ANSI SQL** (`UPDATE`/`CASE`/`IN`/`GROUP BY`/`HAVING`/`COUNT`) that every supported engine implements identically.
 - **Case-insensitive matching is normalized in application code** (for example, queue membership keys are lower-cased before they are stored and queried) rather than relying on a database's default collation, so routing behaves the same regardless of the engine's collation configuration.
 
@@ -284,7 +285,7 @@ Validated settings:
 
 | Section | Rule |
 | --- | --- |
-| `CrestApps_ContactCenter:Retention` | Every window is non-negative. |
+| `CrestApps_ContactCenter:Retention` | Every window and floor is non-negative, and so are the purge batch size and the per-entity batch budget, where zero means "use the default". |
 | `CrestApps_ContactCenter:HealthChecks` | Every threshold is at least one, and each unhealthy bound is at or above its degraded bound. |
 | `CrestApps_ContactCenter:Topology` | A declared profile identifier resolves to a known topology profile, so a typo is refused rather than silently falling back to a weaker topology. |
 | `CrestApps_ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
@@ -311,17 +312,94 @@ Distributed-lock waits, lease expiries, the inbound reclamation threshold and th
 
 ## Retention, legal holds, and replay horizon
 
-The durable interaction event log is the source of truth from which projections (for example the daily metrics projection) are rebuilt. Purging it therefore bounds how far back a projection can be replayed, so retention is aligned with the replay horizon and legal holds rather than deleting events purely by age.
+Every table that grows with traffic is aged out by a retention policy. A table without one is not a small oversight: it is the table that eventually fills the disk, and it is invisible until it does. Retention therefore covers the whole database rather than the event log alone, and a table that is deliberately *not* aged out has to say so.
 
-Retention is configured under `CrestApps_ContactCenter:Retention`:
+Each entity declares a policy that answers three questions: which timestamp the record is aged from, what makes the record finished, and which floors hold it beyond its configured window.
+
+Retention is configured under `CrestApps_ContactCenter:Retention`. Every window defaults to `0`, which means "keep indefinitely":
+
+| Setting | Entity |
+| --- | --- |
+| `InteractionEventRetentionDays` | Interaction events |
+| `InteractionRetentionDays` | Interactions |
+| `CallSessionRetentionDays` | Call sessions |
+| `QueueItemRetentionDays` | Queue items |
+| `ActivityReservationRetentionDays` | Activity reservations |
+| `OutboxMessageRetentionDays` | Event outbox messages |
+| `WebhookInboxMessageRetentionDays` | Provider webhook inbox messages |
+| `ProviderCommandRetentionDays` | Provider commands |
+| `AgentSessionRetentionDays` | Agent sessions |
+| `CallbackRequestRetentionDays` | Callback requests |
+| `EventMetricRetentionDays` | Daily event metrics |
+| `ProcessedEventRetentionDays` | Processed-event markers |
+| `WorkStateRetentionDays` | Routing work state |
+
+### Records are aged from when they settled
+
+A record is aged from the moment it reached a final state, never from when it arrived, when it was last retried, or when it was due:
+
+| Entity | Aged from | Finished when |
+| --- | --- | --- |
+| Interaction event | `OccurredUtc` | Always — an event is an immutable fact |
+| Interaction | `EndedUtc` | The conversation ended |
+| Call session | `EndedUtc` | The call ended |
+| Queue item | `DequeuedUtc` | Completed or removed |
+| Activity reservation | `ModifiedUtc` | Rejected, expired or canceled |
+| Routing work state | `ModifiedUtc` | Never — see below |
+| Event outbox message | `CreatedUtc` | Completed or dead-lettered |
+| Provider webhook inbox message | `ProcessedUtc` | Completed or dead-lettered |
+| Provider command | `CompletedUtc` | Confirmed, compensated or failed |
+| Agent session | `LastHeartbeatUtc` | The session stopped reporting |
+| Event metric | `Date` | Always — a closed day is final |
+| Processed-event marker | `ProcessedUtc` | Always — the event was handled |
+| Callback request | `ModifiedUtc` | Completed, canceled or failed |
+
+Ageing from arrival time would delete exactly the work that waited longest — the calls that sat in queue for an hour, the commands that retried for a day — which are the records an operator most needs when explaining what went wrong. Ageing from a *scheduled* time is worse still: a callback booked three weeks out carries a future timestamp, and a command in backoff carries a retry time that keeps moving.
+
+The status condition is what keeps a live record alive. Age alone never makes an in-flight record safe to delete, so a queue item that is still waiting, a command whose outcome is still unknown, or a conversation that has not ended survives regardless of how old it is.
+
+### Floors extend retention, never shorten it
 
 | Setting | Meaning |
 | --- | --- |
-| `InteractionEventRetentionDays` | Days to retain interaction events before purging. `0` disables purging entirely (keep indefinitely). |
-| `ProjectionReplayHorizonDays` | Minimum days the event log must remain rebuildable. Retention never purges events younger than this, guaranteeing projections can be rebuilt for at least this window. |
-| `LegalHoldMinimumDays` | Legal-hold / regulatory floor. Events are never purged below this age regardless of the configured window. |
+| `ProjectionReplayHorizonDays` | Minimum days the event log must remain rebuildable. Applies to the interaction event log, the only table projections replay from. |
+| `LegalHoldMinimumDays` | Legal-hold / regulatory floor. Applies to communication history: interaction events, interactions, call sessions and callback requests. |
+| `ProcessedEventDeliveryEnvelopeDays` | How long a provider may still redeliver an event. Applies to processed-event markers, which suppress a redelivery. |
 
-Both floors can only make retention more conservative: the effective purge cutoff keeps events for `max(InteractionEventRetentionDays, ProjectionReplayHorizonDays, LegalHoldMinimumDays)` days, so raising a floor extends retention and never causes an earlier purge. Purging stays disabled whenever `InteractionEventRetentionDays` is `0`.
+An accepted reservation is deliberately absent from that list. Accepting is the live claim an agent holds: it is the state that keeps the unique activity claim in place and that tells the agent what they are working on. Deleting one would release the claim so the same work could be reserved twice, and would strip the agent's own assignment out from under them. A reservation only settles when it is rejected, expires or is canceled.
+
+Routing work state is the one entity with no finished state at all, because whether the work is over is owned by the CRM activity rather than by the routing document. It is aged from its last mutation alone. That is safe only because the document is reconstructible: a work state that no longer exists is recreated on next access and re-seeded from the activity projection, which re-adopts the assignment status, reservation and attempt counts. This is the same adoption path a tenant that predates the document takes, so a purged work state is recoverable rather than lost. Without a policy it was the one table that grew by a row for every activity ever routed and was never deleted by anything.
+
+A settlement column is only useful if something writes it. Reservations and callbacks are aged from their last modification, and nothing was stamping that field on the transitions that settle them, so both policies would have matched no row at all — the entity would have reported itself drained every cycle while its table grew. The reservation service now stamps the modification time on every release and cancellation, and the dialer stamps it when a callback is promoted to an activity. A callback counts as settled once it has been scheduled, because from that point the promoted activity is the durable record of the work; the remaining outcome statuses are kept in the policy for completeness. A gate asserts that every settlement column an active policy reads is stamped by a named statement in a named method on each path that settles the record. Naming the method matters: a type usually has several settlement methods, and a file-wide search is satisfied by any one of them, so deleting the stamp from the single path that ends in a status no other method produces would leave the build green while every record settled that way became immortal.
+
+Where a settlement time is added to an existing index by an upgrade, that upgrade also backfills it. Adding a column to an index does not re-project the documents that already exist, and a settled record is never written again, so every row that predated the upgrade would keep a null settlement time and be rejected by its own policy forever. The backfill dates those rows from the upgrade — later than the truth, so it can only ever delay a purge, never bring one forward — and is restricted to rows already in a settled status so nothing in flight is given a false completion time.
+
+Every purge predicate is backed by an index that leads with the timestamp it selects on. The drain loop asks for a batch at a time with no ordering, so an unindexed predicate turns each terminating batch into a full scan of the very table retention exists to bound — worst on the largest tables, and on every cycle once the table has reached steady state. A gate asserts the covering index exists for each policy.
+
+The effective cutoff for an entity keeps records for `max(window, applicable floors)` days, so raising a floor extends retention and never causes an earlier purge. Purging stays disabled for an entity whose window is `0`, which is the default — an unconfigured tenant deletes nothing.
+
+Floors are scoped rather than global. Applying legal hold to delivery bookkeeping would hold outbox rows for years without holding anything a regulator asked for, and applying it to processed-event markers would trade a disk problem for a much larger one. The redelivery floor exists for the opposite reason: purging a deduplication marker while its event can still be redelivered makes the redelivery look new, and the side effect runs a second time. A completed webhook inbox row is such a marker: its payload is cleared at settlement and the row is kept only so a repeated provider delivery is recognised as a duplicate, so it is aged from settlement rather than from receipt — settlement lags receipt by the whole retry envelope, so ageing from receipt would silently shorten the guarantee. Its floor is the seven-day duplicate-detection horizon the inbox itself enforces, not a configurable envelope, because the inbox already sweeps its own settled rows at that horizon on every dispatch pass. Two purges targeting one table means the shorter of the two decides the real window, so the sweep and the retention policy are reconciled in both directions: the policy may never delete inside the seven-day horizon, and the sweep never deletes before `WebhookInboxMessageRetentionDays` — otherwise raising that setting would change nothing and the operator would be configuring a value the sweep silently overruled. Leaving the setting at `0` keeps the seven-day sweep, because an inbox row exists only to bound a duplicate window that is already bounded.
+
+### Purging drains, and says so when it cannot
+
+Each cycle drains an entity in batches until the table is empty rather than deleting a fixed number of rows and stopping. The default batch size (`PurgeBatchSize`) and per-cycle budget (`MaxPurgeBatchesPerCycle`) allow five million rows per cycle, so a database that has accumulated a large backlog returns to steady state within one cycle. The session is committed between batches so a large drain never accumulates one unbounded transaction.
+
+| Setting | Meaning |
+| --- | --- |
+| `PurgeBatchSize` | Rows deleted per batch. |
+| `MaxPurgeBatchesPerCycle` | Batches per entity per cycle, bounding a single cycle's work. |
+
+The budget is spent per entity rather than shared across the cycle. A shared budget would let whichever policy runs first consume all of it whenever its table is large, and every entity behind it would never be purged at all while the cycle still reported success.
+
+If the budget runs out, the cycle logs a warning naming the entities that still have work rather than completing quietly — an operator who has outgrown the budget finds out from a log line instead of from a full disk. One entity failing does not stop the others: a single unhealthy table would otherwise keep every other table growing. A batch that fails partway through has already staged some of its deletes into a session every entity shares, so those deletes are committed and counted against the entity that produced them before the cycle moves on; left staged they would be flushed by whichever entity ran next, committed under that entity's transaction and attributed to nobody.
+
+### Tables that are deliberately never purged
+
+Configuration and reference data — queues, queue groups, skills, entry points, dialer profiles, business-hours calendars, agent profiles, agent queue memberships and reason codes — are bounded by tenant setup rather than by traffic, so ageing them out would delete a working configuration. Projection checkpoints hold one row per handler, and deleting one replays that projection from the beginning.
+
+Each exemption is recorded with its reason and is checked by a gate, so a new table is either covered by a policy or exempted on purpose. Adding an index without doing either fails the build.
+
+Each policy is registered by the feature that owns its data — queue items and reservations by **Queues**, callbacks by **Dialer**, provider commands and webhook inbox messages by **Voice**, agent sessions by **Availability** — so a tenant purges exactly the tables it actually writes to, and enabling a feature brings its retention with it.
 
 Behavior guarantees:
 
@@ -336,19 +414,20 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 | Data category | Sensitivity | Recording ref | Retention basis | Erasure |
 | --- | --- | --- | --- | --- |
 | Interaction event log | Personal | No | `InteractionEventRetentionDays`, floored by replay-horizon and legal-hold | Retention expiry |
-| Interaction | Sensitive personal | Yes | Life of the interaction record | Anonymize (+ external recording erasure) |
-| Call session | Sensitive personal | Yes | Life of the call-session record | Anonymize (+ external recording erasure) |
-| Callback request | Personal | No | Until promoted or expired | Anonymize |
-| Agent session | Personal | No | Adherence/staffing reporting window | Anonymize |
+| Interaction | Sensitive personal | Yes | `InteractionRetentionDays`, floored by legal-hold, once ended | Anonymize (+ external recording erasure) |
+| Call session | Sensitive personal | Yes | `CallSessionRetentionDays`, floored by legal-hold, once ended | Anonymize (+ external recording erasure) |
+| Callback request | Personal | No | `CallbackRequestRetentionDays`, floored by legal-hold, once resolved | Anonymize |
+| Agent session | Personal | No | `AgentSessionRetentionDays`, from last heartbeat | Anonymize |
 | Agent profile | Personal | No | Agent account lifecycle | Anonymize |
-| Event outbox message | Personal | No | Short-lived; deleted on dispatch | Retention expiry |
-| Provider webhook inbox message | Personal | No | Short-lived; deleted on processing | Retention expiry |
-| Provider command | Non-personal | No | Short-lived; deleted on completion | Retention expiry |
-| Queue item | Non-personal | No | Transient; removed when work leaves the queue | Cascade with interaction |
-| Activity reservation | Non-personal | No | Transient; removed on accept/decline/expiry | Retention expiry |
-| Event metric | Non-personal | No | Durable aggregate snapshot | Not applicable |
+| Event outbox message | Personal | No | `OutboxMessageRetentionDays`, once completed or dead-lettered | Retention expiry |
+| Provider webhook inbox message | Personal | No | `WebhookInboxMessageRetentionDays`, once completed or dead-lettered, floored by the seven-day duplicate-detection horizon | Retention expiry |
+| Provider command | Non-personal | No | `ProviderCommandRetentionDays`, once settled | Retention expiry |
+| Queue item | Non-personal | No | `QueueItemRetentionDays`, once dequeued | Cascade with interaction |
+| Activity reservation | Non-personal | No | `ActivityReservationRetentionDays`, once rejected, expired or canceled | Retention expiry |
+| Routing work state | Non-personal | No | `WorkStateRetentionDays`, from last mutation; recreated and re-seeded on next access | Retention expiry |
+| Event metric | Non-personal | No | `EventMetricRetentionDays` | Not applicable |
 | Projection checkpoint | Non-personal | No | Operational; updated in place | Not applicable |
-| Processed-event ledger | Non-personal | No | Idempotency window | Retention expiry |
+| Processed-event ledger | Non-personal | No | `ProcessedEventRetentionDays`, floored by the redelivery envelope | Retention expiry |
 | Routing and dialing configuration | Non-personal | No | Administrator-managed | Not applicable |
 
 **Erasure strategies.** *Retention expiry* removes the record automatically when it ages past its window (no per-subject action). *Anonymize* clears the personal fields — the customer/caller addresses and free-text notes — while keeping the record so aggregate metrics and audit history survive. *Cascade with interaction* erases the record together with its parent interaction. *External store* delegates erasure to the system that holds the payload. *Not applicable* means the category holds no personal data.

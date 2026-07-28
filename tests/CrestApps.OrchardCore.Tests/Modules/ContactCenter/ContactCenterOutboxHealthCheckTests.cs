@@ -146,7 +146,8 @@ public sealed class ContactCenterOutboxHealthCheckTests
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("EventId", column => column.WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime>("CreatedUtc"),
             collection: ContactCenterConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

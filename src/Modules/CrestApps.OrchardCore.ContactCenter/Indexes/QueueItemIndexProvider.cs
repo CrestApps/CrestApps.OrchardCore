@@ -35,6 +35,7 @@ public sealed class QueueItemIndexProvider : IndexProvider<QueueItem>
                 Priority = item.Priority,
                 AgentId = item.AgentId,
                 EnqueuedUtc = item.EnqueuedUtc,
+                DequeuedUtc = item.DequeuedUtc,
             });
     }
 }

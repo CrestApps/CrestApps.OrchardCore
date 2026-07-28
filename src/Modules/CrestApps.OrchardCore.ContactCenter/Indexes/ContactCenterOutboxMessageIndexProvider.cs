@@ -28,6 +28,7 @@ public sealed class ContactCenterOutboxMessageIndexProvider : IndexProvider<Cont
                 EventId = message.EventId,
                 Status = message.Status,
                 NextAttemptUtc = message.NextAttemptUtc,
+                CreatedUtc = message.CreatedUtc,
             });
     }
 }

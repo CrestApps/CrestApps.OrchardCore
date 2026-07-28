@@ -101,6 +101,10 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         {
             reservationAgentId ??= reservation.AgentId;
             reservation.Status = ReservationStatus.Canceled;
+
+            // This is the age settled reservations are purged by.
+            reservation.ModifiedUtc = _clock.UtcNow;
+
             await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
             canceledReservationIds.Add(reservation.ItemId);
         }

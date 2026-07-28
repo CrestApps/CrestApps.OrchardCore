@@ -26,6 +26,57 @@ internal static class ContactCenterMigrationSql
     }
 
     /// <summary>
+    /// Adds a retention timestamp column to an existing index table and backfills it so rows that predate the
+    /// column are not treated as infinitely old.
+    /// </summary>
+    /// <remarks>
+    /// A column added without a backfill leaves every existing row at the default instant, which is older than
+    /// any retention cutoff, so the first retention cycle after an upgrade would delete the entire table's
+    /// history at once. Backfilling to the upgrade time instead gives those rows one full retention window,
+    /// which matters most for the processed-event markers: purging one while its event can still be redelivered
+    /// reintroduces the duplicate processing the marker exists to prevent. The backfill is a single set-based
+    /// statement rather than a row-by-row loop, so it stays inside the tenant startup budget.
+    /// </remarks>
+    /// <param name="schemaBuilder">The active schema builder.</param>
+    /// <param name="store">The YesSql store.</param>
+    /// <param name="indexType">The index type whose table gains the column.</param>
+    /// <param name="columnName">The name of the column to add.</param>
+    /// <param name="backfillUtc">The instant existing rows adopt.</param>
+    /// <param name="settledRowsFilter">
+    /// An optional predicate restricting the backfill to rows that have already settled, so a record still in
+    /// flight is not handed a false completion time. It is composed only from migration-owned constants and
+    /// dialect-quoted column names; no caller-supplied or user-supplied text reaches it.
+    /// </param>
+    public static async Task AddRetentionColumnAsync(
+        ISchemaBuilder schemaBuilder,
+        IStore store,
+        Type indexType,
+        string columnName,
+        DateTime backfillUtc,
+        string settledRowsFilter = null)
+    {
+        var quotedTableName = GetQuotedTableName(schemaBuilder, store, indexType);
+        var quotedColumnName = schemaBuilder.Dialect.QuoteForColumnName(columnName);
+        var settledFilter = string.IsNullOrEmpty(settledRowsFilter)
+            ? string.Empty
+            : $" AND {settledRowsFilter}";
+
+        await using var command = schemaBuilder.Connection.CreateCommand();
+
+        command.Transaction = schemaBuilder.Transaction;
+        command.CommandText = $"UPDATE {quotedTableName} SET {quotedColumnName} = @backfillUtc WHERE {quotedColumnName} IS NULL{settledFilter}";
+
+        var parameter = command.CreateParameter();
+
+        parameter.ParameterName = "@backfillUtc";
+        parameter.Value = backfillUtc;
+
+        command.Parameters.Add(parameter);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
     /// Determines whether at least one row matches the specified query.
     /// </summary>
     /// <param name="schemaBuilder">The active schema builder.</param>

@@ -1599,6 +1599,34 @@
         ]
       },
       "evidenceLocation": "ProviderVoiceEventCloneCompletenessTests, which reflects over the settable properties of ProviderVoiceEvent and parses the clone method's object initializer to prove every one of them is assigned."
+    },
+    {
+      "id": "D014",
+      "severity": "P1",
+      "planFinding": "W2.3-retention-coverage",
+      "category": "data",
+      "gate": "A table grew forever because nobody wrote it a retention policy",
+      "invariant": "Every Contact Center index is either purged by a retention policy that is actually registered, or carries a written exemption naming why it is bounded without one, so a table cannot start growing unbounded through silence. Each policy ages its records from the moment they settled rather than from when they arrived or were last retried, and a table that can still hold a live record is never selected by age alone. Legal hold, the projection replay horizon, and the provider redelivery envelope only ever extend a window. The purge drains an entity across batches instead of deleting a fixed slice, spends its batch budget per entity so a later entity is never starved by an earlier one, and reports remaining work rather than completing quietly when its budget runs out. A policy may only treat statuses declared terminal by name as expired, so widening one to a status an agent still holds fails the build. Every upgrade step that adds a settlement column also backfills it, because a column added to an index does not re-project the rows that already exist and the pre-upgrade backlog would otherwise be immortal. Every settlement column an active policy ages from is stamped by a declared production statement on the transition that settles the record, so a policy cannot age from a column nothing writes; and every purge predicate is backed by a covering index leading with that column, so draining a table does not scan it end to end. No migration writes an identifier into raw SQL with a hardcoded quote, because an engine that reads that quote as a string literal turns the statement inert and skips every row without failing. The settlement stamp is required in the specific method that owns each settlement path rather than anywhere in the declaring file, so removing it from a single terminal transition fails the build. Where a second purge already targets the same table, the two windows are reconciled in both directions so neither silently overrules the other. A batch that fails partway through commits and attributes the deletes it had already staged, so partial work is never committed under a later entity's transaction and counted against nobody.",
+      "testId": "CC-D014",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk",
+          "dialpad"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "single-node-distributed"
+        ]
+      },
+      "evidenceLocation": "ContactCenterRetentionCoverageTests, which reflects over every index and every policy to prove coverage, registration, settlement-time ageing, liveness guarding, the declared terminal-status sets, the governance floors and the settlement-column backfills; and ContactCenterRetentionPersistenceTests, which runs the real policies against a SQLite database and asserts on the survivors rather than on a deletion count, including that a tight budget starves no entity."
     }
   ]
 }

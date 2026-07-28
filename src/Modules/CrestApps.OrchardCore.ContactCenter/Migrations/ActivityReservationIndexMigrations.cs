@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -20,15 +21,25 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
     private static readonly string AcceptedStatusValue =
         ((int)ReservationStatus.Accepted).ToString(CultureInfo.InvariantCulture);
 
+    private static readonly string _terminalStatusValues = string.Join(
+        ", ",
+        ((int)ReservationStatus.Rejected).ToString(CultureInfo.InvariantCulture),
+        ((int)ReservationStatus.Expired).ToString(CultureInfo.InvariantCulture),
+        ((int)ReservationStatus.Canceled).ToString(CultureInfo.InvariantCulture));
+
     private readonly IStore _store;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityReservationIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    public ActivityReservationIndexMigrations(IStore store)
+    public ActivityReservationIndexMigrations(
+        IStore store,
+        IClock clock)
     {
         _store = store;
+        _clock = clock;
     }
 
     /// <summary>
@@ -44,7 +55,8 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("AgentClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(26))
             .Column<ReservationStatus>("Status")
-            .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
+            .Column<DateTime>("ExpiresUtc", column => column.NotNull())
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName
         );
 
@@ -69,7 +81,39 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             "UQ_ActivityReservationIndex_AgentClaimKey",
             "AgentClaimKey");
 
-        return 2;
+        await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
+            .CreateIndex("IDX_ActivityReservationIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the time a reservation reached a terminal status, which is the age settled reservations are purged
+    /// by. Neither the creation time nor the expiry can serve: an accepted reservation lives for as long as the
+    /// work does, and it keeps an expiry in the future that never arrives.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
+            .AddColumn<DateTime>("ModifiedUtc", column => column.Nullable()),
+            collection: ContactCenterConstants.CollectionName);
+
+        await ContactCenterMigrationSql.AddRetentionColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ActivityReservationIndex),
+            "ModifiedUtc",
+            _clock.UtcNow,
+            $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
+
+        await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
+            .CreateIndex("IDX_ActivityReservationIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 3;
     }
 
     /// <summary>

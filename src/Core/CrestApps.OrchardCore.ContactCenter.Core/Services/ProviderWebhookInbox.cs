@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore;
@@ -44,12 +45,19 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private static readonly TimeSpan _dispatchLockExpiration = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _claimLease = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _missingHandlerDelay = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan _tombstoneRetention = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// The number of days a settled delivery is kept as an idempotency tombstone. A provider redelivery arriving
+    /// within this window is recognised as a duplicate purely because the row still exists, so retention must
+    /// never delete one sooner.
+    /// </summary>
+    public const double TombstoneRetentionDays = 7;
 
     private const int BaseBackoffSeconds = 15;
     private const int MaxBackoffSeconds = 1800;
 
     private readonly IReadOnlyList<IProviderWebhookInboxHandler> _handlers;
+    private readonly ContactCenterRetentionOptions _retentionOptions;
     private readonly IProviderWebhookInboxStore _store;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
@@ -77,6 +85,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         IProviderIdentityResolver providerIdentityResolver,
         IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
+        IOptions<ContactCenterRetentionOptions> retentionOptions,
         ILogger<ProviderWebhookInbox> logger)
     {
         _handlers = ValidateHandlers(handlers);
@@ -86,6 +95,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         _providerIdentityResolver = providerIdentityResolver;
         _scopeExecutor = scopeExecutor;
         _clock = clock;
+        _retentionOptions = retentionOptions.Value;
         _logger = logger;
     }
 
@@ -420,7 +430,11 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
     private async Task<int> PurgeExpiredTombstonesAsync(CancellationToken cancellationToken)
     {
-        var cutoff = _clock.UtcNow.Subtract(_tombstoneRetention);
+        // This sweep and the retention policy both delete settled inbox rows, so the shorter of the two would
+        // decide the table's real window. Taking the longer keeps the configured retention window meaningful
+        // while never letting the duplicate-detection horizon be shortened below what the inbox guarantees.
+        var retentionDays = Math.Max(TombstoneRetentionDays, _retentionOptions.WebhookInboxMessageRetentionDays);
+        var cutoff = _clock.UtcNow.Subtract(TimeSpan.FromDays(retentionDays));
         var tombstones = await _store.ListProcessedBeforeAsync(
             cutoff,
             MaxTombstoneCleanupBatchSize,
@@ -478,6 +492,9 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         if (message.AttemptCount >= MaxAttempts)
         {
             message.Status = ProviderWebhookInboxStatus.DeadLettered;
+
+            // This is the age settled deliveries are purged by. Without it a dead letter is never selected.
+            message.ProcessedUtc = _clock.UtcNow;
         }
         else
         {

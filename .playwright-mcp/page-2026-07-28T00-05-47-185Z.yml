@@ -1,0 +1,272 @@
+- generic [ref=f16e2]:
+  - navigation [ref=f16e3]:
+    - generic [ref=f16e5]:
+      - link "Test Site Test Site" [ref=f16e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f16e9]:
+          - img "Test Site" [ref=f16e10]
+          - generic [ref=f16e11]: Test Site
+      - list [ref=f16e12]:
+        - listitem [ref=f16e13]:
+          - button "Toggle theme (light)" [ref=f16e15] [cursor=pointer]
+        - listitem [ref=f16e18]:
+          - button "Visit Site" [ref=f16e19] [cursor=pointer]
+        - listitem [ref=f16e21]:
+          - button [ref=f16e23] [cursor=pointer]
+  - generic [ref=f16e25]:
+    - navigation [ref=f16e26]:
+      - list [ref=f16e27]:
+        - listitem [ref=f16e28]:
+          - figure [ref=f16e29]:
+            - button "Design" [ref=f16e31] [cursor=pointer]
+        - listitem [ref=f16e37]:
+          - figure [ref=f16e38]:
+            - button "Access Control" [ref=f16e40] [cursor=pointer]
+        - listitem [ref=f16e46]:
+          - figure [ref=f16e47]:
+            - button "Artificial Intelligence" [ref=f16e49] [cursor=pointer]
+        - listitem [ref=f16e55]:
+          - figure [ref=f16e56]:
+            - button "Multi-Tenancy" [ref=f16e58] [cursor=pointer]
+        - listitem [ref=f16e64]:
+          - figure [ref=f16e65]:
+            - button "Tools" [ref=f16e67] [cursor=pointer]
+        - listitem [ref=f16e73]:
+          - figure [ref=f16e74]:
+            - button "Settings" [ref=f16e76] [cursor=pointer]
+    - button "⟪" [ref=f16e83] [cursor=pointer]
+  - generic [ref=f16e84]:
+    - heading "New 'New Profile' Profile" [level=1] [ref=f16e85]
+    - generic [ref=f16e86]:
+      - generic:
+        - list
+      - tablist [ref=f16e87]:
+        - listitem [ref=f16e88]:
+          - tab "Content" [selected] [ref=f16e89]
+        - listitem [ref=f16e90]:
+          - tab "Capabilities" [ref=f16e91] [cursor=pointer]
+        - listitem [ref=f16e92]:
+          - tab "Data Processing & Metrics" [ref=f16e93] [cursor=pointer]
+      - generic [ref=f16e94]:
+        - tabpanel [ref=f16e95]:
+          - generic [ref=f16e96]:
+            - generic [ref=f16e97]:
+              - generic [ref=f16e98]:
+                - heading "Apply Templates" [level=5] [ref=f16e99]
+                - button [expanded] [ref=f16e100] [cursor=pointer]
+              - generic [ref=f16e104]:
+                - generic [ref=f16e105]: Template
+                - generic [ref=f16e106]:
+                  - generic [ref=f16e107]:
+                    - combobox "Template" [ref=f16e108]:
+                      - option "Select a template" [selected]
+                      - option "Data Analyst Agent"
+                      - option "Summarizer Agent"
+                      - option "Writer Agent"
+                      - option "Code Assistant Agent"
+                      - option "Executor Agent"
+                      - option "Planner Agent"
+                      - option "Chat Session Summarizer"
+                      - option "Reviewer Agent"
+                      - option "Research Agent"
+                    - button "Apply" [ref=f16e109] [cursor=pointer]
+                  - text: Select a profile template to pre-fill the form fields before you save the new profile.
+            - generic [ref=f16e111]:
+              - generic [ref=f16e112]:
+                - heading "General" [level=5] [ref=f16e113]
+                - button [expanded] [ref=f16e114] [cursor=pointer]
+              - generic [ref=f16e117]:
+                - generic [ref=f16e118]:
+                  - generic [ref=f16e119]: Title
+                  - generic [ref=f16e120]:
+                    - textbox "Title" [ref=f16e121]
+                    - text: Profile title for the user interface.
+                - generic [ref=f16e122]:
+                  - generic [ref=f16e123]: Technical name
+                  - generic [ref=f16e124]:
+                    - textbox "Technical name" [ref=f16e125]
+                    - text: Profile name. This name cannot be changed later.
+                - generic [ref=f16e126]:
+                  - generic [ref=f16e127]: Profile type
+                  - generic [ref=f16e128]:
+                    - combobox "Profile type" [ref=f16e129]:
+                      - option "Chat" [selected]
+                      - option "Utility"
+                      - option "Template generated prompt"
+                      - option "Agent"
+                    - text: Choose how the type of the profile.
+                - generic [ref=f16e130]:
+                  - generic [ref=f16e131]: Title type
+                  - generic [ref=f16e132]:
+                    - combobox "Title type" [ref=f16e133]:
+                      - option "Set the first prompt as the title" [selected]
+                      - option "Generate a title based on the first prompt"
+                    - text: Choose how the session title should be set when a new session is created.
+                - generic [ref=f16e136]:
+                  - checkbox "Add initial prompt" [ref=f16e137]
+                  - generic [ref=f16e138]: Add initial prompt
+                  - text: When enabled, each new chat session starts with an assistant message from the initial prompt and the welcome message is ignored.
+                - generic [ref=f16e139]:
+                  - generic [ref=f16e140]: Welcome message
+                  - generic [ref=f16e141]:
+                    - textbox "Welcome message" [ref=f16e142]
+                    - text: The welcome message to show on the user-interface when a new session is created.
+                - generic [ref=f16e145]:
+                  - checkbox "Show on admin menu" [checked] [ref=f16e146]
+                  - generic [ref=f16e147]: Show on admin menu
+                  - text: — When enabled, the profile will be added to the admin menu.
+                - generic [ref=f16e148]:
+                  - generic [ref=f16e149]: Initial response handler
+                  - generic [ref=f16e150]:
+                    - combobox "Initial response handler" [ref=f16e151]:
+                      - option "Default (AI)" [selected]
+                      - option "AI"
+                    - text: The response handler used when a new chat session starts. When set to a non-AI handler, prompts are routed to an external system (e.g., a live agent platform) instead of AI. The active handler can be changed mid-conversation by an AI function.
+            - generic [ref=f16e152]:
+              - generic [ref=f16e153]:
+                - heading "Deployments" [level=5] [ref=f16e154]
+                - button [expanded] [ref=f16e155] [cursor=pointer]
+              - generic [ref=f16e158]:
+                - alert [ref=f16e161]: Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended chat deployment.
+                - generic [ref=f16e162]:
+                  - generic [ref=f16e163]: Chat deployment
+                  - generic [ref=f16e164]:
+                    - combobox "Chat deployment" [ref=f16e165]:
+                      - option "Default" [selected]
+                    - text: Select the deployment to use for chat completions.
+                - alert [ref=f16e168]: Default utility deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended utility deployment.
+                - generic [ref=f16e169]:
+                  - generic [ref=f16e170]: Utility deployment
+                  - generic [ref=f16e171]:
+                    - combobox "Utility deployment" [ref=f16e172]:
+                      - option "Default" [selected]
+                    - text: Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set.
+            - generic [ref=f16e173]:
+              - generic [ref=f16e174]:
+                - heading "Instructions" [level=5] [ref=f16e175]
+                - button [expanded] [ref=f16e176] [cursor=pointer]
+              - generic [ref=f16e179]:
+                - generic [ref=f16e180]:
+                  - generic [ref=f16e181]: System instructions
+                  - generic [ref=f16e182]:
+                    - generic [ref=f16e183]: The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation.
+                    - application [ref=f16e184]:
+                      - toolbar [ref=f16e185]:
+                        - button "Bold" [ref=f16e186] [cursor=pointer]
+                        - button "Italic" [ref=f16e188] [cursor=pointer]
+                        - button "Heading" [ref=f16e190] [cursor=pointer]
+                        - generic [ref=f16e192]: "|"
+                        - button "Quote" [ref=f16e193] [cursor=pointer]
+                        - button "Generic List" [ref=f16e195] [cursor=pointer]
+                        - button "Numbered List" [ref=f16e197] [cursor=pointer]
+                        - button "Check List" [ref=f16e199] [cursor=pointer]
+                        - generic [ref=f16e200]: "|"
+                        - button "Create Link" [ref=f16e201] [cursor=pointer]
+                        - button "Insert Image" [ref=f16e203] [cursor=pointer]
+                        - generic [ref=f16e205]: "|"
+                        - button "Toggle Preview" [ref=f16e206] [cursor=pointer]
+                        - button "Toggle Side by Side" [ref=f16e208] [cursor=pointer]
+                        - button "Toggle Fullscreen" [ref=f16e210] [cursor=pointer]
+                        - generic [ref=f16e212]: "|"
+                        - button "Markdown Guide" [ref=f16e213] [cursor=pointer]
+                      - textbox [ref=f16e216]
+                      - generic [ref=f16e221]:
+                        - generic [ref=f16e222]: "lines: 1"
+                        - generic [ref=f16e223]: "words: 0"
+                        - generic [ref=f16e224]: 1:1
+                - generic [ref=f16e225]:
+                  - generic [ref=f16e226]:
+                    - text: Prompt templates
+                    - generic "Add one or more reusable prompt templates that will be rendered in order before the custom system instructions." [ref=f16e227]
+                  - generic [ref=f16e229]:
+                    - button "Add prompt template" [ref=f16e231] [cursor=pointer]
+                    - generic [ref=f16e233]: No prompt templates selected.
+            - generic [ref=f16e234]:
+              - generic [ref=f16e235]:
+                - heading "Parameters" [level=5] [ref=f16e236]
+                - button [expanded] [ref=f16e237] [cursor=pointer]
+              - generic [ref=f16e240]:
+                - generic [ref=f16e241]:
+                  - generic [ref=f16e242]:
+                    - text: Max response
+                    - generic "Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text." [ref=f16e243]
+                  - generic [ref=f16e245]:
+                    - spinbutton "Max response Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text." [ref=f16e246]
+                    - text: Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text.
+                - generic [ref=f16e247]:
+                  - generic [ref=f16e248]:
+                    - text: Temperature
+                    - generic "Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both." [ref=f16e249]
+                  - generic [ref=f16e251]:
+                    - spinbutton "Temperature Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both." [ref=f16e252]: "0"
+                    - text: Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both.
+                - generic [ref=f16e253]:
+                  - generic [ref=f16e254]:
+                    - text: Top P
+                    - generic "Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both." [ref=f16e255]
+                  - generic [ref=f16e257]:
+                    - spinbutton "Top P Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both." [ref=f16e258]: "1"
+                    - text: Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both.
+                - generic [ref=f16e259]:
+                  - generic [ref=f16e260]:
+                    - text: Frequency penalty
+                    - generic "Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response." [ref=f16e261]
+                  - generic [ref=f16e263]:
+                    - spinbutton "Frequency penalty Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response." [ref=f16e264]: "0"
+                    - text: Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response.
+                - generic [ref=f16e265]:
+                  - generic [ref=f16e266]:
+                    - text: Presence penalty
+                    - generic "Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response." [ref=f16e267]
+                  - generic [ref=f16e269]:
+                    - spinbutton "Presence penalty Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response." [ref=f16e270]: "0"
+                    - text: Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response.
+                - generic [ref=f16e271]:
+                  - generic [ref=f16e272]:
+                    - text: Past messages included
+                    - generic "Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses." [ref=f16e273]
+                  - generic [ref=f16e275]:
+                    - spinbutton "Past messages included Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses." [ref=f16e276]: "10"
+                    - text: Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses.
+                - generic [ref=f16e279]:
+                  - checkbox "Use caching" [checked] [ref=f16e280]
+                  - generic [ref=f16e281]: Use caching
+                  - text: — When enabled, prompts will utilize semantic caching to reduce AI service costs and improve speed and performance.
+            - generic [ref=f16e282]:
+              - generic [ref=f16e283]:
+                - heading "Prompt Security" [level=5] [ref=f16e284]
+                - button [expanded] [ref=f16e285] [cursor=pointer]
+              - generic [ref=f16e288]:
+                - paragraph [ref=f16e289]: Override the site-wide anti-spam throttle limits for this profile. Leave a field blank to inherit the site default. These overrides only affect this profile; the shared prompt-injection and output guards remain site-wide.
+                - generic [ref=f16e290]:
+                  - generic [ref=f16e291]:
+                    - text: Maximum messages per window
+                    - generic "How many chat messages one rate-limit partition can send within the window below. Leave blank to inherit the site default. Set to 0 to disable message throttling for this profile." [ref=f16e292]
+                  - generic [ref=f16e294]:
+                    - spinbutton "Maximum messages per window How many chat messages one rate-limit partition can send within the window below. Leave blank to inherit the site default. Set to 0 to disable message throttling for this profile." [ref=f16e295]
+                    - text: How many chat messages one rate-limit partition can send within the window below. Set to 0 to disable message throttling for this profile.
+                - generic [ref=f16e296]:
+                  - generic [ref=f16e297]:
+                    - text: Message rate-limit window (seconds)
+                    - generic "Duration of the chat message rate-limit window for this profile. Leave blank to inherit the site default. Must be between 1 and 86400." [ref=f16e298]
+                  - generic [ref=f16e300]:
+                    - spinbutton "Message rate-limit window (seconds) Duration of the chat message rate-limit window for this profile. Leave blank to inherit the site default. Must be between 1 and 86400." [ref=f16e301]
+                    - text: Duration of the chat message rate-limit window for this profile.
+                - generic [ref=f16e302]:
+                  - generic [ref=f16e303]:
+                    - text: Maximum anonymous sessions per window
+                    - generic "Limits how many new anonymous chat sessions can be started within the window below. Leave blank to inherit the site default. Set to 0 to disable anonymous session-start throttling for this profile." [ref=f16e304]
+                  - generic [ref=f16e306]:
+                    - spinbutton "Maximum anonymous sessions per window Limits how many new anonymous chat sessions can be started within the window below. Leave blank to inherit the site default. Set to 0 to disable anonymous session-start throttling for this profile." [ref=f16e307]
+                    - text: Limits how many new anonymous chat sessions can be started within the window below. Set to 0 to disable anonymous session-start throttling for this profile.
+                - generic [ref=f16e308]:
+                  - generic [ref=f16e309]:
+                    - text: Anonymous session window (seconds)
+                    - generic "Duration of the anonymous chat session-start rate-limit window for this profile. Leave blank to inherit the site default. Must be between 1 and 86400." [ref=f16e310]
+                  - generic [ref=f16e312]:
+                    - spinbutton "Anonymous session window (seconds) Duration of the anonymous chat session-start rate-limit window for this profile. Leave blank to inherit the site default. Must be between 1 and 86400." [ref=f16e313]
+                    - text: Duration of the anonymous chat session-start rate-limit window for this profile.
+        - text: — — — — — — —
+      - generic [ref=f16e315]:
+        - button "Save" [ref=f16e316] [cursor=pointer]
+        - button "Cancel" [ref=f16e317] [cursor=pointer]

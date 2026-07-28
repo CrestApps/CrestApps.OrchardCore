@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -12,14 +13,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
 {
     private readonly IStore _store;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterProcessedEventIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    public ContactCenterProcessedEventIndexMigrations(IStore store)
+    public ContactCenterProcessedEventIndexMigrations(
+        IStore store,
+        IClock clock)
     {
         _store = store;
+        _clock = clock;
     }
 
     /// <summary>
@@ -50,6 +55,37 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
             "HandlerId",
             "EventId");
 
+        // The retention column is left to the update step. Declaring it here as well would put this table on
+        // the synthesised upgrade path, where the unique constraint this create step makes with raw SQL cannot
+        // be reproduced, and a fresh installation would then stop enforcing what an upgraded one enforces.
         return 1;
+    }
+
+    /// <summary>
+    /// Adds the processed time these markers are purged by, and gives rows that predate the column one full
+    /// retention window rather than the default instant, which every cutoff is newer than.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
+            .AddColumn<DateTime>("ProcessedUtc"),
+            collection: ContactCenterConstants.CollectionName);
+
+        await ContactCenterMigrationSql.AddRetentionColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ContactCenterProcessedEventIndex),
+            "ProcessedUtc",
+            _clock.UtcNow);
+
+        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
+            .CreateIndex(
+                "IDX_ContactCenterProcessedEventIndex_Retention",
+                "ProcessedUtc",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 2;
     }
 }

@@ -1,0 +1,166 @@
+- generic [ref=f22e2]:
+  - navigation [ref=f22e3]:
+    - generic [ref=f22e5]:
+      - link "Test Site Test Site" [ref=f22e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f22e9]:
+          - img "Test Site" [ref=f22e10]
+          - generic [ref=f22e11]: Test Site
+      - list [ref=f22e12]:
+        - listitem [ref=f22e13]:
+          - button "Toggle theme (light)" [ref=f22e15] [cursor=pointer]
+        - listitem [ref=f22e18]:
+          - button "Visit Site" [ref=f22e19] [cursor=pointer]
+        - listitem [ref=f22e21]:
+          - button [ref=f22e23] [cursor=pointer]
+  - generic [ref=f22e25]:
+    - navigation [ref=f22e26]:
+      - list [ref=f22e27]:
+        - listitem [ref=f22e28]:
+          - figure [ref=f22e29]:
+            - button "Design" [ref=f22e31] [cursor=pointer]
+        - listitem [ref=f22e37]:
+          - figure [ref=f22e38]:
+            - button "Access Control" [ref=f22e40] [cursor=pointer]
+        - listitem [ref=f22e46]:
+          - figure [ref=f22e47]:
+            - button "Artificial Intelligence" [expanded] [ref=f22e49] [cursor=pointer]
+            - list [ref=f22e55]:
+              - listitem [ref=f22e56]:
+                - figure [ref=f22e57]:
+                  - link "Chat Interactions Chat Interactions" [ref=f22e59] [cursor=pointer]:
+                    - /url: /Admin/ai/chat-interactions
+                    - generic "Chat Interactions" [ref=f22e60]
+                    - generic [ref=f22e61]: Chat Interactions
+              - listitem [ref=f22e62]:
+                - figure [ref=f22e63]:
+                  - link "Deployments Deployments" [ref=f22e65] [cursor=pointer]:
+                    - /url: /Admin/ai/deployments
+                    - generic "Deployments" [ref=f22e66]
+                    - generic [ref=f22e67]: Deployments
+              - listitem [ref=f22e68]:
+                - figure [ref=f22e69]:
+                  - link "Profiles Profiles" [ref=f22e71] [cursor=pointer]:
+                    - /url: /Admin/ai/profiles
+                    - generic "Profiles" [ref=f22e72]
+                    - generic [ref=f22e73]: Profiles
+              - listitem [ref=f22e74]:
+                - figure [ref=f22e75]:
+                  - link "Templates Templates" [ref=f22e77] [cursor=pointer]:
+                    - /url: /Admin/ai/templates
+                    - generic "Templates" [ref=f22e78]
+                    - generic [ref=f22e79]: Templates
+              - listitem [ref=f22e80]:
+                - figure [ref=f22e81]:
+                  - link "Tool Instances Tool Instances" [ref=f22e83] [cursor=pointer]:
+                    - /url: /Admin/ai/tool-instances
+                    - generic "Tool Instances" [ref=f22e84]
+                    - generic [ref=f22e85]: Tool Instances
+              - listitem [ref=f22e86]:
+                - figure [ref=f22e87]:
+                  - link "Test Profile Test Profile" [ref=f22e89] [cursor=pointer]:
+                    - /url: /Admin/ai/chat/session/4zjjht72yacn32n1v6vj2rd9mf
+                    - generic "Test Profile" [ref=f22e90]
+                    - generic [ref=f22e91]: Test Profile
+        - listitem [ref=f22e92]:
+          - figure [ref=f22e93]:
+            - button "Multi-Tenancy" [ref=f22e95] [cursor=pointer]
+        - listitem [ref=f22e101]:
+          - figure [ref=f22e102]:
+            - button "Tools" [ref=f22e104] [cursor=pointer]
+        - listitem [ref=f22e110]:
+          - figure [ref=f22e111]:
+            - button "Settings" [ref=f22e113] [cursor=pointer]
+    - button "⟪" [ref=f22e120] [cursor=pointer]
+  - generic [ref=f22e121]:
+    - 'heading "Chat: New Chat" [level=1] [ref=f22e122]'
+    - generic [ref=f22e124]:
+      - generic [ref=f22e125]:
+        - button "Collapse panel" [ref=f22e128] [cursor=pointer]
+        - generic [ref=f22e130]:
+          - tablist [ref=f22e131]:
+            - listitem [ref=f22e132]:
+              - tab "Settings" [selected] [ref=f22e133]
+            - listitem [ref=f22e134]:
+              - tab "Capabilities" [ref=f22e135] [cursor=pointer]
+          - generic [ref=f22e136]:
+            - tabpanel [ref=f22e137]:
+              - generic [ref=f22e138]:
+                - generic [ref=f22e139]:
+                  - text: Title
+                  - generic "A descriptive name for this chat interaction. Helps you identify and find this conversation in your history." [ref=f22e140]
+                - textbox "Title A descriptive name for this chat interaction. Helps you identify and find this conversation in your history." [ref=f22e142]:
+                  - /placeholder: Enter a title for this interaction...
+              - alert [ref=f22e143]: Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended chat deployment.
+              - generic [ref=f22e144]:
+                - generic [ref=f22e145]:
+                  - text: Chat deployment
+                  - generic "Select the deployment to use for chat completions." [ref=f22e146]
+                - combobox "Chat deployment Select the deployment to use for chat completions." [ref=f22e148]:
+                  - option "Default" [selected]
+              - alert [ref=f22e149]: Default utility deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended utility deployment.
+              - generic [ref=f22e150]:
+                - generic [ref=f22e151]:
+                  - text: Utility deployment
+                  - generic "Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set." [ref=f22e152]
+                - combobox "Utility deployment Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set." [ref=f22e154]:
+                  - option "Default" [selected]
+              - generic [ref=f22e155]:
+                - generic [ref=f22e156]:
+                  - text: System instructions
+                  - generic "Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses." [ref=f22e157]
+                - textbox "System instructions Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses." [ref=f22e159]:
+                  - /placeholder: Optional system instructions to guide AI behavior...
+              - generic [ref=f22e160]:
+                - generic [ref=f22e161]:
+                  - text: Prompt templates
+                  - generic "Add one or more reusable prompt templates that will be rendered in order before the custom system instructions." [ref=f22e162]
+                - generic [ref=f22e164]:
+                  - button "Add prompt template" [ref=f22e166] [cursor=pointer]
+                  - generic [ref=f22e168]: No prompt templates selected.
+              - generic [ref=f22e169]:
+                - generic [ref=f22e170]:
+                  - text: Max response tokens
+                  - generic "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers." [ref=f22e171]
+                - spinbutton "Max response tokens The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers." [ref=f22e173]
+              - generic [ref=f22e174]:
+                - generic [ref=f22e175]:
+                  - generic [ref=f22e176]:
+                    - text: Temperature
+                    - generic "Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied." [ref=f22e177]
+                  - spinbutton "Temperature Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied." [ref=f22e179]
+                - generic [ref=f22e180]:
+                  - generic [ref=f22e181]:
+                    - text: Top P
+                    - generic "Also called 'nucleus sampling'. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values (e.g., 0.1) are more focused, higher values (e.g., 0.9) are more diverse." [ref=f22e182]
+                  - spinbutton "Top P Also called 'nucleus sampling'. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values (e.g., 0.1) are more focused, higher values (e.g., 0.9) are more diverse." [ref=f22e184]
+              - generic [ref=f22e185]:
+                - generic [ref=f22e186]:
+                  - generic [ref=f22e187]:
+                    - text: Frequency penalty
+                    - generic "Penalizes tokens based on how frequently they appear in the response so far. Higher values (up to 2) reduce repetition of the same words and phrases." [ref=f22e188]
+                  - spinbutton "Frequency penalty Penalizes tokens based on how frequently they appear in the response so far. Higher values (up to 2) reduce repetition of the same words and phrases." [ref=f22e190]
+                - generic [ref=f22e191]:
+                  - generic [ref=f22e192]:
+                    - text: Presence penalty
+                    - generic "Penalizes tokens based on whether they have appeared at all. Higher values (up to 2) encourage the AI to introduce new topics and ideas rather than staying on the same subjects." [ref=f22e193]
+                  - spinbutton "Presence penalty Penalizes tokens based on whether they have appeared at all. Higher values (up to 2) encourage the AI to introduce new topics and ideas rather than staying on the same subjects." [ref=f22e195]
+              - generic [ref=f22e196]:
+                - generic [ref=f22e197]:
+                  - text: Past messages
+                  - generic "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs." [ref=f22e198]
+                - spinbutton "Past messages The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs." [ref=f22e200]
+            - text: — —
+      - generic [ref=f22e201]:
+        - generic [ref=f22e205]:
+          - generic "Actions" [ref=f22e206]:
+            - button "New Chat" [ref=f22e207] [cursor=pointer]
+          - link "Chat Interactions" [ref=f22e208] [cursor=pointer]:
+            - /url: /Admin/ai/chat-interactions
+        - generic [ref=f22e211]:
+          - heading "What do you want to know?" [level=1] [ref=f22e215]
+          - generic [ref=f22e217]:
+            - textbox "Message AI Chat" [ref=f22e218]:
+              - /placeholder: Message AI Chat ...
+            - generic [ref=f22e220]:
+              - button [disabled]

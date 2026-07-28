@@ -96,6 +96,10 @@ public sealed class CallbackService : ICallbackService
             var activity = await CreateActivityAsync(callback, cancellationToken);
             callback.ActivityItemId = activity.ItemId;
             callback.Status = CallbackRequestStatus.Scheduled;
+
+            // This is the age settled callbacks are purged by. Without it the row is never selected by retention.
+            callback.ModifiedUtc = now;
+
             callback.Attempts++;
             callback.OwnerToken = null;
             callback.LeaseExpiresUtc = null;
@@ -152,6 +156,9 @@ public sealed class CallbackService : ICallbackService
         activity.CampaignId = callback.CampaignId;
         activity.ContactContentItemId = callback.ContactContentItemId;
         activity.ContactContentType = callback.ContactContentType;
+
+        // The callback row is purged once it settles, so anything recorded only there has to move with the work.
+        activity.Notes = callback.Notes;
         activity.Status = ActivityStatus.NotStated;
         activity.ScheduledUtc = now;
         activity.CreatedUtc = now;

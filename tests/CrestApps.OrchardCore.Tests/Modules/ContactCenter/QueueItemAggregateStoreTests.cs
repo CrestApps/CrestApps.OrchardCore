@@ -144,7 +144,8 @@ public sealed class QueueItemAggregateStoreTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
+            .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

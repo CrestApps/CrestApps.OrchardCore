@@ -64,7 +64,8 @@ public sealed class ProviderWebhookInboxMessage : CatalogItem, IModifiedUtcAware
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC time the message completed processing and became an idempotency tombstone.
+    /// Gets or sets the UTC time the message reached a terminal outcome: completed, becoming an idempotency
+    /// tombstone, or dead-lettered after exhausting its attempts.
     /// </summary>
     public DateTime? ProcessedUtc { get; set; }
 

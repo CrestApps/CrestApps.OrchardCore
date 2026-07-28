@@ -32,6 +32,7 @@ public sealed class ProviderCommandIndexProvider : IndexProvider<ProviderCommand
                 InteractionId = command.InteractionId,
                 NextAttemptUtc = command.NextAttemptUtc,
                 LeaseExpiresUtc = command.LeaseExpiresUtc,
+                CompletedUtc = command.CompletedUtc,
             });
     }
 }

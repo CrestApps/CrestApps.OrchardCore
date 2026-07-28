@@ -529,7 +529,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
+            .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table
@@ -545,7 +546,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("AssignmentStatus", column => column.WithLength(50))
             .Column<string>("ReservationId", column => column.WithLength(26))
             .Column<string>("ReservedById", column => column.WithLength(26))
-            .Column<string>("AssignedToId", column => column.WithLength(26)),
+            .Column<string>("AssignedToId", column => column.WithLength(26))
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ActivityReservationIndex>(table => table
@@ -555,7 +557,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("AgentClaimKey", column => column.NotNull().Unique().WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
+            .Column<DateTime>("ExpiresUtc", column => column.NotNull())
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

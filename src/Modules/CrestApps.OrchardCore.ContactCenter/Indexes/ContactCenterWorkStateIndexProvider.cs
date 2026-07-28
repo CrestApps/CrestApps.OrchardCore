@@ -30,6 +30,7 @@ public sealed class ContactCenterWorkStateIndexProvider : IndexProvider<ContactC
                 ReservationId = workState.ReservationId,
                 ReservedById = workState.ReservedById,
                 AssignedToId = workState.AssignedToId,
+                ModifiedUtc = workState.ModifiedUtc,
             });
     }
 }

@@ -1,21 +1,19 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
 /// <summary>
-/// Purges durable interaction events beyond the configured data-governance retention window once a day.
+/// Drains every Contact Center table of records beyond its configured data-governance retention window once a
+/// day.
 /// </summary>
 [BackgroundTask(
     Title = "Contact Center Data Retention",
     Schedule = "0 3 * * *",
-    Description = "Purges durable interaction events older than the configured retention window.",
+    Description = "Purges Contact Center records older than their configured retention windows.",
     LockTimeout = 10_000,
     LockExpiration = 300_000)]
 public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
@@ -23,24 +21,30 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var options = serviceProvider.GetRequiredService<IOptions<ContactCenterRetentionOptions>>().Value;
-        var clock = serviceProvider.GetRequiredService<IClock>();
-
-        if (!RetentionCutoffCalculator.TryComputeCutoff(clock.UtcNow, options, out var cutoff))
-        {
-            return;
-        }
-
         var retentionService = serviceProvider.GetRequiredService<IContactCenterRetentionService>();
         var logger = serviceProvider.GetRequiredService<ILogger<ContactCenterRetentionBackgroundTask>>();
 
         try
         {
-            await retentionService.PurgeInteractionEventsAsync(cutoff, cancellationToken);
+            var report = await retentionService.PurgeAsync(cancellationToken);
+
+            if (report.WorkRemains)
+            {
+                // Without this the cycle would look successful while the database kept growing, which is the
+                // failure mode a silently truncating batch cap produces.
+                var starvedEntities = string.Join(
+                    ", ",
+                    report.Entities.Where(entity => entity.WorkRemains).Select(entity => entity.EntityName));
+
+                logger.LogWarning(
+                    "Contact Center retention purged {PurgedCount} records but did not reach steady state for: {StarvedEntities}. Raise 'CrestApps_ContactCenter:Retention:MaxPurgeBatchesPerCycle' or shorten the retention windows.",
+                    report.TotalPurged,
+                    starvedEntities);
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while purging expired Contact Center interaction events.");
+            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while purging expired Contact Center records.");
         }
     }
 }

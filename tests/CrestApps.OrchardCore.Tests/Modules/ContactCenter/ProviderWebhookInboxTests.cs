@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -274,6 +275,84 @@ public sealed class ProviderWebhookInboxTests
     }
 
     [Fact]
+    public async Task DispatchDueAsync_SweepsTombstones_NoSoonerThanTheConfiguredRetentionWindow()
+    {
+        // Arrange
+        // Two independent purges delete settled inbox rows: this sweep and the retention policy. If the sweep
+        // kept its own hardcoded window it would always be the shorter of the two, so raising the configured
+        // retention window would change nothing and the operator setting would be silently inert.
+        var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.ListProcessedBeforeAsync(
+                It.IsAny<DateTime>(),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        store
+            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var session = new Mock<ISession>();
+        var inbox = CreateInbox(
+            store,
+            session,
+            [],
+            retentionOptions: new ContactCenterRetentionOptions
+            {
+                WebhookInboxMessageRetentionDays = 30,
+            });
+
+        // Act
+        await inbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.Verify(
+            service => service.ListProcessedBeforeAsync(
+                _now.AddDays(-30),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchDueAsync_SweepsTombstones_NoLaterThanTheDuplicateDetectionHorizon_WhenRetentionIsDisabled()
+    {
+        // Arrange
+        // A zero retention window means "keep indefinitely" for every other entity, but an inbox row exists only
+        // to make a redelivery a duplicate. Letting the table grow forever because retention was left off would
+        // trade an unbounded table for a guarantee that is already bounded at seven days.
+        var store = new Mock<IProviderWebhookInboxStore>();
+        store
+            .Setup(service => service.ListProcessedBeforeAsync(
+                It.IsAny<DateTime>(),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        store
+            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var session = new Mock<ISession>();
+        var inbox = CreateInbox(
+            store,
+            session,
+            [],
+            retentionOptions: new ContactCenterRetentionOptions
+            {
+                WebhookInboxMessageRetentionDays = 0,
+            });
+
+        // Act
+        await inbox.DispatchDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.Verify(
+            service => service.ListProcessedBeforeAsync(
+                _now.AddDays(-ProviderWebhookInbox.TombstoneRetentionDays),
+                ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task DispatchDueAsync_WhenOneMessageFails_ContinuesToLaterMessages()
     {
         // Arrange
@@ -507,7 +586,8 @@ public sealed class ProviderWebhookInboxTests
         Mock<IProviderWebhookInboxStore> store,
         Mock<ISession> session,
         IEnumerable<IProviderWebhookInboxHandler> handlers,
-        bool locked = true)
+        bool locked = true,
+        ContactCenterRetentionOptions retentionOptions = null)
     {
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
@@ -532,6 +612,7 @@ public sealed class ProviderWebhookInboxTests
             new ProviderIdentityResolver([]),
             scopeExecutor.Object,
             clock.Object,
+            Options.Create(retentionOptions ?? new ContactCenterRetentionOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
 
         return inbox;

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -13,14 +14,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
 {
     private readonly IStore _store;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterWorkStateIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    public ContactCenterWorkStateIndexMigrations(IStore store)
+    public ContactCenterWorkStateIndexMigrations(
+        IStore store,
+        IClock clock)
     {
         _store = store;
+        _clock = clock;
     }
 
     /// <summary>
@@ -55,5 +60,34 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
             "ActivityItemId");
 
         return 1;
+    }
+
+    /// <summary>
+    /// Adds the modification time the work state is purged by. Nothing in the product ever deletes a work
+    /// state, so without an age this table grows by one row for every activity that is ever routed.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
+            .AddColumn<DateTime>("ModifiedUtc", column => column.Nullable()),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        // Adding a column does not re-project rows that already exist, so without this every work state that
+        // predates the upgrade would keep a null age and could never be purged.
+        await ContactCenterMigrationSql.AddRetentionColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(ContactCenterWorkStateIndex),
+            "ModifiedUtc",
+            _clock.UtcNow);
+
+        await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
+            .CreateIndex("IDX_ContactCenterWorkStateIndex_Retention", "ModifiedUtc", "DocumentId"),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 2;
     }
 }

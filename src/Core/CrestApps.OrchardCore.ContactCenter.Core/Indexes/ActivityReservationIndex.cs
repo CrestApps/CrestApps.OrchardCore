@@ -42,4 +42,10 @@ public sealed class ActivityReservationIndex : CatalogItemIndex
     /// Gets or sets the UTC time the reservation expires.
     /// </summary>
     public DateTime ExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time the reservation reached a terminal status, which is the age settled reservations
+    /// are purged by. Null while the reservation is still pending or held by an agent.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
 }

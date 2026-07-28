@@ -1,0 +1,83 @@
+- generic [ref=f13e2]:
+  - navigation [ref=f13e3]:
+    - generic [ref=f13e5]:
+      - link "Test Site Test Site" [ref=f13e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f13e9]:
+          - img "Test Site" [ref=f13e10]
+          - generic [ref=f13e11]: Test Site
+      - list [ref=f13e12]:
+        - listitem [ref=f13e13]:
+          - button "Toggle theme (light)" [ref=f13e15] [cursor=pointer]
+        - listitem [ref=f13e18]:
+          - button "Visit Site" [ref=f13e19] [cursor=pointer]
+        - listitem [ref=f13e21]:
+          - button [ref=f13e23] [cursor=pointer]
+  - generic [ref=f13e25]:
+    - navigation [ref=f13e26]:
+      - list [ref=f13e27]:
+        - listitem [ref=f13e28]:
+          - figure [ref=f13e29]:
+            - button "Design" [ref=f13e31] [cursor=pointer]
+        - listitem [ref=f13e37]:
+          - figure [ref=f13e38]:
+            - button "Access Control" [ref=f13e40] [cursor=pointer]
+        - listitem [ref=f13e46]:
+          - figure [ref=f13e47]:
+            - button "Artificial Intelligence" [expanded] [ref=f13e49] [cursor=pointer]
+            - list [ref=f13e55]:
+              - listitem [ref=f13e56]:
+                - figure [ref=f13e57]:
+                  - link "Chat Interactions Chat Interactions" [ref=f13e59] [cursor=pointer]:
+                    - /url: /Admin/ai/chat-interactions
+                    - generic "Chat Interactions" [ref=f13e60]
+                    - generic [ref=f13e61]: Chat Interactions
+              - listitem [ref=f13e62]:
+                - figure [ref=f13e63]:
+                  - link "Deployments Deployments" [ref=f13e65] [cursor=pointer]:
+                    - /url: /Admin/ai/deployments
+                    - generic "Deployments" [ref=f13e66]
+                    - generic [ref=f13e67]: Deployments
+              - listitem [ref=f13e68]:
+                - figure [ref=f13e69]:
+                  - link "Profiles Profiles" [ref=f13e71] [cursor=pointer]:
+                    - /url: /Admin/ai/profiles
+                    - generic "Profiles" [ref=f13e72]
+                    - generic [ref=f13e73]: Profiles
+              - listitem [ref=f13e74]:
+                - figure [ref=f13e75]:
+                  - link "Templates Templates" [ref=f13e77] [cursor=pointer]:
+                    - /url: /Admin/ai/templates
+                    - generic "Templates" [ref=f13e78]
+                    - generic [ref=f13e79]: Templates
+              - listitem [ref=f13e80]:
+                - figure [ref=f13e81]:
+                  - link "Tool Instances Tool Instances" [ref=f13e83] [cursor=pointer]:
+                    - /url: /Admin/ai/tool-instances
+                    - generic "Tool Instances" [ref=f13e84]
+                    - generic [ref=f13e85]: Tool Instances
+        - listitem [ref=f13e86]:
+          - figure [ref=f13e87]:
+            - button "Multi-Tenancy" [ref=f13e89] [cursor=pointer]
+        - listitem [ref=f13e95]:
+          - figure [ref=f13e96]:
+            - button "Tools" [ref=f13e98] [cursor=pointer]
+        - listitem [ref=f13e104]:
+          - figure [ref=f13e105]:
+            - button "Settings" [ref=f13e107] [cursor=pointer]
+    - button "⟪" [ref=f13e114] [cursor=pointer]
+  - generic [ref=f13e115]:
+    - heading "AI Profiles" [level=1] [ref=f13e116]
+    - generic [ref=f13e117]:
+      - button "Submit" [ref=f13e118] [cursor=pointer]
+      - button "Submit" [ref=f13e119] [cursor=pointer]
+      - generic [ref=f13e122]:
+        - generic [ref=f13e124]:
+          - searchbox "Search" [active] [ref=f13e126]
+          - button "Go" [ref=f13e127] [cursor=pointer]
+        - link "Add Profile" [ref=f13e130] [cursor=pointer]:
+          - /url: /Admin/ai/profile/create
+      - list [ref=f13e131]:
+        - listitem [ref=f13e132]:
+          - strong [ref=f13e133]: Nothing here!
+          - text: There are no profiles at the moment.

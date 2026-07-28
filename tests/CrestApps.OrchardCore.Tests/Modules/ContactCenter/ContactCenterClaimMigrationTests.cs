@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -40,7 +41,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "activity-2",
                 "agent-1",
                 ReservationStatus.Accepted);
-            var migration = new ActivityReservationIndexMigrations(store)
+            var migration = new ActivityReservationIndexMigrations(store, new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -97,7 +98,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "activity-1",
                 "agent-2",
                 ReservationStatus.Accepted);
-            var migration = new ActivityReservationIndexMigrations(store)
+            var migration = new ActivityReservationIndexMigrations(store, new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -141,7 +142,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "queue-item-2",
                 "activity-1",
                 QueueItemStatus.Completed);
-            var migration = new QueueItemIndexMigrations(store)
+            var migration = new QueueItemIndexMigrations(store, new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -190,7 +191,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "queue-item-2",
                 "activity-1",
                 QueueItemStatus.Reserved);
-            var migration = new QueueItemIndexMigrations(store)
+            var migration = new QueueItemIndexMigrations(store, new StubClock())
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -223,7 +224,8 @@ public sealed class ContactCenterClaimMigrationTests
             .Column<string>("ActivityItemId", column => column.WithLength(26))
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("ExpiresUtc", column => column.NotNull()),
+            .Column<DateTime>("ExpiresUtc", column => column.NotNull())
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
     }
 
@@ -236,7 +238,8 @@ public sealed class ContactCenterClaimMigrationTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
+            .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
     }
 

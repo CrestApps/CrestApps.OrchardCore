@@ -1138,6 +1138,33 @@ public sealed class ActivityReservationServiceTests
         Assert.Same(reservation, canceled);
         Assert.Equal(ReservationStatus.Canceled, reservation.Status);
         Assert.Equal(QueueItemStatus.Waiting, queueItem.Status);
+
+        // Retention selects settled reservations by this column, so a settled row without it would never be purged.
+        Assert.Equal(_now, reservation.ModifiedUtc);
+    }
+
+    [Fact]
+    public async Task RejectAsync_StampsTheSettlementTime_SoRetentionCanEventuallyPurgeTheReservation()
+    {
+        // Arrange
+        var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1", Status = ReservationStatus.Pending };
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var queueItem = new QueueItem { ItemId = "qi-1", Status = QueueItemStatus.Reserved, ReservationId = "r1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1" });
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+        var service = CreateService(reservationManager, queueItemManager, agentManager, new Mock<IActivityQueueManager>(), new Mock<IActivityQueueService>(), new Mock<IInteractionManager>(), activityManager, new Mock<IContactCenterEventPublisher>(), new Mock<ITelephonyService>());
+
+        // Act
+        await service.RejectAsync("r1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ReservationStatus.Rejected, reservation.Status);
+        Assert.Equal(_now, reservation.ModifiedUtc);
     }
 
     [Fact]

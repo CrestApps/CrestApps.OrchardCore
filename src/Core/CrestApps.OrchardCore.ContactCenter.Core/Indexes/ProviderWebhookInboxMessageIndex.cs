@@ -33,4 +33,12 @@ public sealed class ProviderWebhookInboxMessageIndex : CatalogItemIndex
     /// </summary>
     public DateTime NextAttemptUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC time the delivery reached a terminal outcome. Retention purges settled deliveries by
+    /// this age. Receipt time cannot serve, because settlement lags receipt by the whole retry envelope and would
+    /// shorten the redelivery tombstone below its guarantee; the retry time cannot serve either, because a settled
+    /// delivery keeps whatever retry time it last held.
+    /// </summary>
+    public DateTime? ProcessedUtc { get; set; }
+
 }

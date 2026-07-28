@@ -401,6 +401,10 @@ public sealed class ActivityReservationService : IActivityReservationService
         var now = _clock.UtcNow;
         var wasAccepted = reservation.Status == ReservationStatus.Accepted;
         reservation.Status = ReservationStatus.Canceled;
+
+        // This is the age settled reservations are purged by. Without it the row is never selected by retention.
+        reservation.ModifiedUtc = now;
+
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
@@ -522,6 +526,10 @@ public sealed class ActivityReservationService : IActivityReservationService
     {
         var now = _clock.UtcNow;
         reservation.Status = status;
+
+        // This is the age settled reservations are purged by. Without it the row is never selected by retention.
+        reservation.ModifiedUtc = now;
+
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);

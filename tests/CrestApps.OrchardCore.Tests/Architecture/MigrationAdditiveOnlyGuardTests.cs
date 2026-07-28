@@ -308,13 +308,13 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",
-            "0cba6ca11051069a",
+            "1966765494500e97",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "CreateUniqueIndexAsync",
-            "0cba6ca11051069a",
+            "1966765494500e97",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
     ];
 

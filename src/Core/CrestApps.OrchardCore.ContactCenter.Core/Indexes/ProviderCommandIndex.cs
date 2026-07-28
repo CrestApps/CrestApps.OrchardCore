@@ -48,4 +48,11 @@ public sealed class ProviderCommandIndex : CatalogItemIndex
     /// Gets or sets the UTC time the current claim lease expires.
     /// </summary>
     public DateTime LeaseExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the command reached a terminal state, or <see langword="null"/> while it is
+    /// still in flight. Retention purges settled commands by this time rather than by their retry or lease
+    /// times, neither of which advances once a command has finished.
+    /// </summary>
+    public DateTime? CompletedUtc { get; set; }
 }

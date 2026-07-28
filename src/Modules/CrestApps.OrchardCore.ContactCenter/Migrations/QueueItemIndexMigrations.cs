@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -21,14 +22,18 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         ((int)QueueItemStatus.Removed).ToString(CultureInfo.InvariantCulture);
 
     private readonly IStore _store;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueItemIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    public QueueItemIndexMigrations(IStore store)
+    public QueueItemIndexMigrations(
+        IStore store,
+        IClock clock)
     {
         _store = store;
+        _clock = clock;
     }
 
     /// <summary>
@@ -45,7 +50,8 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             .Column<QueueItemStatus>("Status")
             .Column<InteractionPriority>("Priority")
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
+            .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
+            .Column<DateTime?>("DequeuedUtc"),
             collection: ContactCenterConstants.CollectionName
         );
 
@@ -64,7 +70,42 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             "UQ_QueueItemIndex_ActivityClaimKey",
             "ActivityClaimKey");
 
-        return 2;
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex("IDX_QueueItemIndex_Retention", "Status", "DequeuedUtc", "DocumentId"),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the time an item left the queue, which is what settled items are purged by. Purging by arrival
+    /// time instead would delete an item the moment it was handled if it had waited longer than the window.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .AddColumn<DateTime?>("DequeuedUtc"),
+            collection: ContactCenterConstants.CollectionName);
+
+        // Adding a column does not re-project rows that already exist, and a settled item is never written
+        // again, so without this the whole pre-upgrade backlog would keep a null dequeue time and could never
+        // be purged. Legacy settled rows are dated from the upgrade so they age out a full window from now,
+        // which is later than the truth and therefore never deletes anything early.
+        await ContactCenterMigrationSql.AddRetentionColumnAsync(
+            SchemaBuilder,
+            _store,
+            typeof(QueueItemIndex),
+            "DequeuedUtc",
+            _clock.UtcNow,
+            $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({CompletedStatusValue}, {RemovedStatusValue})");
+
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex("IDX_QueueItemIndex_Retention", "Status", "DequeuedUtc", "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 3;
     }
 
     /// <summary>

@@ -27,6 +27,7 @@ public sealed class ContactCenterProcessedEventIndexProvider : IndexProvider<Con
                 ItemId = processedEvent.ItemId,
                 HandlerId = processedEvent.HandlerId,
                 EventId = processedEvent.EventId,
+                ProcessedUtc = processedEvent.ProcessedUtc,
             });
     }
 }

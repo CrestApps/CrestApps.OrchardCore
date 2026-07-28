@@ -123,7 +123,8 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("Status", column => column.WithLength(50))
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
-            .Column<DateTime>("EnqueuedUtc", column => column.NotNull()),
+            .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await CreateUniqueIndexAsync(schemaBuilder, typeof(QueueItemIndex), "UQ_Test_QueueItemIndex_ActivityClaimKey", "ActivityClaimKey");
@@ -136,7 +137,8 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime?>("ProcessedUtc"),
             collection: ContactCenterConstants.CollectionName);
 
         await CreateUniqueIndexAsync(

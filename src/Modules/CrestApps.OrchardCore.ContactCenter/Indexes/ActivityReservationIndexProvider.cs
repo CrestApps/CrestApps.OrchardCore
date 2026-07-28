@@ -36,6 +36,7 @@ public sealed class ActivityReservationIndexProvider : IndexProvider<ActivityRes
                     : reservation.ItemId,
                 Status = reservation.Status,
                 ExpiresUtc = reservation.ExpiresUtc,
+                ModifiedUtc = reservation.ModifiedUtc,
             });
     }
 }

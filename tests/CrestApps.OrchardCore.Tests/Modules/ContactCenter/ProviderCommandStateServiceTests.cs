@@ -918,7 +918,8 @@ public sealed class ProviderCommandStateServiceTests
             .Column<long>("FenceToken", column => column.NotNull().WithDefault(0L))
             .Column<string>("InteractionId", column => column.WithLength(26))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
-            .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull()),
+            .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull())
+            .Column<DateTime>("CompletedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }

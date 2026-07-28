@@ -27,4 +27,10 @@ public sealed class CallbackRequestIndex : CatalogItemIndex
     /// Gets or sets the UTC time the current promotion lease expires, when the callback is claimed.
     /// </summary>
     public DateTime? LeaseExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the callback was last modified, which is the settlement time for a callback
+    /// that has reached a terminal status and is what retention ages it by.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
 }

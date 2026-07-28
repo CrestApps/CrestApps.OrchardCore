@@ -14,6 +14,7 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -258,7 +259,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         {
             SchemaBuilder = schemaBuilder,
         };
-        var outboxMigration = new ContactCenterOutboxMessageIndexMigrations
+        var outboxMigration = new ContactCenterOutboxMessageIndexMigrations(store, new StubClock())
         {
             SchemaBuilder = schemaBuilder,
         };

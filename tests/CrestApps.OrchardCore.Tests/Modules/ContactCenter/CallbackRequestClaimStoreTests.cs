@@ -104,7 +104,8 @@ public sealed class CallbackRequestClaimStoreTests
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<int>("Status")
             .Column<DateTime>("ScheduledUtc")
-            .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable()),
+            .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable())
+            .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
             collection: ContactCenterConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

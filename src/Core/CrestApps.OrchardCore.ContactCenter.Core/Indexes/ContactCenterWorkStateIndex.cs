@@ -37,4 +37,10 @@ public sealed class ContactCenterWorkStateIndex : CatalogItemIndex
     /// Gets or sets the user identifier of the agent the activity is assigned to.
     /// </summary>
     public string AssignedToId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time the work state was last mutated, which is the age it is purged by. There is no
+    /// terminal assignment status to key on, because the work item's closure is owned by the CRM activity.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
 }

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -77,7 +78,8 @@ public sealed class ProviderWebhookInboxPersistenceTests
             .Column<string>("ProviderName", column => column.WithLength(100))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<string>("Status", column => column.WithLength(50))
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime?>("ProcessedUtc"),
             collection: ContactCenterConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
@@ -95,6 +97,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
             new ProviderIdentityResolver([]),
             new Mock<IContactCenterScopeExecutor>().Object,
             clock.Object,
+            Options.Create(new ContactCenterRetentionOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
     }
 

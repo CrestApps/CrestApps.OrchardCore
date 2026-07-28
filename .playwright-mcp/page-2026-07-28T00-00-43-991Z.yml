@@ -1,0 +1,107 @@
+- generic [ref=f10e2]:
+  - navigation [ref=f10e3]:
+    - generic [ref=f10e5]:
+      - link "Test Site Test Site" [ref=f10e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f10e9]:
+          - img "Test Site" [ref=f10e10]
+          - generic [ref=f10e11]: Test Site
+      - list [ref=f10e12]:
+        - listitem [ref=f10e13]:
+          - button "Toggle theme (light)" [ref=f10e15] [cursor=pointer]
+        - listitem [ref=f10e18]:
+          - button "Visit Site" [ref=f10e19] [cursor=pointer]
+        - listitem [ref=f10e21]:
+          - button [ref=f10e23] [cursor=pointer]
+  - generic [ref=f10e25]:
+    - navigation [ref=f10e26]:
+      - list [ref=f10e27]:
+        - listitem [ref=f10e28]:
+          - figure [ref=f10e29]:
+            - button "Design" [ref=f10e31] [cursor=pointer]
+        - listitem [ref=f10e37]:
+          - figure [ref=f10e38]:
+            - button "Access Control" [ref=f10e40] [cursor=pointer]
+        - listitem [ref=f10e46]:
+          - figure [ref=f10e47]:
+            - button "Artificial Intelligence" [expanded] [ref=f10e49] [cursor=pointer]
+            - list [ref=f10e55]:
+              - listitem [ref=f10e56]:
+                - figure [ref=f10e57]:
+                  - link "Chat Interactions Chat Interactions" [ref=f10e59] [cursor=pointer]:
+                    - /url: /Admin/ai/chat-interactions
+                    - generic "Chat Interactions" [ref=f10e60]
+                    - generic [ref=f10e61]: Chat Interactions
+              - listitem [ref=f10e62]:
+                - figure [ref=f10e63]:
+                  - link "Deployments Deployments" [ref=f10e65] [cursor=pointer]:
+                    - /url: /Admin/ai/deployments
+                    - generic "Deployments" [ref=f10e66]
+                    - generic [ref=f10e67]: Deployments
+              - listitem [ref=f10e68]:
+                - figure [ref=f10e69]:
+                  - link "Profiles Profiles" [ref=f10e71] [cursor=pointer]:
+                    - /url: /Admin/ai/profiles
+                    - generic "Profiles" [ref=f10e72]
+                    - generic [ref=f10e73]: Profiles
+              - listitem [ref=f10e74]:
+                - figure [ref=f10e75]:
+                  - link "Templates Templates" [ref=f10e77] [cursor=pointer]:
+                    - /url: /Admin/ai/templates
+                    - generic "Templates" [ref=f10e78]
+                    - generic [ref=f10e79]: Templates
+              - listitem [ref=f10e80]:
+                - figure [ref=f10e81]:
+                  - link "Tool Instances Tool Instances" [ref=f10e83] [cursor=pointer]:
+                    - /url: /Admin/ai/tool-instances
+                    - generic "Tool Instances" [ref=f10e84]
+                    - generic [ref=f10e85]: Tool Instances
+        - listitem [ref=f10e86]:
+          - figure [ref=f10e87]:
+            - button "Multi-Tenancy" [ref=f10e89] [cursor=pointer]
+        - listitem [ref=f10e95]:
+          - figure [ref=f10e96]:
+            - button "Tools" [ref=f10e98] [cursor=pointer]
+        - listitem [ref=f10e104]:
+          - figure [ref=f10e105]:
+            - button "Settings" [ref=f10e107] [cursor=pointer]
+    - button "⟪" [ref=f10e114] [cursor=pointer]
+  - generic [ref=f10e115]:
+    - alert [ref=f10e116]:
+      - generic [ref=f10e117]:
+        - generic [ref=f10e118]: Tool instance has been created successfully.
+        - button "Close" [ref=f10e119] [cursor=pointer]
+    - heading "AI Tool Instances" [level=1] [ref=f10e120]
+    - generic [ref=f10e121]:
+      - button "Submit" [ref=f10e122] [cursor=pointer]
+      - button "Submit" [ref=f10e123] [cursor=pointer]
+      - generic [ref=f10e126]:
+        - generic [ref=f10e128]:
+          - searchbox "Search" [active] [ref=f10e130]
+          - button "Go" [ref=f10e131] [cursor=pointer]
+        - button "Add Tool Instance" [ref=f10e134] [cursor=pointer]
+      - list [ref=f10e135]:
+        - listitem [ref=f10e136]:
+          - generic [ref=f10e139]:
+            - checkbox "Select All 1 item / 1 item in total 0 selected" [ref=f10e140]
+            - generic "Select All"
+            - generic [ref=f10e141]: 1 item / 1 item in total
+        - listitem [ref=f10e143]:
+          - checkbox [ref=f10e146]
+          - generic [ref=f10e149]:
+            - generic [ref=f10e152]:
+              - generic [ref=f10e153]:
+                - heading "orders-api" [level=5] [ref=f10e154]
+                - paragraph [ref=f10e155]: Fetches order details from the demo orders API.
+              - generic [ref=f10e156]:
+                - generic [ref=f10e157]: HTTP API Request
+                - generic [ref=f10e158]: tool_instance_orders-api
+              - generic [ref=f10e159]:
+                - time [ref=f10e162]: a moment ago
+                - generic [ref=f10e163]: admin
+            - generic [ref=f10e166]:
+              - link "Edit" [ref=f10e167] [cursor=pointer]:
+                - /url: /Admin/ai/tool-instance/edit/4gcr3x5917brn63eq9ap83rqwx
+              - link "Delete" [ref=f10e168] [cursor=pointer]:
+                - /url: /Admin/ai/tool-instance/delete/4gcr3x5917brn63eq9ap83rqwx
+    - navigation "Listing pages"

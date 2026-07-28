@@ -35,6 +35,7 @@ public sealed class ProviderWebhookInboxMessageIndexProvider : IndexProvider<Pro
                 DeliveryId = message.DeliveryId,
                 Status = message.Status,
                 NextAttemptUtc = message.NextAttemptUtc,
+                ProcessedUtc = message.ProcessedUtc,
             });
     }
 }
