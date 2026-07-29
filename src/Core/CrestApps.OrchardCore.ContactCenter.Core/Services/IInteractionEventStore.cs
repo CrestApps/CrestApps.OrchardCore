@@ -34,6 +34,23 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     Task<IReadOnlyList<InteractionEvent>> ListOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the events of the supplied types recorded against the supplied aggregate type up to and including
+    /// the supplied instant, oldest first. Reporting reads the event log through this method rather than
+    /// querying it directly so that a stored payload written by an earlier release is brought to the current
+    /// schema version before the report deserializes it.
+    /// </summary>
+    /// <param name="aggregateType">The aggregate type the events were recorded against.</param>
+    /// <param name="eventTypes">The event types to include. When empty, every event type is included.</param>
+    /// <param name="occurredThroughUtc">The inclusive UTC upper bound on occurrence time.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The matching events, oldest first.</returns>
+    Task<IReadOnlyList<InteractionEvent>> ListByAggregateTypeAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        DateTime occurredThroughUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists a page of events ordered deterministically by occurrence time then identifier. It is the
     /// forward-only enumeration used to replay the entire event log during a projection rebuild or drift
     /// check; callers page until fewer than <paramref name="take"/> events are returned.

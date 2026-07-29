@@ -74,7 +74,7 @@ Exactly one Contact Center plan document may be release-authoritative. Each Mark
 
 ## Current gate count
 
-The matrix currently tracks 67 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review, plus the gates added by later accepted amendments: `C001`-`C011` (correctness), `D001`-`D018` (data), `F001`-`F010` (feature/package graph), `O001`-`O009` (operations), `S001`-`S006` (security), `T001`-`T003` (test/topology), and `V001`-`V010` (voice/provider).
+The matrix currently tracks 68 gates across every P0/P1 finding in the 2026-07-13 independent production-readiness review, plus the gates added by later accepted amendments: `C001`-`C012` (correctness), `D001`-`D018` (data), `F001`-`F010` (feature/package graph), `O001`-`O009` (operations), `S001`-`S006` (security), `T001`-`T003` (test/topology), and `V001`-`V010` (voice/provider).
 
 A handful of gates already have `implemented` or `partial` evidence because the underlying remediation shipped ahead of this matrix (tenant-qualified real-time identity, manager-owned queue/campaign entitlements, development-host containment, Asterisk credential-log redaction, centralized operational PII redaction, webhook body limits, the declared recording/monitoring prohibitions in the support matrix, and the static feature-dependency architecture ledger). Every other gate remains `planned` until its owning remediation phase (R1-R8) lands the behavior and its automated evidence.
 

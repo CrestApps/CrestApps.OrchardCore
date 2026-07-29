@@ -2239,6 +2239,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public DefaultDialerAbandonmentPolicyService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAbandonmentStatisticsProvider> statisticsProviders, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterComplianceOptions> options) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerAbandonmentEvaluation> EvaluateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class DefaultInteractionEventUpcastService : CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcastService
+    {
+        public DefaultInteractionEventUpcastService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcaster> upcasters) { }
+        public void Upcast(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent) { }
+    }
     public sealed class DialProviderCommandTypeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandTypeExecutor
     {
         public DialProviderCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandDispatchValidator> dispatchValidators, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager) { }
@@ -2707,9 +2712,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IInteractionEventStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>
     {
         System.Threading.Tasks.Task<bool> ExistsByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInteractionEventUpcastService
+    {
+        void Upcast(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent);
+    }
+    public interface IInteractionEventUpcaster
+    {
+        string EventType { get; }
+        int FromVersion { get; }
+        System.Text.Json.Nodes.JsonNode Upcast(System.Text.Json.Nodes.JsonNode payload);
     }
     public interface IInteractionManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>
     {
@@ -2874,11 +2890,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class InteractionEventStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent, CrestApps.OrchardCore.ContactCenter.Core.Indexes.InteractionEventIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore
     {
-        public InteractionEventStore(YesSql.ISession session) { }
+        public InteractionEventStore(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcastService upcastService) { }
         public System.Threading.Tasks.Task<bool> ExistsByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask LoadingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent record) { }
+    }
+    public sealed class InteractionEventUpcastException : System.Exception
+    {
+        public InteractionEventUpcastException(string message) { }
+        public InteractionEventUpcastException(string message, System.Exception innerException) { }
     }
     public sealed class InteractionManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager
     {

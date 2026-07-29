@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -10,14 +11,35 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, InteractionEventIndex>, IInteractionEventStore
 {
+    private readonly IInteractionEventUpcastService _upcastService;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionEventStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    public InteractionEventStore(ISession session)
+    /// <param name="upcastService">The service that brings a stored event to the current schema version.</param>
+    public InteractionEventStore(
+        ISession session,
+        IInteractionEventUpcastService upcastService)
         : base(session)
     {
+        _upcastService = upcastService;
         CollectionName = ContactCenterConstants.CollectionName;
+    }
+
+    /// <summary>
+    /// Brings every event read through this store to the current schema version. The conversion belongs here
+    /// rather than at each caller because the durable event log is read from several places — post-commit
+    /// dispatch, outbox redelivery, projection replay and reporting — and a caller that forgot to convert would
+    /// not fail, it would read a stale payload as though it were current.
+    /// </summary>
+    /// <param name="record">The event read from storage.</param>
+    /// <returns>A completed task.</returns>
+    protected override ValueTask LoadingAsync(InteractionEvent record)
+    {
+        _upcastService.Upcast(record);
+
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -31,7 +53,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
             .OrderBy(index => index.OccurredUtc)
             .ListAsync(cancellationToken);
 
-        return events.ToArray();
+        return await LoadedAsync(events);
     }
 
     /// <inheritdoc/>
@@ -59,7 +81,37 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
             .Take(take)
             .ListAsync(cancellationToken);
 
-        return events.ToArray();
+        return await LoadedAsync(events);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<InteractionEvent>> ListByAggregateTypeAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        DateTime occurredThroughUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(aggregateType);
+
+        var types = eventTypes is null
+            ? []
+            : eventTypes.Where(eventType => !string.IsNullOrEmpty(eventType)).ToArray();
+
+        var query = Session.Query<InteractionEvent, InteractionEventIndex>(
+            index => index.AggregateType == aggregateType && index.OccurredUtc <= occurredThroughUtc,
+            collection: ContactCenterConstants.CollectionName);
+
+        if (types.Length > 0)
+        {
+            query = query.Where(index => index.EventType.IsIn(types));
+        }
+
+        var events = await query
+            .OrderBy(index => index.OccurredUtc)
+            .ThenBy(index => index.ItemId)
+            .ListAsync(cancellationToken);
+
+        return await LoadedAsync(events);
     }
 
     /// <inheritdoc/>
@@ -79,6 +131,6 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
             .Take(boundedTake)
             .ListAsync(cancellationToken);
 
-        return events.ToArray();
+        return await LoadedAsync(events);
     }
 }

@@ -1,7 +1,6 @@
 using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -12,13 +11,12 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Security.Permissions;
-using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
-    private readonly ISession _session;
+    private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly AgentWorkforceReportDefinition _definition;
@@ -26,14 +24,14 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     private readonly IStringLocalizer _stringLocalizer;
 
     public AgentWorkforceReportProvider(
-        ISession session,
+        IInteractionEventStore eventStore,
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         AgentWorkforceReportDefinition definition,
         IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer stringLocalizer)
     {
-        _session = session;
+        _eventStore = eventStore;
         _agentManager = agentManager;
         _campaignManager = campaignManager;
         _definition = definition;
@@ -64,15 +62,18 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             return _capabilityGuard.DescribeUnavailable(missingFeatures);
         }
 
-        var events = (await _session.Query<InteractionEvent, InteractionEventIndex>(
-            index =>
-                index.AggregateType == nameof(AgentProfile) &&
-                index.OccurredUtc <= context.ToUtc &&
-                (index.EventType == ContactCenterConstants.Events.AgentSignedIn ||
-                 index.EventType == ContactCenterConstants.Events.AgentSignedOut ||
-                 index.EventType == ContactCenterConstants.Events.AgentPresenceChanged),
-            collection: ContactCenterConstants.CollectionName)
-            .ListAsync(cancellationToken))
+        // The event log is read through the store rather than queried directly, because a payload written by an
+        // earlier release deserializes into today's type without complaint and the store is where the stored
+        // schema version is brought to the one this release understands.
+        var events = (await _eventStore.ListByAggregateTypeAsync(
+            nameof(AgentProfile),
+            [
+                ContactCenterConstants.Events.AgentSignedIn,
+                ContactCenterConstants.Events.AgentSignedOut,
+                ContactCenterConstants.Events.AgentPresenceChanged,
+            ],
+            context.ToUtc,
+            cancellationToken))
             .ToArray();
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
 

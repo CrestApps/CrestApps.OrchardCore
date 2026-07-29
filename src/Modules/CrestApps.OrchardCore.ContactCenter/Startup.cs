@@ -188,6 +188,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IInteractionStore, InteractionStore>()
             .AddScoped<IInteractionManager, InteractionManager>()
             .AddScoped<IInteractionEventStore, InteractionEventStore>()
+            .AddScoped<IInteractionEventUpcastService, DefaultInteractionEventUpcastService>()
             .AddScoped<IContactCenterOutboxStore, ContactCenterOutboxStore>()
             .AddScoped<IContactCenterOutbox, ContactCenterOutbox>()
             .AddScoped<IContactCenterScopeExecutor, ContactCenterScopeExecutor>()
@@ -1228,7 +1229,7 @@ public sealed class AnalyticsStartup : StartupBase
             [ContactCenterReportFilter.AgentId]);
 
         services.AddScoped<IReport>(serviceProvider => new AgentWorkforceReportProvider(
-            serviceProvider.GetRequiredService<global::YesSql.ISession>(),
+            serviceProvider.GetRequiredService<IInteractionEventStore>(),
             serviceProvider.GetRequiredService<IAgentProfileManager>(),
             serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>(),
             definition,

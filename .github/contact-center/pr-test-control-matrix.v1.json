@@ -1944,6 +1944,32 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentWorkspaceRoundTripBudgetTests.cs invokes the workspace state handler directly with an agent in twelve queues holding eight recently ended interactions and asserts the batched queue-depth read runs once while the single-queue count never runs, that the activities behind recent work are resolved in one read, that recent interactions are read once rather than once per panel, and that the depths reported are the depths the batched read returned. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/QueueItemQueryPlanBudgetTests.cs measures the statement the store sends, read from the same builder the store reads it from, against a seeded table using EXPLAIN QUERY PLAN, requiring a covering index seek constrained by both the queue and the status; it counts the statements one batched read issues against one queue and against forty; and it compares the batched counts against the per-queue count on items written through the real store. tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/QueryPlans/QueueItemPostgresQueryPlanBudgetTests.cs repeats the plan assertion on PostgreSQL against forty thousand seeded rows and executes the statement the store sends to confirm the counts it returns."
+    },
+    {
+      "id": "C012",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "W15.1",
+      "gate": "An event written by an earlier release is converted to the shape this release understands before any caller reads its payload, and a release cannot ship a schema change without the conversion",
+      "invariant": "A durable event log outlives the code that wrote it. An event published months ago is redelivered by the outbox, replayed by a projection and read by a report long after its payload shape has changed, and the stored JSON is deserialized straight into today's type. That deserialization does not fail when a property was renamed, split or re-united: it succeeds and substitutes a default for whatever moved, so the handler acts on a payload that is quietly wrong. The schema version each event carries is therefore read on the way out and the payload is converted one version step at a time until it reaches the version the running code understands. Three failures are refused rather than absorbed. A version step with no conversion registered fails the read, because returning the payload unconverted is the silent misreading the mechanism exists to prevent. An event written at a version above the one this release understands fails the read, because a node cannot convert forwards and during a rolling upgrade the newer node is already writing that version. And a release that raises the current version without registering a conversion for the step it introduced fails the build, because at that moment every event already on disk becomes unreadable and nothing about the raised constant looks wrong in review. The conversion is applied where events are read rather than at each caller, since a caller that forgot it would not fail, it would return stale data as though it were current. The conversion only reaches a reader that goes through the event store, so code that queries the event log straight off the session bypasses it and is invisible to the coverage gate, which knows only the store's own read paths; reading the log outside the store is therefore refused as well.",
+      "testId": "CC-C012",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionEventUpcastServiceTests.cs drives the conversion chain across several version steps and asserts that a gap in the chain, an event written by a newer release, and two conversions claiming the same step each fail; it also deserializes a renamed payload with and without the conversion to show the unconverted read succeeds and loses the value. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionEventUpcastPersistenceTests.cs seeds a stored event against a real SQLite database and requires every read path on the event store, discovered by reflection rather than listed by hand, to convert what it returns; it also asserts the conversion serves the reader without rewriting the stored row. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionEventUpcastCoverageTests.cs requires the registered conversions to cover every version step between the first version and the current one, proves that rule fails when the current version is raised without a conversion, and requires every conversion in the assembly to be registered and the conversion service itself to be registered. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/InteractionEventReadBoundaryTests.cs scans every production source and fails any that queries the event log directly instead of reading it through the store, and asserts the store itself still contains the query shape it looks for so the scan cannot pass by matching nothing."
     }
   ]
 }

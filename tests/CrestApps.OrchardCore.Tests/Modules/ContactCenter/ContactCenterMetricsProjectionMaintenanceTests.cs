@@ -177,7 +177,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
         clock.Setup(c => c.UtcNow).Returns(_now);
 
         return new ContactCenterMetricsProjectionMaintenanceService(
-            new InteractionEventStore(session),
+            new InteractionEventStore(session, new DefaultInteractionEventUpcastService([])),
             new ContactCenterMetricStore(session),
             new ContactCenterProjectionCheckpointStore(session),
             clock.Object);

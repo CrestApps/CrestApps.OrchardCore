@@ -69,7 +69,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         var item = await Session.Query<T, TIndex>(x => x.ItemId == id, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
 
-        return item;
+        return await LoadedAsync(item);
     }
 
     /// <inheritdoc />
@@ -79,7 +79,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         var items = await Session.Query<T, TIndex>(x => x.ItemId.IsIn(ids), collection: CollectionName).ListAsync(cancellationToken);
 
-        return items.ToArray();
+        return await LoadedAsync(items);
     }
 
     /// <inheritdoc />
@@ -135,7 +135,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         return new PageResult<T>
         {
             Count = await query.CountAsync(cancellationToken),
-            Entries = (await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken)).ToArray()
+            Entries = await LoadedAsync(await query.Skip(skip).Take(pageSize).ListAsync(cancellationToken))
         };
     }
 
@@ -150,7 +150,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     {
         var items = await Session.Query<T, TIndex>(collection: CollectionName).ListAsync(cancellationToken);
 
-        return items.ToArray();
+        return await LoadedAsync(items);
     }
 
     /// <inheritdoc />
@@ -195,5 +195,56 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     protected virtual ValueTask SavingAsync(T record)
     {
         return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called for every record materialized from storage before it is returned to a caller. Derived catalogs
+    /// override this to reconcile a persisted document with the shape the running code expects, so a document
+    /// written by an earlier release is never handed to a caller in its stored shape.
+    /// </summary>
+    /// <param name="record">The record read from storage.</param>
+    /// <returns>A task that completes when the record has been reconciled.</returns>
+    protected virtual ValueTask LoadingAsync(T record)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Applies <see cref="LoadingAsync(T)"/> to a record read from storage.
+    /// </summary>
+    /// <param name="record">The record read from storage, which may be <see langword="null"/>.</param>
+    /// <returns>The same record, after reconciliation.</returns>
+    protected async ValueTask<T> LoadedAsync(T record)
+    {
+        if (record is null)
+        {
+            return null;
+        }
+
+        await LoadingAsync(record);
+
+        return record;
+    }
+
+    /// <summary>
+    /// Applies <see cref="LoadingAsync(T)"/> to every record in a sequence read from storage.
+    /// </summary>
+    /// <param name="records">The records read from storage.</param>
+    /// <returns>The records, as an array, after reconciliation.</returns>
+    protected async ValueTask<T[]> LoadedAsync(IEnumerable<T> records)
+    {
+        var materialized = records as T[] ?? records.ToArray();
+
+        foreach (var record in materialized)
+        {
+            if (record is null)
+            {
+                continue;
+            }
+
+            await LoadingAsync(record);
+        }
+
+        return materialized;
     }
 }

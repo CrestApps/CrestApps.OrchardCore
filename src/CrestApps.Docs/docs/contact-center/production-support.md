@@ -527,6 +527,26 @@ The same harness compares the two databases column by column and constraint by c
 
 **One rolling-upgrade hazard is an operator constraint rather than a gate.** When an upgrade adds a non-nullable column with a shared default and then places a unique constraint on it, only one previous-version write can succeed, because every previous-version node writes that same default. There is no portable fix inside a single release: filtered indexes are unavailable or incompatible across the supported engines, and a nullable column does not help because not every engine treats nulls as distinct in a unique index. The supported answer is to expand and contract across two releases — add the column nullable and unconstrained in one release, then backfill and constrain in the next, once every node is known to write it. Until then, treat a release that introduces a uniquely constrained claim key as requiring drained queues rather than a live rolling upgrade.
 
+### Stored events are converted on read, not on write
+
+A durable event log outlives the code that wrote it. Contact Center does not hand the published object to its handlers: post-commit dispatch, outbox redelivery, the provider-voice reader, and projection maintenance all reload the event from storage by identifier, so a handler always sees JSON that was serialized by whichever release wrote it, deserialized into the type the running release declares. That deserialization does not fail when a payload property is renamed, split, or re-united. It succeeds and substitutes a default, so an event redelivered from last month is acted on with an absent reason, a zero duration, or an empty identifier, and nothing reports a problem.
+
+Every event therefore carries the schema version it was written at, and that version is read on the way out. The payload is converted one version step at a time until it reaches the version the running release understands. The conversion is applied at the event store rather than at each reader, because a reader that forgot to call it would not fail — it would return stale data as though it were current, which is the silence the mechanism exists to remove.
+
+Three situations are refused rather than absorbed:
+
+- **A version step with no conversion registered fails the read**, naming the step. Returning the payload unconverted is precisely the misreading being prevented.
+- **An event stored at a version above the one the running release understands fails the read.** A node cannot convert forwards, and during a rolling upgrade the newer node is already writing that version, so an older node must refuse the record rather than guess at it.
+- **An event with no recorded version is treated as the first version, not as already current.** Assuming current is the same silent default-substitution in a different place.
+
+The conversion serves the reader and never rewrites the stored row. Rewriting history from whichever node happened to read it first would destroy the only record of what was actually published, and would make a rollback to the previous release unrecoverable.
+
+Because the conversion lives at the event store, it only reaches a reader that goes through the event store. Reading the log directly from the session bypasses it and is invisible to the coverage gate, which knows only the store's own read paths, so a build gate refuses any code outside the store that queries the event log directly.
+
+**Raising the schema version without a conversion fails the build.** A build gate requires the registered conversions to cover every version step from the first version to the current one, so the omission is caught at the moment it is introduced — which is the only moment it is visible, because at that moment every event already on disk becomes unreadable and nothing about a bumped constant looks wrong in review. A second gate seeds a stored event at an unreadable version and requires every read path on the event store, discovered by reflection rather than listed by hand, to refuse it, so a read path added later that bypasses the conversion fails without anyone remembering to extend the gate.
+
+`InteractionEvent` is currently the only persisted Contact Center document that carries a schema version. The day another document needs one, the seam to reuse is the loading hook on the shared document catalog, which every catalog in the product already inherits.
+
 ## Tier-1 capacity target
 
 R8 must prove the entire envelope rather than extrapolating from a smaller test:

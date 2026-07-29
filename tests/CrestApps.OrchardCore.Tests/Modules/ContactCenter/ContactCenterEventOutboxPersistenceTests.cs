@@ -185,7 +185,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(service => service.UtcNow).Returns(_now);
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
-        var eventStore = new InteractionEventStore(session);
+        var eventStore = new InteractionEventStore(session, new DefaultInteractionEventUpcastService([]));
         var outbox = new ContactCenterOutbox(
             [],
             new ContactCenterOutboxStore(session),
@@ -213,7 +213,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         interactionEvent.OccurredUtc = _now;
         interactionEvent.SchemaVersion = ContactCenterConstants.CurrentEventSchemaVersion;
         interactionEvent.ActorId = ContactCenterConstants.SystemActor;
-        var eventStore = new InteractionEventStore(session);
+        var eventStore = new InteractionEventStore(session, new DefaultInteractionEventUpcastService([]));
         var outboxStore = new ContactCenterOutboxStore(session);
 
         await eventStore.CreateAsync(interactionEvent, cancellationToken);
