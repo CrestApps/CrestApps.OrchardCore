@@ -28,6 +28,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["CallSession"] = "Runtime state. One row per call in progress or completed.",
         ["CallbackRequest"] = "Runtime state. One row per caller waiting to be called back.",
         ["ContactCenterEventMetric"] = "Derived state. Aggregated counters rebuilt by projecting events.",
+        ["ContactCenterEventMetricDelta"] = "Derived state. Counts appended but not yet folded into the daily totals; the roller drains them within a minute.",
         ["ContactCenterOutboxMessage"] = "Runtime state. Messages awaiting delivery by this node.",
         ["ContactCenterProcessedEvent"] = "Runtime state. Deduplication ledger for events this tenant already handled.",
         ["ContactCenterProjectionCheckpoint"] = "Runtime state. Per-projection position; copying one would skip events in the destination.",

@@ -24,6 +24,16 @@
       "activeWorkStatus": "deferred-follow-up"
     },
     {
+      "featureId": "CrestApps.OrchardCore.ContactCenter",
+      "component": "ContactCenterMetricRollupBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
+      "drain": "Idle contract requires no fold to be running. Contributions left unfolded are not lost: the next fold reads whatever is waiting, and a reader adds unfolded contributions to the stored totals in the meantime.",
+      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "deferred-follow-up"
+    },
+    {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Availability",
       "component": "AgentSessionCleanupBackgroundTask",
       "kind": "background-task",
@@ -154,7 +164,7 @@
       "activeWorkStatus": "deferred-follow-up"
     },
     {
-      "featureId": "CrestApps.OrchardCore.Omnichannel.Managements",
+      "featureId": "CrestApps.OrchardCore.Omnichannel.Activities",
       "component": "AutomatedActivitiesProcessorBackgroundTask",
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",

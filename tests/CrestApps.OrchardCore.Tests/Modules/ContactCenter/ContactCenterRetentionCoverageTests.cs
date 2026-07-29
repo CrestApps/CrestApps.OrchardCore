@@ -51,6 +51,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ProviderCommand"] = "CompletedUtc",
         ["AgentSession"] = "LastHeartbeatUtc",
         ["ContactCenterEventMetric"] = "Date",
+        ["ContactCenterEventMetricDelta"] = "CreatedUtc",
         ["ContactCenterProcessedEvent"] = "ProcessedUtc",
         ["CallbackRequest"] = "ModifiedUtc",
         ["ContactCenterWorkState"] = "ModifiedUtc",
@@ -68,6 +69,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["Interaction"] = [],
         ["CallSession"] = [],
         ["ContactCenterEventMetric"] = [],
+        ["ContactCenterEventMetricDelta"] = [],
         ["ContactCenterProcessedEvent"] = [],
         ["AgentSession"] = [],
         // No terminal status exists: closure is owned by the CRM activity. Safe only because a purged work
@@ -94,6 +96,7 @@ public sealed class ContactCenterRetentionCoverageTests
     {
         "InteractionEvent",
         "ContactCenterEventMetric",
+        "ContactCenterEventMetricDelta",
         "ContactCenterProcessedEvent",
     };
 
@@ -157,7 +160,11 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ContactCenterEventMetric"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricsService.cs", "RecordAsync", "Date = date,"),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricRollupService.cs", "AddAsync", "Date = ContactCenterMetricDateKey.Parse(dateKey),"),
+        ],
+        ["ContactCenterEventMetricDelta"] =
+        [
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricsService.cs", "RecordAsync", "CreatedUtc = _clock.UtcNow,"),
         ],
         ["ContactCenterProcessedEvent"] =
         [
@@ -190,6 +197,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ProviderCommand"] = (false, false, 0),
         ["AgentSession"] = (false, false, 0),
         ["ContactCenterEventMetric"] = (false, false, 0),
+        ["ContactCenterEventMetricDelta"] = (false, false, 0),
         ["ContactCenterWorkState"] = (false, false, 0),
     };
 

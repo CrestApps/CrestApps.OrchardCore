@@ -197,6 +197,8 @@ public sealed class Startup : StartupBase
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
+            .AddScoped<IContactCenterMetricDeltaStore, ContactCenterMetricDeltaStore>()
+            .AddScoped<IContactCenterMetricRollupService, ContactCenterMetricRollupService>()
             .AddScoped<IContactCenterMetricsService, ContactCenterMetricsService>()
             .AddScoped<IContactCenterProjectionCheckpointStore, ContactCenterProjectionCheckpointStore>()
             .AddScoped<IContactCenterMetricsProjectionMaintenanceService, ContactCenterMetricsProjectionMaintenanceService>()
@@ -209,13 +211,16 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, CallSessionRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterOutboxMessageRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterEventMetricRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ContactCenterEventMetricDeltaRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterProcessedEventRetentionPolicy>()
             .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
         services
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
-            .AddDataMigration<ContactCenterEventMetricIndexMigrations>();
+            .AddDataMigration<ContactCenterEventMetricIndexMigrations>()
+            .AddIndexProvider<ContactCenterEventMetricDeltaIndexProvider>()
+            .AddDataMigration<ContactCenterEventMetricDeltaIndexMigrations>();
 
         services
             .AddIndexProvider<ContactCenterProcessedEventIndexProvider>()
@@ -263,6 +268,7 @@ public sealed class Startup : StartupBase
 
         services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
         services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>();
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
 

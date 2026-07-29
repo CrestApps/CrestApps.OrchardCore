@@ -12,8 +12,11 @@ public interface IContactCenterMetricsProjectionMaintenanceService
     /// <summary>
     /// Recomputes every daily metric from the source-of-truth event log and reconciles the stored
     /// projection to match, then advances the replay checkpoint. Missing metrics are created, incorrect
-    /// counts are corrected, and metrics with no supporting events are removed. The operation is
-    /// deterministic and idempotent.
+    /// counts are corrected, and metrics with no supporting events are removed. Contributions that have been
+    /// appended but not folded into the totals yet are excluded from the reconciled totals, because folding
+    /// them later adds them; a rebuild therefore does not count them twice. An event recorded, or a contribution
+    /// folded, while the rebuild is running can leave that total briefly short until the next rebuild; the
+    /// operation is idempotent and converges on a re-run.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of stored metrics that were created, updated, or deleted.</returns>
@@ -21,7 +24,9 @@ public interface IContactCenterMetricsProjectionMaintenanceService
 
     /// <summary>
     /// Recomputes every daily metric from the source-of-truth event log and compares it to the stored
-    /// projection without modifying anything, returning every detected discrepancy.
+    /// projection without modifying anything, returning every detected discrepancy. Contributions that have
+    /// been appended but not folded into the totals yet are counted as part of the projection, so a roller
+    /// that is merely behind is not reported as drift.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The detected drifts, or an empty list when the projection is consistent.</returns>

@@ -11,44 +11,47 @@ public sealed class ContactCenterMetricsServiceTests
     private static readonly DateTime _now = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task RecordAsync_WhenMetricMissing_CreatesWithCountOne()
+    public async Task RecordAsync_AppendsAContributionForTheDayAndType()
     {
         // Arrange
         var store = new Mock<IContactCenterMetricStore>();
-        store.Setup(s => s.FindAsync("2026-01-05", "CallEnded", It.IsAny<CancellationToken>())).ReturnsAsync((ContactCenterEventMetric)null);
+        var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
 
-        ContactCenterEventMetric created = null;
-        store.Setup(s => s.CreateAsync(It.IsAny<ContactCenterEventMetric>(), It.IsAny<CancellationToken>()))
-            .Callback<ContactCenterEventMetric, CancellationToken>((m, _) => created = m)
+        ContactCenterEventMetricDelta appended = null;
+        deltaStore.Setup(s => s.CreateAsync(It.IsAny<ContactCenterEventMetricDelta>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterEventMetricDelta, CancellationToken>((delta, _) => appended = delta)
             .Returns(ValueTask.CompletedTask);
 
-        var service = CreateService(store);
+        var service = CreateService(store, deltaStore);
 
         // Act
         await service.RecordAsync("CallEnded", _now, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(created);
-        Assert.Equal("2026-01-05", created.DateKey);
-        Assert.Equal(1, created.Count);
+        Assert.NotNull(appended);
+        Assert.Equal("2026-01-05", appended.DateKey);
+        Assert.Equal("CallEnded", appended.EventType);
+        Assert.Equal(1, appended.Count);
     }
 
     [Fact]
-    public async Task RecordAsync_WhenMetricExists_IncrementsCount()
+    public async Task RecordAsync_NeverReadsOrWritesTheDailyTotal()
     {
         // Arrange
-        var existing = new ContactCenterEventMetric { ItemId = "m1", DateKey = "2026-01-05", EventType = "CallEnded", Count = 4 };
-        var store = new Mock<IContactCenterMetricStore>();
-        store.Setup(s => s.FindAsync("2026-01-05", "CallEnded", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        // Reading the total and writing it back is what makes it a serialization point, so counting must not
+        // touch it at all - not even to read it, since a read is what a later write would be racing against.
+        var store = new Mock<IContactCenterMetricStore>(MockBehavior.Strict);
+        var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
+        deltaStore.Setup(s => s.CreateAsync(It.IsAny<ContactCenterEventMetricDelta>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
 
-        var service = CreateService(store);
+        var service = CreateService(store, deltaStore);
 
         // Act
         await service.RecordAsync("CallEnded", _now, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(5, existing.Count);
-        store.Verify(s => s.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
+        store.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -64,7 +67,11 @@ public sealed class ContactCenterMetricsServiceTests
                 new ContactCenterEventMetric { EventType = "QueueItemAdded", Count = 7 },
             ]);
 
-        var service = CreateService(store);
+        var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
+        deltaStore.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var service = CreateService(store, deltaStore);
 
         // Act
         var summary = await service.GetSummaryAsync(new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31), TestContext.Current.CancellationToken);
@@ -72,6 +79,38 @@ public sealed class ContactCenterMetricsServiceTests
         // Assert
         Assert.Equal(5, summary["CallEnded"]);
         Assert.Equal(7, summary["QueueItemAdded"]);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_AddsContributionsThatHaveNotBeenFoldedYet()
+    {
+        // Arrange
+        // A contribution that the roller has not reached is still a real event, so a summary that omitted it
+        // would report a number behind the traffic it claims to describe.
+        var store = new Mock<IContactCenterMetricStore>();
+        store.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new ContactCenterEventMetric { EventType = "CallEnded", Count = 3 },
+            ]);
+
+        var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
+        deltaStore.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new ContactCenterEventMetricDelta { EventType = "CallEnded", Count = 1 },
+                new ContactCenterEventMetricDelta { EventType = "CallEnded", Count = 1 },
+                new ContactCenterEventMetricDelta { EventType = "QueueItemAdded", Count = 1 },
+            ]);
+
+        var service = CreateService(store, deltaStore);
+
+        // Act
+        var summary = await service.GetSummaryAsync(new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(5, summary["CallEnded"]);
+        Assert.Equal(1, summary["QueueItemAdded"]);
     }
 
     [Fact]
@@ -115,11 +154,13 @@ public sealed class ContactCenterMetricsServiceTests
         metricsService.Verify(s => s.RecordAsync("OfferAccepted", _now, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static ContactCenterMetricsService CreateService(Mock<IContactCenterMetricStore> store)
+    private static ContactCenterMetricsService CreateService(
+        Mock<IContactCenterMetricStore> store,
+        Mock<IContactCenterMetricDeltaStore> deltaStore = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-        return new ContactCenterMetricsService(store.Object, clock.Object);
+        return new ContactCenterMetricsService(store.Object, (deltaStore ?? new Mock<IContactCenterMetricDeltaStore>()).Object, clock.Object);
     }
 }

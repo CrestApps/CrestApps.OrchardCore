@@ -1,9 +1,12 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Extensions.Features;
+using RegexMatch = System.Text.RegularExpressions.Match;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -101,6 +105,58 @@ public sealed class ContactCenterFeatureLifecycleTests
         foreach (var backgroundTask in backgroundTasks)
         {
             Assert.Contains(backgroundTask, contractComponents);
+        }
+    }
+
+    [Fact]
+    public void LifecycleContract_DeclaresTheFeatureThatActuallyRegistersEachBackgroundTask()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var declaredFeatures = LoadLifecycleContract()["entries"]?.AsArray()
+            .Where(entry => entry?["component"]?.GetValue<string>() is not null)
+            .ToDictionary(
+                entry => entry!["component"]!.GetValue<string>(),
+                entry => entry["featureId"]?.GetValue<string>(),
+                StringComparer.Ordinal);
+        // Every source file under the module roots is read rather than a list of startup paths. Splitting
+        // startups across files is normal here, so naming files would leave a registration in any file nobody
+        // remembered to add invisible to this gate, which is the shape of the misregistration it exists to
+        // catch.
+        var sourceRoots = new[]
+        {
+            "src/Modules/CrestApps.OrchardCore.ContactCenter",
+            "src/Modules/CrestApps.OrchardCore.Telephony",
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements",
+        };
+
+        // Act
+        var registrations = sourceRoots
+            .SelectMany(root => Directory.EnumerateFiles(Path.Combine(repositoryRoot, root), "*.cs", SearchOption.AllDirectories))
+            .SelectMany(ReadBackgroundTaskRegistrations)
+            .ToList();
+
+        // Assert
+        Assert.NotEmpty(registrations);
+
+        foreach (var (component, registeringFeatureId) in registrations)
+        {
+            Assert.True(
+                declaredFeatures!.TryGetValue(component, out var declaredFeatureId),
+                $"The background task '{component}' is not declared in the feature lifecycle contract.");
+
+            Assert.True(
+                string.Equals(declaredFeatureId, registeringFeatureId, StringComparison.Ordinal),
+                $"The feature lifecycle contract declares '{component}' as owned by '{declaredFeatureId}', but it is registered by the startup for '{registeringFeatureId}'. A task registered under a feature its contract does not name is started and stopped by the wrong feature.");
+        }
+
+        // A contract entry whose registration has disappeared is also a finding: the contract would keep
+        // describing lifecycle behaviour for work that no longer runs, and nothing else would notice.
+        var registered = registrations.Select(registration => registration.Component).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var component in declaredFeatures!.Keys.Where(component => component.EndsWith("BackgroundTask", StringComparison.Ordinal)))
+        {
+            Assert.Contains(component, registered);
         }
     }
 
@@ -546,6 +602,96 @@ public sealed class ContactCenterFeatureLifecycleTests
                 ? Task.FromException(new InvalidOperationException("Expected test failure."))
                 : Task.CompletedTask;
         }
+    }
+
+    private static IEnumerable<(string Component, string FeatureId)> ReadBackgroundTaskRegistrations(string sourcePath)
+    {
+        // Orchard resolves a startup's feature from the [Feature] attribute on the class that declares it, and
+        // falls back to the module's own identifier when there is none. That association is reproduced here from
+        // positions in the file rather than line by line, so a base list that wraps across lines is still seen
+        // and an attribute on some other type cannot be mistaken for one on the next startup class.
+        var moduleFeatureId = ModuleFeatureId(sourcePath);
+        var source = File.ReadAllText(sourcePath);
+
+        var featureAttributes = Regex.Matches(source, @"\[Feature\((?<argument>[^\)]+)\)\]");
+        var typeDeclarations = Regex.Matches(source, @"\b(?:class|record|struct|interface|enum)\s+\w+");
+        var startups = Regex.Matches(source, @"\bclass\s+\w+\s*(?:<[^>]*>)?\s*:[^{;]*?\bStartupBase\b")
+            .Select(match => (match.Index, FeatureId: OwningFeatureId(match.Index, featureAttributes, typeDeclarations) ?? moduleFeatureId))
+            .OrderBy(startup => startup.Index)
+            .ToList();
+
+        foreach (RegexMatch registration in Regex.Matches(source, @"AddSingleton<IBackgroundTask,\s*(?<component>\w+)>"))
+        {
+            var owner = startups.LastOrDefault(startup => startup.Index < registration.Index);
+
+            yield return (registration.Groups["component"].Value, owner.FeatureId ?? moduleFeatureId);
+        }
+    }
+
+    private static string OwningFeatureId(int startupIndex, MatchCollection featureAttributes, MatchCollection typeDeclarations)
+    {
+        var attribute = featureAttributes
+            .Where(candidate => candidate.Index < startupIndex)
+            .OrderByDescending(candidate => candidate.Index)
+            .FirstOrDefault();
+
+        if (attribute is null)
+        {
+            return null;
+        }
+
+        // An attribute only belongs to this class when no other type is declared between the two. Without that
+        // check an attribute on an unrelated type would be attributed to the next startup class in the file.
+        var intervening = typeDeclarations.Any(candidate =>
+            candidate.Index > attribute.Index && candidate.Index < startupIndex);
+
+        return intervening
+            ? null
+            : ResolveFeatureConstant(attribute.Groups["argument"].Value.Trim());
+    }
+
+    private static string ModuleFeatureId(string sourcePath)
+    {
+        var directory = new DirectoryInfo(Path.GetDirectoryName(sourcePath));
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Manifest.cs")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.Name ??
+            throw new InvalidOperationException($"The module owning '{sourcePath}' could not be located.");
+    }
+
+    private static string ResolveFeatureConstant(string expression)
+    {
+        if (expression.StartsWith('"'))
+        {
+            return expression.Trim('"');
+        }
+
+        var roots = new Dictionary<string, Type>(StringComparer.Ordinal)
+        {
+            ["ContactCenterConstants"] = typeof(ContactCenterConstants),
+            ["TelephonyConstants"] = typeof(TelephonyConstants),
+            ["OmnichannelConstants"] = typeof(OmnichannelConstants),
+        };
+
+        var segments = expression.Split('.');
+
+        if (segments.Length < 2 || !roots.TryGetValue(segments[0], out var type))
+        {
+            throw new InvalidOperationException($"The feature expression '{expression}' cannot be resolved to a constant.");
+        }
+
+        for (var i = 1; i < segments.Length - 1; i++)
+        {
+            type = type.GetNestedType(segments[i]) ??
+                throw new InvalidOperationException($"The feature expression '{expression}' cannot be resolved to a constant.");
+        }
+
+        return type.GetField(segments[segments.Length - 1])?.GetValue(null) as string ??
+            throw new InvalidOperationException($"The feature expression '{expression}' cannot be resolved to a constant.");
     }
 
     private static JsonObject LoadLifecycleContract()

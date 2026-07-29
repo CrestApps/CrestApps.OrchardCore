@@ -27,6 +27,7 @@ public static class ContactCenterPreviewDataSetRegistry
         new ContactCenterPreviewDataSetDescriptor(typeof(ProviderWebhookInboxMessage), "provider-inbox-message", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ProviderCommand), "provider-command", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterEventMetric), "event-metric", isConfiguration: false),
+        new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterEventMetricDelta), "event-metric-contribution", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterProjectionCheckpoint), "projection-checkpoint", isConfiguration: false),
         new ContactCenterPreviewDataSetDescriptor(typeof(ContactCenterProcessedEvent), "processed-event", isConfiguration: false),
 

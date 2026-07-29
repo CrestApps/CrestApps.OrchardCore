@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -10,11 +9,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactCenterMetricsProjectionMaintenanceService
 {
-    private const string DateKeyFormat = "yyyy-MM-dd";
     private const int PageSize = 500;
 
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterMetricStore _metricStore;
+    private readonly IContactCenterMetricDeltaStore _deltaStore;
     private readonly IContactCenterProjectionCheckpointStore _checkpointStore;
     private readonly IClock _clock;
 
@@ -23,16 +22,19 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
     /// </summary>
     /// <param name="eventStore">The source-of-truth event log store.</param>
     /// <param name="metricStore">The daily metric projection store.</param>
+    /// <param name="deltaStore">The store holding contributions that have not been folded into the totals yet.</param>
     /// <param name="checkpointStore">The projection replay checkpoint store.</param>
     /// <param name="clock">The clock used to stamp metric and checkpoint times.</param>
     public ContactCenterMetricsProjectionMaintenanceService(
         IInteractionEventStore eventStore,
         IContactCenterMetricStore metricStore,
+        IContactCenterMetricDeltaStore deltaStore,
         IContactCenterProjectionCheckpointStore checkpointStore,
         IClock clock)
     {
         _eventStore = eventStore;
         _metricStore = metricStore;
+        _deltaStore = deltaStore;
         _checkpointStore = checkpointStore;
         _clock = clock;
     }
@@ -42,6 +44,27 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
     {
         var recomputed = await RecomputeAsync(cancellationToken);
 
+        // A contribution that is still waiting is a count the log already reports and the totals do not, so it is
+        // subtracted here and added back when it is folded. That is what stops a rebuild from counting it twice.
+        //
+        // The contributions are read after the log rather than before, because folding them first, or reading
+        // them first, makes an event recorded between the two reads counted by the recompute and folded again
+        // on top of it. Reading the log first removes that case.
+        //
+        // It does not make the rebuild exact, and the remaining cases are not all in one direction. A rebuild
+        // cannot read the log, the contributions and the totals in one snapshot, and two of the gaps it cannot
+        // close leave a total that is high rather than short. A contribution is appended by the projection
+        // handler, which runs in a post-commit scope and is redelivered by the outbox, so an event is in the log
+        // for a window before its contribution exists at all: the recompute counts that event, nothing is
+        // subtracted for it, and folding the contribution afterwards adds it a second time. Document
+        // identifiers are also allocated before the transaction that commits them, so a contribution can become
+        // visible below a position the walk has already passed and is missed for the same reason. Both settle by
+        // themselves in the sense that a rebuild run once the projection is settled — the outbox drained and the
+        // roller caught up — writes exactly the log; neither is silent, because the next drift check reports the
+        // difference. A rebuild run against live traffic is a repair that converges, not a snapshot that is
+        // exact, and the difference matters to an operator reading the number immediately afterwards.
+        var pending = await ReadPendingContributionsAsync(cancellationToken);
+
         var stored = await _metricStore.ListAllAsync(cancellationToken);
         var remaining = stored.ToDictionary(metric => (metric.DateKey, metric.EventType));
 
@@ -50,13 +73,15 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
 
         foreach (var bucket in recomputed.Counts)
         {
+            var target = Math.Max(0, bucket.Value - pending.GetValueOrDefault(bucket.Key));
+
             if (remaining.TryGetValue(bucket.Key, out var metric))
             {
                 remaining.Remove(bucket.Key);
 
-                if (metric.Count != bucket.Value)
+                if (metric.Count != target)
                 {
-                    metric.Count = bucket.Value;
+                    metric.Count = target;
                     metric.ModifiedUtc = now;
                     await _metricStore.UpdateAsync(metric, cancellationToken);
                     changes++;
@@ -69,9 +94,9 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
             {
                 ItemId = IdGenerator.GenerateId(),
                 DateKey = bucket.Key.DateKey,
-                Date = ParseDateKey(bucket.Key.DateKey),
+                Date = ContactCenterMetricDateKey.Parse(bucket.Key.DateKey),
                 EventType = bucket.Key.EventType,
-                Count = bucket.Value,
+                Count = target,
                 CreatedUtc = now,
             };
 
@@ -97,6 +122,16 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
 
         var stored = await _metricStore.ListAllAsync(cancellationToken);
         var storedByKey = stored.ToDictionary(metric => (metric.DateKey, metric.EventType), metric => metric.Count);
+
+        // A contribution that has not been folded yet is part of the projection, so it is added to the stored
+        // total before the comparison. Detecting drift stays a read: it reports what the projection holds, it
+        // does not repair it, and it must not commit the ambient unit of work of whoever asked.
+        var pending = await ReadPendingContributionsAsync(cancellationToken);
+
+        foreach (var contribution in pending)
+        {
+            storedByKey[contribution.Key] = storedByKey.GetValueOrDefault(contribution.Key) + contribution.Value;
+        }
 
         var drifts = new List<ContactCenterProjectionDrift>();
 
@@ -133,6 +168,37 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
         return drifts;
     }
 
+    private async Task<Dictionary<(string DateKey, string EventType), long>> ReadPendingContributionsAsync(CancellationToken cancellationToken)
+    {
+        var pending = new Dictionary<(string DateKey, string EventType), long>();
+        var afterDocumentId = 0L;
+
+        while (true)
+        {
+            var page = await _deltaStore.ListContributionsAfterAsync(afterDocumentId, PageSize, cancellationToken);
+
+            if (page.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var contribution in page)
+            {
+                var key = (contribution.DateKey, contribution.EventType);
+
+                pending[key] = pending.GetValueOrDefault(key) + contribution.Count;
+                afterDocumentId = Math.Max(afterDocumentId, contribution.DocumentId);
+            }
+
+            if (page.Count < PageSize)
+            {
+                break;
+            }
+        }
+
+        return pending;
+    }
+
     private async Task<RecomputeResult> RecomputeAsync(CancellationToken cancellationToken)
     {
         var counts = new Dictionary<(string DateKey, string EventType), long>();
@@ -163,7 +229,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
                     continue;
                 }
 
-                var dateKey = interactionEvent.OccurredUtc.Date.ToString(DateKeyFormat, CultureInfo.InvariantCulture);
+                var dateKey = ContactCenterMetricDateKey.From(interactionEvent.OccurredUtc);
                 var key = (dateKey, interactionEvent.EventType);
 
                 counts[key] = counts.GetValueOrDefault(key) + 1;
@@ -207,13 +273,6 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
         checkpoint.RebuiltUtc = rebuiltUtc;
 
         await _checkpointStore.UpdateAsync(checkpoint, cancellationToken);
-    }
-
-    private static DateTime ParseDateKey(string dateKey)
-    {
-        var date = DateTime.ParseExact(dateKey, DateKeyFormat, CultureInfo.InvariantCulture);
-
-        return DateTime.SpecifyKind(date, DateTimeKind.Utc);
     }
 
     private sealed record RecomputeResult(

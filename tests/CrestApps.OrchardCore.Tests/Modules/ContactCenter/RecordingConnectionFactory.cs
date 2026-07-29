@@ -16,6 +16,7 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
 {
     private readonly string _connectionString;
     private readonly List<string> _statements = [];
+    private readonly List<RecordedExecution> _executions = [];
     private readonly Lock _gate = new();
 
     /// <summary>
@@ -44,6 +45,22 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
         }
     }
 
+    /// <summary>
+    /// Gets the text and bound parameter values of every statement executed through a connection this factory
+    /// created. A plan can only be measured for a statement whose parameters can be rebound, so a gate that
+    /// captured the text alone would have to invent values the store never sent.
+    /// </summary>
+    public IReadOnlyList<RecordedExecution> Executions
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _executions];
+            }
+        }
+    }
+
     /// <inheritdoc/>
     public DbConnection CreateConnection()
         => new RecordingConnection(new SqliteConnection(_connectionString), Record);
@@ -57,28 +74,45 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
         lock (_gate)
         {
             _statements.Clear();
+            _executions.Clear();
         }
     }
 
-    private void Record(string commandText)
+    private void Record(string commandText, DbParameterCollection parameters)
     {
         if (string.IsNullOrWhiteSpace(commandText))
         {
             return;
         }
 
+        var bound = new List<KeyValuePair<string, object>>(parameters.Count);
+
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+            bound.Add(new KeyValuePair<string, object>(parameter.ParameterName, parameter.Value));
+        }
+
         lock (_gate)
         {
             _statements.Add(commandText);
+            _executions.Add(new RecordedExecution(commandText, bound));
         }
     }
+
+    /// <summary>
+    /// One statement executed through a recording connection, with the parameter values it was sent with.
+    /// </summary>
+    /// <param name="CommandText">The statement text as the store built it.</param>
+    /// <param name="Parameters">The parameter names and values bound when it ran.</param>
+    internal sealed record RecordedExecution(string CommandText, IReadOnlyList<KeyValuePair<string, object>> Parameters);
 
     private sealed class RecordingConnection : DbConnection
     {
         private readonly SqliteConnection _inner;
-        private readonly Action<string> _record;
+        private readonly Action<string, DbParameterCollection> _record;
 
-        public RecordingConnection(SqliteConnection inner, Action<string> record)
+        public RecordingConnection(SqliteConnection inner, Action<string, DbParameterCollection> record)
         {
             _inner = inner;
             _record = record;
@@ -128,9 +162,9 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
     {
         private readonly SqliteCommand _inner;
         private readonly DbConnection _owner;
-        private readonly Action<string> _record;
+        private readonly Action<string, DbParameterCollection> _record;
 
-        public RecordingCommand(SqliteCommand inner, DbConnection owner, Action<string> record)
+        public RecordingCommand(SqliteCommand inner, DbConnection owner, Action<string, DbParameterCollection> record)
         {
             _inner = inner;
             _owner = owner;
@@ -190,14 +224,14 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
 
         public override int ExecuteNonQuery()
         {
-            _record(_inner.CommandText);
+            _record(_inner.CommandText, _inner.Parameters);
 
             return _inner.ExecuteNonQuery();
         }
 
         public override object ExecuteScalar()
         {
-            _record(_inner.CommandText);
+            _record(_inner.CommandText, _inner.Parameters);
 
             return _inner.ExecuteScalar();
         }
@@ -208,7 +242,7 @@ internal sealed class RecordingConnectionFactory : IConnectionFactory
 
         protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior)
         {
-            _record(_inner.CommandText);
+            _record(_inner.CommandText, _inner.Parameters);
 
             return _inner.ExecuteReader(behavior);
         }

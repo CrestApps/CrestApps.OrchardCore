@@ -143,6 +143,16 @@ public static class ContactCenterDataGovernanceCatalog
         },
         new ContactCenterDataCategory
         {
+            Key = "event-metric-contribution",
+            DisplayName = "Event metric contribution",
+            Sensitivity = ContactCenterDataSensitivity.NonPersonal,
+            ContainsRecordingReference = false,
+            RetentionBasis = "Drained continuously into the event metric aggregate; retained only for contributions the roller could not fold.",
+            ErasureStrategy = ContactCenterErasureStrategy.NotApplicable,
+            Description = "A single appended contribution to a per-day, per-event-type count, waiting to be folded into the aggregate. It names an event type and a day and nothing about who the event concerned, so it contains no personal data.",
+        },
+        new ContactCenterDataCategory
+        {
             Key = "projection-checkpoint",
             DisplayName = "Projection checkpoint",
             Sensitivity = ContactCenterDataSensitivity.NonPersonal,

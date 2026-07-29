@@ -179,6 +179,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public bool Enabled { get; set; }
         public string Name { get; set; }
     }
+    public sealed class ContactCenterEventMetricDeltaIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterEventMetricDeltaIndex() { }
+        public long Count { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public long DocumentId { get; set; }
+        public string EventType { get; set; }
+    }
     public sealed class ContactCenterEventMetricIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
         public ContactCenterEventMetricIndex() { }
@@ -869,6 +879,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string EventType { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
     }
+    public sealed class ContactCenterEventMetricDelta : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactCenterEventMetricDelta() { }
+        public long Count { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public string EventType { get; set; }
+    }
     public sealed class ContactCenterExternalDestination
     {
         public ContactCenterExternalDestination() { }
@@ -893,6 +912,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int OverdueBacklogDegradedThreshold { get; set; }
         public int OverdueBacklogUnhealthyThreshold { get; set; }
         public void Normalize() { }
+    }
+    public sealed class ContactCenterMetricContribution : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>
+    {
+        public ContactCenterMetricContribution(long DocumentId, string DateKey, string EventType, long Count) { }
+        public long Count { get; init; }
+        public string DateKey { get; init; }
+        public long DocumentId { get; init; }
+        public string EventType { get; init; }
     }
     public sealed class ContactCenterOutboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
@@ -2041,6 +2068,25 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public ContactCenterEventDispatchContext(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutbox outbox, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext> logger) { }
         public System.Threading.Tasks.Task DispatchAsync(string eventId) { }
     }
+    public static class ContactCenterMetricDateKey
+    {
+        public const string Format = "yyyy-MM-dd";
+        public static string From(System.DateTime occurredUtc) { }
+        public static System.DateTime Parse(string dateKey) { }
+    }
+    public sealed class ContactCenterMetricDeltaStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEventMetricDeltaIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore
+    {
+        public const int MaxPendingContributionsPerRead = 10000;
+        public ContactCenterMetricDeltaStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterMetricRollupService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricRollupService
+    {
+        public ContactCenterMetricRollupService(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore deltaStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore metricStore, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<int> RollupAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterMetricStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEventMetricIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore
     {
         public ContactCenterMetricStore(YesSql.ISession session) { }
@@ -2051,13 +2097,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterMetricsProjectionMaintenanceService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricsProjectionMaintenanceService
     {
-        public ContactCenterMetricsProjectionMaintenanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore metricStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProjectionCheckpointStore checkpointStore, OrchardCore.Modules.IClock clock) { }
+        public ContactCenterMetricsProjectionMaintenanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore metricStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore deltaStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProjectionCheckpointStore checkpointStore, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProjectionDrift>> DetectDriftAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> RebuildAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterMetricsService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricsService
     {
-        public ContactCenterMetricsService(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore store, OrchardCore.Modules.IClock clock) { }
+        public ContactCenterMetricsService(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore store, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore deltaStore, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, long>> GetSummaryAsync(System.DateOnly fromDate, System.DateOnly toDate, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordAsync(string eventType, System.DateTime occurredUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -2546,6 +2592,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterEventPublisher
     {
         System.Threading.Tasks.Task PublishAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterMetricDeltaStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterMetricRollupService
+    {
+        System.Threading.Tasks.Task<int> RollupAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterMetricStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>
     {
@@ -3234,6 +3290,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         public override string EntityName { get; }
         protected override bool IsSubjectToLegalHold { get; }
         protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallbackRequestIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ContactCenterEventMetricDeltaRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEventMetricDeltaIndex>
+    {
+        public ContactCenterEventMetricDeltaRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore deltaStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEventMetricDeltaIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
     }
     public sealed class ContactCenterEventMetricRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEventMetricIndex>

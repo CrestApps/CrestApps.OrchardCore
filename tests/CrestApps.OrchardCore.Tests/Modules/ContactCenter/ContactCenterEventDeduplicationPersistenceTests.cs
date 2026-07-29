@@ -32,6 +32,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
                 var deduplication = new ContactCenterEventDeduplicationService(failedSession, CreateClock());
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(failedSession),
+                    new ContactCenterMetricDeltaStore(failedSession),
                     CreateClock());
 
                 Assert.True(await deduplication.TryBeginAsync(
@@ -56,13 +57,11 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
                             index.EventId == "event-1",
                         collection: ContactCenterConstants.CollectionName)
                     .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-                var metric = await new ContactCenterMetricStore(verificationSession).FindAsync(
-                    "2026-07-15",
-                    "OfferAccepted",
-                    TestContext.Current.CancellationToken);
+                var contributions = await new ContactCenterMetricDeltaStore(verificationSession)
+                    .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
                 Assert.Null(marker);
-                Assert.Null(metric);
+                Assert.Empty(contributions);
             }
 
             await using (var retrySession = store.CreateSession())
@@ -70,6 +69,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
                 var deduplication = new ContactCenterEventDeduplicationService(retrySession, CreateClock());
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(retrySession),
+                    new ContactCenterMetricDeltaStore(retrySession),
                     CreateClock());
 
                 Assert.True(await deduplication.TryBeginAsync(
@@ -84,13 +84,14 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
             }
 
             await using var committedSession = store.CreateSession();
-            var committedMetric = await new ContactCenterMetricStore(committedSession).FindAsync(
-                "2026-07-15",
-                "OfferAccepted",
-                TestContext.Current.CancellationToken);
+            var committed = await new ContactCenterMetricDeltaStore(committedSession)
+                .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
-            Assert.NotNull(committedMetric);
-            Assert.Equal(1, committedMetric.Count);
+            var contribution = Assert.Single(committed);
+
+            Assert.Equal("2026-07-15", contribution.DateKey);
+            Assert.Equal("OfferAccepted", contribution.EventType);
+            Assert.Equal(1, contribution.Count);
         }
         finally
         {
@@ -153,6 +154,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         [
             new ContactCenterProcessedEventIndexProvider(),
             new ContactCenterEventMetricIndexProvider(),
+            new ContactCenterEventMetricDeltaIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
@@ -170,6 +172,10 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         {
             SchemaBuilder = schemaBuilder,
         };
+        var deltaMigration = new ContactCenterEventMetricDeltaIndexMigrations
+        {
+            SchemaBuilder = schemaBuilder,
+        };
 
         await processedEventMigration.CreateAsync();
 
@@ -177,6 +183,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         // column arrives through the update step here too.
         await processedEventMigration.UpdateFrom1Async();
         await metricMigration.CreateAsync();
+        await deltaMigration.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;
