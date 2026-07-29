@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Telephony;
 /// </summary>
 public static class TelephonyCapabilityContracts
 {
-    private static readonly Dictionary<TelephonyCapabilities, Type> _contractsByCapability = new()
+    private static readonly FrozenDictionary<TelephonyCapabilities, Type> _contractsByCapability = new Dictionary<TelephonyCapabilities, Type>
     {
         [TelephonyCapabilities.Dial] = typeof(ITelephonyCallControlProvider),
         [TelephonyCapabilities.Hangup] = typeof(ITelephonyCallControlProvider),
@@ -22,7 +23,7 @@ public static class TelephonyCapabilityContracts
         [TelephonyCapabilities.ReceiveCalls] = typeof(ITelephonyInboundCallProvider),
         [TelephonyCapabilities.Voicemail] = typeof(ITelephonyVoicemailProvider),
         [TelephonyCapabilities.Directory] = typeof(ITelephonyDirectoryProvider),
-    };
+    }.ToFrozenDictionary();
 
     /// <summary>
     /// Gets the executable contract required by each advertised capability.

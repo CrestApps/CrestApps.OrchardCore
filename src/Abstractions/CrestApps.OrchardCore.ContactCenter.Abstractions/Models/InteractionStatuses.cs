@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
@@ -12,7 +14,7 @@ public static class InteractionStatuses
     /// agent's capacity. A created interaction is excluded because no provider session exists for it yet, and the
     /// settled statuses are excluded because the agent has been released.
     /// </summary>
-    public static readonly InteractionStatus[] OccupyingAgent =
+    public static readonly ImmutableArray<InteractionStatus> OccupyingAgent =
     [
         InteractionStatus.Ringing,
         InteractionStatus.Connected,
@@ -25,7 +27,7 @@ public static class InteractionStatuses
     /// The statuses in which an interaction's communication session has not reached an outcome, so provider
     /// reconciliation must still ask the provider what happened to it.
     /// </summary>
-    public static readonly InteractionStatus[] Unsettled =
+    public static readonly ImmutableArray<InteractionStatus> Unsettled =
     [
         InteractionStatus.Created,
         InteractionStatus.Ringing,
@@ -39,7 +41,7 @@ public static class InteractionStatuses
     /// The statuses in which an interaction's communication session has reached an outcome and will not change
     /// again.
     /// </summary>
-    public static readonly InteractionStatus[] Settled =
+    public static readonly ImmutableArray<InteractionStatus> Settled =
     [
         InteractionStatus.Ended,
         InteractionStatus.Failed,

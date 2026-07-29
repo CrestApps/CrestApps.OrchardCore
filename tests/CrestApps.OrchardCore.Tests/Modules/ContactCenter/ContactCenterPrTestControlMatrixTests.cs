@@ -6,7 +6,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
 {
     private static readonly IReadOnlyDictionary<string, int> ExpectedGateCountByPrefix = new Dictionary<string, int>(StringComparer.Ordinal)
     {
-        ["C"] = 9,
+        ["C"] = 10,
         ["D"] = 18,
         ["F"] = 10,
         ["O"] = 9,
@@ -32,7 +32,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
 
         // Assert
         Assert.Equal("blocked-until-r0-r8-pass", matrix["releaseStatus"]?.GetValue<string>());
-        Assert.Equal(65, gates.Count);
+        Assert.Equal(66, gates.Count);
         Assert.Equal(ids.Count, distinctIds.Count);
 
         foreach (var (prefix, expectedCount) in ExpectedGateCountByPrefix)

@@ -472,3 +472,6 @@ src/docs/node_modules/
 src/docs/build/
 src/docs/.docusaurus/
 src/docs/.cache-loader/
+
+# Public API approval output written when a recorded surface no longer matches.
+*.received.txt
