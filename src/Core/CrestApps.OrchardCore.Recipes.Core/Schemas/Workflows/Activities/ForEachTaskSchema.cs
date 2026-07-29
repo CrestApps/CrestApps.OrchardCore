@@ -32,4 +32,29 @@ public sealed class ForEachTaskSchema : WorkflowActivitySchemaDefinitionBase
         yield return ("Current", WorkflowActivitySchemaBuilders.Any("Runtime state. Holds the value of the current iteration and is normally omitted from recipes."));
         yield return ("Index", WorkflowActivitySchemaBuilders.Integer("Runtime state. Holds the number of iterations executed so far and is normally omitted from recipes."));
     }
+
+    /// <inheritdoc />
+    protected override WorkflowActivitySchema BuildActivitySchemaCore(WorkflowActivitySchemaContext context)
+    {
+        var schema = base.BuildActivitySchemaCore(context);
+
+        schema.Properties = schema.Properties
+            .AllOf(new JsonSchemaBuilder()
+                .If(new JsonSchemaBuilder()
+                    .Properties(("Syntax", new JsonSchemaBuilder().Const("Liquid")))
+                    .Required("Syntax"))
+                .Then(RequireExpression("LiquidEnumerable"))
+                .Else(RequireExpression("Enumerable")));
+
+        return schema;
+    }
+
+    private static JsonSchemaBuilder RequireExpression(string propertyName)
+        => new JsonSchemaBuilder()
+            .Properties((propertyName, new JsonSchemaBuilder()
+                .Properties(("Expression", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .MinLength(1)))
+                .Required("Expression")))
+            .Required(propertyName);
 }

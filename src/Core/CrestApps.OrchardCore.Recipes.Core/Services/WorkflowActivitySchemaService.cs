@@ -138,7 +138,7 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
             .Properties(
                 ("ActivityId", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Description("A unique identifier for this activity within the workflow type. Referenced by 'Transitions[].SourceActivityId' and 'Transitions[].DestinationActivityId'.")),
+                    .Description("A unique identifier for this activity within the workflow type. The recipe step never generates one, so it must be supplied. Referenced by 'Transitions[].SourceActivityId' and 'Transitions[].DestinationActivityId'.")),
                 ("Name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(activityNames)
@@ -155,8 +155,8 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
                 ("Properties", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(true)
-                    .Description("Activity-specific property bag. The accepted properties depend on the value of 'Name'.")))
-            .Required("Name", "Properties")
+                    .Description("Activity-specific property bag. The well known properties depend on the value of 'Name'. Additional members are accepted because modules can persist their own sections here.")))
+            .Required("ActivityId", "Name", "Properties")
             .AdditionalProperties(true)
             .AllOf(conditionals.ToArray());
 

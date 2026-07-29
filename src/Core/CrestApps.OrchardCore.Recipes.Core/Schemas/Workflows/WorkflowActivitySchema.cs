@@ -29,8 +29,9 @@ public sealed class WorkflowActivitySchema
     public IReadOnlyList<string> Outcomes { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether <see cref="Outcomes"/> is a complete list. Activities whose
-    /// outcomes are computed from user supplied values, such as <c>ForkTask</c>, report <see langword="false"/>.
+    /// Gets or sets a value indicating whether the activity can produce outcomes beyond those listed in
+    /// <see cref="Outcomes"/>. Activities whose outcomes are computed from user supplied values, such as
+    /// <c>ForkTask</c>, report <see langword="true"/> to indicate that <see cref="Outcomes"/> is not exhaustive.
     /// </summary>
     public bool HasDynamicOutcomes { get; set; }
 

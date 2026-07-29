@@ -222,6 +222,42 @@ public sealed class WorkflowActivitySchemaServiceTests
     }
 
     [Fact]
+    public async Task WorkflowTypeRecipeStep_RequiresEveryActivityIdentifier()
+    {
+        var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);
+        var recipe = JsonNode.Parse(CreateWorkflowRecipe()).AsObject();
+
+        recipe["data"][0]["Activities"][1].AsObject().Remove("ActivityId");
+
+        Assert.False(Evaluate(schema, recipe.ToJsonString()));
+    }
+
+    [Fact]
+    public async Task WorkflowTypeRecipeStep_AcceptsTheExportedWorkflowTypePropertyBag()
+    {
+        var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);
+        var recipe = JsonNode.Parse(CreateWorkflowRecipe()).AsObject();
+
+        recipe["data"][0]["Properties"] = new JsonObject();
+        recipe["data"][0]["LockTimeout"] = 0;
+        recipe["data"][0]["LockExpiration"] = 0;
+        recipe["data"][0]["Transitions"][0]["Id"] = 0;
+
+        Assert.True(Evaluate(schema, recipe.ToJsonString()));
+    }
+
+    [Fact]
+    public async Task WorkflowTypeRecipeStep_RejectsANonObjectWorkflowTypePropertyBag()
+    {
+        var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);
+        var recipe = JsonNode.Parse(CreateWorkflowRecipe()).AsObject();
+
+        recipe["data"][0]["Properties"] = "not-an-object";
+
+        Assert.False(Evaluate(schema, recipe.ToJsonString()));
+    }
+
+    [Fact]
     public async Task WorkflowTypeRecipeStep_RequiresAtLeastOneActivity()
     {
         var schema = await new WorkflowTypeRecipeStep(CreateService()).GetSchemaAsync(TestContext.Current.CancellationToken);

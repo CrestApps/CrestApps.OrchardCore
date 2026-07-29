@@ -23,10 +23,13 @@ public sealed class HttpRequestEventSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
+    protected override IEnumerable<string> RequiredProperties => ["HttpMethod", "TokenLifeSpan"];
+
+    /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
     {
-        yield return ("HttpMethod", WorkflowActivitySchemaBuilders.String("The HTTP method to match, for example GET or POST."));
-        yield return ("Url", WorkflowActivitySchemaBuilders.String("The generated URL path that triggers this event. Managed automatically by the workflow engine; normally omitted from recipes."));
+        yield return ("HttpMethod", WorkflowActivitySchemaBuilders.String("The HTTP method to match, for example GET or POST. The event only triggers when the incoming request uses this method, so it must be supplied."));
+        yield return ("Url", WorkflowActivitySchemaBuilders.String("The signed URL path that triggers this event. The recipe step regenerates it, including a fresh token, only when the workflow type does not already exist and 'TokenLifeSpan' is present. When an existing workflow type is replaced the imported value is kept as is, so an exported URL should be included."));
         yield return ("ValidateAntiforgeryToken", WorkflowActivitySchemaBuilders.Boolean("When true, validates the anti-forgery token on the incoming request. Set to false for webhook callers that do not include the token. Defaults to true."));
         yield return ("TokenLifeSpan", WorkflowActivitySchemaBuilders.Integer("The number of days before the generated URL token expires. Use 0 for the token to never expire. Defaults to 0."));
         yield return ("FormLocationKey", WorkflowActivitySchemaBuilders.String("The key used to store and retrieve the current form's location in the workflow output. Leave blank when the workflow does not handle a form or handles only a single one. Defaults to an empty string."));

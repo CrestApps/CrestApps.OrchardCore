@@ -235,20 +235,29 @@ public sealed class WorkflowActivitySchemaDefinitionTests
 
     [Theory]
     [MemberData(nameof(DefinitionNames))]
-    public async Task GetActivitySchemaAsync_CachesResult(string activityName)
+    public async Task GetActivitySchemaAsync_HonoursTheSuppliedContext(string activityName)
     {
         var definition = CreateDefinition(activityName);
-        var context = CreateContext(activityName);
-        var first = await definition.GetActivitySchemaAsync(context, TestContext.Current.CancellationToken);
-        var second = await definition.GetActivitySchemaAsync(context, TestContext.Current.CancellationToken);
+        var first = await definition.GetActivitySchemaAsync(CreateContext(activityName), TestContext.Current.CancellationToken);
+        var second = await definition.GetActivitySchemaAsync(
+            new WorkflowActivitySchemaContext
+            {
+                ActivityName = activityName,
+                IsEvent = activityName.EndsWith("Event", StringComparison.Ordinal),
+                IsTask = !activityName.EndsWith("Event", StringComparison.Ordinal),
+                Category = "Overridden Category",
+                DisplayText = "Overridden Display Text",
+            },
+            TestContext.Current.CancellationToken);
 
-        Assert.Same(first, second);
+        Assert.Equal(first.Category, second.Category);
+        Assert.Equal(first.Outcomes, second.Outcomes);
     }
 
     [Fact]
     public async Task GetActivitySchemaAsync_ThrowsWhenContextIsNull()
     {
-        var definition = new EmailTaskSchema();
+        IWorkflowActivitySchemaDefinition definition = new EmailTaskSchema();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             async () => await definition.GetActivitySchemaAsync(null, TestContext.Current.CancellationToken));
@@ -257,7 +266,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     [Fact]
     public async Task EmailTaskSchema_DescribesTheDocumentedContract()
     {
-        var definition = new EmailTaskSchema();
+        IWorkflowActivitySchemaDefinition definition = new EmailTaskSchema();
         var schema = await definition.GetActivitySchemaAsync(
             CreateContext("EmailTask"),
             TestContext.Current.CancellationToken);
@@ -376,7 +385,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     }
 
     [Fact]
-    public async Task UnknownProperties_AreRejectedByDefault()
+    public async Task UnknownProperties_AreAcceptedBecauseTheActivityBagIsOpen()
     {
         var schema = await BuildPropertiesSchemaAsync("EmailTask");
 
@@ -384,7 +393,23 @@ public sealed class WorkflowActivitySchemaDefinitionTests
             """
             {
                 "Recipients": { "Expression": "sales@example.com" },
-                "NotAnEmailTaskProperty": true
+                "SectionAddedByAnotherModule": { "Enabled": true }
+            }
+            """);
+
+        Assert.True(schema.Evaluate(document.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ActivityMetadata_RejectsUnknownMembers()
+    {
+        var schema = await BuildPropertiesSchemaAsync("EmailTask");
+
+        using var document = JsonDocument.Parse(
+            """
+            {
+                "Recipients": { "Expression": "sales@example.com" },
+                "ActivityMetadata": { "Title": "Notify sales", "Subtitle": "nope" }
             }
             """);
 
@@ -426,9 +451,74 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     }
 
     [Fact]
+    public async Task ForEachTaskSchema_RequiresTheJavaScriptEnumerableByDefault()
+    {
+        var schema = await BuildPropertiesSchemaAsync("ForEachTask");
+
+        using var missing = JsonDocument.Parse(
+            """
+            {
+                "LoopVariableName": "item"
+            }
+            """);
+        using var empty = JsonDocument.Parse(
+            """
+            {
+                "Enumerable": { "Expression": "" }
+            }
+            """);
+        using var supplied = JsonDocument.Parse(
+            """
+            {
+                "Enumerable": { "Expression": "return [1, 2, 3];" }
+            }
+            """);
+
+        Assert.False(schema.Evaluate(missing.RootElement).IsValid);
+        Assert.False(schema.Evaluate(empty.RootElement).IsValid);
+        Assert.True(schema.Evaluate(supplied.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task ForEachTaskSchema_RequiresTheLiquidEnumerableWhenTheSyntaxIsLiquid()
+    {
+        var schema = await BuildPropertiesSchemaAsync("ForEachTask");
+
+        using var wrongExpression = JsonDocument.Parse(
+            """
+            {
+                "Syntax": "Liquid",
+                "Enumerable": { "Expression": "return [1, 2, 3];" }
+            }
+            """);
+        using var supplied = JsonDocument.Parse(
+            """
+            {
+                "Syntax": "Liquid",
+                "LiquidEnumerable": { "Expression": "{{ Workflow.Input.Items }}" }
+            }
+            """);
+
+        Assert.False(schema.Evaluate(wrongExpression.RootElement).IsValid);
+        Assert.True(schema.Evaluate(supplied.RootElement).IsValid);
+    }
+
+    [Fact]
+    public async Task BuildActivitySchemaAsync_CanBeOverriddenToShapeTheSchema()
+    {
+        IWorkflowActivitySchemaDefinition definition = new AsyncOverrideActivitySchema();
+        var schema = await definition.GetActivitySchemaAsync(
+            CreateContext("AsyncOverrideTask"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Overridden asynchronously", schema.Description);
+        Assert.Contains("Overridden properties description.", GetDescription(ToNode(schema.Properties)));
+    }
+
+    [Fact]
     public async Task DynamicOutcomeActivities_AnnounceTheirDynamicOutcomes()
     {
-        var definition = new ForkTaskSchema();
+        IWorkflowActivitySchemaDefinition definition = new ForkTaskSchema();
         var schema = await definition.GetActivitySchemaAsync(
             CreateContext("ForkTask"),
             TestContext.Current.CancellationToken);
@@ -440,7 +530,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     [Fact]
     public async Task EventDefinitions_DescribeThemselvesAsEvents()
     {
-        var definition = new ContentPublishedEventSchema();
+        IWorkflowActivitySchemaDefinition definition = new ContentPublishedEventSchema();
         var schema = await definition.GetActivitySchemaAsync(
             CreateContext("ContentPublishedEvent", isEvent: true),
             TestContext.Current.CancellationToken);
@@ -466,7 +556,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     [Fact]
     public async Task FallsBackToTheActivityLibraryValuesWhenNotOverridden()
     {
-        var definition = new FallbackActivitySchema();
+        IWorkflowActivitySchemaDefinition definition = new FallbackActivitySchema();
         var schema = await definition.GetActivitySchemaAsync(
             new WorkflowActivitySchemaContext
             {
@@ -516,11 +606,11 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     private static string[] GetRequired(JsonNode schema)
         => schema?["required"]?.AsArray().Select(node => node.GetValue<string>()).ToArray() ?? [];
 
-    private static WorkflowActivitySchemaDefinitionBase CreateDefinition(string activityName)
+    private static IWorkflowActivitySchemaDefinition CreateDefinition(string activityName)
         => CreateAllDefinitions().Single(definition => definition.Name == activityName);
 
-    private static IEnumerable<WorkflowActivitySchemaDefinitionBase> CreateAllDefinitions()
-        => GetDefinitionTypes().Select(type => (WorkflowActivitySchemaDefinitionBase)Activator.CreateInstance(type));
+    private static IEnumerable<IWorkflowActivitySchemaDefinition> CreateAllDefinitions()
+        => GetDefinitionTypes().Select(type => (IWorkflowActivitySchemaDefinition)Activator.CreateInstance(type));
 
     private static string[] GetRegisteredDefinitionTypes()
     {
@@ -550,6 +640,29 @@ public sealed class WorkflowActivitySchemaDefinitionTests
             .Where(type => !type.IsAbstract && typeof(WorkflowActivitySchemaDefinitionBase).IsAssignableFrom(type))
             .Where(type => type.GetConstructor(BindingFlags.Public | BindingFlags.Instance, []) is not null)
             .OrderBy(type => type.FullName, StringComparer.Ordinal);
+
+    private sealed class AsyncOverrideActivitySchema : WorkflowActivitySchemaDefinitionBase
+    {
+        public override string Name { get; } = "AsyncOverrideTask";
+
+        protected override string Category => "Testing";
+
+        protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+            => [];
+
+        protected override async ValueTask<WorkflowActivitySchema> BuildActivitySchemaAsync(
+            WorkflowActivitySchemaContext context,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+
+            var schema = BuildActivitySchemaCore(context);
+            schema.Description = "Overridden asynchronously";
+            schema.Properties = schema.Properties.Description("Overridden properties description.");
+
+            return schema;
+        }
+    }
 
     private sealed class FallbackActivitySchema : WorkflowActivitySchemaDefinitionBase
     {

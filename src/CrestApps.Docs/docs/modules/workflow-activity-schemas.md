@@ -16,15 +16,22 @@ The `WorkflowType` recipe step imports workflow definitions. A workflow definiti
 
 ## What the schema describes
 
-For every registered activity the composed schema exposes:
+For every registered activity the composed schema declares a `Properties` object whose JSON Schema `description` summarises the activity, and whose members document its configuration:
 
-- **Category** — the group the activity belongs to, for example `Messaging`, `Control Flow` or `Content`.
-- **Display text** — the human readable title shown in the workflow editor.
-- **Description** — what the activity actually does.
-- **Outcomes** — the outcome names that can be used as `Transitions[].SourceOutcomeName`, plus a flag indicating whether the activity can produce additional outcomes derived from its own configuration (`ForkTask`, `ScriptTask` and `UserTaskEvent` do this).
-- **Properties** — every property the activity persists, with its JSON type, a description taken from the activity editor, whether it supports Liquid or JavaScript syntax, and whether it is required.
+- **Category** — the group the activity belongs to, for example `Messaging`, `Control Flow` or `Content`. Written into the `description`.
+- **Description** — what the activity actually does. Written into the `description`.
+- **Outcomes** — the outcome names that can be used as `Transitions[].SourceOutcomeName`. Written into the `description`, together with a note when the activity can produce additional outcomes derived from its own configuration (`ForkTask`, `ScriptTask` and `UserTaskEvent` do this).
+- **Properties** — every property the activity persists, each emitted as a real JSON Schema member with its type, a description derived from the activity's editor view, whether it supports Liquid or JavaScript syntax, and whether it is required.
 
-The step also validates structural rules that a plain enum cannot express: a start activity must be an event, and each transition must reference a source activity, a source outcome and a destination activity. Non-start activities may be either tasks or events, because an event placed in the middle of a workflow halts execution and blocks until it is triggered.
+Display text and the dynamic-outcome flag are not emitted into the JSON Schema. They are carried on the `WorkflowActivityDescriptor` returned by `IWorkflowActivitySchemaService.GetActivityDescriptorsAsync`, so other features can build their own activity listings.
+
+### The property bag stays open
+
+`ActivityRecord` derives from `Entity`, whose `Properties` member is a free-form `JsonObject`. Any module can persist an extra section there through a section display driver, exactly as Orchard Core does for `ActivityMetadata`. The generated schema therefore documents the well known properties without rejecting the rest, so a recipe exported from a tenant with extra modules enabled still validates.
+
+The same reasoning applies one level up: `WorkflowType` also derives from `Entity`, so a workflow type may carry its own `Properties` object.
+
+The step also validates structural rules that a plain enum cannot express: a start activity must be an event, every activity must carry an `ActivityId` because the step never generates one, and each transition must reference a source activity, a source outcome and a destination activity. Non-start activities may be either tasks or events, because an event placed in the middle of a workflow halts execution and blocks until it is triggered.
 
 ## How it is composed
 
@@ -81,6 +88,8 @@ Enum properties accept either the member name or its ordinal, matching Orchard C
 ## Every activity supports `ActivityMetadata`
 
 Regardless of type, every activity may carry an `ActivityMetadata` object with an optional `Title`. The title is nullable, matching the recipes that Orchard Core itself ships. This property is added automatically by the base class and must never be declared by a definition.
+
+`ActivityMetadata` is the only section Orchard Core stores in the activity property bag, and `Title` is its only member, so its own schema is closed — an unknown member such as `Subtitle` is rejected.
 
 ```json
 {
@@ -218,18 +227,62 @@ The registration extension lives in `Microsoft.Extensions.DependencyInjection` a
 
 ### Rules to follow
 
-- **Describe every persisted property.** The generated `Properties` object sets `additionalProperties: false`, so any property the activity writes but the definition omits will make an exported recipe fail validation. This includes inherited properties, deprecated properties and runtime state. Prefix the description with `Deprecated.` or `Runtime state.` so authors know not to set them by hand.
+- **Describe every persisted property.** The `Properties` bag itself is open, so an omitted property will not fail validation — it will silently lose its documentation, its type and its syntax hint. Describe everything the activity writes, including inherited properties, deprecated properties and runtime state. Prefix the description with `Deprecated.` or `Runtime state.` so authors know not to set them by hand.
 - **Use the outcome names, not the labels.** Orchard Core outcome names come from the invariant key inside `S["..."]`, so `S["Drew Blank"]` yields the outcome name `Drew Blank`.
 - **Set `HasDynamicOutcomes`** when the activity derives outcomes from its own configuration. The generated description then tells authors that transitions may reference names not present in the static list.
-- **Only mark a property required when the activity truly cannot run without it.** Use the display driver's validation and the activity's `ExecuteAsync` method as the source of truth, and leave conditionally required properties optional.
-- **Override `AllowAdditionalProperties`** only if the activity genuinely accepts an open-ended property bag.
+- **Only mark a property required when the activity truly cannot run without it.** Use the display driver's validation and the activity's `ExecuteAsync` method as the source of truth. Express conditionally required properties through `BuildActivitySchemaCore` rather than `RequiredProperties`.
+- **Override `AllowAdditionalProperties` to `false`** only when you are certain the activity can never receive an extra member, for example because it is internal to your module and no section driver targets it.
 
-### Opting out of strict properties
+### Conditional requirements and asynchronous work
 
-If the activity stores an unbounded set of values, allow extra properties:
+`RequiredProperties` covers the unconditional case. When a property is only required in some configurations, or when the schema needs asynchronous work such as reading tenant metadata, override one of the two build seams instead.
+
+Override `BuildActivitySchemaCore` to apply object level constraints that `GetPropertyDefinitions` cannot express. Call the base implementation first to obtain the standard envelope, which already contains the shared `ActivityMetadata` property, then refine it. The built-in `ForEachTaskSchema` uses this seam to require `Enumerable` when `Syntax` is `JavaScript` (the default) and `LiquidEnumerable` when `Syntax` is `Liquid`:
 
 ```csharp
-protected override bool AllowAdditionalProperties => true;
+protected override WorkflowActivitySchema BuildActivitySchemaCore(WorkflowActivitySchemaContext context)
+{
+    var schema = base.BuildActivitySchemaCore(context);
+
+    schema.Properties = schema.Properties
+        .AllOf(new JsonSchemaBuilder()
+            .If(new JsonSchemaBuilder()
+                .Properties(("Syntax", new JsonSchemaBuilder().Const("Liquid")))
+                .Required("Syntax"))
+            .Then(RequireExpression("LiquidEnumerable"))
+            .Else(RequireExpression("Enumerable")));
+
+    return schema;
+}
+```
+
+Override `BuildActivitySchemaAsync` when the schema depends on data that must be awaited. It receives the same context and a `CancellationToken`, and its default implementation simply wraps `BuildActivitySchemaCore`:
+
+```csharp
+protected override async ValueTask<WorkflowActivitySchema> BuildActivitySchemaAsync(
+    WorkflowActivitySchemaContext context,
+    CancellationToken cancellationToken = default)
+{
+    var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
+    var schema = BuildActivitySchemaCore(context);
+
+    schema.Properties = schema.Properties
+        .Properties(("ContentType", new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(contentTypes.Select(type => (JsonNode)type.Name))));
+
+    return schema;
+}
+```
+
+Definitions are resolved from the service provider, so a definition that needs services can take them through constructor injection. Neither seam caches its result; build the schema fresh on every call so it always reflects the supplied context.
+
+### Tightening the property bag
+
+The bag is open by default. Set the following to reject anything that is not declared:
+
+```csharp
+protected override bool AllowAdditionalProperties => false;
 ```
 
 ## Auditing coverage

@@ -83,7 +83,11 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
                         .Items(activitySchema)
                         .MinItems(1)
                         .Description("Activities that belong to the workflow type. Exactly one activity should set 'IsStart' to true.")),
-                    ("Transitions", TransitionsSchema(descriptors)))
+                    ("Transitions", TransitionsSchema(descriptors)),
+                    ("Properties", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .AdditionalProperties(true)
+                        .Description("Free form property bag stored on the workflow type. Exported workflow types include it as an empty object unless a module persists data there.")))
                 .Required("WorkflowTypeId", "Name", "Activities", "Transitions")
                 .AdditionalProperties(true));
     }
@@ -104,6 +108,9 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
             .Items(new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
                 .Properties(
+                    ("Id", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Integer)
+                        .Description("Reserved for internal use. Exported workflow types always emit 0.")),
                     ("SourceActivityId", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
                         .Description("The 'ActivityId' of the activity the transition starts from.")),

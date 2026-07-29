@@ -8,13 +8,11 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 /// <remarks>
 /// Derive from this class to describe a workflow event or task in the <c>WorkflowType</c> recipe step.
 /// Implementations only supply the activity name, its category, its outcomes and the properties it accepts;
-/// this base class assembles the <c>Properties</c> object schema, always adds the shared
-/// <c>ActivityMetadata</c> property and caches the result.
+/// this base class assembles the <c>Properties</c> object schema and always adds the shared
+/// <c>ActivityMetadata</c> property.
 /// </remarks>
 public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySchemaDefinition
 {
-    private WorkflowActivitySchema _cachedSchema;
-
     /// <summary>
     /// Gets the workflow activity name this definition describes.
     /// </summary>
@@ -56,19 +54,34 @@ public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySc
     /// <summary>
     /// Gets a value indicating whether properties beyond the declared ones are accepted.
     /// </summary>
-    protected virtual bool AllowAdditionalProperties => false;
+    /// <remarks>
+    /// Defaults to <see langword="true"/> because <c>ActivityRecord</c> derives from <c>Entity</c>, whose
+    /// <c>Properties</c> bag is open by design. Any module can persist an additional section there through a
+    /// section display driver, exactly like the built-in <c>ActivityMetadata</c> section does. The declared
+    /// properties therefore document the well known members without rejecting valid payloads produced by a
+    /// tenant that has extra modules enabled.
+    /// </remarks>
+    protected virtual bool AllowAdditionalProperties => true;
 
-    /// <inheritdoc />
-    public ValueTask<WorkflowActivitySchema> GetActivitySchemaAsync(
+    ValueTask<WorkflowActivitySchema> IWorkflowActivitySchemaDefinition.GetActivitySchemaAsync(
         WorkflowActivitySchemaContext context,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        _cachedSchema ??= BuildSchema(context);
-
-        return ValueTask.FromResult(_cachedSchema);
+        return BuildActivitySchemaAsync(context, cancellationToken);
     }
+
+    /// <summary>
+    /// Builds the schema describing the activity.
+    /// Override this method when the schema requires asynchronous work, such as reading tenant metadata.
+    /// </summary>
+    /// <param name="context">The context describing the activity being documented.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    protected virtual ValueTask<WorkflowActivitySchema> BuildActivitySchemaAsync(
+        WorkflowActivitySchemaContext context,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(BuildActivitySchemaCore(context));
 
     /// <summary>
     /// Builds the property definitions accepted by the activity's <c>Properties</c> object.
@@ -78,7 +91,16 @@ public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySc
     /// </remarks>
     protected abstract IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions();
 
-    private WorkflowActivitySchema BuildSchema(WorkflowActivitySchemaContext context)
+    /// <summary>
+    /// Assembles the activity schema from the declared metadata and property definitions.
+    /// </summary>
+    /// <remarks>
+    /// Override this method to apply object level constraints that <see cref="GetPropertyDefinitions"/> cannot
+    /// express, such as conditional requirements. Call the base implementation first to obtain the standard
+    /// envelope, which already contains the shared <c>ActivityMetadata</c> property.
+    /// </remarks>
+    /// <param name="context">The context describing the activity being documented.</param>
+    protected virtual WorkflowActivitySchema BuildActivitySchemaCore(WorkflowActivitySchemaContext context)
     {
         var properties = new List<(string Name, JsonSchemaBuilder Schema)>
         {
