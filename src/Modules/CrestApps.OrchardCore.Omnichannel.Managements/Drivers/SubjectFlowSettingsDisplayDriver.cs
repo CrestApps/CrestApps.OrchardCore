@@ -41,6 +41,7 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
             model.InteractionType = flowSettings.InteractionType;
             model.Channel = flowSettings.Channel;
             model.ChannelEndpointId = flowSettings.ChannelEndpointId;
+            model.RequireDisposition = flowSettings.RequireDisposition;
 
             model.Campaigns = (await _campaignCatalog.GetAllAsync())
                 .Select(c => new SelectListItem(c.DisplayText, c.ItemId))
@@ -71,26 +72,11 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.CampaignId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is a required field."]);
-        }
-
-        if (string.IsNullOrEmpty(model.Channel))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is a required field."]);
-        }
-
-        if (model.InteractionType == ActivityInteractionType.Automated &&
-            string.IsNullOrEmpty(model.ChannelEndpointId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["Channel endpoint is required for automated interactions."]);
-        }
-
         flowSettings.CampaignId = model.CampaignId;
         flowSettings.InteractionType = model.InteractionType;
         flowSettings.Channel = model.Channel;
         flowSettings.ChannelEndpointId = model.ChannelEndpointId;
+        flowSettings.RequireDisposition = model.RequireDisposition;
 
         return Edit(flowSettings, context);
     }

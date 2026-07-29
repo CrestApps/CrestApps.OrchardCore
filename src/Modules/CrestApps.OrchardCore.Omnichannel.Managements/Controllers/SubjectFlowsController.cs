@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -29,6 +29,7 @@ public sealed class SubjectFlowsController : Controller
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<SubjectFlowSettings> _flowDisplayDriver;
@@ -65,6 +66,7 @@ public sealed class SubjectFlowsController : Controller
         ISourceCatalog<SubjectAction> actionCatalog,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<SubjectFlowSettings> flowDisplayDriver,
@@ -81,6 +83,7 @@ public sealed class SubjectFlowsController : Controller
         _actionCatalog = actionCatalog;
         _dispositionsCatalog = dispositionsCatalog;
         _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _flowDisplayDriver = flowDisplayDriver;
@@ -105,8 +108,10 @@ public sealed class SubjectFlowsController : Controller
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
         var subjectTypes = contentTypes
-            .Where(t => t.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+            .Where(contentType => _contentTypeProvider.IsSubjectContentType(contentType.Name))
             .OrderBy(t => t.DisplayName)
             .ToList();
 
@@ -149,7 +154,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -192,7 +197,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -211,7 +216,9 @@ public sealed class SubjectFlowsController : Controller
 
         await _flowDisplayDriver.UpdateEditorAsync(flowSettings, _updateModelAccessor.ModelUpdater, isNew: isNew);
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_flowSettingsManager, flowSettings, _updateModelAccessor.ModelUpdater, nameof(SubjectFlowSettings));
+
+        if (isValid && ModelState.IsValid)
         {
             if (isNew)
             {
@@ -251,7 +258,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -310,7 +317,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -353,7 +360,7 @@ public sealed class SubjectFlowsController : Controller
 
         var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
 
-        if (contentType is null || !contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
         {
             return NotFound();
         }
@@ -376,7 +383,9 @@ public sealed class SubjectFlowsController : Controller
             Editor = await _actionDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_actionManager, model, _updateModelAccessor.ModelUpdater, nameof(SubjectAction));
+
+        if (isValid && ModelState.IsValid)
         {
             await _actionManager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new subject action has been created successfully."]);
@@ -454,7 +463,9 @@ public sealed class SubjectFlowsController : Controller
             Editor = await _actionDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_actionManager, model, _updateModelAccessor.ModelUpdater, nameof(SubjectAction));
+
+        if (isValid && ModelState.IsValid)
         {
             await _actionManager.UpdateAsync(model);
             await _notifier.SuccessAsync(H["The subject action has been updated successfully."]);
@@ -498,4 +509,5 @@ public sealed class SubjectFlowsController : Controller
 
         return RedirectToAction(nameof(ManageActions), new { subjectContentType });
     }
+
 }

@@ -494,9 +494,14 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     }
 
     private string NormalizePhoneNumber(string phoneNumber, string countryCode)
-        => _phoneNumberService.TryFormatToE164(phoneNumber, GetFormattingRegionCode(phoneNumber, countryCode), out var e164Number)
-            ? e164Number
+    {
+        // A contact may legitimately hold a number this platform cannot identify, so the value is stored as
+        // it was given rather than discarded. It is not canonical and is never treated as such: the index
+        // provider writes only canonical numbers to the columns the compliance path queries.
+        return _phoneNumberService.TryParse(phoneNumber, GetFormattingRegionCode(phoneNumber, countryCode), out var canonicalNumber)
+            ? canonicalNumber.Value
             : phoneNumber;
+    }
 
     private string InferTimeZoneId(string primaryPhoneNumber, string fallbackPhoneNumber)
         => GetFirstKnownTimeZoneId(primaryPhoneNumber) ?? GetFirstKnownTimeZoneId(fallbackPhoneNumber);
@@ -537,7 +542,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
             : countryCode.Trim().ToUpperInvariant();
 
     private static string GetFormattingRegionCode(string phoneNumber, string countryCode)
-        => !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber.TrimStart().StartsWith('+')
+        => PhoneNumber.IsE164(phoneNumber?.Trim())
             ? null
             : countryCode;
 

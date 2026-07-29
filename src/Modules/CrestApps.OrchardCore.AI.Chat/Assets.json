@@ -72,6 +72,13 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css.map"
+    ],
+    "output": "wwwroot/css/ai-chat.css.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.css"
     ],
     "output": "wwwroot/css/ai-chat-widget.css"
@@ -82,6 +89,13 @@
       "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.min.css"
     ],
     "output": "wwwroot/css/ai-chat-widget.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.css.map"
+    ],
+    "output": "wwwroot/css/chat-widget.css.map"
   },
   {
     "inputs": [

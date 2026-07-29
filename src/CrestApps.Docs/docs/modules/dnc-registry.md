@@ -123,6 +123,20 @@ Example CSV:
 5559876543
 ```
 
+### Numbers are canonical before a registry sees them
+
+`INationalDoNotCallRegistry` takes and returns `PhoneNumber` values, which are in E.164 form by construction. A registry is therefore never asked about a number in a shape it has to interpret, and it never has to normalize a number a second time.
+
+That is deliberate. A caller that hands a registry a raw string forces the registry to guess what was meant, and two pieces of code guessing separately will eventually guess differently: the caller screens one number while the registry looks up another, the lookup matches nothing, and the caller reads the empty result as "not listed". Requiring the canonical type at the boundary removes the guess. Canonicalization happens once, in the caller, through `IPhoneNumberService.TryParse`.
+
+### Screening fails closed
+
+A registry that cannot complete a lookup raises `DoNotCallScreeningException` instead of returning an empty result. The distinction is the whole point: a registry that answers "not listed" has screened the number, while a registry that is unreachable, misconfigured, or rejecting requests has said nothing at all. Returning an empty set for the second case makes silence indistinguishable from a clean answer, and every caller acting on it proceeds as though the number had been cleared.
+
+Callers honour that signal rather than ignoring it. The outbound dialer suppresses the attempt with `ComplianceScreeningUnavailable`, which is not terminal, so the activity stays available for a later cycle. The contact import skips the row and reports why, so an unscreened number is never imported as one the registries cleared.
+
+A registry with no credentials configured is a different situation again: it is not participating in screening, returns an empty result, and does not raise. Configure only the registries whose answers you intend to rely on.
+
 ### Country filtering with NumberSearchContext
 
 The `INationalDoNotCallRegistry` interface supports a `NumberSearchContext` parameter that allows filtering by country:
@@ -182,20 +196,22 @@ To integrate another national do-not-call registry:
 services.AddScoped<INationalDoNotCallRegistry, MyRegistry>();
 ```
 
-Each implementation receives the numbers selected during import and returns the subset that the registry reports as listed.
+Each implementation receives the canonical numbers selected during import and returns the subset that the registry reports as listed.
 
 ### Supporting country-based filtering
 
 Implementations can override the `GetRegisteredNumbersAsync` overload that accepts a `NumberSearchContext` to support country-based filtering:
 
 ```csharp
-public Task<HashSet<string>> GetRegisteredNumbersAsync(
-    IEnumerable<string> phoneNumbers,
+public Task<HashSet<PhoneNumber>> GetRegisteredNumbersAsync(
+    IEnumerable<PhoneNumber> phoneNumbers,
     NumberSearchContext context,
     CancellationToken cancellationToken = default)
 {
     // Filter by context.CountryCode if provided
 }
 ```
+
+A registry that cannot express a number in the form its upstream API expects — for example a non-NANP number sent to a North American registry — must skip that number rather than send an altered one. Asking a registry about a number other than the one being dialed produces an answer about a different person.
 
 The default interface implementation delegates to the parameterless overload, so existing registries continue to work without modification.

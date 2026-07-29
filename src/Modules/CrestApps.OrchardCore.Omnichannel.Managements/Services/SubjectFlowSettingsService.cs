@@ -1,5 +1,4 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -13,18 +12,22 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
 {
     private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubjectFlowSettingsService"/> class.
     /// </summary>
     /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="contentTypeProvider">The provider that reports whether a content type is an omnichannel subject.</param>
     public SubjectFlowSettingsService(
         ICatalog<SubjectFlowSettings> flowSettingsCatalog,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider)
     {
         _flowSettingsCatalog = flowSettingsCatalog;
         _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
     }
 
     /// <inheritdoc />
@@ -62,9 +65,11 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
         return contentTypes
             .Where(contentType =>
-                contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject) &&
+                _contentTypeProvider.IsSubjectContentType(contentType.Name) &&
                 configuredSubjectNames.Contains(contentType.Name))
             .OrderBy(contentType => contentType.DisplayName)
             .ToArray();
@@ -82,6 +87,7 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
         }
 
         return flowSettings.InteractionType != ActivityInteractionType.Automated ||
-            !string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId);
+            (!string.IsNullOrWhiteSpace(flowSettings.ChannelEndpointId) &&
+                !string.IsNullOrWhiteSpace(flowSettings.ProfileId));
     }
 }

@@ -25,6 +25,8 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
             .Map(activity => new OmnichannelActivityIndex()
             {
                 ItemId = activity.ItemId,
+                Kind = activity.Kind,
+                Source = activity.Source,
                 Channel = activity.Channel,
                 ChannelEndpointId = activity.ChannelEndpointId,
                 SubjectContentType = activity.SubjectContentType,
@@ -36,6 +38,11 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
                 Attempts = activity.Attempts,
                 AssignedToId = activity.AssignedToId,
                 AssignedToUtc = activity.AssignedToUtc,
+                AssignmentStatus = activity.AssignmentStatus,
+                ReservationId = activity.ReservationId,
+                ReservedById = activity.ReservedById,
+                ReservedUtc = activity.ReservedUtc,
+                ReservationExpiresUtc = activity.ReservationExpiresUtc,
                 CreatedById = activity.CreatedById,
                 CompletedUtc = activity.CompletedUtc,
                 InteractionType = activity.InteractionType,

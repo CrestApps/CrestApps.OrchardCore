@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.EventGrid;
@@ -83,19 +84,18 @@ internal static class AzureEventGridEndpoint
             return TypedResults.Unauthorized();
         }
 
-        if (context.Request.ContentLength is > _maximumRequestBodySizeBytes)
+        // A chunked request declares no length, so the ceiling has to be enforced against what actually arrives
+        // rather than against what the caller says it will send.
+        var read = await RequestBodyReader.ReadAsync(context.Request, _maximumRequestBodySizeBytes, context.RequestAborted);
+
+        if (read.IsTooLarge)
         {
             logger.LogWarning("Event Grid payload exceeded the maximum supported size of {MaxBytes} bytes.", _maximumRequestBodySizeBytes);
 
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
-        // Read request body
-        string body;
-        using (var reader = new StreamReader(context.Request.Body))
-        {
-            body = await reader.ReadToEndAsync();
-        }
+        var body = read.Body;
 
         EventGridEvent[] events;
         try

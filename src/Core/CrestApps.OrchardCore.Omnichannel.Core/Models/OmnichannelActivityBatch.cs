@@ -20,6 +20,11 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source used when loading activities from this batch.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject content type.
     /// </summary>
     public string SubjectContentType { get; set; }
@@ -28,6 +33,31 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// Gets or sets the contact content type.
     /// </summary>
     public string ContactContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile identifier assigned to automated activities loaded from this batch.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name assigned to automated phone activities.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name assigned to automated phone activities.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier assigned to automated phone activities.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
+    /// </summary>
+    public string DialerProfileId { get; set; }
 
     /// <summary>
     /// Gets or sets the user ids.
@@ -122,14 +152,14 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
 
     /// <summary>
     /// Gets or sets the phone number to filter leads by.
-    /// The value should be in E.164 format (e.g., +17025551234).
+    /// A leading plus sign searches E.164 values; otherwise, the national number is searched.
     /// </summary>
     public string PhoneNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the match type for the phone number filter.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter leads by.
@@ -156,8 +186,14 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
+            Source = Source,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
+            AIProfileId = AIProfileId,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
+            TextToSpeechDeploymentName = TextToSpeechDeploymentName,
+            TextToSpeechVoiceId = TextToSpeechVoiceId,
+            DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
             IncludeDoNoSms = IncludeDoNoSms,

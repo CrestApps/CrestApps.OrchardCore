@@ -1,36 +1,23 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Email;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<OmnichannelChannelEndpoint>
 {
-    private readonly IPhoneNumberService _phoneNumberService;
-    private readonly IEmailAddressValidator _emailAddressValidator;
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointDisplayDriver"/> class.
     /// </summary>
-    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
-    /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public OmnichannelChannelEndpointDisplayDriver(
-        IPhoneNumberService phoneNumberService,
-        IEmailAddressValidator emailAddressValidator,
-        IStringLocalizer<OmnichannelChannelEndpointDisplayDriver> stringLocalizer)
+    public OmnichannelChannelEndpointDisplayDriver(IStringLocalizer<OmnichannelChannelEndpointDisplayDriver> stringLocalizer)
     {
-        _phoneNumberService = phoneNumberService;
-        _emailAddressValidator = emailAddressValidator;
         S = stringLocalizer;
     }
 
@@ -69,50 +56,10 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.DisplayText))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Name is a required field."]);
-        }
-
-        var hasValue = !string.IsNullOrWhiteSpace(model.Value);
-
-        if (!hasValue)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Endpoint value is a required field."]);
-        }
-
-        var value = model.Value.Trim();
-
-        if (string.IsNullOrWhiteSpace(model.Channel))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is a required field."]);
-        }
-        else if (hasValue)
-        {
-            if (model.Channel == OmnichannelConstants.Channels.Phone || model.Channel == OmnichannelConstants.Channels.Sms)
-            {
-                if (!_phoneNumberService.TryFormatToE164(model.Value, null, out var e164Number))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."]);
-                }
-                else
-                {
-                    value = e164Number;
-                }
-            }
-            else if (model.Channel == OmnichannelConstants.Channels.Email)
-            {
-                if (!_emailAddressValidator.Validate(model.Value))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Invalid email address."]);
-                }
-            }
-        }
-
         endpoint.DisplayText = model.DisplayText?.Trim();
         endpoint.Description = model.Description?.Trim();
         endpoint.Channel = model.Channel;
-        endpoint.Value = value;
+        endpoint.Value = model.Value?.Trim();
 
         return Edit(endpoint, context);
     }

@@ -18,7 +18,6 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -42,21 +41,18 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service for reading settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
-    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public UsaFtcDncRegistry(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IPhoneNumberService phoneNumberService,
         IStringLocalizer<UsaFtcDncRegistry> stringLocalizer,
         ILogger<UsaFtcDncRegistry> logger)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
-        _phoneNumberService = phoneNumberService;
         _logger = logger;
 
         DisplayName = stringLocalizer["USA FTC Do Not Call Registry"];
@@ -64,11 +60,13 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     }
 
     /// <inheritdoc/>
-    public async Task<HashSet<string>> GetRegisteredNumbersAsync(
-        IEnumerable<string> phoneNumbers,
+    public async Task<HashSet<PhoneNumber>> GetRegisteredNumbersAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
         CancellationToken cancellationToken = default)
     {
-        var dncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(phoneNumbers);
+
+        var dncNumbers = new HashSet<PhoneNumber>();
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<UsaFtcDncRegistrySettings>();
 
@@ -89,30 +87,30 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
 
         foreach (var phoneNumber in phoneNumbers)
         {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
+            if (!phoneNumber.HasValue)
             {
                 continue;
             }
 
             try
             {
-                if (!_phoneNumberService.TryFormatToE164(phoneNumber, "US", out var e164Number))
+                var apiNumber = ConvertToApiFormat(phoneNumber.Value);
+
+                if (apiNumber is null)
                 {
                     continue;
                 }
-
-                var apiNumber = ConvertToApiFormat(e164Number);
                 var requestUrl = $"{baseUrl}Check?PhoneNumber={apiNumber}&OrganizationId={settings.OrganizationId}&api_key={apiKey}";
 
                 var response = await client.GetAsync(requestUrl, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning(
-                        "FTC DNC API returned status {StatusCode} for phone number lookup.",
-                        response.StatusCode);
-
-                    continue;
+                    // The registry did not say the number is unlisted; it did not say anything. Continuing
+                    // here would turn that silence into a clean answer and let the number be called.
+                    throw new DoNotCallScreeningException(
+                        Key,
+                        $"The United States FTC do-not-call registry returned status {response.StatusCode}, so it could not report whether the number is listed.");
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<FtcDncResponse>(cancellationToken);
@@ -122,11 +120,16 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
                     dncNumbers.Add(phoneNumber);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not DoNotCallScreeningException && ex is not OperationCanceledException)
             {
                 _logger.LogError(
                     ex,
-                    "Error checking phone number against FTC DNC registry.");
+                    "Error checking phone number against the FTC DNC registry.");
+
+                throw new DoNotCallScreeningException(
+                    Key,
+                    "The United States FTC do-not-call registry could not be reached, so it could not report whether the number is listed.",
+                    ex);
             }
         }
 
@@ -134,18 +137,21 @@ public sealed class UsaFtcDncRegistry : INationalDoNotCallRegistry
     }
 
     /// <summary>
-    /// Converts an E.164 number to the 10-digit format expected by the FTC API.
+    /// Converts an E.164 number to the 10-digit format expected by the FTC API, or returns
+    /// <see langword="null"/> when the number is outside the North American numbering plan. The registry
+    /// covers United States numbers only, so a number it cannot address is skipped rather than sent with its
+    /// country code stripped, which would ask the registry about a different number entirely.
     /// </summary>
+    /// <param name="e164Number">The canonical number.</param>
+    /// <returns>The ten-digit national number, or <see langword="null"/> when the number is not addressable.</returns>
     private static string ConvertToApiFormat(string e164Number)
     {
-        // E.164 for US: +1XXXXXXXXXX → strip +1 to get the 10-digit number.
         if (e164Number.StartsWith("+1", StringComparison.Ordinal) && e164Number.Length == 12)
         {
-            return e164Number[2..];
+            return e164Number.Substring(2);
         }
 
-        // Fallback: strip the leading '+'.
-        return e164Number.TrimStart('+');
+        return null;
     }
 
     private sealed class FtcDncResponse

@@ -2,35 +2,24 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using Dapper;
+using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundJobs;
-using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Records;
-using OrchardCore.Data;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using YesSql.Services;
 using QueryContext = CrestApps.Core.Models.QueryContext;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
@@ -41,17 +30,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 [Admin]
 public sealed class ActivityBatchesController : Controller
 {
-    private const int _batchSize = 100;
-
     private const string _optionsSearch = "Options.Search";
 
     private readonly ICatalogManager<OmnichannelActivityBatch> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<OmnichannelActivityBatch> _batchDisplayDriver;
-    private readonly IClock _clock;
     private readonly INotifier _notifier;
-    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -63,9 +49,8 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="batchDisplayManager">The batch display manager.</param>
-    /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityBatchesController(
@@ -73,9 +58,8 @@ public sealed class ActivityBatchesController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OmnichannelActivityBatch> batchDisplayManager,
-        IClock clock,
         INotifier notifier,
-        ISubjectFlowSettingsService subjectFlowSettingsService,
+        IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
         IStringLocalizer<ActivityBatchesController> stringLocalizer)
     {
@@ -83,9 +67,8 @@ public sealed class ActivityBatchesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _batchDisplayDriver = batchDisplayManager;
-        _clock = clock;
         _notifier = notifier;
-        _subjectFlowSettingsService = subjectFlowSettingsService;
+        _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -124,11 +107,14 @@ public sealed class ActivityBatchesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelActivityBatch>>
+        var viewModel = new ListOmnichannelActivityBatchViewModel
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _activityBatchSourceOptions.Sources.Values
+                .Where(source => source.ShowInCreationPicker)
+                .OrderBy(source => source.DisplayName.Value),
         };
 
         foreach (var model in result.Entries)
@@ -169,19 +155,27 @@ public sealed class ActivityBatchesController : Controller
     /// <summary>
     /// Creates a new .
     /// </summary>
-    [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> Create()
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
             return Forbid();
         }
 
+        if (!TryGetActivityBatchSource(source, out var sourceEntry))
+        {
+            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = await _manager.NewAsync();
+        model.Source = sourceEntry.Source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Activity Batch"],
+            DisplayName = sourceEntry.DisplayName,
             Editor = await _batchDisplayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -193,19 +187,27 @@ public sealed class ActivityBatchesController : Controller
     /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("omnichannel/activity/batches/create", "OmnichannelActivityBatchesCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("omnichannel/activity/batches/create/{source}", "OmnichannelActivityBatchesCreate")]
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
             return Forbid();
         }
 
+        if (!TryGetActivityBatchSource(source, out var sourceEntry))
+        {
+            await _notifier.ErrorAsync(H["Unable to find an inventory load source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = await _manager.NewAsync();
+        model.Source = sourceEntry.Source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Activity Batch"],
+            DisplayName = sourceEntry.DisplayName,
             Editor = await _batchDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -213,7 +215,7 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.CreateAsync(model);
 
-            await _notifier.SuccessAsync(H["A new activity batch has been created successfully."]);
+            await _notifier.SuccessAsync(H["A new inventory load has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -296,7 +298,7 @@ public sealed class ActivityBatchesController : Controller
         {
             await _manager.UpdateAsync(model);
 
-            await _notifier.SuccessAsync(H["The Activity Batch has been updated successfully."]);
+            await _notifier.SuccessAsync(H["The inventory load has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -342,11 +344,11 @@ public sealed class ActivityBatchesController : Controller
 
         if (await _manager.DeleteAsync(model))
         {
-            await _notifier.SuccessAsync(H["The activity batch has been deleted successfully."]);
+            await _notifier.SuccessAsync(H["The inventory load has been deleted successfully."]);
         }
         else
         {
-            await _notifier.ErrorAsync(H["Unable to remove the activity batch."]);
+            await _notifier.ErrorAsync(H["Unable to remove the inventory load."]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -389,324 +391,23 @@ public sealed class ActivityBatchesController : Controller
         model.Status = OmnichannelActivityBatchStatus.Started;
         await _manager.UpdateAsync(model);
 
+        var loaderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var loaderUserName = User.Identity.Name;
+        var batchId = model.ItemId;
+
         ShellScope.AddDeferredTask(async s =>
         {
-            // Query the contacts, and find the ones that do not already have an activity assigned.
-            // Then, load the activities and assign them to the agents.
-            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity.Name, model.ItemId, async (scope, loaderId, loaderUserName, batchId) =>
+            // Resolve the loader that matches the batch source and let it query the contacts,
+            // apply the source-specific filters, and create the activities in the background.
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", loaderId, loaderUserName, batchId, async (scope, userId, userName, id) =>
             {
-                var catalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelActivityBatch>>();
+                var coordinator = scope.ServiceProvider.GetRequiredService<IActivityBatchLoadCoordinator>();
 
-                long documentId = 0;
-                var batch = await catalog.FindByIdAsync(batchId);
-
-                if (batch.Status != OmnichannelActivityBatchStatus.Started)
-                {
-                    throw new InvalidOperationException($"Unable to load activities for batch with the ID '{batch.ItemId}' since it's status is not '{nameof(OmnichannelActivityBatchStatus.Started)}'.");
-                }
-
-                batch.Status = OmnichannelActivityBatchStatus.Loading;
-                batch.TotalLoaded = 0;
-
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
-                var session = scope.ServiceProvider.GetRequiredService<ISession>();
-
-                await using var readonlySession = session.Store.CreateSession(withTracking: false);
-
-                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync()).ToArray();
-
-                if (users.Length == 0)
-                {
-                    batch.Status = OmnichannelActivityBatchStatus.New;
-
-                    await catalog.UpdateAsync(batch);
-
-                    logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.ItemId);
-                    return;
-                }
-
-                var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
-                var subjectFlowSettingsService = scope.ServiceProvider.GetRequiredService<ISubjectFlowSettingsService>();
-                var flowSettings = await subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
-
-                if (flowSettings is null)
-                {
-                    batch.Status = OmnichannelActivityBatchStatus.New;
-
-                    await catalog.UpdateAsync(batch);
-
-                    logger.LogError("Configured subject flow settings are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
-                    return;
-                }
-
-                var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
-
-                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue
-                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value)
-                    : null;
-
-                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue
-                    ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value)
-                    : null;
-
-                // Pre-compute contact-level filter sets (phone, timezone, last activity).
-                HashSet<string> eligibleContactIds = null;
-
-                var hasPhoneFilter = !string.IsNullOrEmpty(batch.PhoneNumber);
-                var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
-                var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType);
-
-                if (hasPhoneFilter || hasTimeZoneFilter || hasLastActivityFilter)
-                {
-                    HashSet<string> phoneIds = null;
-                    HashSet<string> timeZoneIds = null;
-                    HashSet<string> lastActivityIds = null;
-
-                    if (hasPhoneFilter)
-                    {
-                        var phoneQuery = batch.PhoneNumberMatchType switch
-                        {
-                            PhoneNumberMatchType.Exact => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                                index.NormalizedPrimaryCellPhoneNumber == batch.PhoneNumber ||
-                                index.NormalizedPrimaryHomePhoneNumber == batch.PhoneNumber),
-                            PhoneNumberMatchType.EndsWith => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                                index.NormalizedPrimaryCellPhoneNumber.EndsWith(batch.PhoneNumber) ||
-                                index.NormalizedPrimaryHomePhoneNumber.EndsWith(batch.PhoneNumber)),
-                            _ => readonlySession.QueryIndex<OmnichannelContactIndex>(index =>
-                                index.NormalizedPrimaryCellPhoneNumber.StartsWith(batch.PhoneNumber) ||
-                                index.NormalizedPrimaryHomePhoneNumber.StartsWith(batch.PhoneNumber)),
-                        };
-
-                        var phoneContacts = await phoneQuery.ListAsync();
-                        phoneIds = phoneContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    if (hasTimeZoneFilter)
-                    {
-                        var tzContacts = await readonlySession.QueryIndex<OmnichannelContactIndex>(
-                            index => index.TimeZoneId.IsIn(batch.TimeZoneIds))
-                            .ListAsync();
-
-                        timeZoneIds = tzContacts.Select(c => c.ContentItemId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    if (hasLastActivityFilter)
-                    {
-                        // Use raw SQL to find contacts whose most recent completed activity
-                        // matches the given subject (and optional disposition). This avoids
-                        // materializing all completed activities in memory.
-                        var store = scope.ServiceProvider.GetRequiredService<IStore>();
-                        var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
-
-                        var dialect = store.Configuration.SqlDialect;
-                        var dbSchema = store.Configuration.Schema;
-                        var activityTableName = store.Configuration.TableNameConvention.GetIndexTable(
-                            typeof(OmnichannelActivityIndex),
-                            OmnichannelConstants.CollectionName);
-                        var activityTable = dialect.QuoteForTableName(
-                            $"{store.Configuration.TablePrefix}{activityTableName}",
-                            dbSchema);
-                        var contactCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.ContactContentItemId));
-                        var statusCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status));
-                        var subjectCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.SubjectContentType));
-                        var dispositionCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DispositionId));
-                        var completedCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.CompletedUtc));
-
-                        var completedStatus = (int)ActivityStatus.Completed;
-
-                        // Find contacts where the most recent completed activity matches the subject/disposition.
-                        // Uses a correlated subquery to find the "latest per group" server-side.
-                        var sql = $@"SELECT DISTINCT a.{contactCol}
-                                    FROM {activityTable} a
-                                    WHERE a.{statusCol} = @CompletedStatus
-                                      AND a.{subjectCol} = @Subject
-                                      AND a.{completedCol} = (
-                                          SELECT MAX(a2.{completedCol})
-                                          FROM {activityTable} a2
-                                          WHERE a2.{contactCol} = a.{contactCol}
-                                            AND a2.{statusCol} = @CompletedStatus
-                                      )";
-
-                        var parameters = new DynamicParameters();
-                        parameters.Add("@CompletedStatus", completedStatus);
-                        parameters.Add("@Subject", batch.LastActivitySubjectContentType);
-
-                        if (!string.IsNullOrEmpty(batch.LastActivityDispositionId))
-                        {
-                            sql += $"\n  AND a.{dispositionCol} = @Disposition";
-                            parameters.Add("@Disposition", batch.LastActivityDispositionId);
-                        }
-
-                        await using var sqlConnection = dbConnectionAccessor.CreateConnection();
-                        await sqlConnection.OpenAsync();
-
-                        var command = new CommandDefinition(sql, parameters);
-                        var results = await sqlConnection.QueryAsync<string>(command);
-
-                        lastActivityIds = results
-                            .Where(id => !string.IsNullOrEmpty(id))
-                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    // Intersect all non-null filter sets.
-                    foreach (var set in new[] { phoneIds, timeZoneIds, lastActivityIds })
-                    {
-                        if (set is null)
-                        {
-                            continue;
-                        }
-
-                        if (eligibleContactIds is null)
-                        {
-                            eligibleContactIds = set;
-                        }
-                        else
-                        {
-                            eligibleContactIds.IntersectWith(set);
-                        }
-                    }
-
-                    // If filters are applied but no contacts match, mark as loaded immediately.
-                    if (eligibleContactIds is not null && eligibleContactIds.Count == 0)
-                    {
-                        batch.Status = OmnichannelActivityBatchStatus.Loaded;
-
-                        await catalog.UpdateAsync(batch);
-                        await session.SaveChangesAsync();
-                        return;
-                    }
-                }
-
-                var activityCounter = 0;
-
-                while (true)
-                {
-                    var contactQuery = readonlySession.Query<ContentItem, ContentItemIndex>(index =>
-                            index.ContentType == batch.ContactContentType &&
-                            index.DocumentId > documentId);
-
-                    if (leadCreatedFrom.HasValue)
-                    {
-                        contactQuery = contactQuery.Where(index => index.CreatedUtc >= leadCreatedFrom);
-                    }
-
-                    if (leadCreatedTo.HasValue)
-                    {
-                        contactQuery = contactQuery.Where(index => index.CreatedUtc <= leadCreatedTo);
-                    }
-
-                    if (batch.OnlyPublishedLeads)
-                    {
-                        contactQuery = contactQuery.Where(contact => contact.Published);
-                    }
-                    else
-                    {
-                        contactQuery = contactQuery.Where(contact => contact.Latest);
-                    }
-
-                    var contacts = await contactQuery
-                        .OrderBy(x => x.DocumentId)
-                        .Take(_batchSize)
-                        .ListAsync();
-
-                    if (!contacts.Any())
-                    {
-                        batch.Status = OmnichannelActivityBatchStatus.Loaded;
-
-                        await catalog.UpdateAsync(batch);
-                        break;
-                    }
-
-                    var preventDuplicates = batch.PreventDuplicates;
-
-                    HashSet<string> inQueueActivities = null;
-
-                    if (preventDuplicates)
-                    {
-                        var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
-
-                        inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
-                            index.ContactContentType == batch.ContactContentType &&
-                            index.ContactContentItemId.IsIn(contentItemsIds) &&
-                            index.Status != ActivityStatus.Completed &&
-                            index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
-                        .ListAsync())
-                        .Select(x => x.ContactContentItemId)
-                        .ToHashSet();
-                    }
-
-                    var now = _clock.UtcNow;
-
-                    var scheduledUtc = await localClock.ConvertToUtcAsync(batch.ScheduleAt);
-
-                    foreach (var contact in contacts)
-                    {
-                        documentId = Math.Max(documentId, contact.Id);
-
-                        // Skip contacts not in the pre-computed eligible set.
-                        if (eligibleContactIds is not null && !eligibleContactIds.Contains(contact.ContentItemId))
-                        {
-                            continue;
-                        }
-
-                        if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
-                        {
-                            continue;
-                        }
-
-                        // Respect the limit if specified.
-                        if (batch.Limit.HasValue && batch.Limit.Value > 0 && batch.TotalLoaded >= batch.Limit.Value)
-                        {
-                            batch.Status = OmnichannelActivityBatchStatus.Loaded;
-
-                            await catalog.UpdateAsync(batch);
-                            await session.SaveChangesAsync();
-                            return;
-                        }
-
-                        var user = users[activityCounter++ % users.Length];
-
-                        var activity = await activityManager.NewAsync();
-
-                        activity.InteractionType = flowSettings.InteractionType;
-                        activity.Channel = flowSettings.Channel;
-                        activity.ContactContentItemId = contact.ContentItemId;
-                        activity.ContactContentType = batch.ContactContentType;
-                        activity.SubjectContentType = batch.SubjectContentType;
-                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, activity.Channel);
-                        activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
-                        activity.CampaignId = flowSettings.CampaignId;
-                        activity.ScheduledUtc = scheduledUtc;
-                        activity.AssignedToId = user.UserId;
-                        activity.AssignedToUsername = user.UserName;
-                        activity.AssignedToUtc = now;
-                        activity.Instructions = batch.Instructions;
-                        activity.CreatedUtc = now;
-                        activity.CreatedById = loaderId;
-                        activity.CreatedByUsername = loaderUserName;
-                        activity.UrgencyLevel = batch.UrgencyLevel;
-                        activity.Status = ActivityStatus.NotStated;
-
-                        batch.TotalLoaded++;
-
-                        await activityManager.CreateAsync(activity);
-                        await session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
-                    }
-
-                    await catalog.UpdateAsync(batch);
-
-                    // Flush the session to release memory.
-                    await session.FlushAsync();
-                }
-
-                // Complete the batch loading.
-                batch.Status = OmnichannelActivityBatchStatus.Loaded;
-                await catalog.UpdateAsync(batch);
-                await session.SaveChangesAsync();
+                await coordinator.LoadAsync(id, userId, userName);
             });
         });
 
-        await _notifier.SuccessAsync(H["The Activity Batch started loaded in the background."]);
+        await _notifier.SuccessAsync(H["The inventory load has started loading in the background."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -751,11 +452,11 @@ public sealed class ActivityBatchesController : Controller
                     }
                     if (counter == 0)
                     {
-                        await _notifier.WarningAsync(H["No activity batch were removed."]);
+                        await _notifier.WarningAsync(H["No inventory loads were removed."]);
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 activity batch has been removed successfully.", "{0} activity batches have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 inventory load has been removed successfully.", "{0} inventory loads have been removed successfully."));
                     }
                     break;
                 default:
@@ -764,5 +465,22 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private bool TryGetActivityBatchSource(string source, out ActivityBatchSourceEntry sourceEntry)
+        => TryGetActivityBatchSource(source, _activityBatchSourceOptions, out sourceEntry);
+
+    private static bool TryGetActivityBatchSource(string source, ActivityBatchSourceOptions options, out ActivityBatchSourceEntry sourceEntry)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            sourceEntry = null;
+
+            return false;
+        }
+
+        var normalizedSource = source.Trim();
+
+        return options.Sources.TryGetValue(normalizedSource, out sourceEntry);
     }
 }

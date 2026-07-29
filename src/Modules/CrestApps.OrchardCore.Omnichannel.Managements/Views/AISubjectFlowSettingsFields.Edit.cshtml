@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
@@ -8,7 +9,7 @@
     <div class="ocat-wrapper">
         <div class="ocat-end-offset">
             <h5 class="border-bottom pb-2 mt-4">@T["AI Configuration"]</h5>
-         </div>
+        </div>
     </div>
 
     <div class="ocat-wrapper">
@@ -18,9 +19,39 @@
                 <option value="">@T["Select a profile"]</option>
             </select>
             <span asp-validation-for="ProfileId" class="text-danger"></span>
-            <span class="hint">@T["The chat profile that controls the AI behavior for this subject."]</span>
+            <span class="hint">@T["Only chat profiles with Add initial prompt enabled are shown because the initial prompt is sent as the first outbound SMS message."]</span>
         </div>
     </div>
+
+    @if (string.Equals(Model.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-label">@T["Voice call automation"]</div>
+            <div class="ocat-end">
+                <div class="mb-3">
+                    <label asp-for="SpeechToTextDeploymentName" class="form-label">@T["Speech-to-text deployment"]</label>
+                    <select asp-for="SpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default speech-to-text deployment configured in Artificial Intelligence settings."]</span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="TextToSpeechDeploymentName" class="form-label">@T["Text-to-speech deployment"]</label>
+                    <select asp-for="TextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default text-to-speech deployment configured in Artificial Intelligence settings."]</span>
+                </div>
+                <div>
+                    <label asp-for="TextToSpeechVoiceId" class="form-label">@T["Voice"]</label>
+                    <select asp-for="TextToSpeechVoiceId" asp-items="Model.TextToSpeechVoices" class="form-select">
+                        <option value="">@T["Use site default"]</option>
+                    </select>
+                    <span class="hint">@T["Leave empty to use the default text-to-speech voice. Save after changing the text-to-speech deployment to refresh its voice list."]</span>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="ocat-wrapper">
         <label asp-for="SubjectGoal" class="ocat-label">@T["Subject goal"]</label>
@@ -28,15 +59,6 @@
             <textarea asp-for="SubjectGoal" rows="3" class="form-control"></textarea>
             <span asp-validation-for="SubjectGoal" class="text-danger"></span>
             <span class="hint">@T["Describe the goal of this subject. The AI uses this to determine when to disposition the activity and end the conversation."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="InitialOutboundPromptPattern" class="ocat-label">@T["Initial outbound prompt pattern"]</label>
-        <div class="ocat-end">
-            <textarea asp-for="InitialOutboundPromptPattern" rows="5" class="form-control"></textarea>
-            <span class="hint">@T["This is the first message sent to the contact to initiate the conversation. Supports Liquid syntax."]</span>
-            <span asp-validation-for="InitialOutboundPromptPattern" class="text-danger"></span>
         </div>
     </div>
 
@@ -50,6 +72,31 @@
             <div class="form-check">
                 <input asp-for="AllowAIToUpdateSubject" class="form-check-input" type="checkbox" />
                 <label asp-for="AllowAIToUpdateSubject" class="form-check-label">@T["Allow AI to update subject"]</label>
+            </div>
+            <span class="hint dashed">@T["Opt-out SMS requests always update the contact's Do not SMS preference, even when contact updates are disabled."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-label">@T["SMS automation"]</div>
+        <div class="ocat-end">
+            <div class="mb-3">
+                <label asp-for="NoResponseTimeoutInMinutes" class="form-label">@T["No-response timeout (minutes)"]</label>
+                <input asp-for="NoResponseTimeoutInMinutes" type="number" min="1" class="form-control" />
+                <span asp-validation-for="NoResponseTimeoutInMinutes" class="text-danger"></span>
+                <span class="hint">@T["When set, an automated SMS activity is failed if the contact does not respond before this timeout."]</span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="SmsResponseDelayInSeconds" class="form-label">@T["Response delay (seconds)"]</label>
+                <input asp-for="SmsResponseDelayInSeconds" type="number" min="0" class="form-control" />
+                <span asp-validation-for="SmsResponseDelayInSeconds" class="text-danger"></span>
+                <span class="hint">@T["Optional delay before each AI SMS response is sent. Leave empty or use 0 to reply immediately."]</span>
+            </div>
+            <div>
+                <label asp-for="SmsOptOutKeywords" class="form-label">@T["Opt-out keywords"]</label>
+                <textarea asp-for="SmsOptOutKeywords" rows="3" class="form-control"></textarea>
+                <span asp-validation-for="SmsOptOutKeywords" class="text-danger"></span>
+                <span class="hint">@T["Enter one keyword per line or separate keywords with commas. Defaults include STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, and QUIT."]</span>
             </div>
         </div>
     </div>
