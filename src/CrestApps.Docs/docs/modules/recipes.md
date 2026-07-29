@@ -403,6 +403,10 @@ Then the field settings and content payload can be expressed like this:
 }
 ```
 
+## Extending workflow activity schemas
+
+The `WorkflowType` step composes its schema from per-activity contributions, so every workflow event and task can describe its own category, outcomes and properties. See [Workflow Activity Schemas](./workflow-activity-schemas.md) for the full contract and for how to describe a custom event or task.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.
