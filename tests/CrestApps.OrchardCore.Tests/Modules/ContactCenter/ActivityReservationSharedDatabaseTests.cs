@@ -16,6 +16,7 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -87,8 +88,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -152,8 +152,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -178,8 +177,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -204,8 +202,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -230,8 +227,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

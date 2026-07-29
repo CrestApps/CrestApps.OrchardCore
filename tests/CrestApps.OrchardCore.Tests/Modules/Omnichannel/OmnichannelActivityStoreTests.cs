@@ -12,7 +12,8 @@ using OrchardCore;
 using OrchardCore.Data;
 using YesSql;
 using YesSql.Provider.Sqlite;
-using YesSql.Sql;
+using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
@@ -86,8 +87,7 @@ public sealed class OmnichannelActivityStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -159,8 +159,7 @@ public sealed class OmnichannelActivityStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -91,7 +92,7 @@ public sealed class InteractionEventUpcastPersistenceTests
         finally
         {
             store.Dispose();
-            Delete(databasePath);
+            TemporarySqliteDatabase.Delete(databasePath);
         }
     }
 
@@ -121,7 +122,7 @@ public sealed class InteractionEventUpcastPersistenceTests
         finally
         {
             store.Dispose();
-            Delete(databasePath);
+            TemporarySqliteDatabase.Delete(databasePath);
         }
     }
 
@@ -180,7 +181,7 @@ public sealed class InteractionEventUpcastPersistenceTests
         finally
         {
             store.Dispose();
-            Delete(databasePath);
+            TemporarySqliteDatabase.Delete(databasePath);
         }
     }
 
@@ -413,14 +414,6 @@ public sealed class InteractionEventUpcastPersistenceTests
     private static string DatabasePath(string name)
     {
         return Path.Combine(Path.GetTempPath(), $"cc-upcast-{name}-{Guid.NewGuid():N}.db");
-    }
-
-    private static void Delete(string databasePath)
-    {
-        if (File.Exists(databasePath))
-        {
-            File.Delete(databasePath);
-        }
     }
 
     private sealed class PresencePayload

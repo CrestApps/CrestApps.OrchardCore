@@ -19,6 +19,7 @@ using YesSql.Sql;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -78,8 +79,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -126,8 +126,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -174,8 +173,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -238,8 +236,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -297,8 +294,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

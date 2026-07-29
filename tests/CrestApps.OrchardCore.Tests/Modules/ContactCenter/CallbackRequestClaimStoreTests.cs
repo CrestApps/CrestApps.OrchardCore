@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -49,8 +50,7 @@ public sealed class CallbackRequestClaimStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -84,8 +84,7 @@ public sealed class CallbackRequestClaimStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

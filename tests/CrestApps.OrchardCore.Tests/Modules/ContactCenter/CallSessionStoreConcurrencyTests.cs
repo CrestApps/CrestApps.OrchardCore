@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -61,8 +62,7 @@ public sealed class CallSessionStoreConcurrencyTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -108,8 +108,7 @@ public sealed class CallSessionStoreConcurrencyTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

@@ -10,6 +10,10 @@
 # container that copies the script then fails to start because no interpreter by that name exists.
 *.sh text eol=lf
 
+# Vendored specification cassettes are verified against the SHA-256 of the upstream file recorded in their
+# manifest. Line ending normalization would rewrite the bytes and break that check on Windows checkouts.
+tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/** -text
+
 # Ensure binary files are never treated as text.
 *.webp binary
 *.png binary

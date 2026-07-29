@@ -8,6 +8,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -58,8 +59,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -108,8 +108,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -152,8 +151,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

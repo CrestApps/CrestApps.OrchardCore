@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -55,8 +56,7 @@ public sealed class AsteriskPjsipCredentialLeaseStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -82,8 +82,7 @@ public sealed class AsteriskPjsipCredentialLeaseStoreTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

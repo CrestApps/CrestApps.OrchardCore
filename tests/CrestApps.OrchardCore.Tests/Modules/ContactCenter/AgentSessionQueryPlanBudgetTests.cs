@@ -9,6 +9,7 @@ using OrchardCore;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -89,12 +90,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
         }
         finally
         {
-            store.Dispose();
-
-            if (File.Exists(databasePath))
-            {
-                File.Delete(databasePath);
-            }
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
@@ -155,12 +151,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
         }
         finally
         {
-            store.Dispose();
-
-            if (File.Exists(databasePath))
-            {
-                File.Delete(databasePath);
-            }
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

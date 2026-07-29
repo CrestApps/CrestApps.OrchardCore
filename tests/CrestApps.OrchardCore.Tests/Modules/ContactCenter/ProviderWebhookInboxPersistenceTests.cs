@@ -13,6 +13,7 @@ using OrchardCore.Modules;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using YesSql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -62,8 +63,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
         }
         finally
         {
-            store.Dispose();
-            File.Delete(databasePath);
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 

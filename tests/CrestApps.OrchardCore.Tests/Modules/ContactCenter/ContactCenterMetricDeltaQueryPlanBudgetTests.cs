@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -153,12 +154,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
         }
         finally
         {
-            store.Dispose();
-
-            if (File.Exists(databasePath))
-            {
-                File.Delete(databasePath);
-            }
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
     }
 
