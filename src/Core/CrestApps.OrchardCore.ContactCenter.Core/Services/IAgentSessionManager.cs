@@ -17,11 +17,12 @@ public interface IAgentSessionManager : ICatalogManager<AgentSession>
     Task<AgentSession> FindByUserIdAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists every online session whose heartbeat is older than the supplied cut-off time.
+    /// Lists online sessions whose heartbeat is older than the supplied cut-off time, oldest heartbeat first.
+    /// The result is bounded, so a large backlog is drained across several calls rather than in one pass.
     /// </summary>
     /// <param name="heartbeatCutoffUtc">The UTC time before which a heartbeat is considered stale.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The stale online sessions.</returns>
+    /// <returns>A bounded, oldest-heartbeat-first page of the stale online sessions.</returns>
     Task<IReadOnlyCollection<AgentSession>> ListStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default);
 
     /// <summary>

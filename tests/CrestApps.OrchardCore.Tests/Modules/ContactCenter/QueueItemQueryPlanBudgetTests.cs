@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -18,6 +19,12 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// </summary>
 public sealed class QueueItemQueryPlanBudgetTests
 {
+
+    /// <summary>
+    /// The alias SQLite reports for the index table in a query plan. SQLite names the query alias, not the table, so an assertion written against the physical
+// table name can never match and passes no matter how the table is reached.
+    /// </summary>
+    private const string IndexAlias = nameof(QueueItemIndex);
     [Fact]
     public async Task WaitingCountByQueue_SeeksAnIndexInsteadOfScanningTheQueueItemTable()
     {
@@ -64,7 +71,7 @@ public sealed class QueueItemQueryPlanBudgetTests
 
             Assert.DoesNotContain(
                 plan,
-                line => line.Contains($"SCAN {tableName}", StringComparison.OrdinalIgnoreCase));
+                line => line.TrimStart().StartsWith($"SCAN {IndexAlias}", StringComparison.OrdinalIgnoreCase));
 
             Assert.DoesNotContain(
                 plan,

@@ -14,6 +14,11 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
     private const int QueryBatchSize = 500;
 
     /// <summary>
+    /// The maximum number of stale sessions a single cleanup pass reads.
+    /// </summary>
+    public const int MaxStaleSessionsPerPass = 500;
+
+    /// <summary>
     /// Gets a value indicating that agent session updates use YesSql document-version concurrency checks so
     /// concurrent connect, heartbeat, and disconnect operations cannot lose active-session state. A losing
     /// writer observes a <see cref="ConcurrencyException"/> instead of silently overwriting a newer commit.
@@ -46,12 +51,41 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<AgentSession>> ListStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default)
     {
-        var stale = await Session.Query<AgentSession, AgentSessionIndex>(
+        // Read the index alone rather than the documents, and order the read explicitly. A YesSql document
+        // query always groups by document identity, and no ordering over the index columns can satisfy that
+        // grouping, so bounding one makes the engine materialize and sort every stale session before it can
+        // honor the limit: the cost of a pass would still grow with the whole backlog rather than with the page
+        // it takes. Worse, a bound on a document query is not free to add — YesSql supplies an ordering by
+        // document identity when a page is asked for and none is given, so the sort appears whether or not it
+        // is wanted. An index query carries no such grouping, so ordering by the heartbeat time is answered by
+        // the retention index that leads with it and the limit stops the read early.
+        //
+        // Bounded on purpose. The caller takes a distributed lock, re-reads and deletes for every session this
+        // returns, so the cost of one cleanup pass is set by the size of the page. An unbounded read makes a
+        // single incident — a deployment restart that drops every connection at once — hand the pass every
+        // session in the tenant, and it runs on a schedule, so the pass would still be working when the next one
+        // starts. The oldest heartbeats come first, so consecutive passes drain the backlog instead of
+        // re-reading the same page, and what is not expired now is expired by the next pass a minute later,
+        // which is already the resolution this cleanup has.
+        var candidates = await Session.QueryIndex<AgentSessionIndex>(
             index => index.IsOnline && index.LastHeartbeatUtc < heartbeatCutoffUtc,
             collection: ContactCenterConstants.CollectionName)
+            .OrderBy(index => index.LastHeartbeatUtc)
+            .Take(MaxStaleSessionsPerPass)
             .ListAsync(cancellationToken);
 
-        return stale.ToArray();
+        var userIds = candidates
+            .Select(candidate => candidate.UserId)
+            .Where(userId => !string.IsNullOrEmpty(userId))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (userIds.Length == 0)
+        {
+            return [];
+        }
+
+        return await ListByUserIdsAsync(userIds, cancellationToken);
     }
 
     /// <inheritdoc/>

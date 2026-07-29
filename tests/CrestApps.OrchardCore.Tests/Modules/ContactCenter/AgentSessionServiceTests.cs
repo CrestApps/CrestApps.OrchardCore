@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -317,10 +318,105 @@ public sealed class AgentSessionServiceTests
         sessionManager.Verify(m => m.DeleteAsync(It.IsAny<AgentSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task HeartbeatAsync_DoesNotThrowAtTheAgent_WhenTheStampLosesItsVersionCheck()
+    {
+        // Arrange
+        // The heartbeat rewrites the whole session document, so it competes with connect, disconnect and the
+        // cleanup pass for the document version. Losing that race must not surface to the agent: the heartbeat
+        // arrives on a timer and carries nothing the agent needs, and whichever writer won has already moved
+        // the session forward. The caller is told what is stored rather than what the stamp tried to write.
+        var stored = new AgentSession { ItemId = "s1", UserId = "u1", LastHeartbeatUtc = _now.AddMinutes(-5) };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+
+        var service = CreateService(
+            sessionManager,
+            new Mock<IAgentProfileManager>(),
+            scopeExecutor: new ThrowingScopeExecutor(new ConcurrencyException(new Document())));
+
+        // Act
+        var session = await service.HeartbeatAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(stored, session);
+        Assert.Equal(_now.AddMinutes(-5), session.LastHeartbeatUtc);
+    }
+
+    [Fact]
+    public async Task HeartbeatAsync_StampsTheSessionItReadsInItsOwnUnitOfWork_SoAConcurrentConnectIsNotUndone()
+    {
+        // Arrange
+        // A session read on the ambient unit of work can already be behind a connect that committed since, and
+        // re-reading it there returns the same instance because the session answers from its identity map.
+        // Writing that copy back would stamp the heartbeat and drop the connection the connect added, leaving
+        // routing believing a connected agent is not. The stamp therefore runs in its own unit of work, whose
+        // read reflects what is committed.
+        var ambient = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
+        var committed = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1", "c2"], IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
+
+        var ambientManager = new Mock<IAgentSessionManager>();
+        ambientManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(ambient);
+
+        var scopedManager = new Mock<IAgentSessionManager>();
+        scopedManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(committed);
+
+        AgentSession written = null;
+        scopedManager
+            .Setup(m => m.UpdateAsync(It.IsAny<AgentSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Callback<AgentSession, JsonNode, CancellationToken>((session, _, _) => written = session);
+
+        var service = CreateService(
+            ambientManager,
+            new Mock<IAgentProfileManager>(),
+            scopeExecutor: new StubScopeExecutor(scopedManager.Object));
+
+        // Act
+        var session = await service.HeartbeatAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(written);
+        Assert.Equal(["c1", "c2"], written.ConnectionIds);
+        Assert.Equal(_now, written.LastHeartbeatUtc);
+        Assert.Same(committed, session);
+
+        // The ambient copy is never the one written, so a stale connection list cannot reach the store.
+        ambientManager.Verify(m => m.UpdateAsync(It.IsAny<AgentSession>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HeartbeatAsync_TakesNoDistributedLock_BecauseTheWriteCommitsOutsideAnyLockItCouldHold()
+    {
+        // Arrange
+        // Writes are staged, not committed, so the version check runs when the unit of work commits — after any
+        // lock taken inside this method has been released. A lock here would cost every connected agent two
+        // round trips on a timer and still not make the write exclusive.
+        var stored = new AgentSession { ItemId = "s1", UserId = "u1", LastHeartbeatUtc = _now.AddMinutes(-5) };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+
+        var distributedLock = CreateDistributedLock();
+        var service = CreateService(
+            sessionManager,
+            new Mock<IAgentProfileManager>(),
+            distributedLock: distributedLock,
+            scopeExecutor: new StubScopeExecutor(sessionManager.Object));
+
+        // Act
+        await service.HeartbeatAsync("u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        distributedLock.Verify(
+            l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()),
+            Times.Never);
+    }
+
     private static AgentSessionService CreateService(
         Mock<IAgentSessionManager> sessionManager,
         Mock<IAgentProfileManager> agentManager,
-        Mock<IAgentPresenceManager> presenceManager = null)
+        Mock<IAgentPresenceManager> presenceManager = null,
+        Mock<IDistributedLock> distributedLock = null,
+        IContactCenterScopeExecutor scopeExecutor = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -329,7 +425,8 @@ public sealed class AgentSessionServiceTests
             sessionManager.Object,
             agentManager.Object,
             (presenceManager ?? new Mock<IAgentPresenceManager>()).Object,
-            CreateDistributedLock().Object,
+            (distributedLock ?? CreateDistributedLock()).Object,
+            scopeExecutor ?? new StubScopeExecutor(sessionManager.Object),
             clock.Object);
     }
 
@@ -341,5 +438,55 @@ public sealed class AgentSessionServiceTests
             .ReturnsAsync((null, true));
 
         return distributedLock;
+    }
+
+    /// <summary>
+    /// Runs the operation against a supplied context, standing in for the child unit of work the service uses
+    /// so a test can give the stamp a different view of the session than the ambient read has.
+    /// </summary>
+    private sealed class StubScopeExecutor : IContactCenterScopeExecutor
+    {
+        private readonly object _context;
+
+        public StubScopeExecutor(object context)
+        {
+            _context = context;
+        }
+
+        public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+            => operation((TContext)_context);
+
+        public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+            => false;
+
+        public bool ScheduleAfterCommit(Func<Task> operation)
+            => false;
+    }
+
+    /// <summary>
+    /// Fails the child unit of work, standing in for the version check the stamp loses when another writer
+    /// commits the same session first.
+    /// </summary>
+    private sealed class ThrowingScopeExecutor : IContactCenterScopeExecutor
+    {
+        private readonly Exception _exception;
+
+        public ThrowingScopeExecutor(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+            => throw _exception;
+
+        public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+            => false;
+
+        public bool ScheduleAfterCommit(Func<Task> operation)
+            => false;
     }
 }

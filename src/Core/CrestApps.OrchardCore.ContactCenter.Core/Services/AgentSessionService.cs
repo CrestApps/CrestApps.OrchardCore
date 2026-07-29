@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -25,6 +26,7 @@ public sealed class AgentSessionService : IAgentSessionService
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IDistributedLock _distributedLock;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
 
     /// <summary>
@@ -34,18 +36,21 @@ public sealed class AgentSessionService : IAgentSessionService
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="presenceManager">The agent presence manager used to sign out abandoned sessions.</param>
     /// <param name="distributedLock">The distributed lock used to serialize per-user session writes.</param>
+    /// <param name="scopeExecutor">The scope executor used to commit heartbeat stamps in their own unit of work.</param>
     /// <param name="clock">The clock used to stamp session activity.</param>
     public AgentSessionService(
         IAgentSessionManager sessionManager,
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
         IDistributedLock distributedLock,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock)
     {
         _sessionManager = sessionManager;
         _agentManager = agentManager;
         _presenceManager = presenceManager;
         _distributedLock = distributedLock;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
     }
 
@@ -162,19 +167,61 @@ public sealed class AgentSessionService : IAgentSessionService
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
-        var session = await _sessionManager.FindByUserIdAsync(userId, cancellationToken);
+        // A heartbeat rewrites the whole session document to move one timestamp, and it arrives from every
+        // connected agent on a timer, so it is by far the most frequent write this service performs — and the
+        // document it writes also carries the connection list that connect and disconnect maintain. Two things
+        // therefore have to hold, and they pull against each other. The heartbeat must not overwrite a
+        // connection list it read before a concurrent connect committed, which is what the store's
+        // document-version check exists to prevent; and losing that check must not surface to the agent, whose
+        // hub call would fail on a timer for a write that carries no information the agent needs.
+        //
+        // Neither a lock nor a second read on the ambient unit of work delivers this. Writes here are staged,
+        // not committed: the version check runs when the shell scope commits, which is after any lock this
+        // method could take has been released, so two heartbeats can serialize perfectly against each other and
+        // still collide at commit. And a second read on the ambient session is answered from its identity map,
+        // so it returns the instance already read rather than the row a concurrent connect committed.
+        //
+        // The stamp is applied in its own unit of work instead. A child scope has its own session, so the read
+        // genuinely reflects what is committed and the connection list written back is the current one, and it
+        // commits before returning, so a lost version check is raised here rather than thrown at the agent.
+        var stampedUtc = _clock.UtcNow;
+        AgentSession stamped = null;
 
-        if (session is null)
+        try
         {
-            return null;
+            await _scopeExecutor.ExecuteAsync<IAgentSessionManager>(async manager =>
+            {
+                var current = await manager.FindByUserIdAsync(userId, cancellationToken);
+
+                if (current is null)
+                {
+                    return;
+                }
+
+                current.LastHeartbeatUtc = stampedUtc;
+                current.ModifiedUtc = stampedUtc;
+
+                await manager.UpdateAsync(current, cancellationToken: cancellationToken);
+
+                stamped = current;
+            });
+        }
+        catch (ConcurrencyException)
+        {
+            // Losing the version check means another writer (connect, disconnect, the cleanup pass, or a
+            // membership sync) committed a newer version of this session while the stamp was in flight.
+            // Retrying is wrong: connect and the cleanup pass already carry a newer heartbeat, so a retry
+            // would write an older timestamp over a newer one. Disconnect and membership sync do not advance
+            // the heartbeat, so a heartbeat lost to one of them records no liveness — that is tolerated
+            // because neither fires on a timer and the stale threshold spans several heartbeat intervals.
+            stamped = null;
         }
 
-        session.LastHeartbeatUtc = _clock.UtcNow;
-        session.ModifiedUtc = session.LastHeartbeatUtc;
-
-        await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
-
-        return session;
+        // Read back on the caller's unit of work, so the caller is told what that unit of work sees, including
+        // when the stamp lost its race or the session had already been signed out.
+        return stamped is null
+            ? await _sessionManager.FindByUserIdAsync(userId, cancellationToken)
+            : stamped;
     }
 
     /// <inheritdoc/>

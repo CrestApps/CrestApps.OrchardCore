@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -16,6 +17,12 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// </summary>
 public sealed class InteractionQueryPlanBudgetTests
 {
+
+    /// <summary>
+    /// The alias SQLite reports for the index table in a query plan. SQLite names the query alias, not the table, so an assertion written against the physical
+// table name can never match and passes no matter how the table is reached.
+    /// </summary>
+    private const string IndexAlias = nameof(InteractionIndex);
     [Fact]
     public async Task ActiveCountByAgent_SeeksAnIndexInsteadOfScanningTheInteractionTable()
     {
@@ -59,7 +66,7 @@ public sealed class InteractionQueryPlanBudgetTests
 
             Assert.DoesNotContain(
                 plan,
-                line => line.Contains($"SCAN {tableName}", StringComparison.OrdinalIgnoreCase));
+                line => line.TrimStart().StartsWith($"SCAN {IndexAlias}", StringComparison.OrdinalIgnoreCase));
 
             Assert.True(
                 plan.Any(line => line.Contains("IDX_InteractionIndex_ActiveByAgent", StringComparison.OrdinalIgnoreCase)),
@@ -162,7 +169,7 @@ public sealed class InteractionQueryPlanBudgetTests
 
                 Assert.DoesNotContain(
                     plan,
-                    line => line.Contains($"SCAN {tableName}", StringComparison.OrdinalIgnoreCase));
+                    line => line.TrimStart().StartsWith($"SCAN {IndexAlias}", StringComparison.OrdinalIgnoreCase));
 
                 Assert.True(
                     plan.Any(line => line.Contains("AgentId=?", StringComparison.OrdinalIgnoreCase)

@@ -21,6 +21,12 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// </summary>
 public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
 {
+
+    /// <summary>
+    /// The alias SQLite reports for the index table in a query plan. SQLite names the query alias, not the table, so an assertion written against the physical
+// table name can never match and passes no matter how the table is reached.
+    /// </summary>
+    private const string IndexAlias = nameof(ContactCenterEventMetricDeltaIndex);
     private const int SeededContributions = 4000;
     private const int SeededDays = 30;
 
@@ -78,7 +84,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
         // this by walking it would make reading a summary cost more the busier the deployment is.
         Assert.DoesNotContain(
             plan,
-            line => line.Contains($"SCAN {tableName}", StringComparison.OrdinalIgnoreCase));
+            line => line.TrimStart().StartsWith($"SCAN {IndexAlias}", StringComparison.OrdinalIgnoreCase));
 
         Assert.True(
             plan.Any(line => line.Contains("IDX_ContactCenterEventMetricDeltaIndex_Summary", StringComparison.OrdinalIgnoreCase)),

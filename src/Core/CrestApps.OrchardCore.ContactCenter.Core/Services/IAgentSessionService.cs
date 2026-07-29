@@ -32,11 +32,14 @@ public interface IAgentSessionService
     Task<AgentSession> DisconnectAsync(string userId, string connectionId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records a heartbeat for the agent session so the cleanup task does not consider it stale.
+    /// Records a heartbeat for the agent session so the cleanup task does not consider it stale. The stamp is
+    /// committed in its own unit of work, so it is durable when this method returns rather than when the caller
+    /// commits. A heartbeat that loses its version check to a concurrent writer is not recorded and does not
+    /// throw; it is not retried, because a retry could write an older timestamp over a newer one.
     /// </summary>
     /// <param name="userId">The Orchard user identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The agent session after the heartbeat, or <see langword="null"/> when none exists.</returns>
+    /// <returns>The agent session as the caller's unit of work sees it, whether or not this heartbeat was the write that stamped it, or <see langword="null"/> when none exists.</returns>
     Task<AgentSession> HeartbeatAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -48,10 +51,13 @@ public interface IAgentSessionService
     Task<AgentDesktopSnapshot> BuildSnapshotAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Marks every session whose heartbeat has gone stale as offline and signs the agent out so routing
-    /// no longer targets a client that is no longer connected.
+    /// Marks sessions whose heartbeat has gone stale as offline and signs the agents out so routing no longer
+    /// targets clients that are no longer connected. A single pass expires a bounded number of sessions, oldest
+    /// heartbeat first, so a backlog left by an event that made every session stale at once — a deployment that
+    /// drops every connection — is drained over consecutive passes rather than in one. A caller that needs the
+    /// backlog cleared cannot assume one call is enough.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The number of sessions that were expired.</returns>
+    /// <returns>The number of sessions that were expired by this pass.</returns>
     Task<int> ExpireStaleAsync(CancellationToken cancellationToken = default);
 }
