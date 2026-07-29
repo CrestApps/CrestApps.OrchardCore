@@ -60,11 +60,17 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             .WithDescription("Provides a way to configure a content type to act as an omnichannel contact record.")
         );
 
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelSubject, part => part
+            .Attachable()
+            .WithDisplayName("Omnichannel Subject")
+            .WithDescription("Provides a way to configure a content type to act as an omnichannel subject record.")
+        );
+
         await CreateContactIndexTableAsync();
         await CreateContactIndexIndexesAsync();
         ScheduleContactDefinitionRepair();
 
-        return 10;
+        return 11;
     }
 
     /// <summary>
@@ -203,6 +209,17 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         ScheduleContactDefinitionRepair();
 
         return 10;
+    }
+
+    public async Task<int> UpdateFrom10Async()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.OmnichannelSubject, part => part
+            .Attachable()
+            .WithDisplayName("Omnichannel Subject")
+            .WithDescription("Provides a way to configure a content type to act as an omnichannel subject record.")
+        );
+
+        return 11;
     }
 
     private void ScheduleContactDefinitionRepair()
