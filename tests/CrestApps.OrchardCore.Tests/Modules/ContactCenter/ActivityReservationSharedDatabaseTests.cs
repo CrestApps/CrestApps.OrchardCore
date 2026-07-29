@@ -106,6 +106,58 @@ public sealed class ActivityReservationSharedDatabaseTests
     }
 
     [Fact]
+    public async Task AcceptAsync_WhenTheLockLeaseIsNotHonoured_OnlyOneAcceptanceIsPersisted()
+    {
+        // The reservation locks are taken with a fixed expiration and are never renewed, so a critical section
+        // that outruns its lease continues with no lock at all while a second caller is admitted. What makes
+        // that survivable is that the transition commits under a document version check rather than under the
+        // lease. This test defeats the lock entirely, which is the worst case an expired lease can produce, and
+        // requires that exactly one acceptance reaches the database.
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-accept-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var seed = await SeedPendingReservationAsync(store);
+            var readGate = new AsyncGate(2);
+            var distributedLock = CreateAlwaysGrantingLock();
+            await using var firstSession = store.CreateSession();
+            await using var secondSession = store.CreateSession();
+            await using var firstProvider = CreateAcceptServiceProvider(firstSession, readGate, distributedLock);
+            await using var secondProvider = CreateAcceptServiceProvider(secondSession, readGate, distributedLock);
+
+            // Act
+            var attempts = await Task.WhenAll(
+                CaptureReservationAttemptAsync(firstProvider
+                    .GetRequiredService<IActivityReservationService>()
+                    .AcceptAsync(seed.ItemId, TestContext.Current.CancellationToken)),
+                CaptureReservationAttemptAsync(secondProvider
+                    .GetRequiredService<IActivityReservationService>()
+                    .AcceptAsync(seed.ItemId, TestContext.Current.CancellationToken)));
+
+            await using var verificationSession = store.CreateSession();
+            var persisted = await CreateReservationManager(verificationSession)
+                .FindByIdAsync(seed.ItemId, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Single(attempts, attempt => attempt.Reservation is not null);
+            var losingAttempt = Assert.Single(attempts, attempt => attempt.Reservation is null);
+            Assert.NotNull(losingAttempt.Exception);
+            Assert.True(
+                losingAttempt.Exception is ConcurrencyException or System.Data.Common.DbException,
+                $"Expected a database concurrency failure but received {losingAttempt.Exception.GetType().Name}.");
+            Assert.NotNull(persisted);
+            Assert.Equal(ReservationStatus.Accepted, persisted.Status);
+        }
+        finally
+        {
+            store.Dispose();
+            File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task ReservationIndex_DuplicateActiveActivityClaim_RejectsSecondReservation()
     {
         // Arrange
@@ -338,9 +390,19 @@ public sealed class ActivityReservationSharedDatabaseTests
         var availabilityService = new Mock<IAgentAvailabilityService>();
         availabilityService
             .Setup(service => service.GetAsync(seed.Agent.ItemId, seed.QueueItem.QueueId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AgentAvailability
+            .Returns<string, string, CancellationToken>(async (agentId, _, cancellationToken) =>
             {
-                Agent = seed.Agent,
+                // Availability has to resolve the agent through this provider's own session. Handing back the
+                // shared seed instance would give both providers the same tracked object, so the document
+                // version check this test exists to exercise would never see two independent readers.
+                var resolved = await agentManager.FindByIdAsync(agentId, cancellationToken);
+
+                return resolved is null
+                    ? null
+                    : new AgentAvailability
+                    {
+                        Agent = resolved,
+                    };
             });
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager
@@ -379,6 +441,120 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
 
         return services.BuildServiceProvider();
+    }
+
+    private static async Task<ActivityReservation> SeedPendingReservationAsync(IStore store)
+    {
+        await using var session = store.CreateSession();
+        var queueItemManager = CreateQueueItemManager(session);
+        var agentManager = CreateAgentProfileManager(session);
+        var reservationManager = CreateReservationManager(session);
+
+        var agent = await agentManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        agent.ItemId = "agent-1";
+        agent.UserId = "user-1";
+        agent.PresenceStatus = AgentPresenceStatus.Reserved;
+        await agentManager.CreateAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
+
+        var queueItem = await queueItemManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        queueItem.ItemId = "queue-item-1";
+        queueItem.QueueId = "queue-1";
+        queueItem.ActivityItemId = "activity-1";
+        queueItem.AgentId = agent.ItemId;
+        queueItem.RestorePersistedStatus(QueueItemStatus.Reserved);
+        queueItem.EnqueuedUtc = _now;
+        await queueItemManager.CreateAsync(queueItem, cancellationToken: TestContext.Current.CancellationToken);
+
+        var reservation = await reservationManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        reservation.ItemId = "reservation-1";
+        reservation.ActivityItemId = queueItem.ActivityItemId;
+        reservation.QueueId = queueItem.QueueId;
+        reservation.QueueItemId = queueItem.ItemId;
+        reservation.AgentId = agent.ItemId;
+        reservation.RestorePersistedStatus(ReservationStatus.Pending);
+        reservation.ExpiresUtc = _now.AddMinutes(1);
+        await reservationManager.CreateAsync(reservation, cancellationToken: TestContext.Current.CancellationToken);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return reservation;
+    }
+
+    private static ServiceProvider CreateAcceptServiceProvider(
+        ISession session,
+        AsyncGate readGate,
+        IDistributedLock distributedLock)
+    {
+        var reservationManager = CreateReservationManager(session);
+        var reservationManagerProxy = new Mock<IActivityReservationManager>();
+        reservationManagerProxy
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>(async (itemId, cancellationToken) =>
+            {
+                // Both callers must read the pending reservation before either commits, otherwise the second
+                // would observe the accepted status and decline on its own, and the version check this test
+                // exists to exercise would never run.
+                var reservation = await reservationManager.FindByIdAsync(itemId, cancellationToken);
+                await readGate.SignalAndWaitAsync();
+
+                return reservation;
+            });
+        reservationManagerProxy
+            .Setup(manager => manager.UpdateAsync(
+                It.IsAny<ActivityReservation>(),
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<ActivityReservation, System.Text.Json.Nodes.JsonNode, CancellationToken>(
+                (reservation, properties, cancellationToken) => reservationManager.UpdateAsync(reservation, properties, cancellationToken));
+
+        var queueItemManager = CreateQueueItemManager(session);
+        var agentManager = CreateAgentProfileManager(session);
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "activity-1" });
+        var clock = new Mock<IClock>();
+        clock.SetupGet(service => service.UtcNow).Returns(_now);
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IActivityReservationManager>(reservationManagerProxy.Object);
+        services.AddSingleton<IQueueItemManager>(queueItemManager);
+        services.AddSingleton<IAgentProfileManager>(agentManager);
+        services.AddSingleton(Mock.Of<IActivityQueueManager>());
+        services.AddSingleton(Mock.Of<IActivityQueueService>());
+        services.AddSingleton(Mock.Of<IInteractionManager>());
+        services.AddSingleton(Mock.Of<IAgentAvailabilityService>());
+        services.AddSingleton(activityManager.Object);
+        services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
+        services.AddSingleton(Mock.Of<IContactCenterScopeExecutor>());
+        services.AddSingleton<IEnumerable<ITelephonyService>>([]);
+        services.AddSingleton(distributedLock);
+        services.AddSingleton(session);
+        services.AddSingleton(clock.Object);
+        services.AddLogging();
+        services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
+        services.AddSingleton<IContactCenterWorkStateManager>(provider => new ContactCenterWorkStateManager(
+            provider.GetRequiredService<IContactCenterWorkStateStore>(),
+            [],
+            NullLogger<CatalogManager<ContactCenterWorkState>>.Instance));
+        services.AddSingleton<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>();
+        services.AddSingleton<IContactCenterWorkStateService, ContactCenterWorkStateService>();
+        services.AddSingleton<IContactCenterActivityWriter, ContactCenterActivityWriter>();
+        services.AddSingleton<IActivityReservationService, ActivityReservationService>();
+
+        return services.BuildServiceProvider();
+    }
+
+    private static IDistributedLock CreateAlwaysGrantingLock()
+    {
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(service => service.TryAcquireLockAsync(
+                It.IsAny<string>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, true));
+
+        return distributedLock.Object;
     }
 
     private static IDistributedLock CreateOverlappingLock(Action onAcquired)

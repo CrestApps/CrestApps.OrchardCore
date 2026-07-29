@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 #nullable enable annotations
 
 using CrestApps.OrchardCore.ContactCenter;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -40,6 +42,7 @@ public sealed class ActivityReservationServiceTests
 
         var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available };
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(item);
 
         // Act
@@ -203,11 +206,17 @@ public sealed class ActivityReservationServiceTests
             .Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" }.RestorePersistedStatus(QueueItemStatus.Waiting));
 
+        // An agent holding a reservation is normally in the Reserved presence state, but seeding it that way
+        // would let availability decline on presence alone and the guard this test is named for would never
+        // run. The agent is therefore Available and entitled, so the only thing that can refuse the reservation
+        // is the active-reservation guard itself.
         var alreadyReservedAgent = new AgentProfile
         {
             ItemId = "a1",
             UserId = "u1",
-            PresenceStatus = AgentPresenceStatus.Reserved,
+            PresenceStatus = AgentPresenceStatus.Available,
+            QueueIds = ["q1"],
+            AllowedQueueIds = ["q1"],
             ActiveReservationId = "r-existing",
         };
         var agentManager = new Mock<IAgentProfileManager>();
@@ -1459,6 +1468,104 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal("u2", activity.AssignedToId);
     }
 
+    [Fact]
+    public async Task ReserveAsync_ReadsTheAgentAndItsInteractionCountOnceEach_SoTheLocksAreNotHeldAcrossDuplicateRoundTrips()
+    {
+        // Arrange
+        // Availability is the canonical authority for whether an agent may take work, and answering that
+        // question already reads the agent profile and counts that agent's active interactions. The real
+        // availability service is used here rather than a double, because a double would hide those reads and
+        // the budget would then be measured against a stub instead of against what the critical section costs.
+        var agent = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Available,
+            MaxConcurrentInteractions = 2,
+            QueueIds = ["q1"],
+            AllowedQueueIds = ["q1"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.CountActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager
+            .Setup(manager => manager.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentSession
+            {
+                UserId = "u1",
+                IsOnline = true,
+                ConnectionIds = ["c1"],
+                QueueIds = ["q1"],
+                LastHeartbeatUtc = _now,
+            });
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(service => service.UtcNow).Returns(_now);
+
+        var realAvailability = new AgentAvailabilityService(
+            agentManager.Object,
+            sessionManager.Object,
+            interactionManager.Object,
+            Options.Create(new AgentAvailabilityOptions()),
+            clock.Object);
+        var availabilityService = new Mock<IAgentAvailabilityService>();
+        availabilityService
+            .Setup(service => service.GetAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, string, CancellationToken>(realAvailability.GetAsync);
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation());
+
+        var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.FindByIdAsync("qi-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            interactionManager,
+            activityManager,
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>(),
+            availabilityService: availabilityService);
+
+        // Act
+        var reservation = await service.ReserveAsync(item, agent, 30, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(reservation);
+        agentManager.Verify(
+            manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        interactionManager.Verify(
+            manager => manager.CountActiveByAgentAsync("a1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static ActivityReservationService CreateService(
         Mock<IActivityReservationManager> reservationManager,
         Mock<IQueueItemManager> queueItemManager,
@@ -1525,15 +1632,39 @@ public sealed class ActivityReservationServiceTests
 
         if (availabilityService is null)
         {
+            // The reservation service treats availability as the single authority for whether an agent may take
+            // work, so a double that answers independently of the agent manager would let the two disagree in a
+            // way production cannot: both read the same agent document. This double therefore derives its answer
+            // from the same mocked managers the test set up, applying the presence and capacity rules the real
+            // service applies.
             availabilityService = new Mock<IAgentAvailabilityService>();
             availabilityService
                 .Setup(service => service.GetAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string agentId, string _, CancellationToken _) => new AgentAvailability
+                .Returns(async (string agentId, string _, CancellationToken token) =>
                 {
-                    Agent = new AgentProfile { ItemId = agentId },
+                    var resolved = await agentManager.Object.FindByIdAsync(agentId, token)
+                        ?? new AgentProfile { ItemId = agentId };
+
+                    if (resolved.PresenceStatus != AgentPresenceStatus.Available)
+                    {
+                        return null;
+                    }
+
+                    var activeCount = await interactionManager.Object.CountActiveByAgentAsync(agentId, token);
+
+                    if (activeCount >= Math.Max(1, resolved.MaxConcurrentInteractions))
+                    {
+                        return null;
+                    }
+
+                    return new AgentAvailability
+                    {
+                        Agent = resolved,
+                        ActiveInteractionCount = activeCount,
+                    };
                 });
         }
 

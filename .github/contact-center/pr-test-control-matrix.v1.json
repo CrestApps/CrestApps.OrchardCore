@@ -2022,6 +2022,32 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentSessionServiceTests.cs requires the stamp to be applied in its own unit of work against the session that unit of work reads, so a connect committed since the ambient read is still present in what is written back, which a stamp applied on the ambient unit of work fails; requires a heartbeat whose unit of work loses its version check to return the stored session rather than throw, which removing that handling fails; and requires the heartbeat to take no distributed lock, since the write commits outside any lock the method could hold. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentSessionQueryPlanBudgetTests.cs seeds four thousand sessions through the store against a real SQLite database so both sides of the document join are populated, analyzes the table, and measures the plan of the statement the store actually issues, captured from a recording connection rather than hand written. It requires that plan not to scan the session index — asserted against the alias the planner prints, because the physical table name never appears in a plan and an assertion written against it can never fail — to seek IDX_AgentSessionIndex_Retention, and to build no temporary tree; dropping the index fails the first two and reverting the selection to a bounded document query fails the third. It separately requires the read to return exactly the bounded page when more sessions are stale than the bound allows, which removing the bound fails by returning all of them, and to return the oldest heartbeats first, which removing the ordering fails."
+    },
+    {
+      "id": "C015",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "W16.6",
+      "gate": "Creating a reservation does not read the same fact twice while holding two distributed locks, and no reservation transition depends on the lock lease for correctness",
+      "invariant": "The reservation locks are taken with a fixed expiration and are never renewed. A critical section that outruns its lease therefore continues believing it holds a lock it has already lost, while a second caller is admitted, and no amount of lease renewal removes that case: renewal shortens the window, it does not close it. Two properties follow. The first is that the critical section must be short, and it was not: availability is the canonical authority for whether an agent may take work, and answering that question already reads the agent profile and counts that agent's active interactions, yet the reservation path read the agent and counted its interactions a second time. Those duplicate checks were applied conjunctively, so they could only ever add a redundant rejection and never admitted an agent the authority had refused; the cost was two further round trips inside a critical section holding two unrenewed leases, and a second derivation of a decision that already had an owner. The second property is the one that actually makes an expired lease survivable, and it must be proved rather than assumed: every transition commits under a document version check, so when two callers are admitted at once, exactly one commit succeeds and the other is rejected by the database. Lease renewal is therefore not the remedy for this finding, and adding it would substitute a probabilistic defence for a deterministic one that is already in place.",
+      "testId": "CC-C015",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs requires that creating a reservation read the agent profile once and count that agent's active interactions once, measured through the real availability service rather than a double, because a double would hide the reads the authority itself performs and the budget would then be asserted against a stub instead of against what the critical section costs. Reintroducing either duplicate read fails it. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationSharedDatabaseTests.cs runs two acceptances of one reservation concurrently against a real shared SQLite database with the lock granted to both callers, which is the worst case an expired lease can produce, and with a gate that holds both readers until each has read the pending reservation so the second cannot simply observe the first's result and decline. It requires exactly one acceptance to be returned, the other to fail with a concurrency or database error, and the stored reservation to be accepted once. Removing the version check from the reservation store makes both acceptances succeed and fails the test, which is what shows the assertion is about the compare-and-set rather than about the lock; the unique claim indexes cannot be doing that work here, because two acceptances of one reservation write identical index values. The companion reservation test in the same file establishes the same outcome for creating a reservation, where the unique activity and agent claim indexes reject the second insert as well."
     }
   ]
 }

@@ -529,6 +529,16 @@ Three properties are gated, each on the statement the store actually issues rath
 
 The bound matters because every session in a tenant goes stale together whenever a deployment drops every connection at once, and the caller takes a distributed lock, re-reads and deletes for each session it is handed. Unbounded, that single event becomes one pass doing all of it while the next pass is already due. Bounded, the backlog drains over consecutive passes, which is the same shape retention purging uses — so `ExpireStaleAsync` reports what one pass expired, not that the backlog is gone.
 
+## Reservation transitions and lock leases
+
+Every reservation transition is taken under one or two distributed locks with a fixed thirty-second expiration, and those leases are never renewed. A critical section that outruns its lease keeps working under a lock it has already lost while a second caller is admitted, and that is a property of leases rather than a defect to be tuned away: renewal shortens the window, it cannot close it. The module therefore does not rely on the lease for correctness, and treats the lease as a way to avoid wasted work rather than as the thing that makes a transition safe.
+
+**The compare-and-set at commit is the safety mechanism.** Each transition commits under a document version check, so when two callers are admitted at once, exactly one commit is accepted and the other is rejected by the database. This is gated for creating a reservation and for accepting one, in both cases by granting the lock to both callers — the worst case an expired lease can produce — and requiring that exactly one result reaches storage. The two are rejected by different mechanisms, and the distinction matters when reading the gates. Two concurrent acceptances write the same reservation document with identical index values, so no unique constraint can fire and only the version check can discriminate: removing it makes both callers succeed. Two concurrent creations insert two different reservations carrying the same activity and agent claim keys, so the unique claim indexes reject the second as well, independently of the version check.
+
+**Availability is the single authority for whether an agent may take work.** Producing that answer already reads the agent profile and counts the agent's active interactions, so the reservation path uses the snapshot it receives instead of reading either again. Re-deriving the decision inside the lock would cost two further round trips while the lease runs, and would let a weaker derivation — one that never checked queue entitlement or live session state — overrule the canonical one. A round-trip budget gates this, measured through the real availability service, because measuring it through a double would hide exactly the reads that make up the cost.
+
+Removing the duplicate read also removed a fallback to the caller-supplied in-memory agent. That fallback was unreachable: availability reads the same document through the same session, so when the profile cannot be read the reservation was already refused. Its removal is a simplification, not a change in behaviour.
+
 ## Upgrade and migration safety
 
 Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:

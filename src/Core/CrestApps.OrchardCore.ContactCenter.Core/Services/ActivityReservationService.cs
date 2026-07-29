@@ -130,29 +130,24 @@ public sealed class ActivityReservationService : IActivityReservationService
         }
 
         queueItem = current;
-        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
 
-        if (agent.PresenceStatus != AgentPresenceStatus.Available ||
-            !string.IsNullOrWhiteSpace(agent.ActiveReservationId))
-        {
-            return null;
-        }
-
+        // The availability service is the canonical authority for whether an agent may take work, and answering
+        // that question already costs a read of the agent profile and a count of that agent's active
+        // interactions. Reading the agent and counting again here would double the round trips this critical
+        // section holds two distributed locks across, in order to re-derive a decision that already has an
+        // owner. The locks carry a fixed expiration and are never renewed, so the length of this section is
+        // what decides how often it outruns its lease; what makes that survivable is the version check the
+        // commit below runs under, not the lease.
         var availability = await _availabilityService.GetAsync(agent.ItemId, queueItem.QueueId, cancellationToken);
 
-        if (availability is null)
+        if (availability?.Agent is null)
         {
             return null;
         }
 
-        var capacity = agent.MaxConcurrentInteractions > 0
-            ? agent.MaxConcurrentInteractions
-            : 1;
-        var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(
-            agent.ItemId,
-            cancellationToken);
+        agent = availability.Agent;
 
-        if (activeInteractionCount >= capacity)
+        if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
         {
             return null;
         }
