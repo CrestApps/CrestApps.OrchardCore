@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -139,7 +140,242 @@ public sealed class WorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
         services.AddScoped<IRecipeStep, WorkflowTypeRecipeStep>();
+
+        services
+            .AddWorkflowActivitySchema<CommitTransactionTaskSchema>()
+            .AddWorkflowActivitySchema<CorrelateTaskSchema>()
+            .AddWorkflowActivitySchema<ForEachTaskSchema>()
+            .AddWorkflowActivitySchema<ForkTaskSchema>()
+            .AddWorkflowActivitySchema<ForLoopTaskSchema>()
+            .AddWorkflowActivitySchema<IfElseTaskSchema>()
+            .AddWorkflowActivitySchema<JoinTaskSchema>()
+            .AddWorkflowActivitySchema<LiquidTaskSchema>()
+            .AddWorkflowActivitySchema<LogTaskSchema>()
+            .AddWorkflowActivitySchema<NotifyTaskSchema>()
+            .AddWorkflowActivitySchema<ScriptTaskSchema>()
+            .AddWorkflowActivitySchema<SetOutputTaskSchema>()
+            .AddWorkflowActivitySchema<SetPropertyTaskSchema>()
+            .AddWorkflowActivitySchema<WhileLoopTaskSchema>()
+            .AddWorkflowActivitySchema<WorkflowFaultEventSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the WorkflowHttpRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows.Http")]
+public sealed class WorkflowHttpRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<HttpRedirectTaskSchema>()
+            .AddWorkflowActivitySchema<HttpRequestEventSchema>()
+            .AddWorkflowActivitySchema<HttpRequestFilterEventSchema>()
+            .AddWorkflowActivitySchema<HttpRequestTaskSchema>()
+            .AddWorkflowActivitySchema<HttpResponseTaskSchema>()
+            .AddWorkflowActivitySchema<SignalEventSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the WorkflowTimersRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows.Timers")]
+public sealed class WorkflowTimersRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<TimerEventSchema>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the WorkflowUserTasksRecipe feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Contents", "OrchardCore.Roles")]
+public sealed class WorkflowUserTasksRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<UserTaskEventSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the content activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Contents")]
+public sealed class ContentWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<ContentCreatedEventSchema>()
+            .AddWorkflowActivitySchema<ContentDeletedEventSchema>()
+            .AddWorkflowActivitySchema<ContentDraftSavedEventSchema>()
+            .AddWorkflowActivitySchema<ContentPublishedEventSchema>()
+            .AddWorkflowActivitySchema<ContentUnpublishedEventSchema>()
+            .AddWorkflowActivitySchema<ContentUpdatedEventSchema>()
+            .AddWorkflowActivitySchema<ContentVersionedEventSchema>()
+            .AddWorkflowActivitySchema<CreateContentTaskSchema>()
+            .AddWorkflowActivitySchema<DeleteContentTaskSchema>()
+            .AddWorkflowActivitySchema<PublishContentTaskSchema>()
+            .AddWorkflowActivitySchema<RetrieveContentTaskSchema>()
+            .AddWorkflowActivitySchema<UnpublishContentTaskSchema>()
+            .AddWorkflowActivitySchema<UpdateContentTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schema for the email activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Email")]
+public sealed class EmailWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<EmailTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schema for the SMS activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Sms")]
+public sealed class SmsWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<SmsTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the form activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Forms")]
+public sealed class FormsWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<AddModelValidationErrorTaskSchema>()
+            .AddWorkflowActivitySchema<BindModelStateTaskSchema>()
+            .AddWorkflowActivitySchema<HttpRedirectToFormLocationTaskSchema>()
+            .AddWorkflowActivitySchema<ValidateAntiforgeryTokenTaskSchema>()
+            .AddWorkflowActivitySchema<ValidateFormFieldTaskSchema>()
+            .AddWorkflowActivitySchema<ValidateFormTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the notification activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Notifications")]
+public sealed class NotificationsWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<NotifyContentOwnerTaskSchema>()
+            .AddWorkflowActivitySchema<NotifyUserTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schema for the ReCaptcha activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.ReCaptcha")]
+public sealed class ReCaptchaWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<ValidateReCaptchaTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the role activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Roles")]
+public sealed class RolesWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<GetUsersByRoleTaskSchema>()
+            .AddWorkflowActivitySchema<UnassignUserRoleTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the user activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Users")]
+public sealed class UsersWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<AssignUserRoleTaskSchema>()
+            .AddWorkflowActivitySchema<RegisterUserTaskSchema>()
+            .AddWorkflowActivitySchema<UserConfirmedEventSchema>()
+            .AddWorkflowActivitySchema<UserCreatedEventSchema>()
+            .AddWorkflowActivitySchema<UserDeletedEventSchema>()
+            .AddWorkflowActivitySchema<UserDisabledEventSchema>()
+            .AddWorkflowActivitySchema<UserEnabledEventSchema>()
+            .AddWorkflowActivitySchema<UserLoggedInEventSchema>()
+            .AddWorkflowActivitySchema<UserUpdatedEventSchema>()
+            .AddWorkflowActivitySchema<ValidateUserTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the tenant activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Tenants")]
+public sealed class TenantsWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<CreateTenantTaskSchema>()
+            .AddWorkflowActivitySchema<DisableTenantTaskSchema>()
+            .AddWorkflowActivitySchema<EnableTenantTaskSchema>()
+            .AddWorkflowActivitySchema<SetupTenantTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schema for the Twitter activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Twitter")]
+public sealed class TwitterWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWorkflowActivitySchema<UpdateTwitterStatusTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow activity schemas for the artificial intelligence activities.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.AI")]
+public sealed class AIWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<AIChatSessionAllFieldsExtractedEventSchema>()
+            .AddWorkflowActivitySchema<AIChatSessionClosedEventSchema>()
+            .AddWorkflowActivitySchema<AIChatSessionFieldExtractedEventSchema>()
+            .AddWorkflowActivitySchema<AIChatSessionPostProcessedEventSchema>()
+            .AddWorkflowActivitySchema<AICompletionFromProfileTaskSchema>()
+            .AddWorkflowActivitySchema<AICompletionWithConfigTaskSchema>();
     }
 }
 
