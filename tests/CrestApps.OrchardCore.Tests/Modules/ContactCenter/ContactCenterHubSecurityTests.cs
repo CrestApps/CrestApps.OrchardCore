@@ -193,8 +193,14 @@ public sealed class ContactCenterHubSecurityTests
     }
 
     [Fact]
-    public async Task OnConnectedAsync_WhenTheSessionServiceFails_StillJoinsTheSupervisorAndUserGroups()
+    public async Task OnConnectedAsync_WhenTheSessionServiceFails_AbortsInsteadOfLeavingADeafAgentConnected()
     {
+        // Registration is what puts this connection into the groups its durable session says it belongs to. If it
+        // did not finish, the agent receives none of its queues' events, and nothing later repairs that. Aborting
+        // makes the client reconnect and register again rather than sit there looking available and silently deaf.
+        // This also applies to a user who is a supervisor as well: their agent capability is broken either way, and
+        // a reconnect re-establishes both roles.
+
         // Arrange
         var harness = new HubHarness();
         harness.Grant(ContactCenterPermissions.SignIntoQueues);
@@ -205,14 +211,91 @@ public sealed class ContactCenterHubSecurityTests
         await harness.Hub.OnConnectedAsync();
 
         // Assert
+        Assert.Equal(1, harness.Context.AbortCount);
+        Assert.DoesNotContain(
+            harness.Groups.Operations,
+            operation => operation.Contains(TenantSignalRGroupName.ForUser(TenantName, UserId), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WhenTheConnectionTokenIsAlreadyAborted_StillRegistersAndJoinsEveryGroup()
+    {
+        // A connection's own token is at its most likely to trip exactly when a half-applied membership change does
+        // the most damage: a flaky or reconnecting client. Registration must therefore not be cancellable by it.
+
+        // Arrange
+        var harness = new HubHarness();
+        harness.Grant(ContactCenterPermissions.SignIntoQueues);
+        harness.Grant(ContactCenterPermissions.MonitorContactCenter);
+        harness.SessionService.SessionQueueIds = ["sales", "support"];
+        harness.SessionService.SnapshotQueueIds = ["sales", "support"];
+
+        await harness.Context.ConnectionAbortedSource.CancelAsync();
+
+        // Act
+        await harness.Hub.OnConnectedAsync();
+
+        // Assert
         Assert.Equal(0, harness.Context.AbortCount);
+        Assert.Equal(UserId, Assert.Single(harness.SessionService.ConnectedUserIds));
 
         Assert.Equal(
             [
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"))}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("support"))}",
                 $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.SupervisorsGroup)}",
                 $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
             ],
             harness.Groups.Operations);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WhenTheConnectionTokenAbortsPartWayThroughTheQueueGroups_JoinsAllOfThemAnyway()
+    {
+        // The failure this closes is a partial join: the agent ends up in some of its queues' groups and not
+        // others, so it silently receives work for one queue and never hears about another.
+
+        // Arrange
+        var harness = new HubHarness();
+        harness.Grant(ContactCenterPermissions.SignIntoQueues);
+        harness.SessionService.SessionQueueIds = ["sales", "support", "billing"];
+        harness.SessionService.SnapshotQueueIds = ["sales", "support", "billing"];
+        harness.Groups.CancelAfterOperations(harness.Context.ConnectionAbortedSource, 1);
+
+        // Act
+        await harness.Hub.OnConnectedAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Context.AbortCount);
+
+        Assert.Equal(
+            [
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"))}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("support"))}",
+                $"add:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("billing"))}",
+                $"add:{TenantSignalRGroupName.ForUser(TenantName, UserId)}",
+            ],
+            harness.Groups.Operations);
+    }
+
+    [Fact]
+    public async Task UnwatchQueue_WhenTheConnectionTokenIsAlreadyAborted_StillLeavesTheQueueGroup()
+    {
+        // Leaving a group is the same class of work as joining one: abandoning it half-way leaves the connection
+        // subscribed to a queue the agent is no longer entitled to see.
+
+        // Arrange
+        var harness = new HubHarness();
+
+        await harness.Context.ConnectionAbortedSource.CancelAsync();
+
+        // Act
+        await harness.Hub.UnwatchQueue("sales");
+
+        // Assert
+        Assert.Equal(
+            $"remove:{TenantSignalRGroupName.ForGroup(TenantName, ContactCenterHub.QueueGroup("sales"))}",
+            Assert.Single(harness.Groups.Operations));
     }
 
     private sealed class HubHarness
@@ -326,6 +409,8 @@ public sealed class ContactCenterHubSecurityTests
 
         public int AbortCount { get; private set; }
 
+        public CancellationTokenSource ConnectionAbortedSource { get; } = new();
+
         public override string ConnectionId => ContactCenterHubSecurityTests.ConnectionId;
 
         public override string UserIdentifier => _userId;
@@ -336,7 +421,7 @@ public sealed class ContactCenterHubSecurityTests
 
         public override IFeatureCollection Features { get; }
 
-        public override CancellationToken ConnectionAborted => CancellationToken.None;
+        public override CancellationToken ConnectionAborted => ConnectionAbortedSource.Token;
 
         public override void Abort()
         {
@@ -351,12 +436,32 @@ public sealed class ContactCenterHubSecurityTests
 
     private sealed class RecordingGroupManager : IGroupManager
     {
+        private CancellationTokenSource _cancelAfterSource;
+        private int _cancelAfterOperations;
+
         public List<string> Operations { get; } = [];
+
+        /// <summary>
+        /// Cancels the supplied source once the requested number of group operations have been recorded, so a test
+        /// can reproduce a connection that drops part-way through a multi-group join.
+        /// </summary>
+        /// <param name="source">The connection-aborted source to cancel.</param>
+        /// <param name="operations">The number of operations to allow before cancelling.</param>
+        public void CancelAfterOperations(CancellationTokenSource source, int operations)
+        {
+            _cancelAfterSource = source;
+            _cancelAfterOperations = operations;
+        }
 
         public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
         {
             Assert.Equal(ConnectionId, connectionId);
+
+            // A backplane-backed group manager performs I/O and observes the token it is handed, so honouring it
+            // here is what makes a test able to tell the connection's own token apart from one that never cancels.
+            cancellationToken.ThrowIfCancellationRequested();
             Operations.Add($"add:{groupName}");
+            SignalCancellationIfDue();
 
             return Task.CompletedTask;
         }
@@ -364,9 +469,20 @@ public sealed class ContactCenterHubSecurityTests
         public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
         {
             Assert.Equal(ConnectionId, connectionId);
+            cancellationToken.ThrowIfCancellationRequested();
             Operations.Add($"remove:{groupName}");
+            SignalCancellationIfDue();
 
             return Task.CompletedTask;
+        }
+
+        private void SignalCancellationIfDue()
+        {
+            if (_cancelAfterSource is not null && Operations.Count >= _cancelAfterOperations)
+            {
+                _cancelAfterSource.Cancel();
+                _cancelAfterSource = null;
+            }
         }
     }
 
@@ -435,6 +551,7 @@ public sealed class ContactCenterHubSecurityTests
                 throw ConnectException;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             ConnectedUserIds.Add(userId);
 
             return Task.FromResult(new AgentSession
@@ -457,6 +574,8 @@ public sealed class ContactCenterHubSecurityTests
 
         public Task<AgentDesktopSnapshot> BuildSnapshotAsync(string userId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             return Task.FromResult(new AgentDesktopSnapshot
             {
                 UserId = userId,

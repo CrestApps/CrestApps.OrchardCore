@@ -72,7 +72,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             TenantSignalRGroupName.ForUser(_tenantName, userId),
-            Context.ConnectionAborted);
+            HubConnectionWork.MustComplete);
         await base.OnConnectedAsync();
     }
 
@@ -233,7 +233,10 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
 
             if (authenticationService is not null)
             {
-                status = await authenticationService.GetStatusAsync(Context.ConnectionAborted);
+                // Reads the status but refreshes the provider's OAuth tokens on the way when they are near expiry,
+                // and refresh-token rotation means the old token is already spent at the identity provider. Losing
+                // the replacement to a cancelled connection locks the agent out until they authenticate again.
+                status = await authenticationService.GetStatusAsync(HubConnectionWork.MustComplete);
             }
         });
 
@@ -328,7 +331,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             }
 
             var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
-            result = await synchronizationService.GetActiveCallAsync(userId, Context.ConnectionAborted);
+            // This reads like a lookup but reconciles against the provider: it commits provider state back to each
+            // interaction in its own session and deletes orphans, one commit per interaction. Abandoning it part-way
+            // leaves some interactions reconciled and the rest not, and the caller is typically a client that has
+            // just reconnected, so the connection token is exactly the wrong token to hand it.
+            result = await synchronizationService.GetActiveCallAsync(userId, HubConnectionWork.MustComplete);
         });
 
         if (_logger.IsEnabled(LogLevel.Information))
@@ -378,7 +385,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             }
 
             var synchronizationService = scope.ServiceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
-            result = await synchronizationService.GetActiveCallsAsync(userId, Context.ConnectionAborted);
+            // This reads like a lookup but reconciles against the provider: it commits provider state back to each
+            // interaction in its own session and deletes orphans, one commit per interaction. Abandoning it part-way
+            // leaves some interactions reconciled and the rest not, and the caller is typically a client that has
+            // just reconnected, so the connection token is exactly the wrong token to hand it.
+            result = await synchronizationService.GetActiveCallsAsync(userId, HubConnectionWork.MustComplete);
         });
 
         if (_logger.IsEnabled(LogLevel.Information))

@@ -99,6 +99,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         }
 
         var authorized = false;
+        var registrationFailed = false;
 
         await _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
@@ -116,18 +117,24 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                         Context.ConnectionId,
                         userName,
                         displayName,
-                        Context.ConnectionAborted);
+                        HubConnectionWork.MustComplete);
 
                     foreach (var queueId in session.QueueIds)
                     {
-                        await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
                     }
 
-                    var snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+                    var snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
                     await UpdateQueueGroupsAsync(session.QueueIds, snapshot.QueueIds);
                 }
                 catch (Exception ex)
                 {
+                    // Registration is the step that puts this connection into the groups its durable session says
+                    // it belongs to. If it did not finish, the connection is deaf for some or all of those queues,
+                    // and nothing later repairs that. Abort so the client reconnects and registers again, rather
+                    // than leaving an agent who looks available and silently receives no work.
+                    registrationFailed = true;
+
                     _logger.LogError(
                         OperationalLogRedactor.RedactException(ex),
                         "An error occurred while registering the Contact Center connection for user '{UserId}'.",
@@ -139,11 +146,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             {
                 authorized = true;
 
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetSupervisorsGroup(), Context.ConnectionAborted);
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetSupervisorsGroup(), HubConnectionWork.MustComplete);
             }
         });
 
-        if (!authorized)
+        if (!authorized || registrationFailed)
         {
             Context.Abort();
 
@@ -153,7 +160,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             TenantSignalRGroupName.ForUser(_tenantName, userId),
-            Context.ConnectionAborted);
+            HubConnectionWork.MustComplete);
 
         await base.OnConnectedAsync();
     }
@@ -215,7 +222,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         return _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await services.SessionService.HeartbeatAsync(userId, Context.ConnectionAborted);
+            await services.SessionService.HeartbeatAsync(userId, HubConnectionWork.MustComplete);
         });
     }
 
@@ -259,9 +266,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 Context.User,
                 Context.UserIdentifier,
                 queueId,
-                Context.ConnectionAborted))
+                HubConnectionWork.MustComplete))
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
             }
         });
     }
@@ -277,7 +284,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             return;
         }
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
     }
 
     /// <summary>
@@ -295,7 +302,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
             var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
             var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
 
@@ -310,14 +317,14 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                     userId,
                     normalizedQueueIds,
                     normalizedCampaignIds,
-                    Context.ConnectionAborted);
+                    HubConnectionWork.MustComplete);
             }
             catch (AgentEntitlementDeniedException exception)
             {
                 throw new HubException(exception.Message);
             }
 
-            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -337,11 +344,11 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
 
-            await services.PresenceManager.SignOutAsync(userId, Context.ConnectionAborted);
+            await services.PresenceManager.SignOutAsync(userId, HubConnectionWork.MustComplete);
 
-            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -363,7 +370,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            var previousSnapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
             var normalizedQueueIds = ContactCenterFormHelpers.NormalizeList(queueIds);
             var normalizedCampaignIds = ContactCenterFormHelpers.NormalizeList(campaignIds);
 
@@ -380,7 +387,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                     userId,
                     normalizedQueueIds,
                     normalizedCampaignIds,
-                    Context.ConnectionAborted);
+                    HubConnectionWork.MustComplete);
             }
             catch (AgentEntitlementDeniedException exception)
             {
@@ -392,7 +399,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 throw new HubException("Sign in before changing queue or campaign memberships.");
             }
 
-            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
             await UpdateQueueGroupsAsync(previousSnapshot?.QueueIds, snapshot?.QueueIds);
         });
 
@@ -418,9 +425,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                 userId,
                 status,
                 reason,
-                Context.ConnectionAborted);
+                HubConnectionWork.MustComplete);
 
-            snapshot = await services.SessionService.BuildSnapshotAsync(userId, Context.ConnectionAborted);
+            snapshot = await services.SessionService.BuildSnapshotAsync(userId, HubConnectionWork.MustComplete);
         });
 
         return snapshot;
@@ -443,7 +450,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
             {
                 offered = await services.QueuedVoiceWorkOfferService.OfferForUserAsync(
                     userId,
-                    Context.ConnectionAborted);
+                    HubConnectionWork.MustComplete);
             }
         });
 
@@ -496,7 +503,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (user is not null)
         {
-            var displayName = await services.DisplayNameProvider.GetAsync(user, Context.ConnectionAborted);
+            var displayName = await services.DisplayNameProvider.GetAsync(user, HubConnectionWork.MustComplete);
 
             if (!string.IsNullOrWhiteSpace(displayName))
             {
@@ -536,12 +543,12 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         foreach (var queueId in current.Except(previous))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
         }
 
         foreach (var queueId in previous.Except(current))
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), Context.ConnectionAborted);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetQueueGroup(queueId), HubConnectionWork.MustComplete);
         }
     }
 

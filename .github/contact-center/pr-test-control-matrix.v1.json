@@ -2074,6 +2074,33 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/VoiceEventFanOutIntegrationTests.cs dispatches a non-terminal sequence covering StasisStart, ChannelStateChange and ChannelHangupRequest and requires that no registered teardown service is invoked at all, and dispatches a full call lifecycle and requires that the only event reaching the fan-out is the one that ended the channel. Removing the terminal test from the dispatcher fails both. It also requires that each of the two event types reporting the channel has ended does reach teardown, so the gate cannot be satisfied by never invoking teardown; dropping ChannelDestroyed from the terminal set fails that case and the teardown service's own connected-caller test. Two further tests require that a terminal event still reaches teardown when a call-control bridge absorbs it and when a bridge throws, which is what keeps the cleanup independent of the bridge pipeline. The bridge-throws test previously asserted this using a StasisStart, so it did not exercise a terminal event at all despite its name, and it now uses one."
+    },
+    {
+      "id": "C017",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "W16.2",
+      "gate": "No hub makes a SignalR group membership change cancellable by the connection's own token, and a connection that cannot be fully registered is aborted rather than left connected",
+      "invariant": "A hub connection's group membership is what decides which events reach it. The Contact Center hub joins one group per signed-in queue, and it passed the connection's own token to every one of those joins, so a token that tripped part-way through left the connection in some of its queues' groups and not others. Nothing later repairs that: the durable session still says the agent is signed into every queue, so the agent stays connected, appears available, and silently receives no work for the queues whose joins never happened. The moment the connection token is most likely to trip - a flaky or reconnecting client - is exactly the moment that partial state does the most damage. The convention is now explicit: work whose only product is a value returned to the calling connection may honour the connection token, because if the caller is gone the answer has nowhere to go, while work that changes durable state or group membership runs to completion under a token that never cancels. Three Telephony hub methods that read like queries were reclassified under it. Two refresh interactions through a store that opens its own session and commits per interaction, so cancelling mid-loop leaves a partial durable write; the third refreshes the provider's OAuth tokens when they are near expiry, and because refresh-token rotation spends the old token at the identity provider, losing the replacement locks the agent out until they authenticate again. The same harm was reachable by a second path that is closed with it. When registration threw, the hub logged the failure and carried on, reporting a successful connection, so a store outage produced the same silently deaf agent. Registration failure now aborts the connection. The load-bearing part of that remedy is not the reconnect: the client's automatic reconnect is bounded and gives up after roughly forty seconds without surfacing anything to the user, so an outage longer than that ends with the agent disconnected and unaware. What the abort guarantees is that the client stops heartbeating, and the availability service refuses an agent whose last heartbeat is older than the heartbeat timeout - so the agent becomes unassignable whether or not any write succeeds. Marking the session offline on disconnect is the fast path that applies when the store is reachable; it cannot be the guarantee, because in the store outage that caused the registration failure the disconnect write fails for the same reason, and it is logged and swallowed. This is a deliberate behaviour change, and it aborts a user who is both an agent and a supervisor: their agent capability is broken either way, and being visibly disconnected is a better failure than being silently deaf.",
+      "testId": "CC-C017",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node",
+          "multi-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/HubCancellationConventionTests.cs scans every C# file under src and tests for SignalR group membership calls and fails if any is passed the connection token, which keeps the convention from regressing in hubs that do not exist yet. It enumerates the calls rather than first enumerating hubs, because hub detection from source has blind spots - ChatHubBase matches no hub-shaped file name and AIChatHub derives from AIChatHubCore - and because group membership is also changed outside hub classes, as the real-time notifier does. A companion test asserts the exact set of files the scan reaches, so a scan that silently stopped finding anything could not pass as a clean run. It reads each call's argument list by balancing parentheses rather than by a regex, because these calls nest another call in an argument and a pattern that stopped at the first closing parenthesis would never see the token argument - a weakness the sabotage probe for this gate exposed in an earlier draft of the gate itself. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterHubSecurityTests.cs supplies the behavioural half against the real hub, with a group manager and session service that honour the token they are handed the way a backplane-backed one does. It requires that a connection whose token is already aborted is still registered and still joins every queue group, the supervisor group, and the user group; that a connection whose token trips after the first queue join still joins the remaining queues; that leaving a group is not cancellable either; and that a registration failure aborts the connection. Reverting the connect path to the connection token fails the first two and the scan, reverting the leave path fails the third and the scan, and removing the abort fails the fourth."
     }
   ]
 }

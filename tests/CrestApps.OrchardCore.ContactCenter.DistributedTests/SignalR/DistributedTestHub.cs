@@ -22,7 +22,7 @@ internal sealed class DistributedTestHub(ShellSettings shellSettings) : Hub<IDis
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             TenantSignalRGroupName.ForUser(_tenantName, userId),
-            Context.ConnectionAborted);
+            HubConnectionWork.MustComplete);
         await base.OnConnectedAsync();
     }
 
