@@ -444,6 +444,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
     {
         public OmnichannelContactsMigrations(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelContactsMigrations> logger) { }
         public System.Threading.Tasks.Task<int> CreateAsync() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom10Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
