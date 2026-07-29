@@ -151,16 +151,104 @@ public sealed class VoiceEventFanOutIntegrationTests
 
         var teardownService = new Mock<IAsteriskCallTeardownService>();
         var context = new FanOutContext(throwingBridge.Object, teardownService.Object);
-        var voiceEvent = BuildAriSequence()[0];
+        var terminalEvent = BuildVoiceEvent("StasisEnd", CallState.Disconnected, _startedUtc.AddSeconds(65));
 
         // Act
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            context.DispatchAsync([voiceEvent]));
+            context.DispatchAsync([terminalEvent]));
 
         // Assert
         teardownService.Verify(
-            service => service.ReleaseAsync(voiceEvent, It.IsAny<CancellationToken>()),
+            service => service.ReleaseAsync(terminalEvent, It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Dispatch_WhenABridgeAbsorbsATerminalEvent_StillRunsTerminalTeardown()
+    {
+        // Arrange
+        var absorbingBridge = new Mock<IAsteriskRealtimeVoiceEventBridge>();
+        absorbingBridge
+            .Setup(bridge => bridge.TryHandleAsync(It.IsAny<AsteriskRealtimeVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var teardownService = new Mock<IAsteriskCallTeardownService>();
+        var context = new FanOutContext(absorbingBridge.Object, teardownService.Object);
+        var terminalEvent = BuildVoiceEvent("StasisEnd", CallState.Disconnected, _startedUtc.AddSeconds(65));
+
+        // Act
+        await context.DispatchAsync([terminalEvent]);
+
+        // Assert
+        teardownService.Verify(
+            service => service.ReleaseAsync(terminalEvent, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("StasisEnd")]
+    [InlineData("ChannelDestroyed")]
+    public async Task Dispatch_ForAnEventReportingTheChannelEnded_RunsTerminalTeardown(string eventType)
+    {
+        // Arrange
+        var teardownService = new Mock<IAsteriskCallTeardownService>();
+        var context = new FanOutContext(teardownService: teardownService.Object);
+        var terminalEvent = BuildVoiceEvent(eventType, CallState.Disconnected, _startedUtc.AddSeconds(65));
+
+        // Act
+        await context.DispatchAsync([terminalEvent]);
+
+        // Assert
+        teardownService.Verify(
+            service => service.ReleaseAsync(terminalEvent, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Dispatch_ForANonTerminalEvent_NeverReachesTheTeardownFanOut()
+    {
+        // A live channel emits a continuous stream of non-terminal events and ends exactly once, so the dispatcher
+        // must not fan out to the teardown services until the channel is actually gone. This asserts the gate lives
+        // in the dispatcher rather than depending on each registered implementation to refuse the work itself.
+
+        // Arrange
+        var teardownService = new Mock<IAsteriskCallTeardownService>();
+        var context = new FanOutContext(teardownService: teardownService.Object);
+
+        var nonTerminalEvents = new[]
+        {
+            BuildVoiceEvent("StasisStart", CallState.Ringing, _startedUtc),
+            BuildVoiceEvent("ChannelStateChange", CallState.Connected, _startedUtc.AddSeconds(5)),
+            BuildVoiceEvent("ChannelHangupRequest", CallState.Connected, _startedUtc.AddSeconds(60)),
+        };
+
+        // Act
+        await context.DispatchAsync(nonTerminalEvents);
+
+        // Assert
+        teardownService.Verify(
+            service => service.ReleaseAsync(It.IsAny<AsteriskRealtimeVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Dispatch_OverACallLifecycle_RunsTerminalTeardownOnlyForTheEventThatEndedTheChannel()
+    {
+        // Arrange
+        var released = new List<string>();
+        var teardownService = new Mock<IAsteriskCallTeardownService>();
+        teardownService
+            .Setup(service => service.ReleaseAsync(It.IsAny<AsteriskRealtimeVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<AsteriskRealtimeVoiceEvent, CancellationToken>((voiceEvent, _) => released.Add(voiceEvent.EventType))
+            .Returns(Task.CompletedTask);
+
+        var context = new FanOutContext(teardownService: teardownService.Object);
+
+        // Act
+        await context.DispatchAsync(BuildAriSequence());
+
+        // Assert
+        Assert.Equal(["StasisEnd"], released);
     }
 
     private static string[] BuildDeliveryDeduplicationKeys(AsteriskRealtimeVoiceEvent[] sequence)

@@ -51,11 +51,19 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         {
             // Terminal resource cleanup runs in a finally so it happens regardless of which bridge (if any)
             // claimed the event and even if a bridge throws, because releasing ARI bridges, channels, and
-            // ownership bindings is orthogonal to projecting call status. Each service is a no-op for
-            // non-terminal events and for channels the current tenant does not own.
-            foreach (var callTeardownService in _callTeardownServices)
+            // ownership bindings is orthogonal to projecting call status.
+            //
+            // The terminal test is applied HERE rather than being left to each implementation. A channel emits a
+            // continuous stream of non-terminal events (state changes, DTMF, variable sets) and only ends once, so
+            // gating the fan-out at the point it happens keeps every non-terminal event free of teardown work no
+            // matter how many services are registered — instead of making correctness depend on each one
+            // remembering to re-derive "has this channel ended" before it touches a store or ARI.
+            if (AsteriskTerminalVoiceEvents.IsChannelGone(voiceEvent.EventType))
             {
-                await callTeardownService.ReleaseAsync(voiceEvent, cancellationToken);
+                foreach (var callTeardownService in _callTeardownServices)
+                {
+                    await callTeardownService.ReleaseAsync(voiceEvent, cancellationToken);
+                }
             }
         }
 

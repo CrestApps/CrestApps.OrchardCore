@@ -45,7 +45,7 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
     {
         ArgumentNullException.ThrowIfNull(voiceEvent);
 
-        if (!IsTerminalEvent(voiceEvent.EventType) ||
+        if (!AsteriskTerminalVoiceEvents.IsChannelGone(voiceEvent.EventType) ||
             string.IsNullOrWhiteSpace(voiceEvent.ChannelId))
         {
             return;
@@ -279,12 +279,6 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
                 await RemoveBindingAsync(peer.ChannelId);
             }
         }
-    }
-
-    private static bool IsTerminalEvent(string eventType)
-    {
-        return string.Equals(eventType, "ChannelDestroyed", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(eventType, "StasisEnd", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task DestroyBridgeAsync(string bridgeId)

@@ -2048,6 +2048,32 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationServiceTests.cs requires that creating a reservation read the agent profile once and count that agent's active interactions once, measured through the real availability service rather than a double, because a double would hide the reads the authority itself performs and the budget would then be asserted against a stub instead of against what the critical section costs. Reintroducing either duplicate read fails it. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ActivityReservationSharedDatabaseTests.cs runs two acceptances of one reservation concurrently against a real shared SQLite database with the lock granted to both callers, which is the worst case an expired lease can produce, and with a gate that holds both readers until each has read the pending reservation so the second cannot simply observe the first's result and decline. It requires exactly one acceptance to be returned, the other to fail with a concurrency or database error, and the stored reservation to be accepted once. Removing the version check from the reservation store makes both acceptances succeed and fails the test, which is what shows the assertion is about the compare-and-set rather than about the lock; the unique claim indexes cannot be doing that work here, because two acceptances of one reservation write identical index values. The companion reservation test in the same file establishes the same outcome for creating a reservation, where the unique activity and agent claim indexes reject the second insert as well."
+    },
+    {
+      "id": "C016",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "W16.1",
+      "gate": "Every event that reports an Asterisk channel has ended reaches call teardown, including when a call-control bridge absorbs the event and when a bridge throws, and no other event does",
+      "invariant": "Call teardown releases ARI bridges, channels, and ownership bindings, so an event that ends a channel failing to reach it leaks those resources until the reconciler sweeps. Teardown therefore runs in a finally, independently of the call-control pipeline, so it happens whether or not a bridge claimed the event and even if a bridge threw. That property was not actually gated: the test named for it dispatched a StasisStart, which is not a terminal event, so it asserted only that the dispatcher invoked teardown for some event and would have passed even if terminal teardown had been removed entirely. The bridge-absorbs case was not gated for teardown at all. Both are now gated with a real terminal event. The complementary half is that teardown must not run for anything else. A live channel emits a continuous stream of non-terminal events - state changes, DTMF, variable sets - and ends exactly once, but the dispatcher invoked every registered teardown service for every one of them and relied on each implementation to recognise a non-terminal event and refuse the work. The one shipped implementation does refuse it, on a string comparison before any store or ARI round trip, so this was a latent contract hazard rather than a live cost: the seam is an enumerable extension point whose contract told implementers they would be invoked for every event, so an implementation that read a binding before deciding would issue a store round trip per event on a per-channel event stream. The decision now lives in the dispatcher where the fan-out happens, and the terminal set now has a single named owner shared by the dispatcher and the teardown service instead of living as a private detail of one implementation. That set is deliberately narrower than the set the state mapper treats as terminal: the mapper also treats ChannelHangupRequest as terminal so it can project the call as ending, but a hangup request is a request, and destroying bridges or hanging up the peer leg on it would tear a conversation down before the channel actually ended. The two notions are kept apart on purpose.",
+      "testId": "CC-C016",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented"
+      },
+      "context": {
+        "providers": [
+          "asterisk"
+        ],
+        "databases": [
+          "sqlite"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Telephony/VoiceEventFanOutIntegrationTests.cs dispatches a non-terminal sequence covering StasisStart, ChannelStateChange and ChannelHangupRequest and requires that no registered teardown service is invoked at all, and dispatches a full call lifecycle and requires that the only event reaching the fan-out is the one that ended the channel. Removing the terminal test from the dispatcher fails both. It also requires that each of the two event types reporting the channel has ended does reach teardown, so the gate cannot be satisfied by never invoking teardown; dropping ChannelDestroyed from the terminal set fails that case and the teardown service's own connected-caller test. Two further tests require that a terminal event still reaches teardown when a call-control bridge absorbs it and when a bridge throws, which is what keeps the cleanup independent of the bridge pipeline. The bridge-throws test previously asserted this using a StasisStart, so it did not exercise a terminal event at all despite its name, and it now uses one."
     }
   ]
 }
