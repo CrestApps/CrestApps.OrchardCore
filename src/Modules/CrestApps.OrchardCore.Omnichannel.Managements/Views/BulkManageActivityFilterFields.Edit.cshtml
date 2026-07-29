@@ -21,12 +21,15 @@
     @if (Model.ContactPublishedOptions.Any())
     {
         <div class="col-lg-3">
+            <label asp-for="ContactIsPublished" class="form-label form-label-sm mb-1">@T["Contact status"]</label>
             <select asp-for="ContactIsPublished" asp-items="Model.ContactPublishedOptions" class="form-select form-select-sm"></select>
         </div>
     }
 
     <div class="col-lg-6">
+        <label asp-for="PhoneNumber" class="form-label form-label-sm mb-1">@T["Phone number"]</label>
         <div class="input-group input-group-sm">
+            <label asp-for="PhoneNumberMatchType" class="visually-hidden">@T["Phone match type"]</label>
             <select asp-for="PhoneNumberMatchType" asp-items="Model.PhoneNumberMatchTypes" class="form-select form-select-sm" style="max-width: 140px;"></select>
             <input asp-for="PhoneNumber"
                    class="form-control form-control-sm"
@@ -37,11 +40,13 @@
     </div>
 
     <div class="col-lg-3">
+        <label asp-for="TimeZoneIds" class="form-label form-label-sm mb-1">@T["Time zones"]</label>
         <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-light btn-sm" title="@T["Time zones"]">
         </select>
     </div>
 
     <div class="col-lg-3">
+        <label class="form-label form-label-sm mb-1" for="bulk-dnc-from">@T["Do not call from"]</label>
         <input type="text"
                id="bulk-dnc-from"
                asp-for="DoNotCallFrom"
@@ -51,6 +56,7 @@
     </div>
 
     <div class="col-lg-3">
+        <label class="form-label form-label-sm mb-1" for="bulk-dnc-to">@T["Do not call to"]</label>
         <input type="text"
                id="bulk-dnc-to"
                asp-for="DoNotCallTo"
@@ -66,42 +72,52 @@
     <div class="row gx-2 gy-2">
 
         <div class="col-lg-3">
+            <label asp-for="AttemptFilter" class="form-label form-label-sm mb-1">@T["Attempts"]</label>
             <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="SubjectContentType" class="form-label form-label-sm mb-1">@T["Subject type"]</label>
             <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="Channel" class="form-label form-label-sm mb-1">@T["Channel"]</label>
             <select asp-for="Channel" asp-items="Model.Channels" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="Source" class="form-label form-label-sm mb-1">@T["Source"]</label>
             <select asp-for="Source" asp-items="Model.Sources" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="InteractionType" class="form-label form-label-sm mb-1">@T["Interaction type"]</label>
             <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="Status" class="form-label form-label-sm mb-1">@T["Status"]</label>
             <select asp-for="Status" asp-items="Model.Statuses" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="AssignmentStatus" class="form-label form-label-sm mb-1">@T["Assignment status"]</label>
             <select asp-for="AssignmentStatus" asp-items="Model.AssignmentStatuses" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="CampaignId" class="form-label form-label-sm mb-1">@T["Campaign"]</label>
             <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label asp-for="UrgencyLevel" class="form-label form-label-sm mb-1">@T["Urgency level"]</label>
             <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
         </div>
 
         <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-scheduled-from">@T["Scheduled from"]</label>
             <input type="text"
                    id="bulk-scheduled-from"
                    asp-for="ScheduledFrom"
@@ -110,6 +126,7 @@
         </div>
 
         <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-scheduled-to">@T["Scheduled to"]</label>
             <input type="text"
                    id="bulk-scheduled-to"
                    asp-for="ScheduledTo"
@@ -118,6 +135,7 @@
         </div>
 
         <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-created-from">@T["Created from"]</label>
             <input type="text"
                    id="bulk-created-from"
                    asp-for="CreatedFrom"
@@ -126,6 +144,7 @@
         </div>
 
         <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-created-to">@T["Created to"]</label>
             <input type="text"
                    id="bulk-created-to"
                    asp-for="CreatedTo"
@@ -173,11 +192,24 @@
 
 <script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
-        flatpickr('#bulk-scheduled-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-        flatpickr('#bulk-scheduled-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-        flatpickr('#bulk-created-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-        flatpickr('#bulk-created-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-        flatpickr('#bulk-dnc-from', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-        flatpickr('#bulk-dnc-to', flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+        // flatpickr hides the original input and renders a visible alternate input without an id,
+        // so the label has to be re-pointed at the alternate input to stay usable and accessible.
+        var initializeDatePicker = function (elementId) {
+            var instance = flatpickr('#' + elementId, flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
+
+            if (!instance || !instance.altInput) {
+                return;
+            }
+
+            instance.altInput.id = elementId + '-display';
+
+            var label = document.querySelector('label[for="' + elementId + '"]');
+
+            if (label) {
+                label.setAttribute('for', instance.altInput.id);
+            }
+        };
+
+        ['bulk-scheduled-from', 'bulk-scheduled-to', 'bulk-created-from', 'bulk-created-to', 'bulk-dnc-from', 'bulk-dnc-to'].forEach(initializeDatePicker);
     });
 </script>

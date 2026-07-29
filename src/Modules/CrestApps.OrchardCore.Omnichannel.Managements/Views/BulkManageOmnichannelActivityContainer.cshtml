@@ -4,6 +4,7 @@
 @model BulkManageOmnichannelActivityContainer
 
 <script asp-name="list-management-ui" at="Foot"></script>
+<script asp-name="collapsible-panel" at="Foot"></script>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
@@ -15,14 +16,27 @@
 
     @if (Model.Header is not null)
     {
-        <div class="card text-bg-theme mb-3 position-sticky action-bar">
-            <div class="card-body">
-                <div class="row gx-2 gy-2 align-items-end">
-                    @await DisplayAsync(Model.Header)
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <button class="btn btn-sm btn-link text-decoration-none p-0 d-flex align-items-center gap-2"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#manage-activities-filters"
+                        aria-expanded="true"
+                        aria-controls="manage-activities-filters">
+                    <i class="fa-solid fa-chevron-up" data-collapsible-panel-icon aria-hidden="true"></i>
+                    <span>@T["Filters"]</span>
+                </button>
+            </div>
+            <div class="collapse show" id="manage-activities-filters" data-collapsible-panel="omnichannel-manage-activities-filters">
+                <div class="card-body">
+                    <div class="row gx-2 gy-2 align-items-end">
+                        @await DisplayAsync(Model.Header)
 
-                    <div class="col-auto">
-                        <label class="form-label form-label-sm mb-1" for="page-size">@T["Page size"]</label>
-                        <select id="page-size" name="pageSize" asp-items="Model.PageSizeOptions" class="form-select form-select-sm"></select>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm mb-1" for="page-size">@T["Page size"]</label>
+                            <select id="page-size" name="pageSize" asp-items="Model.PageSizeOptions" class="form-select form-select-sm"></select>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -13,6 +13,12 @@
   },
   {
     "inputs": [
+      "Assets/js/collapsible-panel.js"
+    ],
+    "output": "wwwroot/scripts/collapsible-panel.js"
+  },
+  {
+    "inputs": [
       "Assets/css/item-selector.css"
     ],
     "output": "wwwroot/styles/item-selector.css"

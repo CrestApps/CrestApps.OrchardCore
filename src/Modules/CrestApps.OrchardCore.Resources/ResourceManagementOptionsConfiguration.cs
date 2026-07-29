@@ -28,6 +28,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("collapsible-panel")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineStyle("item-selector")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/styles/item-selector.min.css",

@@ -300,7 +300,9 @@ Route: `Admin/omnichannel/manage-activities`
 
 ### Filters
 
-The filter panel groups fields into **Contact filters** and **Activity filters** so managers can narrow the result set quickly.
+The filter panel groups fields into **Contact filters** and **Activity filters** so managers can narrow the result set quickly. Every filter is rendered with its own label so the purpose of each field stays clear. The phone match-type selector keeps a screen-reader-only label because it sits inside the phone number field group.
+
+The filter card is collapsible and does not stick to the top of the page, which leaves the full viewport available for results. Use the **Filters** toggle in the card header to expand or collapse the panel. The chosen state is stored in the browser's local storage, so the panel reopens in the same state on the next visit.
 
 #### Contact Filters
 
@@ -309,6 +311,9 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Contact status | Select | Filter by published or unpublished contacts |
 | Phone number | Text | Search primary Cell and Home numbers using national-number fragments or a leading `+` for E.164 |
 | Phone match type | Select | Contains, exact match, begins with, or ends with |
+| Time zones | Multi-select | Filter by one or more contact time zones |
+| Do not call from | Date | Only include contacts marked as do-not-call on or after this date |
+| Do not call to | Date | Only include contacts marked as do-not-call on or before this date |
 
 #### Activity Filters
 
@@ -328,6 +333,7 @@ The filter panel groups fields into **Contact filters** and **Activity filters**
 | Scheduled to | Date | Filter activities scheduled on or before this date |
 | Created from | Date | Filter activities created on or after this date |
 | Created to | Date | Filter activities created on or before this date |
+| Limit | Number | Limit the number of records to retrieve |
 
 The assigned-user filter is displayed on its own row to make multi-user searches easier to manage, and it searches across all users instead of only agent-role users.
 
