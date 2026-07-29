@@ -166,6 +166,8 @@ When the import file is not already using E.164 phone numbers, select the defaul
 
 The former `OmnichannelSubject` stereotype is no longer recognized. Existing subject content types must remove that stereotype and attach `OmnichannelSubjectPart`.
 
+Because subject content items are authored and completed through the omnichannel subject flow rather than the standard content workflow, the default content editor action buttons Orchard Core injects (**Publish**, **Save Draft**, and **Preview**) are automatically hidden on the editor of any content type that has `OmnichannelSubjectPart` attached. This applies as soon as the part is attached and is reverted automatically when the part is detached, without any placement configuration.
+
 ### 4) Create Dispositions
 
 1. Go to `Interaction Center` → `Management` → `Dispositions`.

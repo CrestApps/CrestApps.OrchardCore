@@ -36,6 +36,7 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -108,6 +109,10 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
+
+        services.AddSingleton<OmnichannelContentTypeProvider>();
+        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
+        services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
     }
 
 }

@@ -24,6 +24,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 {
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
@@ -50,6 +51,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ILocalClock localClock,
         ISession session,
@@ -61,6 +63,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     {
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _localClock = localClock;
         _session = session;
@@ -125,9 +128,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
+            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
+                if (_contentTypeProvider.IsContactContentType(contentType.Name))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }

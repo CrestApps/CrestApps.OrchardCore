@@ -29,6 +29,7 @@ public sealed class SubjectFlowsController : Controller
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<SubjectFlowSettings> _flowDisplayDriver;
@@ -65,6 +66,7 @@ public sealed class SubjectFlowsController : Controller
         ISourceCatalog<SubjectAction> actionCatalog,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<SubjectFlowSettings> flowDisplayDriver,
@@ -81,6 +83,7 @@ public sealed class SubjectFlowsController : Controller
         _actionCatalog = actionCatalog;
         _dispositionsCatalog = dispositionsCatalog;
         _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _flowDisplayDriver = flowDisplayDriver;
@@ -105,8 +108,10 @@ public sealed class SubjectFlowsController : Controller
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
         var subjectTypes = contentTypes
-            .Where(OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart)
+            .Where(contentType => _contentTypeProvider.IsSubjectContentType(contentType.Name))
             .OrderBy(t => t.DisplayName)
             .ToList();
 

@@ -31,6 +31,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
@@ -63,6 +64,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ISourceCatalog<SubjectAction> actionCatalog,
         IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         ILocalClock localClock,
@@ -77,6 +79,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _actionCatalog = actionCatalog;
         _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
         _displayNameProvider = displayNameProvider;
         _clock = clock;
         _localClock = localClock;
@@ -109,9 +112,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
+            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
+                if (_contentTypeProvider.IsContactContentType(contentType.Name))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }
