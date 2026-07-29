@@ -59,6 +59,14 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(
+        IReadOnlyCollection<string> queueIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _store.CountWaitingByQueueIdsAsync(queueIds, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Task<int> CountWaitingOlderThanAsync(
         string queueId,
         DateTime thresholdUtc,

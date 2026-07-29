@@ -483,6 +483,18 @@ The statement under budget is the one routing runs before every offer: how much 
 
 Both are needed, because the planners disagree and the results do not. PostgreSQL will choose to read a table end to end where SQLite seeks, so only the plan on the engine a deployment actually runs is evidence for that deployment.
 
+### The agent-workspace poll
+
+The second statement under budget belongs to the read that runs most often in the whole product: the workspace state every signed-in agent polls continuously. Its cost used to grow in three separate places, none of which changed a single byte of what the agent saw.
+
+**Queue depth was asked once per queue.** An agent who covers eight queues issued eight counts a poll, and no index could answer any of them: the composite index leads with `DocumentId`, which serves join-back and delete-by-document and says nothing about a queue, and the retention index leads with `Status`, so the planner seeks that and then walks every waiting item in the tenant to find the ones in the queue being asked about. Depth is now one grouped statement covering all of an agent's queues at once, and `IDX_QueueItemIndex_WaitingByQueue (QueueId, Status, DocumentId)` is added alongside the existing indexes so it is answered from the index alone. Batching without the index would only have moved the growth: one statement that walks every waiting item in the contact center is no cheaper than forty that do.
+
+**The work behind recent interactions was resolved one at a time**, so the wrap-up check cost a query per interaction the agent had recently ended. Those activities are now fetched in a single read.
+
+**Recent interactions were read twice**, once for the active-interaction panel and once for the history panel, because each panel fetched what it needed for itself. The list is now read once and shared.
+
+**Both failures are gated, because either alone leaves the other free.** The round trips a single poll issues are counted at the handler, so a caller that loops over the single-item APIs fails on the count rather than on its output — a plan budget cannot see this, since a well-planned statement run once per queue costs the same as one scan. The plan of the batched statement is then measured on SQLite on every build and on real PostgreSQL in the operations-gates workflow, with the seek required to be constrained by both the queue and the status: an index that leads with the queue and tests the status row by row still names the index in the plan while walking every item that queue has ever held. Neither gate is written as "no table scan", because losing the covering index does not produce one — the planner reverts to the `Status`-led retention index, which is a seek by name and unbounded work in fact — so both require that no other index answers this question. As with the routing statement, the plan is measured on the SQL the store actually sends, and the PostgreSQL case executes it as well as explaining it.
+
 ## Upgrade and migration safety
 
 Contact Center follows an expand → migrate → contract policy so a rolling or blue-green deployment never runs an old and a new node against a schema either cannot use:

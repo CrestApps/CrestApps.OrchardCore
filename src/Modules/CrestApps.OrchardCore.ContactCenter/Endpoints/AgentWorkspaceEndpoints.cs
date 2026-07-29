@@ -45,7 +45,12 @@ internal static class AgentWorkspaceEndpoints
         return builder;
     }
 
-    private static async Task<IResult> HandleStateAsync(
+    /// <summary>
+    /// Builds the agent workspace state a signed-in agent polls. Exposed to the test assembly so the number of
+    /// round trips a single poll issues can be asserted directly: the batching this handler relies on lives in
+    /// the stores, and a caller that looped over the single-item APIs instead would produce identical output.
+    /// </summary>
+    internal static async Task<IResult> HandleStateAsync(
         IAuthorizationService authorizationService,
         IAgentProfileManager agentManager,
         IActivityReservationManager reservationManager,
@@ -94,8 +99,15 @@ internal static class AgentWorkspaceEndpoints
             RequestedStatus = profile.RequestedPresenceStatus?.ToString(),
         };
 
-        foreach (var queueId in profile.QueueIds)
+        var queueIds = profile.QueueIds;
+        var waitingCounts = queueIds.Count == 0
+            ? new Dictionary<string, int>(StringComparer.Ordinal)
+            : await queueItemManager.CountWaitingByQueueIdsAsync([.. queueIds], httpContext.RequestAborted);
+
+        foreach (var queueId in queueIds)
         {
+            // Queues are configuration-catalog backed, so resolving them one at a time reads an already
+            // materialized document rather than issuing a query per queue.
             var queue = await queueManager.FindByIdAsync(queueId, httpContext.RequestAborted);
 
             if (queue is null)
@@ -103,19 +115,21 @@ internal static class AgentWorkspaceEndpoints
                 continue;
             }
 
-            var waitingCount = await queueItemManager.CountWaitingAsync(queueId, httpContext.RequestAborted);
-
             model.Queues.Add(new WorkspaceQueueStatViewModel
             {
                 Id = queueId,
                 Name = queue.Name,
-                WaitingCount = waitingCount,
+                WaitingCount = waitingCounts.TryGetValue(queueId, out var waitingCount) ? waitingCount : 0,
             });
         }
 
+        // Read once and share. The active interaction and the history panel are built from the same recent
+        // interactions, so reading them per panel would run the same query twice on every poll.
+        var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
+
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
-        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, authorizationService, interactionManager, activityManager, queueManager, contentManager, userManager, displayNameProvider, linkGenerator, httpContext, httpContext.RequestAborted);
-        model.RecentHistory = await BuildRecentHistoryAsync(profile.ItemId, interactionManager, httpContext.RequestAborted);
+        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, userManager, displayNameProvider, linkGenerator, httpContext, httpContext.RequestAborted);
+        model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
     }
@@ -255,6 +269,7 @@ internal static class AgentWorkspaceEndpoints
 
     private static async Task<WorkspaceActiveInteractionViewModel> BuildActiveInteractionAsync(
         AgentProfile profile,
+        IReadOnlyCollection<Interaction> recentInteractions,
         IAuthorizationService authorizationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
@@ -270,7 +285,7 @@ internal static class AgentWorkspaceEndpoints
 
         if (interaction is null)
         {
-            interaction = await FindPendingWrapUpInteractionAsync(profile, interactionManager, activityManager, cancellationToken);
+            interaction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, cancellationToken);
         }
 
         if (interaction is null)
@@ -315,34 +330,42 @@ internal static class AgentWorkspaceEndpoints
             return true;
         }
 
-        var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, interactionManager, activityManager, cancellationToken);
+        var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, cancellationToken);
+        var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, cancellationToken);
 
         return string.Equals(wrapUpInteraction?.ActivityItemId, activityId, StringComparison.Ordinal);
     }
 
     private static async Task<Interaction> FindPendingWrapUpInteractionAsync(
         AgentProfile profile,
-        IInteractionManager interactionManager,
+        IReadOnlyCollection<Interaction> recentInteractions,
         IOmnichannelActivityManager activityManager,
         CancellationToken cancellationToken)
     {
-        var interactions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, cancellationToken);
+        var candidates = recentInteractions
+            .Where(interaction => interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed &&
+                !string.IsNullOrEmpty(interaction.ActivityItemId))
+            .ToArray();
 
-        foreach (var interaction in interactions)
+        if (candidates.Length == 0)
         {
-            if (interaction.Status is not InteractionStatus.Ended and not InteractionStatus.Failed)
-            {
-                continue;
-            }
+            return null;
+        }
 
-            if (string.IsNullOrEmpty(interaction.ActivityItemId))
-            {
-                continue;
-            }
+        // Every candidate names an activity, and the answer depends on that activity. Resolving them one at a
+        // time would make the number of queries this poll issues depend on how much work the agent has just
+        // finished, so they are resolved together and matched in memory.
+        var activityIds = candidates
+            .Select(interaction => interaction.ActivityItemId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
-            var activity = await activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
+        var activities = await activityManager.ListByIdsAsync(activityIds, cancellationToken);
+        var activitiesById = activities.ToDictionary(activity => activity.ItemId, StringComparer.Ordinal);
 
-            if (activity is null ||
+        foreach (var interaction in candidates)
+        {
+            if (!activitiesById.TryGetValue(interaction.ActivityItemId, out var activity) ||
                 activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
             {
                 continue;
@@ -358,13 +381,8 @@ internal static class AgentWorkspaceEndpoints
         return null;
     }
 
-    private static async Task<IList<WorkspaceHistoryEntryViewModel>> BuildRecentHistoryAsync(
-        string agentId,
-        IInteractionManager interactionManager,
-        CancellationToken cancellationToken)
+    private static IList<WorkspaceHistoryEntryViewModel> BuildRecentHistory(IReadOnlyCollection<Interaction> interactions)
     {
-        var interactions = await interactionManager.ListRecentByAgentAsync(agentId, RecentHistoryCount, cancellationToken);
-
         return [.. interactions.Select(interaction => new WorkspaceHistoryEntryViewModel
         {
             InteractionId = interaction.ItemId,

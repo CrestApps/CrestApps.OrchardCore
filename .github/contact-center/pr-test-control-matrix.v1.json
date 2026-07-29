@@ -1911,6 +1911,39 @@
         ]
       },
       "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/PublicApi/PublicApiApprovalTests.cs reads every project file under src, treats a project in the Contact Center, Telephony or Omnichannel families as governed once a project other than the packaging target or the web host references it, and compares each governed assembly's generated public surface against tests/CrestApps.OrchardCore.Tests/PublicApi/Baselines. A surface with no baseline fails and writes one to be read and committed; a surface that differs fails and writes a received file beside the approved one together with the added and removed lines; a baseline left behind for an assembly nothing compiles against any more fails as well, so the recorded set cannot drift away from the governed set in either direction. The same file refuses a public class that is neither sealed, abstract, the introducer of an overridable member, nor a view model; refuses a public static field or property that can be reassigned; refuses a public static collection whose runtime value can be rewritten, judged by asking the instance rather than reading its declared type, with arrays refused outright because they report themselves as read-only while still allowing element assignment; and refuses a recorded surface containing a filesystem path, so an attribute that embeds the build directory cannot make a baseline that only its author can reproduce. Assemblies are resolved from the test output by file rather than by name, so a governed assembly the test project does not reference reports the missing project reference instead of throwing out of the data provider and taking every other case down with it. The reported difference is qualified by the enclosing type before it is compared, because roughly half of every baseline is text that repeats across types and a set comparison would report a removed member with nothing listed under it. The derivation is guarded against collapsing: it fails if no family project is found, if none is consumed, or if all of them are, which would mean the rule had stopped telling contracts apart from leaf modules."
+    },
+    {
+      "id": "C011",
+      "severity": "P1",
+      "category": "correctness",
+      "planFinding": "W11.9",
+      "gate": "One agent workspace poll costs the same number of database round trips no matter how many queues the agent covers or how much work the agent has just finished",
+      "invariant": "Every signed-in agent polls the workspace continuously, so whatever one poll costs is multiplied by every agent and repeated for as long as they are signed in. A read that asks the database once per queue the agent belongs to, or once per interaction the agent recently ended, produces exactly the same state as a read that asks once, which is why no functional test can tell them apart and why a reviewer sees only a loop over an ordinary lookup. Two distinct failures are therefore gated together, because either alone leaves the other free. The number of round trips a single poll issues is counted, so a caller that loops over the single-item APIs instead of the batched ones fails on the count rather than on the output; and the plan of the batched statement is measured, because a statement that runs once but reads the queue item table end to end merely moves the growth from the number of queues to the number of items ever enqueued. The plan is asserted on both SQLite and on PostgreSQL, the engine single-node production deployments run, since one planner's index seek is the other's sequential scan and only the deployed engine's plan is evidence. Both the queue and the status must be seek constraints rather than the queue alone, because an index that leads with the queue and then filters the status per row still names the index in the plan while walking every item the queue has ever held. The batched statement is also executed, not only explained, since a plan proves nothing about a statement the engine would refuse to run, and its numbers are compared against the per-queue count it replaced so a statement that groups and seeks correctly but answers wrongly cannot pass.",
+      "testId": "CC-C011",
+      "ciJob": {
+        "id": "build_test",
+        "workflow": ".github/workflows/pr_ci.yml",
+        "status": "implemented",
+        "additionalJobs": [
+          {
+            "id": "redis-backplane-two-node",
+            "workflow": ".github/workflows/contact_center_operations_gates.yml"
+          }
+        ]
+      },
+      "context": {
+        "providers": [
+          "all-ga-core-providers"
+        ],
+        "databases": [
+          "sqlite",
+          "postgres"
+        ],
+        "topologies": [
+          "single-node"
+        ]
+      },
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/AgentWorkspaceRoundTripBudgetTests.cs invokes the workspace state handler directly with an agent in twelve queues holding eight recently ended interactions and asserts the batched queue-depth read runs once while the single-queue count never runs, that the activities behind recent work are resolved in one read, that recent interactions are read once rather than once per panel, and that the depths reported are the depths the batched read returned. tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/QueueItemQueryPlanBudgetTests.cs measures the statement the store sends, read from the same builder the store reads it from, against a seeded table using EXPLAIN QUERY PLAN, requiring a covering index seek constrained by both the queue and the status; it counts the statements one batched read issues against one queue and against forty; and it compares the batched counts against the per-queue count on items written through the real store. tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/QueryPlans/QueueItemPostgresQueryPlanBudgetTests.cs repeats the plan assertion on PostgreSQL against forty thousand seeded rows and executes the statement the store sends to confirm the counts it returns."
     }
   ]
 }

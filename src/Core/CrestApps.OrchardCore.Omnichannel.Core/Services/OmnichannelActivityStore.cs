@@ -162,6 +162,27 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(itemIds);
+
+        if (itemIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Resolving every identifier in one query rather than one query per identifier: the callers of this
+        // method hold a page of rows that each name an activity, so a lookup per row makes the cost of showing
+        // the page grow with the size of the page.
+        var activities = await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+            index => index.ItemId.IsIn(itemIds),
+            collection: OmnichannelConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return [.. activities];
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);

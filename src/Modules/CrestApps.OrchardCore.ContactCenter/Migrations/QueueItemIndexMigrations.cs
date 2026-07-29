@@ -209,4 +209,26 @@ internal sealed class QueueItemIndexMigrations : DataMigration
                 "The Contact Center queue-item index contains multiple active items for one activity. Resolve the duplicate legacy queue items before enabling unique active queue-item claims.");
         }
     }
+
+    /// <summary>
+    /// Adds the predicate-led index the agent workspace reads. Every poll asks how many items are waiting in
+    /// each queue the agent belongs to, and no existing index answers that: the composite leads with
+    /// <c>DocumentId</c>, which serves join-back and delete-by-document but says nothing about a queue, and the
+    /// retention index leads with <c>Status</c>, so the planner falls back to seeking that and walking every
+    /// waiting item in the tenant to find the ones belonging to the queue being asked about — once per queue, on
+    /// every poll of every signed-in agent.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex(
+                "IDX_QueueItemIndex_WaitingByQueue",
+                "QueueId",
+                "Status",
+                "DocumentId"),
+            collection: ContactCenterConstants.CollectionName);
+
+        return 4;
+    }
 }

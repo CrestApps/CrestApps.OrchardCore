@@ -34,6 +34,17 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     Task<int> CountWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts the items currently waiting in each of the specified queues using a single aggregate query.
+    /// Queues with no waiting items are absent from the result rather than present with a zero.
+    /// </summary>
+    /// <param name="queueIds">The queue identifiers to count.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of waiting items keyed by queue identifier.</returns>
+    Task<IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(
+        IReadOnlyCollection<string> queueIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Counts the items waiting in the specified queue that were enqueued before the threshold, using an
     /// aggregate query. This supports SLA-breach counting without loading the waiting rows.
     /// </summary>
