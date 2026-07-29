@@ -284,11 +284,9 @@ public sealed class WorkflowActivitySchemaDefinitionTests
                 "ActivityMetadata",
                 "Author",
                 "Bcc",
-                "Body",
                 "BodyFormat",
                 "Cc",
                 "HtmlBody",
-                "IsHtmlBody",
                 "Recipients",
                 "ReplyTo",
                 "Sender",
@@ -298,7 +296,8 @@ public sealed class WorkflowActivitySchemaDefinitionTests
             properties.Select(property => property.Key).OrderBy(key => key, StringComparer.Ordinal));
 
         Assert.Equal(["Recipients"], GetRequired(document));
-        Assert.Contains("Deprecated.", GetDescription(document["properties"]["Body"]));
+        Assert.DoesNotContain("Body", properties.Select(property => property.Key));
+        Assert.DoesNotContain("IsHtmlBody", properties.Select(property => property.Key));
         Assert.Contains(WorkflowActivitySchemaBuilders.LiquidSupportText, GetDescription(document["properties"]["Subject"]));
     }
 

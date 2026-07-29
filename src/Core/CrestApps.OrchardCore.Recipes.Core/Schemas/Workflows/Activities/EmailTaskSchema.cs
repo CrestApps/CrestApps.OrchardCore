@@ -35,8 +35,6 @@ public sealed class EmailTaskSchema : WorkflowActivitySchemaDefinitionBase
         yield return ("Cc", WorkflowActivitySchemaBuilders.LiquidExpression("The comma-separated list of carbon copy email addresses."));
         yield return ("Bcc", WorkflowActivitySchemaBuilders.LiquidExpression("The comma-separated list of blind carbon copy email addresses."));
         yield return ("Subject", WorkflowActivitySchemaBuilders.LiquidExpression("The subject of the email message."));
-        yield return ("Body", WorkflowActivitySchemaBuilders.LiquidExpression("Deprecated. Use 'TextBody' and 'HtmlBody' instead. When set, it is used as the HTML body if 'IsHtmlBody' is true and as the text body otherwise, but only while the matching 'HtmlBody' or 'TextBody' property is absent."));
-        yield return ("IsHtmlBody", WorkflowActivitySchemaBuilders.Boolean("Deprecated. Use 'BodyFormat' instead. Selects which body the deprecated 'Body' property falls back to. Defaults to true, meaning 'Body' is treated as HTML."));
         yield return ("BodyFormat", WorkflowActivitySchemaBuilders.EnumValue("The format of the email message. 'All' sends both the text and the HTML body.", "All", "Text", "Html"));
         yield return ("TextBody", WorkflowActivitySchemaBuilders.LiquidExpression("The plain text body of the email message. Used when 'BodyFormat' is 'All' or 'Text'."));
         yield return ("HtmlBody", WorkflowActivitySchemaBuilders.LiquidExpression("The HTML body of the email message. Used when 'BodyFormat' is 'All' or 'Html'."));
