@@ -6,6 +6,10 @@
 **/wwwroot/**/*.js text eol=lf
 **/wwwroot/**/*.css text eol=lf
 
+# Shell scripts must keep LF endings. A CRLF checkout turns a script's shebang into `#!/bin/sh\r`, and a
+# container that copies the script then fails to start because no interpreter by that name exists.
+*.sh text eol=lf
+
 # Ensure binary files are never treated as text.
 *.webp binary
 *.png binary

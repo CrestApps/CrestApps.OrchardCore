@@ -34,6 +34,12 @@ var coturn = builder.AddContainer("Coturn", "coturn/coturn", "4.6.3")
     .WithEndpoint(port: 3478, targetPort: 3478, scheme: "turn", name: "TurnUdp", protocol: ProtocolType.Udp)
     .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsTcp")
     .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsUdp", protocol: ProtocolType.Udp)
+    // Aspire 13.4.6 builds dashboard URL snapshots by matching each resource URL to a single DCP endpoint
+    // (ResourceSnapshotBuilder.GetUrls uses SingleOrDefault). Coturn publishes the same port over both TCP and
+    // UDP, which resolves to more than one endpoint and throws, killing the DCP watch tasks and preventing every
+    // resource in the app host from starting. Clearing the generated URLs skips that lookup. The endpoints are
+    // still published, so TURN keeps working; only the clickable dashboard links for Coturn are omitted.
+    .WithUrls(context => context.Urls.Clear())
     .WithBindMount("Coturn/turnserver.conf", "/etc/coturn/turnserver.conf", isReadOnly: true);
 
 var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")

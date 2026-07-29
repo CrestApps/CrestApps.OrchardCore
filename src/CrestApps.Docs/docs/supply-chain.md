@@ -43,9 +43,13 @@ The `sbom` job generates an SPDX SBOM with [`microsoft/sbom-tool`](https://githu
 
 ## Container image scanning
 
-The `container-scan` job scans the container images used by the single-node Contact Center profile with [Trivy](https://github.com/aquasecurity/trivy-action) and fails on fixable `HIGH` or `CRITICAL` findings. Results are uploaded as SARIF so they appear in the repository's code scanning alerts.
+The `container-scan` job scans the container images used by the single-node Contact Center profile with [Trivy](https://github.com/aquasecurity/trivy-action). It reports `HIGH` and `CRITICAL` vulnerabilities that have a fix available, and it reports secrets baked into image layers regardless of whether a fix exists. Every image is scanned, and every result is uploaded as SARIF so it appears in the repository's code scanning alerts.
 
-The Asterisk image is built from `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile` and scanned as built; `redis` and `coturn` are scanned as pulled.
+The gate blocks only on images this repository builds, because those are the only findings it can actually remediate. Pulled upstream images (`redis` and `coturn`) are scanned and reported but cannot fail the build. A CVE in an upstream image is fixed by its maintainer, not here, and for `coturn` every tag checked (`4.6.3`, `4.7.0`, and `alpine`) still reports `HIGH` or `CRITICAL` findings, so blocking on it would leave the pipeline permanently red without improving security. Exposure stays visible in code scanning, and the pinned tags are raised when upstream ships a cleaner one.
+
+The Asterisk image is built from `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile` and scanned as built, so it is the one image that can fail the job.
+
+That image generates its self-signed WebRTC certificate in its entrypoint rather than in a `RUN` layer. Generating it at build time would bake the private key into the published bytes, which Trivy correctly reports as a leaked secret, and would give every container pulled from the image the same key. Creating it at container start keeps the key inside the running container and gives each container its own.
 
 Base images are pinned by digest so a scan describes the exact bytes that will run. Update the tag comment and the digest together:
 

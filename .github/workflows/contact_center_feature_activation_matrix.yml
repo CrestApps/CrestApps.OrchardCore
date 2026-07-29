@@ -45,7 +45,6 @@ jobs:
         run: >-
           dotnet test
           -c Release
-         
           --logger "trx;LogFileName=contact-center-feature-activation.trx"
           --results-directory ./artifacts/TestResults/ContactCenterFeatureActivation
           ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj

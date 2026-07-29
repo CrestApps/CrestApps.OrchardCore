@@ -249,6 +249,16 @@ This makes the configuration-backed provider available immediately for local ten
 
 The Aspire host supplies its local-only ARI connection values at runtime. The standalone Asterisk Web sample intentionally keeps ARI credentials out of committed configuration; use user secrets or environment variables as described above. Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. The `/ari/` endpoint can be used to verify that the local ARI service is reachable.
 
+The Asterisk container generates its self-signed WebRTC certificate in its entrypoint rather than in a `RUN` layer, so no private key is baked into the image. The key is created on first start under `/etc/asterisk/keys` and is unique per container.
+
+### Coturn dashboard URLs are suppressed on purpose
+
+The Coturn container registers its TURN endpoints with `WithUrls(context => context.Urls.Clear())`. This is a workaround for a defect in Aspire `13.4.6`, not a configuration preference, and removing it makes the app host fail to start on most runs.
+
+Aspire builds each resource's dashboard URL snapshot in `ResourceSnapshotBuilder.GetUrls`, which resolves a URL to its DCP endpoint with `SingleOrDefault`. Coturn publishes the same port over both TCP and UDP, so that lookup matches more than one endpoint and throws. The exception escapes into the DCP resource watch tasks and terminates them, and because those watchers drive orchestration for every resource, the failure is not limited to Coturn: when it triggers, no container and no project starts. The symptom is `Watch task over Kubernetes Service resources terminated unexpectedly` followed by `Sequence contains more than one matching element` in the app host log. The failure is timing dependent, so an occasional clean run does not mean it is fixed.
+
+Clearing the generated URLs skips that lookup entirely. The endpoints themselves are still published and proxied, so TURN over TCP and UDP on `3478` and `5349` continues to work; the only thing lost is the clickable Coturn link in the dashboard. Remove the call once Aspire resolves the underlying defect.
+
 The default Aspire endpoint template uses `Local/{number}@default`, which loops the originated call back into the bundled demo dialplan. Numeric and E.164 destinations beginning with `+` are supported. The dialplan answers, plays a short generated tone sequence, and enters `Echo()` so the simulation does not depend on sound files that are absent from the container image. That local development path still **originates through the configured Stasis application**, so the same live channel remains under ARI control for hold, resume, mute, merge, inbound answer/reject, and Local-route blind transfer while the simulated media stays inside Asterisk.
 
 ### Two-party dashboard simulation

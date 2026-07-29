@@ -75,5 +75,4 @@ jobs:
         run: >-
           dotnet test
           -c Release
-         
           ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj

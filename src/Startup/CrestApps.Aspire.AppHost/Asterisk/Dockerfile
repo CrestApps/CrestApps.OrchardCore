@@ -3,6 +3,9 @@
 # The base is pinned by digest so the image is reproducible and so the supply chain scan reports on the
 # exact bytes that were scanned. Update the tag comment and the digest together.
 #
+# This image restates the base ENTRYPOINT/CMD so the entrypoint below can wrap them. When the digest is
+# bumped, re-check the base with `docker inspect` and update the CMD here if it changed.
+#
 # Previously this referenced `asterisk/asterisk:22.6.0`, which does not exist on Docker Hub - the registry
 # answers "object not found" for that repository - so this image could never have been built.
 #
@@ -11,13 +14,16 @@ FROM andrius/asterisk@sha256:4cfb208f877b45e88115b35140b1edba06e1374e9bce4b6f5e5
 
 USER root
 
+# The WebRTC certificate is deliberately NOT generated here. Writing it into an image layer would bake a
+# private key into the published image, so the entrypoint creates it at container start instead.
 RUN mkdir -p /etc/asterisk/keys \
-    && openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
-        -keyout /etc/asterisk/keys/asterisk.key \
-        -out /etc/asterisk/keys/asterisk.pem \
-        -subj "/CN=localhost" \
     && chown -R asterisk:asterisk /etc/asterisk/keys \
-    && chmod 600 /etc/asterisk/keys/asterisk.key \
-    && chmod 644 /etc/asterisk/keys/asterisk.pem
+    && chmod 700 /etc/asterisk/keys
+
+COPY --chown=asterisk:asterisk docker-entrypoint.sh /usr/local/bin/crestapps-entrypoint.sh
+RUN chmod 755 /usr/local/bin/crestapps-entrypoint.sh
 
 USER asterisk
+
+ENTRYPOINT ["/usr/local/bin/crestapps-entrypoint.sh"]
+CMD ["/usr/sbin/asterisk", "-vvvdddf", "-T", "-W", "-U", "asterisk", "-p"]
