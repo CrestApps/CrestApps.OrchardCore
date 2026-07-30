@@ -42,8 +42,6 @@ public sealed class EndlessStream : Stream
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        // A caller that really never stops would hang a regression instead of failing it, so the double gives up
-        // well past any limit a reader is entitled to honour.
         if (BytesProduced >= ExhaustionCeilingBytes)
         {
             return ValueTask.FromResult(0);

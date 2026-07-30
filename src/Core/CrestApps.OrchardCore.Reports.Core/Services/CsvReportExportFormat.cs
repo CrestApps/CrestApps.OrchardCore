@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 

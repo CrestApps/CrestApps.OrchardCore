@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
+    private readonly Redactor _addressRedactor;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -73,6 +75,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="smsService">The sms service.</param>
     /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
     /// <param name="jsonSerializerOptions">The json serializer options.</param>
+    /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelEventHandler(
@@ -91,6 +94,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
         IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
+        IRedactorProvider redactorProvider,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -110,6 +114,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _omnichannelActivityStore = omnichannelActivityStore;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
+        _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _logger = logger;
         S = stringLocalizer;
     }
@@ -133,7 +138,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (endpoint is null)
         {
-            _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), OperationalLogRedactor.Redact(omnichannelEvent.Message.ServiceAddress, OperationalLogFieldKind.Address));
+            _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), _addressRedactor.Redact(omnichannelEvent.Message.ServiceAddress));
 
             return;
         }
@@ -146,7 +151,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (activity is null)
         {
-            _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), OperationalLogRedactor.Redact(omnichannelEvent.Message.ServiceAddress, OperationalLogFieldKind.Address), OperationalLogRedactor.Redact(omnichannelEvent.Message.CustomerAddress, OperationalLogFieldKind.Address));
+            _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), _addressRedactor.Redact(omnichannelEvent.Message.ServiceAddress), _addressRedactor.Redact(omnichannelEvent.Message.CustomerAddress));
 
             return;
         }
@@ -167,7 +172,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (flowSettings is null)
         {
-            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} were not found. Cannot process incoming SMS message.", activity.SubjectContentType, OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} were not found. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId.SanitizeLogValue());
 
             return;
         }
@@ -178,7 +183,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (string.IsNullOrWhiteSpace(profileId))
         {
-            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} do not have an AI profile. Cannot process incoming SMS message.", activity.SubjectContentType, OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogWarning("The subject flow settings for subject '{SubjectContentType}' associated with Activity {ActivityId} do not have an AI profile. Cannot process incoming SMS message.", activity.SubjectContentType, activity.ItemId.SanitizeLogValue());
 
             return;
         }
@@ -187,14 +192,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (profile is null || profile.Type != AIProfileType.Chat)
         {
-            _logger.LogWarning("The AI profile '{ProfileId}' associated with Activity {ActivityId} was not found or is not a chat profile. Cannot process incoming SMS message.", OperationalLogRedactor.Pseudonymize(profileId), OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogWarning("The AI profile '{ProfileId}' associated with Activity {ActivityId} was not found or is not a chat profile. Cannot process incoming SMS message.", profileId.SanitizeLogValue(), activity.ItemId.SanitizeLogValue());
 
             return;
         }
 
         if (string.IsNullOrWhiteSpace(activity.AISessionId))
         {
-            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Session associated with it. Cannot process incoming SMS message.", OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Session associated with it. Cannot process incoming SMS message.", activity.ItemId.SanitizeLogValue());
 
             return;
         }
@@ -203,7 +208,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (chatSession is null)
         {
-            _logger.LogWarning("The AI Chat Session {AISessionId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", OperationalLogRedactor.Pseudonymize(activity.AISessionId, OperationalLogIdentifierCategory.Session), OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogWarning("The AI Chat Session {AISessionId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AISessionId.SanitizeLogValue(), activity.ItemId.SanitizeLogValue());
 
             return;
         }
@@ -215,7 +220,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (profile is null || profile.Type != AIProfileType.Chat)
             {
-                _logger.LogWarning("The AI profile '{ProfileId}' associated with AI Chat Session {AISessionId} was not found or is not a chat profile. Cannot process incoming SMS message.", OperationalLogRedactor.Pseudonymize(chatSession.ProfileId), OperationalLogRedactor.Pseudonymize(chatSession.SessionId, OperationalLogIdentifierCategory.Session));
+                _logger.LogWarning("The AI profile '{ProfileId}' associated with AI Chat Session {AISessionId} was not found or is not a chat profile. Cannot process incoming SMS message.", chatSession.ProfileId.SanitizeLogValue(), chatSession.SessionId.SanitizeLogValue());
 
                 return;
             }
@@ -251,7 +256,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (string.IsNullOrWhiteSpace(bestChoice))
             {
-                _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI profile {ProfileId}.", OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity), OperationalLogRedactor.Pseudonymize(profile.ItemId));
+                _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
 
                 return;
             }
@@ -259,7 +264,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity), OperationalLogRedactor.Pseudonymize(profile.ItemId));
+            _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI profile {ProfileId}.", activity.ItemId.SanitizeLogValue(), profile.ItemId.SanitizeLogValue());
 
             return;
         }
@@ -456,7 +461,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Failed to send SMS message to {To} for Activity {ActivityId}.", OperationalLogRedactor.Redact(activity.PreferredDestination, OperationalLogFieldKind.Address), OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity));
+            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", _addressRedactor.Redact(activity.PreferredDestination), activity.ItemId.SanitizeLogValue());
         }
 
         await _session.SaveAsync(chatSession);
@@ -485,7 +490,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (contact is null)
         {
-            _logger.LogWarning("Unable to update Do not SMS for Activity {ActivityId} because contact {ContactContentItemId} was not found.", OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity), OperationalLogRedactor.Pseudonymize(activity.ContactContentItemId, OperationalLogIdentifierCategory.Metadata));
+            _logger.LogWarning("Unable to update Do not SMS for Activity {ActivityId} because contact {ContactContentItemId} was not found.", activity.ItemId.SanitizeLogValue(), activity.ContactContentItemId.SanitizeLogValue());
         }
         else
         {

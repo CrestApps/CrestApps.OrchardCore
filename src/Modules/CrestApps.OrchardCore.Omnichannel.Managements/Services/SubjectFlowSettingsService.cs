@@ -60,14 +60,16 @@ internal sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
         var configuredFlowSettings = await GetConfiguredFlowSettingsAsync(cancellationToken);
         var configuredSubjectNames = configuredFlowSettings
             .Select(flowSettings => flowSettings.SubjectContentType)
+            .Where(subjectContentType => !string.IsNullOrWhiteSpace(subjectContentType))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-        var subjectContentTypeNames = await _contentTypeProvider.GetSubjectContentTypesAsync();
+
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
         return contentTypes
             .Where(contentType =>
-                subjectContentTypeNames.Contains(contentType.Name) &&
+                _contentTypeProvider.IsSubjectContentType(contentType.Name) &&
                 configuredSubjectNames.Contains(contentType.Name))
             .OrderBy(contentType => contentType.DisplayName)
             .ToArray();

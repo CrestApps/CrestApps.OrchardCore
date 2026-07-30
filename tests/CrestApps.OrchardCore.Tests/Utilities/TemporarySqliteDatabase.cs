@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Threading;
 using Microsoft.Data.Sqlite;
 using YesSql;
 

@@ -124,6 +124,7 @@ const sidebars = {
                 'modules/phone-number-verifications-veriphone',
                 'modules/phone-number-verifications-twilio',
                 'modules/recipes',
+                'modules/reports',
                 'modules/workflow-activity-schemas',
                 'modules/resources',
                 'modules/roles',

@@ -107,10 +107,11 @@ public sealed class SubjectFlowsController : Controller
         }
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-        var subjectContentTypeNames = await _contentTypeProvider.GetSubjectContentTypesAsync();
+
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
         var subjectTypes = contentTypes
-            .Where(contentType => subjectContentTypeNames.Contains(contentType.Name))
+            .Where(contentType => _contentTypeProvider.IsSubjectContentType(contentType.Name))
             .OrderBy(t => t.DisplayName)
             .ToList();
 

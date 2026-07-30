@@ -103,7 +103,8 @@ The backplane channel prefix includes both `InstancePrefix` and the immutable Or
 
 Use a deployment-unique `InstancePrefix` that identifies the application, environment, and region whenever Redis infrastructure is shared. Reusing an empty or generic prefix across deployments can merge the backplane channels of tenants with the same shell name.
 
-For multi-node Contact Center deployments, also enable `OrchardCore.Redis.Lock` because routing, webhook inbox acceptance, and other distributed critical sections require the Redis lock implementation independently of the SignalR backplane.
+For multi-node deployments, also enable `OrchardCore.Redis.Lock` when features rely on distributed critical sections, because they require the Redis lock implementation independently of the SignalR backplane.
+
 ## Authenticating with access tokens
 
 Browser clients that are already signed in are authenticated through the regular authentication cookie, and nothing extra is required.

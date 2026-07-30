@@ -134,6 +134,7 @@ Configure where it appears on the **Soft Phone** tab of the telephony settings:
 - **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
   by default.
 - **Show the soft phone on the front end** displays the widget on the website.
+- **Recent calls to display** controls how many interactions appear on the **Recent** tab (default `30`, maximum `200`).
 - **Accent color** controls the widget's button and control colors.
 - **Recent calls count** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
 
@@ -315,6 +316,8 @@ name, the user id and name, the call direction and outcome, the start and end ti
 duration. Because the index covers the interaction id, provider name, user name, and call date, the
 site keeps a searchable call history for reporting and history tracking that is **independent of the
 provider** — the data remains even if the provider integration is later removed.
+
+Interaction updates use optimistic concurrency. If two callers update the same interaction from stale copies, the later save fails instead of silently overwriting the first caller's state.
 
 The soft phone reads this history through the hub's `GetInteractions` method to render its history
 panel. Outbound calls placed from the soft phone are recorded automatically. Inbound and missed

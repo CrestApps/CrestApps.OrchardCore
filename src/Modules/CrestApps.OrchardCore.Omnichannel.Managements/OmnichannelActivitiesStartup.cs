@@ -2,13 +2,11 @@ using CrestApps.Core;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
-using CrestApps.OrchardCore.Omnichannel.Managements.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
@@ -87,47 +85,6 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
         services.AddScoped<ICatalogEntryHandler<SubjectAction>, SubjectActionHandler>();
         services.AddScoped<ICatalogEntryHandler<SubjectFlowSettings>, SubjectFlowSettingsHandler>();
-
-        // The import order matters: a campaign references a campaign group, and a subject flow references the
-        // dispositions it can end on, so a plan that carried them in registration order would fail on a fresh tenant.
-        services
-            .AddConfigurationCatalog<OmnichannelDisposition, INamedCatalogManager<OmnichannelDisposition>>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.Disposition,
-                "Dispositions",
-                order: 10)
-            .AddConfigurationCatalog<OmnichannelChannelEndpoint, IOmnichannelChannelEndpointManager>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.ChannelEndpoint,
-                "ChannelEndpoints",
-                order: 20)
-            .AddConfigurationCatalog<OmnichannelCampaignGroup, ICatalogManager<OmnichannelCampaignGroup>>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.CampaignGroup,
-                "CampaignGroups",
-                order: 30)
-            .AddConfigurationCatalog<OmnichannelCampaign, ICatalogManager<OmnichannelCampaign>>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.Campaign,
-                "Campaigns",
-                order: 40)
-            .AddConfigurationCatalog<SubjectFlowSettings, ICatalogManager<SubjectFlowSettings>>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.SubjectFlowSettings,
-                "SubjectFlows",
-                order: 50,
-                identityProperties: [nameof(SubjectFlowSettings.SubjectContentType)])
-            .AddSourceConfigurationCatalog<SubjectAction, ISourceCatalogManager<SubjectAction>>(
-                OmnichannelConfigurationCatalogs.Group,
-                OmnichannelConfigurationCatalogs.SubjectAction,
-                "SubjectActions",
-                order: 60,
-                identityProperties:
-                [
-                    nameof(SubjectAction.SubjectContentType),
-                    nameof(SubjectAction.DispositionId),
-                    nameof(SubjectAction.Source),
-                ]);
 
         services
             .AddScoped<ISourceCatalog<SubjectAction>, SubjectActionCatalog>()

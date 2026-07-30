@@ -5,6 +5,16 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class SoftPhoneWidgetSettingsTests
 {
     [Fact]
+    public void Constructor_WithoutConfiguration_ShouldDisplayOnAdmin()
+    {
+        // Act
+        var settings = new SoftPhoneWidgetSettings();
+
+        // Assert
+        Assert.True(settings.DisplayOnAdmin);
+    }
+
+    [Fact]
     public void Constructor_WithoutConfiguration_ShouldDefaultRecentCallsCountToThirty()
     {
         // Act
