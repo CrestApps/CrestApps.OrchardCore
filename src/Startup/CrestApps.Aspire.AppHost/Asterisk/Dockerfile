@@ -14,6 +14,14 @@ FROM andrius/asterisk@sha256:4cfb208f877b45e88115b35140b1edba06e1374e9bce4b6f5e5
 
 USER root
 
+# The base image is pinned by digest, so it never receives the Debian security updates published after it
+# was built, and the supply chain scan blocks the build on any fixable CRITICAL/HIGH OS package. Applying
+# the available security patches here keeps the reproducible pinned base while ensuring the OS packages are
+# current at build time - the Asterisk binary itself is compiled from source in the base and is untouched.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # The WebRTC certificate is deliberately NOT generated here. Writing it into an image layer would bake a
 # private key into the published image, so the entrypoint creates it at container start instead.
 RUN mkdir -p /etc/asterisk/keys \

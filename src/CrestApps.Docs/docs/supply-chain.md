@@ -58,6 +58,8 @@ Base images are pinned by digest so a scan describes the exact bytes that will r
 FROM andrius/asterisk@sha256:4cfb208f877b45e88115b35140b1edba06e1374e9bce4b6f5e55a84e60254b92
 ```
 
+Pinning by digest means the base never receives the Debian security updates published after it was built, so a fixable `HIGH` or `CRITICAL` in an OS package it ships would fail the gate even though the fix is already in Debian. The Dockerfile therefore applies the available security patches with `apt-get upgrade` at build time. This keeps the reproducible pinned base while bringing its OS packages current, and the Asterisk binary is compiled from source in the base so the upgrade never touches it.
+
 ## Dependency updates
 
 Dependabot version update pull requests are enabled weekly for NuGet, npm, and GitHub Actions, grouped so routine minor and patch bumps arrive as a single review. Orchard Core packages and the bundled themes remain pinned and are never auto-updated.
