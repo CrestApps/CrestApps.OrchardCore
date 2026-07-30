@@ -12,7 +12,7 @@ using OrchardCore;
 using OrchardCore.Data;
 using YesSql;
 using YesSql.Provider.Sqlite;
-using YesSql.Sql;
+using YesSql.Sql;
 using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;

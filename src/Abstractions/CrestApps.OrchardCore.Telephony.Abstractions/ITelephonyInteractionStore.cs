@@ -16,7 +16,8 @@ public interface ITelephonyInteractionStore
     Task CreateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing interaction.
+    /// Updates an existing interaction. The write is guarded by an optimistic-concurrency check, so a
+    /// caller that mutated a stale copy fails instead of silently discarding a concurrent update.
     /// </summary>
     /// <param name="interaction">The interaction to update.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

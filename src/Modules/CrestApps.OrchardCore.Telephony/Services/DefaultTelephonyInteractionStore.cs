@@ -33,7 +33,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
-        return _session.SaveAsync(interaction, cancellationToken: cancellationToken);
+        return _session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>

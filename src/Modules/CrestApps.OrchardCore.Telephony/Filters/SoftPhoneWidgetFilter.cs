@@ -103,6 +103,9 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
             ? SoftPhoneWidgetSettings.DefaultAccentColor
             : settings.AccentColor;
         shape.Properties["Capabilities"] = capabilities;
+        shape.Properties["RecentCallsCount"] = settings.RecentCallsCount is >= 1 and <= 200
+            ? settings.RecentCallsCount
+            : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 

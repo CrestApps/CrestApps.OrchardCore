@@ -48,6 +48,9 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
             model.AccentColor = string.IsNullOrWhiteSpace(settings.AccentColor)
                 ? SoftPhoneWidgetSettings.DefaultAccentColor
                 : settings.AccentColor;
+            model.RecentCallsCount = settings.RecentCallsCount is >= 1 and <= 200
+                ? settings.RecentCallsCount
+                : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
         }).Location("Content:5#Soft Phone")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
@@ -71,6 +74,7 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
         settings.AccentColor = string.IsNullOrWhiteSpace(model.AccentColor)
             ? SoftPhoneWidgetSettings.DefaultAccentColor
             : model.AccentColor.Trim();
+        settings.RecentCallsCount = Math.Clamp(model.RecentCallsCount, 1, 200);
 
         return Edit(site, settings, context);
     }

@@ -2,14 +2,14 @@ namespace CrestApps.OrchardCore.Diagnostics;
 
 /// <summary>
 /// Classifies the operational-logging sensitivity of a value so <see cref="OperationalLogRedactor"/> can apply a
-/// consistent redaction or pseudonymization rule across every Contact Center, Telephony, and Omnichannel provider path.
+/// consistent redaction or pseudonymization rule across Telephony, Omnichannel, and other provider paths.
 /// </summary>
 public enum OperationalLogFieldKind
 {
     /// <summary>
-    /// A stable correlation identifier, such as a user, agent, session, call, interaction, activity, reservation, or
-    /// queue id. Identifiers are pseudonymized with a process-local keyed hash so operators can correlate related
-    /// log lines within one process lifetime without ever seeing the raw value.
+    /// A stable correlation identifier, such as a user, session, call, interaction, activity, or event id. Identifiers
+    /// are pseudonymized with a process-local keyed hash so operators can correlate related log lines within one
+    /// process lifetime without ever seeing the raw value.
     /// </summary>
     Identifier,
 

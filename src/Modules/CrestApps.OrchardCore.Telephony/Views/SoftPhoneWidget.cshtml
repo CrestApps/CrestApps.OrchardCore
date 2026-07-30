@@ -1,11 +1,15 @@
 @using CrestApps.OrchardCore.Telephony
 @using CrestApps.OrchardCore.Telephony.Hubs
+@using CrestApps.OrchardCore.Telephony.Models
 @using CrestApps.Core.SignalR.Services
 @using System.Text.Json
 @inject HubRouteManager HubRouteManager
 @{
     var hubUrl = HubRouteManager.GetPathByHub<TelephonyHub>();
     var accentColor = Model.AccentColor as string ?? "#2f6fed";
+    var recentCallsCount = Model.RecentCallsCount is int configuredRecentCallsCount
+        ? configuredRecentCallsCount
+        : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
     var capabilities = Model.Capabilities is int caps ? caps : 0;
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
 
@@ -13,6 +17,7 @@
     {
         ["hubUrl"] = hubUrl,
         ["capabilities"] = capabilities,
+        ["recentCallsCount"] = recentCallsCount,
         ["connectUrl"] = connectUrl,
         ["storageKey"] = "telephony-soft-phone",
         ["strings"] = new Dictionary<string, string>
