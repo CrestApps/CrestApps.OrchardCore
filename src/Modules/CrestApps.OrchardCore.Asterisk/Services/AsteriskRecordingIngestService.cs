@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -69,9 +69,9 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
             catch (Exception ex)
             {
                 _logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "An unexpected error occurred while ingesting recording {RecordingName}.",
-                    OperationalLogRedactor.Pseudonymize(job.RecordingName, OperationalLogIdentifierCategory.Call));
+                    job.RecordingName.SanitizeLogValue());
 
                 await RecordFailureAsync(job, nowUtc, "An unexpected error occurred during ingestion.", cancellationToken);
             }
@@ -96,9 +96,9 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
             catch (AsteriskAriException ex)
             {
                 _logger.LogWarning(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Downloading recording {RecordingName} from Asterisk failed; it will be retried.",
-                    OperationalLogRedactor.Pseudonymize(job.RecordingName, OperationalLogIdentifierCategory.Call));
+                    job.RecordingName.SanitizeLogValue());
 
                 await RecordFailureAsync(job, nowUtc, "The stored recording could not be downloaded from Asterisk.", cancellationToken);
 
@@ -143,9 +143,9 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "The Asterisk source file for recording {RecordingName} could not be deleted after ingestion; cleanup will be retried.",
-                OperationalLogRedactor.Pseudonymize(job.RecordingName, OperationalLogIdentifierCategory.Call));
+                job.RecordingName.SanitizeLogValue());
 
             await RecordFailureAsync(job, nowUtc, "The Asterisk source file could not be deleted after ingestion.", cancellationToken);
 
@@ -174,7 +174,7 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
 
             _logger.LogError(
                 "Recording {RecordingName} could not be ingested after {AttemptCount} attempts and was dead-lettered.",
-                OperationalLogRedactor.Pseudonymize(job.RecordingName, OperationalLogIdentifierCategory.Call),
+                job.RecordingName.SanitizeLogValue(),
                 job.AttemptCount);
         }
         else

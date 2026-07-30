@@ -1,10 +1,10 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -135,9 +135,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                     registrationFailed = true;
 
                     _logger.LogError(
-                        OperationalLogRedactor.RedactException(ex),
+                        ex,
                         "An error occurred while registering the Contact Center connection for user '{UserId}'.",
-                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
+                        userId.SanitizeLogValue());
                 }
             }
 
@@ -182,9 +182,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
                     catch (Exception ex)
                     {
                         _logger.LogError(
-                            OperationalLogRedactor.RedactException(ex),
+                            ex,
                             "An error occurred while removing the Contact Center connection for user '{UserId}'.",
-                            OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
+                            userId.SanitizeLogValue());
                     }
                 });
             }

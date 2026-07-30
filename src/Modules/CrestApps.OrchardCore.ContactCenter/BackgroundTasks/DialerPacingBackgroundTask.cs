@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -42,7 +41,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             }
             catch (Exception ex)
             {
-                logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while running dialer profile '{Profile}'.", profile.Name);
+                logger.LogError(ex, "An error occurred while running dialer profile '{Profile}'.", profile.Name);
             }
         }
     }

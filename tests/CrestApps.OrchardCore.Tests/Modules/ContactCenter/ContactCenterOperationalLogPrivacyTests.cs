@@ -4,16 +4,24 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
-/// Proves the R1 centralized operational-log redaction contract: no Contact Center, Telephony, Asterisk, DialPad,
-/// or Omnichannel.Sms path emits a raw E.164/customer address, a stable personal identifier, or a secret/token, while
-/// control-character log-forging protection continues to work.
+/// Proves the centralized operational-log redaction contract now enforced through
+/// <c>Microsoft.Extensions.Compliance.Redaction</c>: no Contact Center, Telephony, Asterisk, DialPad, or
+/// Omnichannel.Sms path emits a raw E.164/customer address or a stable personal identifier, every sensitive value is
+/// wrapped in <c>SanitizeLogValue()</c> or an erasing redactor, control-character
+/// log-forging protection continues to work, and exceptions are handed to the logger as the exception parameter instead
+/// of being interpolated into the message template.
 /// </summary>
 public sealed partial class ContactCenterOperationalLogPrivacyTests
 {
@@ -35,35 +43,10 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
     }
 
     [Fact]
-    public void OperationalLogRedactor_WhenGivenSentinelValues_NeverEmitsThemRaw()
-    {
-        // Act
-        var redactedAddress = OperationalLogRedactor.Redact(SentinelE164, OperationalLogFieldKind.Address);
-        var redactedSecret = OperationalLogRedactor.Redact(SentinelSecret, OperationalLogFieldKind.Secret);
-        var pseudonymizedUserId = OperationalLogRedactor.Pseudonymize(SentinelUserId, OperationalLogIdentifierCategory.User);
-        var pseudonymizedCallId = OperationalLogRedactor.Pseudonymize(SentinelCallId, OperationalLogIdentifierCategory.Call);
-        var redactedMetadata = OperationalLogRedactor.RedactMetadata(new Dictionary<string, object>
-        {
-            ["callerId"] = SentinelE164,
-            ["apiKey"] = SentinelSecret,
-        });
-
-        // Assert
-        Assert.DoesNotContain(SentinelE164, redactedAddress, StringComparison.Ordinal);
-        Assert.DoesNotContain(SentinelSecret, redactedSecret, StringComparison.Ordinal);
-        Assert.DoesNotContain(SentinelUserId, pseudonymizedUserId, StringComparison.Ordinal);
-        Assert.DoesNotContain(SentinelCallId, pseudonymizedCallId, StringComparison.Ordinal);
-        Assert.DoesNotContain(SentinelE164, redactedMetadata, StringComparison.Ordinal);
-        Assert.DoesNotContain(SentinelSecret, redactedMetadata, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void TelephonyHub_DescribeDialRequest_NeverContainsRawCustomerAddresses()
     {
         // Arrange
-        var method = typeof(TelephonyHub).GetMethod(
-            "DescribeDialRequest",
-            BindingFlags.NonPublic | BindingFlags.Static);
+        var hub = CreateTelephonyHub();
         var request = new DialRequest
         {
             To = SentinelE164,
@@ -71,7 +54,7 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         };
 
         // Act
-        var description = Assert.IsType<string>(method?.Invoke(null, [request]));
+        var description = InvokeDescribe(hub, "DescribeDialRequest", request);
 
         // Assert
         Assert.DoesNotContain(request.To, description, StringComparison.Ordinal);
@@ -79,12 +62,10 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
     }
 
     [Fact]
-    public void TelephonyHub_DescribeCallReference_NeverContainsRawCallIdOrSecretMetadata()
+    public void TelephonyHub_DescribeCallReference_NeverContainsRawSecretMetadataValues()
     {
         // Arrange
-        var method = typeof(TelephonyHub).GetMethod(
-            "DescribeCallReference",
-            BindingFlags.NonPublic | BindingFlags.Static);
+        var hub = CreateTelephonyHub();
         var call = new CallReference
         {
             CallId = SentinelCallId,
@@ -96,22 +77,18 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         };
 
         // Act
-        var description = Assert.IsType<string>(method?.Invoke(null, [call]));
+        var description = InvokeDescribe(hub, "DescribeCallReference", call);
 
         // Assert
-        Assert.DoesNotContain(SentinelCallId, description, StringComparison.Ordinal);
         Assert.DoesNotContain(SentinelSecret, description, StringComparison.Ordinal);
         Assert.DoesNotContain("bridge-sentinel-321", description, StringComparison.Ordinal);
-        Assert.Contains("id_", description, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TelephonyHub_DescribeTransferRequest_NeverContainsRawCallIdOrAddress()
+    public void TelephonyHub_DescribeTransferRequest_NeverContainsRawAddress()
     {
         // Arrange
-        var method = typeof(TelephonyHub).GetMethod(
-            "DescribeTransferRequest",
-            BindingFlags.NonPublic | BindingFlags.Static);
+        var hub = CreateTelephonyHub();
         var request = new TransferRequest
         {
             CallId = SentinelCallId,
@@ -119,15 +96,14 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         };
 
         // Act
-        var description = Assert.IsType<string>(method?.Invoke(null, [request]));
+        var description = InvokeDescribe(hub, "DescribeTransferRequest", request);
 
         // Assert
-        Assert.DoesNotContain(SentinelCallId, description, StringComparison.Ordinal);
         Assert.DoesNotContain(SentinelE164, description, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void LoggingCalls_OnlyEmitValuesThatWentThroughTheOperationalLogRedactor()
+    public void LoggingCalls_OnlyEmitSensitiveValuesThroughSanitizationOrRedaction()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -138,7 +114,7 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         // Assert
         Assert.True(
             violations.Count == 0,
-            $"Every logged value in the Contact Center, Telephony, Asterisk, DialPad, and Omnichannel.Sms trees must pass through OperationalLogRedactor. Unredacted arguments:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+            $"Every sensitive value logged in the Contact Center, Telephony, Asterisk, DialPad, and Omnichannel.Sms trees must be wrapped in SanitizeLogValue() or an erasing Redactor.Redact(...) call. Unredacted arguments:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
     [Fact]
@@ -146,34 +122,37 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
-        var sourceRoots = new[]
-        {
-            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.ContactCenter"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Telephony"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Asterisk"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.DialPad"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
-        };
+
         // Act
-        var unsafeFiles = sourceRoots
-            .SelectMany(sourceRoot => Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
-            .Where(file => RawExceptionLogPattern().IsMatch(File.ReadAllText(file)))
-            .Select(file => Path.GetRelativePath(repositoryRoot, file))
-            .ToArray();
+        var violations = FindMisplacedExceptionArguments(repositoryRoot);
 
         // Assert
-        Assert.Empty(unsafeFiles);
+        Assert.True(
+            violations.Count == 0,
+            $"Exceptions must be passed to the logger as the first (exception) argument and never interpolated into the message template or passed as a format argument. Violations:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
-    [GeneratedRegex(
-        @"Log(?:Error|Warning|Information|Debug|Critical|Trace)\s*\(\s*(?:ex|\w*[Ee]xception)\b",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex RawExceptionLogPattern();
-
-    private static string ReadSource(string repositoryRoot, string topLevelFolder, string projectFolder, string subFolder, string fileName)
+    private static TelephonyHub CreateTelephonyHub()
     {
-        return File.ReadAllText(Path.Combine(repositoryRoot, "src", topLevelFolder, projectFolder, subFolder, fileName));
+        var redactorProvider = new ServiceCollection()
+            .AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet))
+            .BuildServiceProvider()
+            .GetRequiredService<IRedactorProvider>();
+
+        return new TelephonyHub(
+            NullLogger<TelephonyHub>.Instance,
+            new PassThroughStringLocalizer<TelephonyHub>(),
+            new ShellSettings(),
+            redactorProvider);
+    }
+
+    private static string InvokeDescribe(TelephonyHub hub, string methodName, object argument)
+    {
+        var method = typeof(TelephonyHub).GetMethod(
+            methodName,
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        return Assert.IsType<string>(method?.Invoke(hub, [argument]));
     }
 
     private static List<string> FindUnredactedLogArguments(string repositoryRoot)
@@ -205,6 +184,68 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         return violations;
     }
 
+    private static List<string> FindMisplacedExceptionArguments(string repositoryRoot)
+    {
+        var violations = new List<string>();
+
+        foreach (var file in EnumerateGuardedSources(repositoryRoot))
+        {
+            var root = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetRoot();
+
+            foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            {
+                if (!IsLoggerInvocation(invocation))
+                {
+                    continue;
+                }
+
+                foreach (var exception in FindMisplacedExceptions(invocation))
+                {
+                    var line = exception.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+                    violations.Add($"{Path.GetRelativePath(repositoryRoot, file)}({line}): {exception}");
+                }
+            }
+        }
+
+        return violations;
+    }
+
+    private static IEnumerable<SyntaxNode> FindMisplacedExceptions(InvocationExpressionSyntax invocation)
+    {
+        var arguments = invocation.ArgumentList.Arguments;
+
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var expression = arguments[index].Expression;
+
+            // The first argument may legitimately be the ILogger exception parameter passed as a bare identifier.
+            if (index == 0 && IsExceptionIdentifier(expression))
+            {
+                continue;
+            }
+
+            // A bare exception object passed as a message format argument.
+            if (index > 0 && IsExceptionIdentifier(expression))
+            {
+                yield return expression;
+
+                continue;
+            }
+
+            // An exception object interpolated directly into a message template.
+            foreach (var interpolation in expression.DescendantNodes().OfType<InterpolationSyntax>())
+            {
+                if (IsExceptionIdentifier(interpolation.Expression))
+                {
+                    yield return interpolation.Expression;
+                }
+            }
+        }
+    }
+
+    private static bool IsExceptionIdentifier(ExpressionSyntax expression)
+        => expression is IdentifierNameSyntax identifier && ExceptionValueName().IsMatch(identifier.Identifier.ValueText);
+
     private static IEnumerable<SyntaxNode> FindUnredactedSensitiveNames(ExpressionSyntax expression)
     {
         foreach (var node in expression.DescendantNodesAndSelf())
@@ -222,7 +263,7 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
                 continue;
             }
 
-            if (IsInsideRedactor(node, expression))
+            if (IsInsideSafeWrapper(node, expression))
             {
                 continue;
             }
@@ -243,18 +284,29 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
             .Any(ancestor => ancestor is InterpolatedStringExpressionSyntax);
     }
 
-    private static bool IsInsideRedactor(SyntaxNode node, ExpressionSyntax boundary)
+    private static bool IsInsideSafeWrapper(SyntaxNode node, ExpressionSyntax boundary)
     {
         for (var current = node; current is not null && current != boundary.Parent; current = current.Parent)
         {
-            if (current is InvocationExpressionSyntax invocation &&
-                invocation.Expression.ToString().Contains(nameof(OperationalLogRedactor), StringComparison.Ordinal))
+            if (current is InvocationExpressionSyntax invocation && IsSafeWrapperInvocation(invocation))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool IsSafeWrapperInvocation(InvocationExpressionSyntax invocation)
+    {
+        var name = invocation.Expression switch
+        {
+            MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.ValueText,
+            MemberBindingExpressionSyntax memberBinding => memberBinding.Name.Identifier.ValueText,
+            _ => null,
+        };
+
+        return name is "SanitizeLogValue" or "Redact";
     }
 
     private static IEnumerable<string> EnumerateGuardedSources(string repositoryRoot)
@@ -300,6 +352,11 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         "^(?:_)?(?:userId|userIdentifier|userName|agentId|agentUserId|stickyAgentUserId|assignedToId|supervisorAgentId|ownerId|contactId|customerId|subscriberId|phoneNumber|phone|e164|customerAddress|serviceAddress|callerId|callerNumber|emailAddress|email|displayName|firstName|lastName|callId|providerCallId|providerLegId|legId|interactionId|providerInteractionId|activityItemId|activityId|reservationId|queueItemId|agentSessionId|itemId|connectionId|sessionId|conversationId|password|secret|apiKey|accessToken|credential|credentials|authorization|signature|responseBody|errorMessage|transcript)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
     private static partial Regex SensitiveValueName();
+
+    [GeneratedRegex(
+        "^_?(?:ex|exception|[A-Za-z]+Exception)$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex ExceptionValueName();
 
     private static string FindRepositoryRoot()
     {

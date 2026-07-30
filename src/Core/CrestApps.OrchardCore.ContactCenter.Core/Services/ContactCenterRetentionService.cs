@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -96,7 +95,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
                     // unhealthy table would keep every other table growing forever. The batch failed partway
                     // through staging, so its deletes must be committed and counted here: leaving them in the
                     // session would have the next entity's flush commit them under the wrong entity's name.
-                    _logger.LogError(OperationalLogRedactor.RedactException(ex), "Contact Center retention failed while purging entity {EntityName}.", policy.EntityName);
+                    _logger.LogError(ex, "Contact Center retention failed while purging entity {EntityName}.", policy.EntityName);
                     result.WorkRemains = true;
 
                     if (ex.StagedBeforeFailure == 0)
@@ -110,7 +109,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
                     }
                     catch (Exception flushException)
                     {
-                        _logger.LogError(OperationalLogRedactor.RedactException(flushException), "Contact Center retention failed while committing the partial batch for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
+                        _logger.LogError(flushException, "Contact Center retention failed while committing the partial batch for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
                         MarkUnvisitedEntitiesAsUnfinished(report, nowUtc);
 
                         return report;
@@ -124,7 +123,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
                 {
                     // Nothing was staged, because the batch failed before it began deleting. The session is
                     // still usable, so the remaining entities can drain normally.
-                    _logger.LogError(OperationalLogRedactor.RedactException(ex), "Contact Center retention failed while reading expired records for entity {EntityName}.", policy.EntityName);
+                    _logger.LogError(ex, "Contact Center retention failed while reading expired records for entity {EntityName}.", policy.EntityName);
                     result.WorkRemains = true;
 
                     break;
@@ -146,7 +145,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
                     // The deletes only reach the database here, so this is where a deadlock or a lost connection
                     // surfaces. A failed flush cancels the session permanently, which means every later entity
                     // would appear to purge while its deletes were silently discarded. Stop the cycle instead.
-                    _logger.LogError(OperationalLogRedactor.RedactException(ex), "Contact Center retention failed while committing purged records for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
+                    _logger.LogError(ex, "Contact Center retention failed while committing purged records for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
                     result.WorkRemains = true;
 
                     // Entities the cycle never reached still have work. Leaving them out of the report would make

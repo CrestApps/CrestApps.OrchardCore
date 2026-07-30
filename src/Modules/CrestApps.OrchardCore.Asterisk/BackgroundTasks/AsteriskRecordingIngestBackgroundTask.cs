@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -41,7 +40,7 @@ public sealed class AsteriskRecordingIngestBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
-            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while ingesting Asterisk recordings.");
+            logger.LogError(ex, "An error occurred while ingesting Asterisk recordings.");
         }
     }
 }

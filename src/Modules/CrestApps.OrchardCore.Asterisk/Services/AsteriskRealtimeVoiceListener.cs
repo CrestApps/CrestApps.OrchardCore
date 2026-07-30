@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Channels;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
@@ -123,7 +123,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 failureCount++;
 
                 _logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "The Asterisk real-time voice listener for provider {ProviderName} failed unexpectedly.",
                     settings.ProviderName);
             }
@@ -186,7 +186,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                             "The Asterisk real-time voice listener for provider {ProviderName} received a close frame. Status={Status}, Description={Description}.",
                             settings.ProviderName,
                             result.CloseStatus,
-                            OperationalLogRedactor.Redact(result.CloseStatusDescription, OperationalLogFieldKind.FreeText));
+                            result.CloseStatusDescription.SanitizeLogValue());
 
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
 
@@ -240,7 +240,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 catch (Exception ex)
                 {
                     _logger.LogError(
-                        OperationalLogRedactor.RedactException(ex),
+                        ex,
                         "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
                         settings.ProviderName);
                 }
@@ -270,7 +270,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
                 catch (Exception ex)
                 {
                     _logger.LogError(
-                        OperationalLogRedactor.RedactException(ex),
+                        ex,
                         "Provider-state reconciliation failed after reconnecting the Asterisk real-time listener for provider {ProviderName}.",
                         providerName);
                 }
@@ -301,9 +301,9 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
         {
             _logger.LogDebug(
                 "Received Asterisk real-time event {EventType} for provider {ProviderName} call {CallId}; mapped to state {State}.",
-                OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
+                voiceEvent.EventType.SanitizeLogValue(),
                 voiceEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call),
+                voiceEvent.CallId.SanitizeLogValue(),
                 voiceEvent.State);
         }
 
@@ -329,7 +329,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Skipped an Asterisk real-time dispatch because a tenant scope could not be acquired; the shell may be reloading.");
 
             return;

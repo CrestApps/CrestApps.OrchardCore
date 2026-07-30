@@ -10,10 +10,10 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Core.Configuration;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -423,26 +423,12 @@ public sealed class NamedRecipeStepHandlerTests
     }
 
     /// <summary>
-    /// Builds the shared configuration-catalog step over the reason code catalog. Reason codes used to have a
-    /// hand-written recipe step; they are now imported by the same generic step as every other configuration
-    /// catalog, and these tests keep proving the identity rules that step has to honour.
+    /// Builds the recipe step that imports agent state reason codes, so these tests keep proving the identity rules
+    /// the step has to honour.
     /// </summary>
     /// <param name="manager">The manager that owns the reason codes.</param>
-    private static ConfigurationCatalogRecipeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
-    {
-        var catalog = new ConfigurationCatalog<AgentStateReasonCode>(
-            new CatalogManagerConfigurationCatalogWriter<AgentStateReasonCode>(manager),
-            new ConfigurationCatalogDescriptor
-            {
-                Group = "ContactCenter",
-                StepName = "AgentStateReasonCode",
-                CollectionName = "ReasonCodes",
-                Order = 70,
-            },
-            new ConfigurationImportIdentityStore(new Clock()));
-
-        return new ConfigurationCatalogRecipeStep([catalog]);
-    }
+    private static AgentStateReasonCodeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
+        => new(manager, new PassThroughStringLocalizer<AgentStateReasonCodeStep>());
 
     [Fact]
     public async Task AgentStateReasonCodeStep_WhenReasonCodeExists_ShouldUpdateInsteadOfCreate()

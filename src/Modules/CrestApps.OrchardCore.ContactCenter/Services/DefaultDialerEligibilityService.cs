@@ -1,7 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
@@ -158,9 +158,9 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
             catch (DoNotCallScreeningException ex)
             {
                 _logger.LogWarning(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Suppressing the dial attempt for activity {ActivityId} because registry {RegistryKey} could not report whether the destination is listed.",
-                    OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
+                    activity.ItemId.SanitizeLogValue(),
                     ex.RegistryKey);
 
                 // The registry reported nothing, not "not listed". Suppressing here is not terminal: the

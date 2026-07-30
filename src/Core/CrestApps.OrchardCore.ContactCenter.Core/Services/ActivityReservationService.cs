@@ -1,7 +1,7 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -534,10 +534,10 @@ public sealed class ActivityReservationService : IActivityReservationService
         {
             _logger.LogWarning(
                 "Skipped releasing expired reservation '{ReservationId}' for activity '{ActivityItemId}' because queue item '{QueueItemId}' is now owned by newer reservation '{CurrentReservationId}'.",
-                OperationalLogRedactor.Pseudonymize(reservation.ItemId, OperationalLogIdentifierCategory.Reservation),
-                OperationalLogRedactor.Pseudonymize(reservation.ActivityItemId, OperationalLogIdentifierCategory.Activity),
-                OperationalLogRedactor.Pseudonymize(queueItem.ItemId, OperationalLogIdentifierCategory.Queue),
-                OperationalLogRedactor.Pseudonymize(queueItem.ReservationId, OperationalLogIdentifierCategory.Reservation));
+                reservation.ItemId.SanitizeLogValue(),
+                reservation.ActivityItemId.SanitizeLogValue(),
+                queueItem.ItemId.SanitizeLogValue(),
+                queueItem.ReservationId.SanitizeLogValue());
 
             var obsoleteAgent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
 
@@ -576,7 +576,7 @@ public sealed class ActivityReservationService : IActivityReservationService
                 _logger.LogWarning(
                     "The unanswered-offer action '{UnansweredOfferAction}' could not be persisted for activity '{ActivityItemId}' because provider command infrastructure or call identity is unavailable.",
                     unansweredAction,
-                    OperationalLogRedactor.Pseudonymize(interaction?.ActivityItemId, OperationalLogIdentifierCategory.Activity));
+                    interaction?.ActivityItemId.SanitizeLogValue());
                 unansweredAction = UnansweredOfferAction.Requeue;
             }
             else
@@ -716,8 +716,8 @@ public sealed class ActivityReservationService : IActivityReservationService
             {
                 _logger.LogDebug(
                     "A concurrent Contact Center operation won the compare-and-set transition for activity '{ActivityId}' and agent '{AgentId}'.",
-                    OperationalLogRedactor.Pseudonymize(activityItemId, OperationalLogIdentifierCategory.Activity),
-                    OperationalLogRedactor.Pseudonymize(agentId, OperationalLogIdentifierCategory.Agent));
+                    activityItemId.SanitizeLogValue(),
+                    agentId.SanitizeLogValue());
             }
 
             throw;

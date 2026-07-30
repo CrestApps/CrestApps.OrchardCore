@@ -151,6 +151,7 @@ public sealed class AsteriskTelephonyProviderTests
             new StubHttpClientFactory(handler),
             gate,
             new StubClock(),
+            RedactorProviderFactory.Create(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());
 
@@ -659,6 +660,7 @@ public sealed class AsteriskTelephonyProviderTests
             new StubHttpClientFactory(handler),
             gate,
             new StubClock(),
+            RedactorProviderFactory.Create(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());
     }

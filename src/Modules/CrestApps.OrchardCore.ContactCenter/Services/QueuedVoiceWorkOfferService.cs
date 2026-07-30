@@ -1,7 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using YesSql;
 
@@ -70,7 +70,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             {
                 _logger.LogDebug(
                     "Skipped queued voice offering because agent was missing, unavailable, or had no queue membership. AgentId={AgentId}, Presence={PresenceStatus}, QueueCount={QueueCount}.",
-                    OperationalLogRedactor.Pseudonymize(agent?.ItemId, OperationalLogIdentifierCategory.Agent),
+                    agent?.ItemId.SanitizeLogValue(),
                     agent?.PresenceStatus,
                     agent?.QueueIds.Count ?? 0);
             }
@@ -90,8 +90,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             {
                 _logger.LogDebug(
                     "Skipped queued voice offering for agent '{AgentId}' because reservation '{ReservationId}' is active.",
-                    OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
-                    OperationalLogRedactor.Pseudonymize(agent.ActiveReservationId, OperationalLogIdentifierCategory.Reservation));
+                    agent.ItemId.SanitizeLogValue(),
+                    agent.ActiveReservationId.SanitizeLogValue());
             }
 
             return 0;
@@ -115,9 +115,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
                 {
                     _logger.LogInformation(
                         "Offered the next queued voice activity from queue '{QueueId}' to agent '{AgentId}' for user '{UserId}'.",
-                        OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
-                        OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
-                        OperationalLogRedactor.Pseudonymize(agentUserId, OperationalLogIdentifierCategory.User));
+                        queueId.SanitizeLogValue(),
+                        agent.ItemId.SanitizeLogValue(),
+                        agentUserId.SanitizeLogValue());
                 }
             }
 

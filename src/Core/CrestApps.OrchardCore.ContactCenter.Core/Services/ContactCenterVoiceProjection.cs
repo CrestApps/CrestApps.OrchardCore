@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -48,7 +48,7 @@ public sealed class ContactCenterVoiceProjection : INormalizedVoiceEventHandler
             _logger.LogDebug(
                 "Normalized voice event for provider {ProviderName} call {CallId} flowed into Contact Center.",
                 providerEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                providerEvent.ProviderCallId.SanitizeLogValue());
         }
 
         return handled;

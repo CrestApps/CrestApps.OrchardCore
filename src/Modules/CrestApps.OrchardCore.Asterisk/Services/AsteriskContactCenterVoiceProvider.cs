@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
@@ -359,10 +359,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to connect caller channel {CallerChannelId} to agent {AgentId}; compensating side effects.",
-                OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call),
-                OperationalLogRedactor.Pseudonymize(request.AgentId, OperationalLogIdentifierCategory.User));
+                callerChannelId.SanitizeLogValue(),
+                request.AgentId.SanitizeLogValue());
 
             // When the failure was transport-ambiguous (a client timeout, a transport error that returned no server
             // response, or a server error), the bridge-create or originate may still commit on Asterisk after this
@@ -440,10 +440,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (AsteriskAriException ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to change the recording state to {RecordingState} for interaction {InteractionId}.",
                 request.State,
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             var outcomeUnknown = IsAmbiguousAriOutcome(ex);
 
@@ -524,9 +524,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Failed to enqueue recording {RecordingName} for ingestion.",
-                OperationalLogRedactor.Pseudonymize(recordingName, OperationalLogIdentifierCategory.Call));
+                recordingName.SanitizeLogValue());
         }
     }
 
@@ -769,9 +769,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to transfer interaction {InteractionId}; compensating the new destination leg.",
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             // Pre-commit compensation. Because the serialized durable Joining create above gave THIS transfer
             // exclusive ownership of the deterministic destination id (a concurrent duplicate lost the create and
@@ -851,7 +851,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 // the reconciler. Never a drop, never a double owner.
                 _logger.LogWarning(
                     "Asterisk transfer of interaction {InteractionId} could not finalize the handoff because the destination leg was already claimed for teardown; leaving the previous agent as the owner.",
-                    OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
+                    interactionId.SanitizeLogValue());
 
                 return;
             }
@@ -869,9 +869,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk transfer of interaction {InteractionId} bridged the destination agent but did not finalize the previous leg cleanly; leaving residue for the reconciler.",
-                OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
+                interactionId.SanitizeLogValue());
         }
     }
 
@@ -1106,9 +1106,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to add an agent to interaction {InteractionId}; compensating the participant leg.",
-                OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
+                interactionId.SanitizeLogValue());
 
             // Pre-commit compensation. Because the serialized durable Joining create above gave THIS add exclusive
             // ownership of the deterministic participant id (a concurrent duplicate lost the create and never
@@ -1174,15 +1174,15 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 // committed add is still a success.
                 _logger.LogWarning(
                     "Asterisk conference add of interaction {InteractionId} bridged the participant but could not stabilize it because its leg was already claimed for teardown; leaving the residue for the reconciler.",
-                    OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
+                    interactionId.SanitizeLogValue());
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk conference add of interaction {InteractionId} bridged the participant but did not stabilize its leg cleanly; leaving residue for the reconciler.",
-                OperationalLogRedactor.Pseudonymize(interactionId, OperationalLogIdentifierCategory.Call));
+                interactionId.SanitizeLogValue());
         }
     }
 
@@ -1442,7 +1442,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk could not place the customer channel on hold for an attended transfer.");
+            _logger.LogWarning(ex, "Asterisk could not place the customer channel on hold for an attended transfer.");
 
             return false;
         }
@@ -1458,7 +1458,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk could not resume the customer channel from hold for an attended transfer.");
+            _logger.LogWarning(ex, "Asterisk could not resume the customer channel from hold for an attended transfer.");
 
             return false;
         }
@@ -1543,10 +1543,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (AsteriskAriException ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk could not probe the existing {MonitorMode} supervisor leg for interaction {InteractionId}; leaving any established engagement untouched.",
                 request.Mode,
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             return MonitoringFailure(ex, request);
         }
@@ -1577,10 +1577,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             catch (AsteriskAriException ex)
             {
                 _logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Asterisk could not re-assert the {MonitorMode} supervisor topology for interaction {InteractionId}; leaving the existing engagement untouched.",
                     request.Mode,
-                    OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                    request.InteractionId.SanitizeLogValue());
 
                 return MonitoringFailure(ex, request);
             }
@@ -1630,10 +1630,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (AsteriskAriException ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to start the {MonitorMode} supervisor engagement for interaction {InteractionId}; compensating supervisor-only side effects.",
                 request.Mode,
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             // Compensation is scoped to this engagement's own deterministic supervisor resources; it never touches
             // the customer/agent call. It is safe here because the supervisor leg did not exist when this invocation
@@ -1656,10 +1656,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             // cancelled), then rethrow so cancellation semantics are preserved — the service layer maps a cancelled
             // engagement to an unknown outcome rather than a false success.
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "The {MonitorMode} supervisor engagement for interaction {InteractionId} failed unexpectedly; compensating supervisor-only side effects.",
                 request.Mode,
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             await CompensateSupervisorEngagementAsync(
                 request.Mode,
@@ -1742,10 +1742,10 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (AsteriskAriException ex)
         {
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to stop the {MonitorMode} supervisor engagement for interaction {InteractionId}.",
                 request.Mode,
-                OperationalLogRedactor.Pseudonymize(request.InteractionId, OperationalLogIdentifierCategory.Call));
+                request.InteractionId.SanitizeLogValue());
 
             var outcomeUnknown = IsAmbiguousAriOutcome(ex);
 
@@ -1951,7 +1951,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
         catch (AsteriskAriException ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk supervisor engagement compensation did not complete cleanly.");
+            _logger.LogWarning(ex, "Asterisk supervisor engagement compensation did not complete cleanly.");
         }
     }
 
@@ -2129,7 +2129,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk caller-to-agent binding compensation claim did not complete cleanly.");
+                _logger.LogWarning(ex, "Asterisk caller-to-agent binding compensation claim did not complete cleanly.");
             }
         }
 
@@ -2175,7 +2175,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk caller-to-agent binding compensation did not complete cleanly.");
+                _logger.LogWarning(ex, "Asterisk caller-to-agent binding compensation did not complete cleanly.");
             }
         }
     }
@@ -2209,7 +2209,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk caller-to-agent channel compensation did not complete cleanly.");
+            _logger.LogWarning(ex, "Asterisk caller-to-agent channel compensation did not complete cleanly.");
 
             return false;
         }
@@ -2225,7 +2225,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk caller-to-agent bridge compensation did not complete cleanly.");
+            _logger.LogWarning(ex, "Asterisk caller-to-agent bridge compensation did not complete cleanly.");
 
             return false;
         }
@@ -2247,7 +2247,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             {
                 _logger.LogInformation(
                     "Re-parked Asterisk caller {CallerChannelId} into a holding bridge after a failed agent connect so the work can be re-offered.",
-                    OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call));
+                    callerChannelId.SanitizeLogValue());
             }
 
             return true;
@@ -2255,9 +2255,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk could not re-park caller {CallerChannelId} after a failed agent connect; hanging up the caller to avoid a silent stranded channel.",
-                OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call));
+                callerChannelId.SanitizeLogValue());
 
             // Destroy the holding bridge if it was created before the add failed (for example the caller vanished
             // before it could be parked). Otherwise the empty bridge leaks, since the caller is about to be hung up
@@ -2270,7 +2270,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
                 }
                 catch (Exception destroyEx)
                 {
-                    _logger.LogWarning(OperationalLogRedactor.RedactException(destroyEx), "Asterisk holding-bridge cleanup after a failed re-park did not complete cleanly.");
+                    _logger.LogWarning(destroyEx, "Asterisk holding-bridge cleanup after a failed re-park did not complete cleanly.");
                 }
             }
 
@@ -2280,7 +2280,7 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             }
             catch (Exception hangupEx)
             {
-                _logger.LogWarning(OperationalLogRedactor.RedactException(hangupEx), "Asterisk caller hangup after a failed re-park did not complete cleanly.");
+                _logger.LogWarning(hangupEx, "Asterisk caller hangup after a failed re-park did not complete cleanly.");
 
                 // Neither re-park nor hangup succeeded, so the caller may still be alive with no bridge. Report the
                 // failure so the connect flow retains the durable record and the reconciler retries the caller's
@@ -2308,9 +2308,9 @@ internal sealed class AsteriskContactCenterVoiceProvider :
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "No Asterisk holding bridge to detach caller {CallerChannelId} from before bridging to the agent; continuing.",
-                    OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call));
+                    callerChannelId.SanitizeLogValue());
             }
         }
     }

@@ -1,6 +1,6 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -87,10 +87,10 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
                 _logger.LogWarning(
                     "Repaired interaction '{InteractionId}' from '{PreviousStatus}' to '{CurrentStatus}' because call session '{CallSessionId}' is terminal in provider state '{ProviderState}'.",
-                    OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                    interaction.ItemId.SanitizeLogValue(),
                     previousStatus,
                     interaction.Status,
-                    OperationalLogRedactor.Pseudonymize(currentSession.ItemId, OperationalLogIdentifierCategory.Session),
+                    currentSession.ItemId.SanitizeLogValue(),
                     currentSession.State);
             }
 
@@ -112,7 +112,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
 
                 _logger.LogWarning(
                     "Reconciling interaction '{InteractionId}' through the current default provider '{Provider}' because its stored provider '{StoredProvider}' is no longer registered.",
-                    OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                    interaction.ItemId.SanitizeLogValue(),
                     providerName,
                     interaction.ProviderName);
             }
@@ -131,10 +131,10 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             {
                 _logger.LogWarning(
                     "Skipping provider-state reconciliation for interaction '{InteractionId}' because provider '{Provider}' could not resolve call '{ProviderCallId}': {ErrorMessage}",
-                    OperationalLogRedactor.Pseudonymize(interaction.ItemId, OperationalLogIdentifierCategory.Interaction),
+                    interaction.ItemId.SanitizeLogValue(),
                     interaction.ProviderName,
-                    OperationalLogRedactor.Pseudonymize(interaction.ProviderInteractionId, OperationalLogIdentifierCategory.Call),
-                    OperationalLogRedactor.Redact(lookup.Error, OperationalLogFieldKind.FreeText));
+                    interaction.ProviderInteractionId.SanitizeLogValue(),
+                    lookup.Error.SanitizeLogValue());
             }
 
             return interaction;

@@ -316,7 +316,8 @@ public sealed class TelephonyHubAuthorizationTests
         var hub = new TelephonyHub(
             NullLogger<TelephonyHub>.Instance,
             new PassThroughStringLocalizer<TelephonyHub>(),
-            shellSettings)
+            shellSettings,
+            RedactorProviderFactory.Create())
         {
             Context = CreateHubCallerContext(userId),
         };

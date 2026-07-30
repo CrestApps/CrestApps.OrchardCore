@@ -4,16 +4,15 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Configuration;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes.Models;
@@ -30,20 +29,25 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// and the operator only discovers it after promoting to production, because the import succeeds and the missing
 /// settings simply read as their defaults. The oracle is therefore a real export from one live tenant replayed into a
 /// second, empty tenant, compared field by field over entries whose every property was deliberately set away from its
-/// default.
+/// default. Each configuration entity carries its own deployment step and its own recipe step, and an import matches an
+/// exported entry to a stored one by identifier alone, creating the entry when the identifier is absent and preserving
+/// the exported identifier so that the references other entries hold keep resolving.
 /// </remarks>
 public sealed class ContactCenterConfigurationPortabilityTests
 {
     private const string DeploymentFeatureId = "OrchardCore.Deployment";
     private const string RecipesFeatureId = "OrchardCore.Recipes.Core";
 
+    private const string ContactCenterGroup = "ContactCenter";
+    private const string OmnichannelGroup = "Omnichannel";
+
     /// <summary>
-    /// The members a destination environment owns rather than inherits. Creation and modification stamps are written by
-    /// the receiving tenant's clock, and ownership is written by the receiving tenant's identity, so requiring them to
-    /// match would assert that a copy is indistinguishable from the original rather than that the configuration is.
-    /// The identifier is included because a tenant that already holds an entry of the same name keeps its own
-    /// identifier when the plan is replayed, which is what stops a replay from duplicating configuration that a
-    /// migration seeded independently in both environments.
+    /// The members a destination environment writes for itself, excluded from the settings comparison. Creation and
+    /// modification stamps are written by the receiving tenant's clock, and ownership is written by the receiving
+    /// tenant's identity, so requiring them to match would assert that a copy is indistinguishable from the original
+    /// rather than that its configuration is. The identifier is excluded because its preservation is proven on its own
+    /// by the identifier round-trip test, which keeps this comparison focused on the settings an entry carries rather
+    /// than on its identity.
     /// </summary>
     private static readonly string[] _environmentOwnedMembers =
     [
@@ -67,47 +71,57 @@ public sealed class ContactCenterConfigurationPortabilityTests
     private static readonly ConfigurationGroup[] _groups =
     [
         new ConfigurationGroup(
-            ContactCenterConfigurationCatalogs.Group,
-            static () => new ContactCenterConfigurationDeploymentStep(),
+            ContactCenterGroup,
             [
-                (ContactCenterConfigurationCatalogs.Skill, typeof(ContactCenterSkill), typeof(IContactCenterSkillManager)),
-                (ContactCenterConfigurationCatalogs.QueueGroup, typeof(ActivityQueueGroup), typeof(IActivityQueueGroupManager)),
-                (ContactCenterConfigurationCatalogs.BusinessHoursCalendar, typeof(BusinessHoursCalendar), typeof(IBusinessHoursCalendarManager)),
-                (ContactCenterConfigurationCatalogs.Queue, typeof(ActivityQueue), typeof(IActivityQueueManager)),
-                (ContactCenterConfigurationCatalogs.EntryPoint, typeof(ContactCenterEntryPoint), typeof(IContactCenterEntryPointManager)),
-                (ContactCenterConfigurationCatalogs.DialerProfile, typeof(DialerProfile), typeof(IDialerProfileManager)),
-                (ContactCenterConfigurationCatalogs.AgentStateReasonCode, typeof(AgentStateReasonCode), typeof(IAgentStateReasonCodeManager)),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.Skill, "Skills", typeof(ContactCenterSkill), typeof(IContactCenterSkillManager), static () => new ContactCenterSkillDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.QueueGroup, "QueueGroups", typeof(ActivityQueueGroup), typeof(IActivityQueueGroupManager), static () => new ContactCenterQueueGroupDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.BusinessHoursCalendar, "Calendars", typeof(BusinessHoursCalendar), typeof(IBusinessHoursCalendarManager), static () => new ContactCenterBusinessHoursCalendarDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.Queue, "Queues", typeof(ActivityQueue), typeof(IActivityQueueManager), static () => new ContactCenterQueueDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.EntryPoint, "EntryPoints", typeof(ContactCenterEntryPoint), typeof(IContactCenterEntryPointManager), static () => new ContactCenterEntryPointDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.DialerProfile, "DialerProfiles", typeof(DialerProfile), typeof(IDialerProfileManager), static () => new ContactCenterDialerProfileDeploymentStep()),
+                new ConfigurationCatalog(ContactCenterDeploymentSteps.AgentStateReasonCode, "ReasonCodes", typeof(AgentStateReasonCode), typeof(IAgentStateReasonCodeManager), static () => new AgentStateReasonCodeDeploymentStep()),
             ]),
         new ConfigurationGroup(
-            OmnichannelConfigurationCatalogs.Group,
-            static () => new OmnichannelConfigurationDeploymentStep(),
+            OmnichannelGroup,
             [
-                (OmnichannelConfigurationCatalogs.Disposition, typeof(OmnichannelDisposition), typeof(INamedCatalogManager<OmnichannelDisposition>)),
-                (OmnichannelConfigurationCatalogs.ChannelEndpoint, typeof(OmnichannelChannelEndpoint), typeof(IOmnichannelChannelEndpointManager)),
-                (OmnichannelConfigurationCatalogs.CampaignGroup, typeof(OmnichannelCampaignGroup), typeof(ICatalogManager<OmnichannelCampaignGroup>)),
-                (OmnichannelConfigurationCatalogs.Campaign, typeof(OmnichannelCampaign), typeof(ICatalogManager<OmnichannelCampaign>)),
-                (OmnichannelConfigurationCatalogs.SubjectFlowSettings, typeof(SubjectFlowSettings), typeof(ICatalogManager<SubjectFlowSettings>)),
-                (OmnichannelConfigurationCatalogs.SubjectAction, typeof(SubjectAction), typeof(ISourceCatalogManager<SubjectAction>)),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.Disposition, "Dispositions", typeof(OmnichannelDisposition), typeof(INamedCatalogManager<OmnichannelDisposition>), static () => new OmnichannelDispositionDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.ChannelEndpoint, "ChannelEndpoints", typeof(OmnichannelChannelEndpoint), typeof(IOmnichannelChannelEndpointManager), static () => new OmnichannelChannelEndpointDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.CampaignGroup, "CampaignGroups", typeof(OmnichannelCampaignGroup), typeof(ICatalogManager<OmnichannelCampaignGroup>), static () => new OmnichannelCampaignGroupDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.Campaign, "Campaigns", typeof(OmnichannelCampaign), typeof(ICatalogManager<OmnichannelCampaign>), static () => new OmnichannelCampaignDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.SubjectFlowSettings, "SubjectFlows", typeof(SubjectFlowSettings), typeof(ICatalogManager<SubjectFlowSettings>), static () => new OmnichannelSubjectFlowSettingsDeploymentStep()),
+                new ConfigurationCatalog(OmnichannelDeploymentSteps.SubjectAction, "SubjectActions", typeof(SubjectAction), typeof(ISourceCatalogManager<SubjectAction>), static () => new OmnichannelSubjectActionDeploymentStep()),
             ]),
     ];
 
     /// <summary>
-    /// Describes one deployable group of configuration catalogs.
+    /// Describes one configuration entity that travels between environments as its own recipe step.
     /// </summary>
-    /// <param name="Group">The catalog group identifier.</param>
-    /// <param name="CreateStep">Creates the deployment step that exports the group.</param>
-    /// <param name="Catalogs">The catalogs the group is expected to export.</param>
-    private sealed record ConfigurationGroup(
-        string Group,
-        Func<ConfigurationCatalogDeploymentStep> CreateStep,
-        (string StepName, Type EntryType, Type ManagerType)[] Catalogs);
+    /// <param name="StepName">The name shared by the deployment step and the recipe step that carry the entity.</param>
+    /// <param name="CollectionName">The property that holds the exported entries inside the recipe step.</param>
+    /// <param name="EntryType">The entity type the catalog stores.</param>
+    /// <param name="ManagerType">The catalog manager that owns the stored entries.</param>
+    /// <param name="CreateStep">Creates the deployment step that exports the entity.</param>
+    private sealed record ConfigurationCatalog(
+        string StepName,
+        string CollectionName,
+        Type EntryType,
+        Type ManagerType,
+        Func<DeploymentStep> CreateStep);
+
+    /// <summary>
+    /// Describes the catalogs a feature area exports, listed in the order a plan has to import them so that every
+    /// reference resolves as it is written.
+    /// </summary>
+    /// <param name="Group">The area the catalogs belong to.</param>
+    /// <param name="Catalogs">The catalogs the area exports, in dependency order.</param>
+    private sealed record ConfigurationGroup(string Group, ConfigurationCatalog[] Catalogs);
 
     private static ConfigurationGroup GetGroup(string group)
         => _groups.Single(candidate => candidate.Group == group);
 
     [Theory]
-    [InlineData(ContactCenterConfigurationCatalogs.Group)]
-    [InlineData(OmnichannelConfigurationCatalogs.Group)]
+    [InlineData(ContactCenterGroup)]
+    [InlineData(OmnichannelGroup)]
     public async Task EveryConfigurationCatalog_IsExportedByTheDeploymentStep(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -132,8 +146,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     }
 
     [Theory]
-    [InlineData(ContactCenterConfigurationCatalogs.Group)]
-    [InlineData(OmnichannelConfigurationCatalogs.Group)]
+    [InlineData(ContactCenterGroup)]
+    [InlineData(OmnichannelGroup)]
     public async Task ExportedConfiguration_ReplaysIntoAnEmptyTenantWithoutLosingAnySetting(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -183,8 +197,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     }
 
     [Theory]
-    [InlineData(ContactCenterConfigurationCatalogs.Group)]
-    [InlineData(OmnichannelConfigurationCatalogs.Group)]
+    [InlineData(ContactCenterGroup)]
+    [InlineData(OmnichannelGroup)]
     public async Task ReplayingTheSamePlanTwice_DoesNotDuplicateConfiguration(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -216,180 +230,6 @@ public sealed class ContactCenterConfigurationPortabilityTests
         Assert.Empty(Compare(afterFirst, afterSecond));
         Assert.Empty(Compare(await ReadAsync(host, source, group), afterSecond));
         Assert.All(afterSecond, step => Assert.NotEmpty(GetEntries(step)));
-    }
-
-    /// <summary>
-    /// The destination is rarely empty. When both environments created the same queue group independently, the two
-    /// copies carry the same name and different identifiers, and the import has to reconcile them - but every queue
-    /// in the same plan still names the source's identifier. Unless the substitution is carried forward into the
-    /// steps that follow, the plan lands with its references pointing at entries that do not exist there, which is
-    /// worse than failing because the tenant looks configured and routes nothing.
-    /// </summary>
-    [Fact]
-    public async Task ImportingIntoATenantThatAlreadyOwnsAnEntry_RepointsTheReferencesInTheRestOfThePlan()
-    {
-        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
-
-        var source = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-reference-origin",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        var destination = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-reference-target",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        var sourceGroupId = await host.ExecuteInTenantScopeAsync(source, async serviceProvider =>
-        {
-            var manager = serviceProvider.GetRequiredService<IActivityQueueGroupManager>();
-            var group = await manager.NewAsync(new JsonObject());
-
-            group.Name = "Shared group";
-            await manager.CreateAsync(group);
-
-            var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
-            var queue = await queueManager.NewAsync(new JsonObject());
-
-            queue.Name = "Support";
-            queue.QueueGroupId = group.ItemId;
-            await queueManager.CreateAsync(queue);
-
-            return group.ItemId;
-        });
-
-        var destinationGroupId = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var manager = serviceProvider.GetRequiredService<IActivityQueueGroupManager>();
-            var group = await manager.NewAsync(new JsonObject());
-
-            group.Name = "Shared group";
-            await manager.CreateAsync(group);
-
-            return group.ItemId;
-        });
-
-        Assert.NotEqual(sourceGroupId, destinationGroupId);
-
-        var plan = await ExportAsync(host, source, ContactCenterConfigurationCatalogs.Group);
-
-        await ImportAsync(host, destination, plan);
-
-        var landed = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var queues = await serviceProvider.GetRequiredService<IActivityQueueManager>().GetAllAsync();
-            var groups = await serviceProvider.GetRequiredService<IActivityQueueGroupManager>().GetAllAsync();
-
-            var queue = queues.Single(candidate => candidate.Name == "Support");
-
-            return new
-            {
-                queue.QueueGroupId,
-                GroupIds = groups.Select(group => group.ItemId).ToArray(),
-                GroupCount = groups.Count(group => group.Name == "Shared group"),
-            };
-        });
-
-        Assert.Equal(1, landed.GroupCount);
-
-        Assert.True(
-            landed.GroupIds.Contains(landed.QueueGroupId, StringComparer.Ordinal),
-            Describe(
-                "An imported queue references a queue group that does not exist on the destination tenant, so the " +
-                "plan configured a contact centre that cannot route.",
-                "Carry the identifiers reconciled by one step forward into the steps that follow.",
-                [$"The queue references '{landed.QueueGroupId}'.", $"The tenant holds: {string.Join(", ", landed.GroupIds)}."]));
-
-        Assert.Equal(destinationGroupId, landed.QueueGroupId);
-    }
-
-    /// <summary>
-    /// Not every catalog identifies its entries by a name. Campaigns and campaign groups are identified by display
-    /// text, and an import that only understands names would fail to recognise the copy the destination already had,
-    /// duplicate it, and leave the campaigns in the plan pointing at the copy nobody is looking at.
-    /// </summary>
-    [Fact]
-    public async Task ImportingAnEntryIdentifiedByDisplayText_ReconcilesItWithTheCopyTheTenantAlreadyHad()
-    {
-        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
-
-        var source = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-displaytext-origin",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        var destination = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-displaytext-target",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        var sourceGroupId = await host.ExecuteInTenantScopeAsync(source, async serviceProvider =>
-        {
-            var groupManager = serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>();
-            var group = await groupManager.NewAsync(new JsonObject());
-
-            group.DisplayText = "Shared campaign group";
-            await groupManager.CreateAsync(group);
-
-            var campaignManager = serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>();
-            var campaign = await campaignManager.NewAsync(new JsonObject());
-
-            campaign.DisplayText = "Winback";
-            campaign.CampaignGroupId = group.ItemId;
-            await campaignManager.CreateAsync(campaign);
-
-            return group.ItemId;
-        });
-
-        var destinationGroupId = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var groupManager = serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>();
-            var group = await groupManager.NewAsync(new JsonObject());
-
-            group.DisplayText = "Shared campaign group";
-            await groupManager.CreateAsync(group);
-
-            return group.ItemId;
-        });
-
-        Assert.NotEqual(sourceGroupId, destinationGroupId);
-
-        var plan = await ExportAsync(host, source, OmnichannelConfigurationCatalogs.Group);
-
-        await ImportAsync(host, destination, plan);
-
-        var landed = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var campaigns = await serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>().GetAllAsync();
-            var groups = await serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaignGroup>>().GetAllAsync();
-
-            var campaign = campaigns.Single(candidate => candidate.DisplayText == "Winback");
-
-            return new
-            {
-                campaign.CampaignGroupId,
-                GroupIds = groups.Select(group => group.ItemId).ToArray(),
-                GroupCount = groups.Count(group => group.DisplayText == "Shared campaign group"),
-            };
-        });
-
-        Assert.True(
-            landed.GroupCount == 1,
-            Describe(
-                "Importing a campaign group the destination tenant already had produced a second copy of it, because " +
-                "the import only recognises entries identified by name.",
-                "Match entries identified by display text as well as entries identified by name.",
-                [$"The tenant holds {landed.GroupCount} groups named 'Shared campaign group'."]));
-
-        Assert.Equal(destinationGroupId, landed.CampaignGroupId);
     }
 
     /// <summary>
@@ -428,7 +268,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
             return true;
         });
 
-        await ImportAsync(host, destination, await ExportAsync(host, source, OmnichannelConfigurationCatalogs.Group));
+        await ImportAsync(host, destination, await ExportAsync(host, source, OmnichannelGroup));
 
         var carried = await ReadDescriptionAsync(host, destination);
 
@@ -446,7 +286,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
             return true;
         });
 
-        await ImportAsync(host, destination, await ExportAsync(host, source, OmnichannelConfigurationCatalogs.Group));
+        await ImportAsync(host, destination, await ExportAsync(host, source, OmnichannelGroup));
 
         var cleared = await ReadDescriptionAsync(host, destination);
 
@@ -460,11 +300,11 @@ public sealed class ContactCenterConfigurationPortabilityTests
     }
 
     /// <summary>
-    /// A queue references a channel endpoint that a different deployment step carries, so no ordering of the two
-    /// steps makes both references resolvable at the moment they are written. If the plan is replayed into a tenant
-    /// that independently created the same endpoints, a queue imported before the CRM step lands pointing at an
-    /// endpoint the destination does not hold - and an inbound number stops reaching its queue while the tenant
-    /// still looks configured.
+    /// A queue references a channel endpoint that a different deployment step carries, so the endpoint is not present
+    /// on the destination when the queue is imported. Because an import preserves the identifier every entry was
+    /// exported with, the endpoint lands under that same identifier and the queue's reference resolves regardless of
+    /// the order the two steps are imported in. This is what makes a cross-step reference survive a replay now that
+    /// nothing re-points references during import.
     /// </summary>
     [Fact]
     public async Task AQueueThatReferencesAChannelEndpoint_LandsPointingAtTheEndpointTheTenantHolds()
@@ -498,32 +338,41 @@ public sealed class ContactCenterConfigurationPortabilityTests
             return endpointId;
         });
 
-        var destinationEndpointId = await host.ExecuteInTenantScopeAsync(destination, CreateEndpointAsync);
-
-        Assert.NotEqual(sourceEndpointId, destinationEndpointId);
-
-        // The Contact Center step is placed first, the way the operator documentation describes building a plan, so
-        // the queue is imported before the endpoint it references has been reconciled.
-        var plan = await ExportAsync(host, source, ContactCenterConfigurationCatalogs.Group);
-        var crmPlan = await ExportAsync(host, source, OmnichannelConfigurationCatalogs.Group);
+        // The Contact Center step is placed first, the way the operator documentation describes building a plan, so the
+        // queue is imported before the endpoint it references has been created on the destination.
+        var plan = await ExportAsync(host, source, ContactCenterGroup);
+        var crmPlan = await ExportAsync(host, source, OmnichannelGroup);
 
         await ImportAsync(host, destination, [.. plan, .. crmPlan]);
 
         var landed = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
         {
             var queues = await serviceProvider.GetRequiredService<IActivityQueueManager>().GetAllAsync();
+            var endpoints = await serviceProvider.GetRequiredService<IOmnichannelChannelEndpointManager>().GetAllAsync();
 
-            return queues.Single(candidate => candidate.Name == "Inbound").InboundChannelEndpointId;
+            return new
+            {
+                EndpointId = queues.Single(candidate => candidate.Name == "Inbound").InboundChannelEndpointId,
+                EndpointIds = endpoints.Select(endpoint => endpoint.ItemId).ToArray(),
+            };
         });
 
-        Assert.Equal(destinationEndpointId, landed);
+        Assert.Equal(sourceEndpointId, landed.EndpointId);
+
+        Assert.True(
+            landed.EndpointIds.Contains(landed.EndpointId, StringComparer.Ordinal),
+            Describe(
+                "An imported queue references a channel endpoint that does not exist on the destination tenant, so " +
+                "the plan configured a contact centre that cannot route an inbound number to its queue.",
+                "Preserve the identifier of every imported entry so cross-step references resolve without re-pointing.",
+                [$"The queue references '{landed.EndpointId}'.", $"The tenant holds: {string.Join(", ", landed.EndpointIds)}."]));
     }
 
     /// <summary>
-    /// A queue overflows into another queue in the same step, and entries are imported in export order, which has
-    /// nothing to do with the direction of the reference. The queue that overflows is therefore routinely imported
-    /// before the queue it overflows into is reconciled, and an import that only looks forward leaves overflow
-    /// routing pointing at a queue the destination does not have.
+    /// A queue overflows into another queue carried by the same step, and the two are imported in export order, which
+    /// has nothing to do with the direction of the reference. Because an import preserves the identifier every entry
+    /// was exported with, the queue that is overflowed into lands under the identifier the overflowing queue already
+    /// names, so the overflow reference resolves whichever of the two is imported first.
     /// </summary>
     [Fact]
     public async Task AQueueThatOverflowsIntoAQueueImportedAfterIt_LandsPointingAtTheQueueTheTenantHolds()
@@ -544,7 +393,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
             Features = _configurationFeatures,
         });
 
-        await host.ExecuteInTenantScopeAsync(source, async serviceProvider =>
+        var sourceOverflowId = await host.ExecuteInTenantScopeAsync(source, async serviceProvider =>
         {
             var manager = serviceProvider.GetRequiredService<IActivityQueueManager>();
             var overflow = await manager.NewAsync(new JsonObject());
@@ -558,98 +407,31 @@ public sealed class ContactCenterConfigurationPortabilityTests
             primary.OverflowQueueId = overflow.ItemId;
             await manager.CreateAsync(primary);
 
-            return true;
-        });
-
-        var destinationOverflowId = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var manager = serviceProvider.GetRequiredService<IActivityQueueManager>();
-            var overflow = await manager.NewAsync(new JsonObject());
-
-            overflow.Name = "Zulu";
-            await manager.CreateAsync(overflow);
-
             return overflow.ItemId;
         });
 
-        await ImportAsync(host, destination, await ExportAsync(host, source, ContactCenterConfigurationCatalogs.Group));
+        await ImportAsync(host, destination, await ExportAsync(host, source, ContactCenterGroup));
 
         var landed = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
         {
             var queues = await serviceProvider.GetRequiredService<IActivityQueueManager>().GetAllAsync();
 
-            return queues.Single(candidate => candidate.Name == "Alpha").OverflowQueueId;
+            return new
+            {
+                OverflowQueueId = queues.Single(candidate => candidate.Name == "Alpha").OverflowQueueId,
+                QueueIds = queues.Select(queue => queue.ItemId).ToArray(),
+            };
         });
 
-        Assert.Equal(destinationOverflowId, landed);
-    }
-
-    /// <summary>
-    /// Reconciling an entry with the copy the destination already had depends on the entry carrying something that
-    /// identifies it. Subject flow settings and subject actions carry a display text that nothing in the product
-    /// ever fills in - they are identified by the subject they belong to and, for an action, by the disposition
-    /// that triggers it. A catalog that leans on the unfilled display text creates a second copy on every replay,
-    /// and the product then acts on both: the effective flow for a subject becomes whichever copy is read first,
-    /// and a duplicated action runs twice for one disposition.
-    /// </summary>
-    [Fact]
-    public async Task ImportingConfigurationThatCarriesNoNameOrDisplayText_ReconcilesItInsteadOfDuplicatingIt()
-    {
-        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
-
-        var source = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-keyless-origin",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        var destination = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-keyless-target",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        await host.ExecuteInTenantScopeAsync(source, serviceProvider => CreateFlowAsync(serviceProvider, "The source tenant's copy."));
-        await host.ExecuteInTenantScopeAsync(destination, serviceProvider => CreateFlowAsync(serviceProvider, null));
-
-        await ImportAsync(host, destination, await ExportAsync(host, source, OmnichannelConfigurationCatalogs.Group));
-
-        var landed = await host.ExecuteInTenantScopeAsync(destination, async serviceProvider =>
-        {
-            var flows = await serviceProvider.GetRequiredService<ICatalogManager<SubjectFlowSettings>>().GetAllAsync();
-
-            return flows.Where(candidate => candidate.SubjectContentType == "SupportCase").ToArray();
-        });
+        Assert.Equal(sourceOverflowId, landed.OverflowQueueId);
 
         Assert.True(
-            landed.Length == 1,
+            landed.QueueIds.Contains(landed.OverflowQueueId, StringComparer.Ordinal),
             Describe(
-                "Replaying a plan created a second set of flow settings for a subject the destination had already " +
-                "configured, so which settings the product uses now depends on which copy it happens to read first.",
-                "Identify entries that carry no name or display text by the members that make them the same entry.",
-                [$"The tenant holds {landed.Length} sets of flow settings for 'SupportCase'."]));
-
-        Assert.Equal("The source tenant's copy.", landed[0].SubjectGoal);
-    }
-
-    private static async Task<bool> CreateFlowAsync(IServiceProvider serviceProvider, string goal)
-    {
-        var manager = serviceProvider.GetRequiredService<ICatalogManager<SubjectFlowSettings>>();
-        var flow = await manager.NewAsync(new JsonObject());
-
-        // The display text is left unset on purpose: no screen in the product fills it in, so a gate that set it
-        // would be proving something about the fixture rather than about the configuration the product produces. The
-        // campaign and channel are set for the opposite reason: the editor requires both, so a flow without them is not
-        // configuration the product produces either.
-        flow.SubjectContentType = "SupportCase";
-        flow.SubjectGoal = goal;
-        flow.CampaignId = "support-campaign";
-        flow.Channel = "voice";
-        await manager.CreateAsync(flow);
-
-        return true;
+                "An imported queue overflows into a queue that does not exist on the destination tenant, so overflow " +
+                "routing points at nothing after the plan is replayed.",
+                "Preserve the identifier of every imported entry so an overflow reference resolves regardless of order.",
+                [$"'Alpha' overflows into '{landed.OverflowQueueId}'.", $"The tenant holds: {string.Join(", ", landed.QueueIds)}."]));
     }
 
     private static async Task<string> CreateEndpointAsync(IServiceProvider serviceProvider)
@@ -682,8 +464,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     /// turns every one of those references into a pointer to nothing on the destination tenant.
     /// </summary>
     [Theory]
-    [InlineData(ContactCenterConfigurationCatalogs.Group)]
-    [InlineData(OmnichannelConfigurationCatalogs.Group)]
+    [InlineData(ContactCenterGroup)]
+    [InlineData(OmnichannelGroup)]
     public async Task ImportedConfiguration_KeepsTheIdentifiersThatOtherEntriesPointAt(string group)
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -759,86 +541,39 @@ public sealed class ContactCenterConfigurationPortabilityTests
             "so this test would pass without proving anything.");
     }
 
-    [Fact]
-    public async Task AnExportedPlan_OrdersEveryCatalogAfterTheCatalogsItReferences()
-    {
-        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
-
-        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
-        {
-            Id = "configuration-export-order",
-            ProviderProfile = "none",
-            Features = _configurationFeatures,
-        });
-
-        await SeedAsync(host, tenant, ContactCenterConfigurationCatalogs.Group);
-        await SeedAsync(host, tenant, OmnichannelConfigurationCatalogs.Group);
-
-        var plan = await ExportAsync(host, tenant, ContactCenterConfigurationCatalogs.Group);
-        var order = plan.Select(step => step["name"].GetValue<string>()).ToArray();
-
-        AssertPrecedes(order, ContactCenterConfigurationCatalogs.Skill, ContactCenterConfigurationCatalogs.Queue);
-        AssertPrecedes(order, ContactCenterConfigurationCatalogs.QueueGroup, ContactCenterConfigurationCatalogs.Queue);
-        AssertPrecedes(order, ContactCenterConfigurationCatalogs.BusinessHoursCalendar, ContactCenterConfigurationCatalogs.Queue);
-        AssertPrecedes(order, ContactCenterConfigurationCatalogs.Queue, ContactCenterConfigurationCatalogs.EntryPoint);
-
-        var omnichannelOrder = (await ExportAsync(host, tenant, OmnichannelConfigurationCatalogs.Group))
-            .Select(step => step["name"].GetValue<string>())
-            .ToArray();
-
-        AssertPrecedes(omnichannelOrder, OmnichannelConfigurationCatalogs.CampaignGroup, OmnichannelConfigurationCatalogs.Campaign);
-        AssertPrecedes(omnichannelOrder, OmnichannelConfigurationCatalogs.Disposition, OmnichannelConfigurationCatalogs.SubjectFlowSettings);
-        AssertPrecedes(omnichannelOrder, OmnichannelConfigurationCatalogs.Disposition, OmnichannelConfigurationCatalogs.SubjectAction);
-    }
-
-    private static void AssertPrecedes(string[] order, string first, string second)
-    {
-        var firstIndex = Array.IndexOf(order, first);
-        var secondIndex = Array.IndexOf(order, second);
-
-        Assert.True(firstIndex >= 0, $"The plan does not export '{first}'.");
-        Assert.True(secondIndex >= 0, $"The plan does not export '{second}'.");
-        Assert.True(
-            firstIndex < secondIndex,
-            $"'{first}' must be imported before '{second}' because '{second}' references it, but the plan orders " +
-            $"'{first}' at {firstIndex} and '{second}' at {secondIndex}.");
-    }
-
     private static readonly (string OwningStep, string PropertyName, JsonNode Value)[] _seedOverrides =
     [
-        (ContactCenterConfigurationCatalogs.DialerProfile, nameof(DialerProfile.Mode), JsonValue.Create(nameof(DialerMode.Preview))),
-        (ContactCenterConfigurationCatalogs.DialerProfile, nameof(DialerProfile.CallsPerAgent), JsonValue.Create(PowerDialerStrategy.MaxCallsPerAgent)),
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.Mode), JsonValue.Create(nameof(DialerMode.Preview))),
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallsPerAgent), JsonValue.Create(PowerDialerStrategy.MaxCallsPerAgent)),
     ];
 
     private static readonly (string OwningStep, string PropertyName, string ReferencedStep)[] _references =
     [
-        (ContactCenterConfigurationCatalogs.Queue, nameof(ActivityQueue.QueueGroupId), ContactCenterConfigurationCatalogs.QueueGroup),
+        (ContactCenterDeploymentSteps.Queue, nameof(ActivityQueue.QueueGroupId), ContactCenterDeploymentSteps.QueueGroup),
     ];
 
     private static async Task<int> SeedAsync(ContactCenterFeatureActivationHost host, ContactCenterTenant tenant, string group)
     {
         return await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
         {
-            var catalogs = GetCatalogs(serviceProvider, group);
             var handlers = serviceProvider.GetServices<IRecipeStepHandler>().ToArray();
             var seededIds = new Dictionary<string, string>(StringComparer.Ordinal);
             var assigned = 0;
 
-            foreach (var (stepName, entryType, managerType) in GetGroup(group).Catalogs)
+            foreach (var catalog in GetGroup(group).Catalogs)
             {
-                var catalog = catalogs.Single(candidate => candidate.StepName == stepName);
-                var (entry, populated) = BuildFullyPopulated(entryType, stepName);
+                var (entry, populated) = BuildFullyPopulated(catalog.EntryType, catalog.StepName);
 
                 assigned += populated;
-                ApplySeedOverrides(entry, stepName);
-                ApplyReferences(entry, stepName, seededIds);
+                ApplySeedOverrides(entry, catalog.StepName);
+                ApplyReferences(entry, catalog.StepName, seededIds);
 
                 var context = new RecipeExecutionContext
                 {
-                    Name = stepName,
+                    Name = catalog.StepName,
                     Step = new JsonObject
                     {
-                        ["name"] = stepName,
+                        ["name"] = catalog.StepName,
                         [catalog.CollectionName] = new JsonArray(entry),
                     },
                 };
@@ -850,13 +585,13 @@ public sealed class ContactCenterConfigurationPortabilityTests
 
                 Assert.True(
                     context.Errors.Count == 0,
-                    $"{stepName}: {string.Join("; ", context.Errors)} :: {entry.ToJsonString()}");
+                    $"{catalog.StepName}: {string.Join("; ", context.Errors)} :: {entry.ToJsonString()}");
 
-                var stored = (await GetAllAsync(serviceProvider, managerType)).OfType<CatalogItem>().FirstOrDefault();
+                var stored = (await GetAllAsync(serviceProvider, catalog.ManagerType)).OfType<CatalogItem>().FirstOrDefault();
 
                 if (stored is not null)
                 {
-                    seededIds[stepName] = stored.ItemId;
+                    seededIds[catalog.StepName] = stored.ItemId;
                 }
             }
 
@@ -868,17 +603,26 @@ public sealed class ContactCenterConfigurationPortabilityTests
     {
         return await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
         {
-            var step = GetGroup(group).CreateStep();
-            var result = new DeploymentPlanResult(new NullFileBuilder(), new RecipeDescriptor());
+            var sources = serviceProvider.GetServices<IDeploymentSource>();
+            var steps = new List<JsonObject>();
 
-            // Every source is offered the step because a source only contributes to the step type it declares. A
-            // source that ignores it contributes nothing, which the step-count assertions would catch.
-            foreach (var source in serviceProvider.GetServices<IDeploymentSource>())
+            foreach (var catalog in GetGroup(group).Catalogs)
             {
-                await source.ProcessDeploymentStepAsync(step, result);
+                var step = catalog.CreateStep();
+                var result = new DeploymentPlanResult(new NullFileBuilder(), new RecipeDescriptor());
+
+                // Every source is offered the step because a source only contributes to the step type it declares. A
+                // source that ignores it contributes nothing, which the step-count assertions would catch. The catalogs
+                // are visited in dependency order, so the emitted steps arrive in the order an import has to replay them.
+                foreach (var source in sources)
+                {
+                    await source.ProcessDeploymentStepAsync(step, result);
+                }
+
+                steps.AddRange(result.Steps.Cast<JsonObject>());
             }
 
-            return result.Steps.Cast<JsonObject>().ToArray();
+            return steps.ToArray();
         });
     }
 
@@ -896,18 +640,18 @@ public sealed class ContactCenterConfigurationPortabilityTests
         {
             var steps = new List<JsonObject>();
 
-            foreach (var (stepName, _, managerType) in GetGroup(group).Catalogs)
+            foreach (var catalog in GetGroup(group).Catalogs)
             {
                 var entries = new JsonArray();
 
-                foreach (var entry in await GetAllAsync(serviceProvider, managerType))
+                foreach (var entry in await GetAllAsync(serviceProvider, catalog.ManagerType))
                 {
                     entries.Add(JsonSerializer.SerializeToNode(entry, entry.GetType(), JOptions.Default));
                 }
 
                 steps.Add(new JsonObject
                 {
-                    ["name"] = stepName,
+                    ["name"] = catalog.StepName,
                     ["entries"] = Sort(entries),
                 });
             }
@@ -977,14 +721,6 @@ public sealed class ContactCenterConfigurationPortabilityTests
                 Assert.Empty(context.Errors);
             });
         }
-    }
-
-    private static IConfigurationCatalog[] GetCatalogs(IServiceProvider serviceProvider, string group)
-    {
-        return serviceProvider
-            .GetServices<IConfigurationCatalog>()
-            .Where(catalog => catalog.Group == group)
-            .ToArray();
     }
 
     private static JsonArray GetEntries(JsonObject step)
@@ -1093,8 +829,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
     /// <remarks>
     /// A synthetic seed value satisfies the shape of a reference but not its meaning. Entries whose handlers require a
     /// reference to resolve are rejected by the import when the reference points at nothing, so the reference is
-    /// rewritten to the identifier the earlier step actually produced. The plan orders a catalog after the catalogs it
-    /// references, so the target is always present by the time it is needed.
+    /// rewritten to the identifier the earlier catalog actually produced. Catalogs are seeded in dependency order, so
+    /// the target is always present by the time it is needed.
     /// </remarks>
     /// <param name="entry">The entry about to be imported.</param>
     /// <param name="stepName">The catalog step the entry belongs to.</param>

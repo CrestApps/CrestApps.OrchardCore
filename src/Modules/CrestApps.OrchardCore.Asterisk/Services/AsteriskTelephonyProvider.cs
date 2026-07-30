@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -27,6 +27,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="applicationGate">The gate that enforces single-tenant ownership of each ARI application.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AsteriskTelephonyProvider(
@@ -35,9 +36,10 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         IHttpClientFactory httpClientFactory,
         IAsteriskAriApplicationGate applicationGate,
         IClock clock,
+        IRedactorProvider redactorProvider,
         ILogger<AsteriskTelephonyProvider> logger,
         IStringLocalizer<AsteriskTelephonyProvider> stringLocalizer)
-        : base(httpClientFactory, clock, logger, stringLocalizer)
+        : base(httpClientFactory, clock, redactorProvider, logger, stringLocalizer)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -131,7 +133,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Failed to unprotect the tenant-configured Asterisk password.");
+            _logger.LogError(ex, "Failed to unprotect the tenant-configured Asterisk password.");
 
             return null;
         }

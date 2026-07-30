@@ -7,7 +7,6 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -170,7 +169,7 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
             catch (Exception cleanupException)
             {
                 _logger.LogWarning(
-                    OperationalLogRedactor.RedactException(cleanupException),
+                    cleanupException,
                     "Unable to clean up a partially opened Asterisk external-media session.");
             }
             finally
@@ -264,7 +263,7 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Unable to unprotect the tenant Asterisk password for external media.");
+            _logger.LogWarning(ex, "Unable to unprotect the tenant Asterisk password for external media.");
 
             return null;
         }

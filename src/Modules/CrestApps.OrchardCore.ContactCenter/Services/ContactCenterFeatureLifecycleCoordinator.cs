@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -111,7 +110,7 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         Exception exception)
     {
         _logger.LogError(
-            OperationalLogRedactor.RedactException(exception),
+            exception,
             "An error occurred while {Operation} Contact Center feature '{FeatureId}' participant '{ParticipantType}'.",
             operation,
             participant.FeatureId,

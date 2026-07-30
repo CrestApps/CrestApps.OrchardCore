@@ -1,8 +1,10 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
 {
     private readonly ILogger _logger;
     private readonly string _tenantName;
+    private readonly Redactor _addressRedactor;
 
     internal readonly IStringLocalizer S;
 
@@ -33,13 +36,16 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
+    /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     public TelephonyHub(
         ILogger<TelephonyHub> logger,
         IStringLocalizer<TelephonyHub> stringLocalizer,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IRedactorProvider redactorProvider)
     {
         _logger = logger;
         _tenantName = shellSettings.Name;
+        _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         S = stringLocalizer;
     }
 
@@ -346,9 +352,9 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 RedactedUserId(),
                 result.Succeeded,
                 result.Found,
-                OperationalLogRedactor.Redact(result.Call?.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call),
+                result.Call?.CallId.SanitizeLogValue(),
                 result.Call?.State.ToString() ?? "(none)",
-                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
+                result.Error.SanitizeLogValue());
         }
 
         return result;
@@ -400,7 +406,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 RedactedUserId(),
                 result.Succeeded,
                 result.Calls.Count,
-                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
+                result.Error.SanitizeLogValue());
         }
 
         return result;
@@ -474,7 +480,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 RedactedUserId(),
                 result.Succeeded,
                 result.Entries.Count,
-                OperationalLogRedactor.Redact(result.Error, OperationalLogFieldKind.FreeText));
+                result.Error.SanitizeLogValue());
         }
 
         return result;
@@ -531,7 +537,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                     catch (Exception ex)
                     {
                         _logger.LogError(
-                            OperationalLogRedactor.RedactException(ex),
+                            ex,
                             "Telephony provider action {Action} completed for user {UserId}, but local interaction persistence failed.",
                             actionName,
                             RedactedUserId());
@@ -556,11 +562,11 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 var request = BuildLogRequest(requestFactory);
 
                 _logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Telephony hub action {Action} failed for user {UserId} on connection {ConnectionId}. Request: {Request}.",
                     actionName,
                     RedactedUserId(),
-                    OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session),
+                    Context.ConnectionId.SanitizeLogValue(),
                     request ?? "(none)");
 
                 result = TelephonyResult.Failed(S["An error occurred while processing your request."].Value);
@@ -577,8 +583,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 RedactedUserId(),
                 completionRequest,
                 result?.Succeeded,
-                OperationalLogRedactor.Redact(result?.Error, OperationalLogFieldKind.FreeText),
-                OperationalLogRedactor.Redact(result?.Call?.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call),
+                result?.Error.SanitizeLogValue(),
+                result?.Call?.CallId.SanitizeLogValue(),
                 result?.Call?.State.ToString() ?? "(none)");
         }
 
@@ -654,7 +660,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             "Telephony hub action {Action} started for user {UserId} on connection {ConnectionId}.",
             actionName,
             RedactedUserId(),
-            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+            Context.ConnectionId.SanitizeLogValue());
     }
 
     private void LogHubActionStart(string actionName, Func<string> requestFactory)
@@ -668,7 +674,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             "Telephony hub action {Action} started for user {UserId} on connection {ConnectionId}. Request: {Request}.",
             actionName,
             RedactedUserId(),
-            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session),
+            Context.ConnectionId.SanitizeLogValue(),
             BuildLogRequest(requestFactory));
     }
 
@@ -678,7 +684,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             "Telephony hub action {Action} was denied for user {UserId} on connection {ConnectionId}.",
             actionName,
             RedactedUserId(),
-            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+            Context.ConnectionId.SanitizeLogValue());
     }
 
     private void LogHubActionCallUnavailable(string actionName)
@@ -687,7 +693,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             "Telephony hub action {Action} referenced a call that is not available to user {UserId} on connection {ConnectionId}.",
             actionName,
             RedactedUserId(),
-            OperationalLogRedactor.Pseudonymize(Context.ConnectionId, OperationalLogIdentifierCategory.Session));
+            Context.ConnectionId.SanitizeLogValue());
     }
 
     private static IEnumerable<string> GetCallIds(CallReference call)
@@ -730,42 +736,52 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         return [request.CallId];
     }
 
-    private static string DescribeDialRequest(DialRequest request)
+    private string DescribeDialRequest(DialRequest request)
     {
         return request is null
             ? "(null)"
-            : $"To={OperationalLogRedactor.Redact(request.To, OperationalLogFieldKind.Address)}, From={OperationalLogRedactor.Redact(request.From, OperationalLogFieldKind.Address)}";
+            : $"To={_addressRedactor.Redact(request.To)}, From={_addressRedactor.Redact(request.From)}";
     }
 
-    private static string DescribeCallReference(CallReference call)
+    private string DescribeCallReference(CallReference call)
     {
         if (call is null)
         {
             return "(null)";
         }
 
-        return $"CallId={OperationalLogRedactor.Redact(call.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, Metadata={OperationalLogRedactor.RedactMetadata(call.Metadata)}";
+        return $"CallId={call.CallId.SanitizeLogValue()}, Metadata={DescribeMetadata(call.Metadata)}";
     }
 
-    private static string DescribeTransferRequest(TransferRequest request)
+    private string DescribeMetadata(IDictionary<string, object> metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return "(none)";
+        }
+
+        return string.Join(", ", metadata.Select(entry => $"{entry.Key.SanitizeLogValue()}={_addressRedactor.Redact(entry.Value?.ToString())}"));
+    }
+
+    private string DescribeTransferRequest(TransferRequest request)
     {
         return request is null
             ? "(null)"
-            : $"CallId={OperationalLogRedactor.Redact(request.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, To={OperationalLogRedactor.Redact(request.To, OperationalLogFieldKind.Address)}, Mode={request.Mode}";
+            : $"CallId={request.CallId.SanitizeLogValue()}, To={_addressRedactor.Redact(request.To)}, Mode={request.Mode}";
     }
 
     private static string DescribeMergeRequest(MergeRequest request)
     {
         return request is null
             ? "(null)"
-            : $"CallIds={OperationalLogRedactor.Redact(string.Join(',', request.GetCallIds()), OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}";
+            : $"CallIds={string.Join(',', request.GetCallIds()).SanitizeLogValue()}";
     }
 
     private static string DescribeSendDigitsRequest(SendDigitsRequest request)
     {
         return request is null
             ? "(null)"
-            : $"CallId={OperationalLogRedactor.Redact(request.CallId, OperationalLogFieldKind.Identifier, OperationalLogIdentifierCategory.Call)}, DigitsLength={request.Digits?.Length ?? 0}";
+            : $"CallId={request.CallId.SanitizeLogValue()}, DigitsLength={request.Digits?.Length ?? 0}";
     }
 
     private static string BuildLogRequest(Func<string> requestFactory)
@@ -777,7 +793,7 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     {
         return string.IsNullOrEmpty(Context.UserIdentifier)
             ? "(anonymous)"
-            : OperationalLogRedactor.Pseudonymize(Context.UserIdentifier, OperationalLogIdentifierCategory.User);
+            : Context.UserIdentifier.SanitizeLogValue();
     }
 
     private async Task RecordInteractionAsync(

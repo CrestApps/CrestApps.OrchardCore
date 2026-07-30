@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -75,9 +74,9 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
             if (_logger.IsEnabled(LogLevel.Critical))
             {
                 _logger.LogCritical(
-                    "Unable to validate the Contact Center deployment topology for tenant '{TenantName}': {Error} Contact Center work admission is refused until this is resolved.",
-                    _shellSettings.Name,
-                    OperationalLogRedactor.RedactException(ex));
+                    ex,
+                    "Unable to validate the Contact Center deployment topology for tenant '{TenantName}': Contact Center work admission is refused until this is resolved.",
+                    _shellSettings.Name);
             }
 
             _state.Record(new ContactCenterTopologyValidationResult

@@ -114,19 +114,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Configuration
-{
-    public static class OmnichannelConfigurationCatalogs
-    {
-        public const string Campaign = "OmnichannelCampaign";
-        public const string CampaignGroup = "OmnichannelCampaignGroup";
-        public const string ChannelEndpoint = "OmnichannelChannelEndpoint";
-        public const string Disposition = "OmnichannelDisposition";
-        public const string Group = "Omnichannel";
-        public const string SubjectAction = "OmnichannelSubjectAction";
-        public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";
-    }
-}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
 {
     [OrchardCore.Admin.Admin(null, null)]
@@ -381,10 +368,47 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments
 {
-    public sealed class OmnichannelConfigurationDeploymentStep : CrestApps.OrchardCore.Core.Configuration.ConfigurationCatalogDeploymentStep
+    public static class OmnichannelDeploymentSteps
     {
-        public OmnichannelConfigurationDeploymentStep() { }
-        public OmnichannelConfigurationDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.OmnichannelConfigurationDeploymentStep> stringLocalizer) { }
+        public const string Campaign = "OmnichannelCampaign";
+        public const string CampaignGroup = "OmnichannelCampaignGroup";
+        public const string ChannelEndpoint = "OmnichannelChannelEndpoint";
+        public const string Disposition = "OmnichannelDisposition";
+        public const string SubjectAction = "OmnichannelSubjectAction";
+        public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
+{
+    public sealed class OmnichannelCampaignDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelCampaignDeploymentStep() { }
+        public OmnichannelCampaignDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelCampaignDeploymentStep> stringLocalizer) { }
+    }
+    public sealed class OmnichannelCampaignGroupDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelCampaignGroupDeploymentStep() { }
+        public OmnichannelCampaignGroupDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelCampaignGroupDeploymentStep> stringLocalizer) { }
+    }
+    public sealed class OmnichannelChannelEndpointDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelChannelEndpointDeploymentStep() { }
+        public OmnichannelChannelEndpointDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelChannelEndpointDeploymentStep> stringLocalizer) { }
+    }
+    public sealed class OmnichannelDispositionDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelDispositionDeploymentStep() { }
+        public OmnichannelDispositionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelDispositionDeploymentStep> stringLocalizer) { }
+    }
+    public sealed class OmnichannelSubjectActionDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelSubjectActionDeploymentStep() { }
+        public OmnichannelSubjectActionDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelSubjectActionDeploymentStep> stringLocalizer) { }
+    }
+    public sealed class OmnichannelSubjectFlowSettingsDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public OmnichannelSubjectFlowSettingsDeploymentStep() { }
+        public OmnichannelSubjectFlowSettingsDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.OmnichannelSubjectFlowSettingsDeploymentStep> stringLocalizer) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
@@ -649,7 +673,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class OmnichannelContentTypeProvider : OrchardCore.ContentTypes.Events.IContentDefinitionEventHandler
     {
-        public OmnichannelContentTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache) { }
+        public OmnichannelContentTypeProvider() { }
         public void ContentFieldAttached(OrchardCore.ContentTypes.Events.ContentFieldAttachedContext context) { }
         public void ContentFieldDetached(OrchardCore.ContentTypes.Events.ContentFieldDetachedContext context) { }
         public void ContentFieldUpdated(OrchardCore.ContentTypes.Events.ContentFieldUpdatedContext context) { }
@@ -667,8 +691,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public void ContentTypePartUpdated(OrchardCore.ContentTypes.Events.ContentTypePartUpdatedContext context) { }
         public void ContentTypeRemoved(OrchardCore.ContentTypes.Events.ContentTypeRemovedContext context) { }
         public void ContentTypeUpdated(OrchardCore.ContentTypes.Events.ContentTypeUpdatedContext context) { }
-        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync() { }
-        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetSubjectContentTypesAsync() { }
+        public System.Threading.Tasks.Task EnsureInitializedAsync(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Collections.Generic.IReadOnlyCollection<string> GetContactContentTypes() { }
+        public System.Collections.Generic.IReadOnlyCollection<string> GetSubjectContentTypes() { }
+        public bool IsContactContentType(string contentType) { }
+        public bool IsSubjectContentType(string contentType) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels

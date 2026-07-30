@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DialPad.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -216,13 +216,13 @@ public sealed class DialPadTelephonyProvider :
 
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while placing a DialPad call.");
+            _logger.LogError(ex, "An error occurred while placing a DialPad call.");
 
             return TelephonyResult.Unknown(S["DialPad did not confirm whether the call was placed."].Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while preparing a DialPad call.");
+            _logger.LogError(ex, "An error occurred while preparing a DialPad call.");
 
             return TelephonyResult.Failed(S["DialPad could not place the call."].Value);
         }
@@ -284,7 +284,7 @@ public sealed class DialPadTelephonyProvider :
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("DialPad rejected a call-state lookup for call {CallId} with status code {StatusCode}.", OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call), response.StatusCode);
+                _logger.LogError("DialPad rejected a call-state lookup for call {CallId} with status code {StatusCode}.", callId.SanitizeLogValue(), response.StatusCode);
 
                 return new TelephonyCallLookupResult
                 {
@@ -321,7 +321,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while querying the DialPad call state for call {CallId}.", OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call));
+            _logger.LogError(ex, "An error occurred while querying the DialPad call state for call {CallId}.", callId.SanitizeLogValue());
 
             return new TelephonyCallLookupResult
             {
@@ -578,7 +578,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while loading the DialPad directory.");
+            _logger.LogError(ex, "An error occurred while loading the DialPad directory.");
 
             return new TelephonyDirectoryResult
             {
@@ -709,7 +709,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while revoking DialPad OAuth tokens.");
+            _logger.LogError(ex, "An error occurred while revoking DialPad OAuth tokens.");
         }
     }
 
@@ -767,7 +767,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while requesting DialPad OAuth tokens.");
+            _logger.LogError(ex, "An error occurred while requesting DialPad OAuth tokens.");
 
             return null;
         }
@@ -854,7 +854,7 @@ public sealed class DialPadTelephonyProvider :
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("DialPad rejected the '{Action}' request for call {CallId} with status code {StatusCode}.", action, OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call), response.StatusCode);
+                _logger.LogError("DialPad rejected the '{Action}' request for call {CallId} with status code {StatusCode}.", action, callId.SanitizeLogValue(), response.StatusCode);
 
                 return TelephonyResult.Failed(S["DialPad could not complete the requested operation."].Value);
             }
@@ -863,7 +863,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while performing the DialPad '{Action}' operation.", action);
+            _logger.LogError(ex, "An error occurred while performing the DialPad '{Action}' operation.", action);
 
             return TelephonyResult.Failed(S["DialPad could not complete the requested operation."].Value);
         }
@@ -1099,7 +1099,7 @@ public sealed class DialPadTelephonyProvider :
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Unable to unprotect a DialPad secret.");
+            _logger.LogError(ex, "Unable to unprotect a DialPad secret.");
 
             return null;
         }

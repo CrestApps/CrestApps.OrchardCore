@@ -1,6 +1,6 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,8 +102,8 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                         {
                             logger.LogDebug(
                                 "Skipped generic assignment for automated dialer activity '{ActivityItemId}' in queue '{QueueId}'. The dialer pacing task owns {ActivitySource} work.",
-                                OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
-                                OperationalLogRedactor.Pseudonymize(queue.ItemId, OperationalLogIdentifierCategory.Queue),
+                                activity.ItemId.SanitizeLogValue(),
+                                queue.ItemId.SanitizeLogValue(),
                                 activity.Source);
                         }
 
@@ -116,9 +116,9 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
             catch (Exception ex)
             {
                 logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "An error occurred while assigning work for queue '{QueueId}'.",
-                    OperationalLogRedactor.Pseudonymize(queue.ItemId, OperationalLogIdentifierCategory.Queue));
+                    queue.ItemId.SanitizeLogValue());
             }
         }
     }

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -130,9 +130,9 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
         }
 
         _logger.LogWarning(
-            "Unable to apply a Contact Center write to the CRM activity '{ActivityItemId}' after {Attempts} attempts. {Error}",
-            OperationalLogRedactor.Pseudonymize(activityItemId, OperationalLogIdentifierCategory.Activity),
-            MaxActivityWriteAttempts,
-            OperationalLogRedactor.RedactException(lastException));
+            lastException,
+            "Unable to apply a Contact Center write to the CRM activity '{ActivityItemId}' after {Attempts} attempts.",
+            activityItemId.SanitizeLogValue(),
+            MaxActivityWriteAttempts);
     }
 }

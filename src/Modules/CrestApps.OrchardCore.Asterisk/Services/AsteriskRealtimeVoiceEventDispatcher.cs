@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -83,9 +83,9 @@ internal sealed class AsteriskRealtimeVoiceEventDispatcher
         {
             _logger.LogDebug(
                 "Asterisk real-time event {EventType} for provider {ProviderName} call {CallId} was not projected by any consumer.",
-                OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
+                voiceEvent.EventType.SanitizeLogValue(),
                 voiceEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
+                voiceEvent.CallId.SanitizeLogValue());
         }
     }
 

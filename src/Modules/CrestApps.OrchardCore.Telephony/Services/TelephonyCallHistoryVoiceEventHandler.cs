@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -96,7 +96,7 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
                 _logger.LogDebug(
                     "Normalized voice event for provider {ProviderName} call {CallId} did not match any telephony interaction.",
                     providerEvent.ProviderName,
-                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                    providerEvent.ProviderCallId.SanitizeLogValue());
             }
 
             return false;
@@ -109,8 +109,8 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
                 _logger.LogDebug(
                     "Ignored normalized voice event for provider {ProviderName} call {CallId} because telephony interaction {InteractionId} is already terminal.",
                     providerEvent.ProviderName,
-                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
-                    OperationalLogRedactor.Pseudonymize(interaction.InteractionId, OperationalLogIdentifierCategory.Interaction));
+                    providerEvent.ProviderCallId.SanitizeLogValue(),
+                    interaction.InteractionId.SanitizeLogValue());
             }
 
             return false;
@@ -125,8 +125,8 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
             _logger.LogInformation(
                 "Projected normalized voice event for provider {ProviderName} call {CallId} to soft-phone user {UserId} as state {State}.",
                 providerEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
-                OperationalLogRedactor.Pseudonymize(interaction.UserId, OperationalLogIdentifierCategory.User),
+                providerEvent.ProviderCallId.SanitizeLogValue(),
+                interaction.UserId.SanitizeLogValue(),
                 providerEvent.State);
         }
 

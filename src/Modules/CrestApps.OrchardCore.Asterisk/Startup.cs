@@ -6,8 +6,10 @@ using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -99,6 +101,8 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProvider<AsteriskPjsipCredentialLeaseIndexProvider>();
         services.AddDataMigration<AsteriskPjsipCredentialLeaseMigrations>();
+
+        services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
 
         services.AddSingleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>();
 

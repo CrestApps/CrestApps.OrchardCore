@@ -5,8 +5,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -689,7 +689,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         }
         catch (TimeoutRejectedException ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Asterisk ARI operation {Operation} timed out before a response was observed.", operation);
+            _logger.LogError(ex, "Asterisk ARI operation {Operation} timed out before a response was observed.", operation);
 
             // The resilience pipeline exhausted its attempt or total-request timeout without a response, so the
             // operation may still be taking effect on Asterisk. Surface it as a null-status AsteriskAriException so the
@@ -698,7 +698,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Asterisk ARI operation {Operation} could not reach Asterisk.", operation);
+            _logger.LogError(ex, "Asterisk ARI operation {Operation} could not reach Asterisk.", operation);
 
             throw new AsteriskAriException(operation, null, "Asterisk ARI could not reach Asterisk.", ex);
         }
@@ -720,7 +720,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
             "Asterisk ARI operation {Operation} failed with status code {StatusCode}. Response: {ResponseBody}",
             operation,
             response.StatusCode,
-            OperationalLogRedactor.Redact(responseBody, OperationalLogFieldKind.FreeText));
+            responseBody.SanitizeLogValue());
 
         throw new AsteriskAriException(
             operation,
@@ -746,13 +746,13 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         }
         catch (JsonException ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Asterisk ARI operation {Operation} returned invalid JSON.", operation);
+            _logger.LogError(ex, "Asterisk ARI operation {Operation} returned invalid JSON.", operation);
 
             throw new AsteriskAriException(operation, response.StatusCode, "Asterisk ARI returned invalid JSON.", ex);
         }
         catch (NotSupportedException ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Asterisk ARI operation {Operation} returned unsupported JSON.", operation);
+            _logger.LogError(ex, "Asterisk ARI operation {Operation} returned unsupported JSON.", operation);
 
             throw new AsteriskAriException(operation, response.StatusCode, "Asterisk ARI returned unsupported JSON.", ex);
         }
@@ -854,7 +854,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Unable to unprotect the tenant Asterisk password for ARI.");
+            _logger.LogWarning(ex, "Unable to unprotect the tenant Asterisk password for ARI.");
 
             return null;
         }

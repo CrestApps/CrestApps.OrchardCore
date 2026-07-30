@@ -1,5 +1,5 @@
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Configuration;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -45,13 +45,13 @@ public sealed class ContactCenterConfigurationCoverageTests
     /// </summary>
     private static readonly Dictionary<string, string> _configuration = new(StringComparer.Ordinal)
     {
-        [nameof(ActivityQueue)] = ContactCenterConfigurationCatalogs.Queue,
-        [nameof(ActivityQueueGroup)] = ContactCenterConfigurationCatalogs.QueueGroup,
-        [nameof(AgentStateReasonCode)] = ContactCenterConfigurationCatalogs.AgentStateReasonCode,
-        [nameof(BusinessHoursCalendar)] = ContactCenterConfigurationCatalogs.BusinessHoursCalendar,
-        [nameof(ContactCenterEntryPoint)] = ContactCenterConfigurationCatalogs.EntryPoint,
-        [nameof(ContactCenterSkill)] = ContactCenterConfigurationCatalogs.Skill,
-        [nameof(DialerProfile)] = ContactCenterConfigurationCatalogs.DialerProfile,
+        [nameof(ActivityQueue)] = ContactCenterDeploymentSteps.Queue,
+        [nameof(ActivityQueueGroup)] = ContactCenterDeploymentSteps.QueueGroup,
+        [nameof(AgentStateReasonCode)] = ContactCenterDeploymentSteps.AgentStateReasonCode,
+        [nameof(BusinessHoursCalendar)] = ContactCenterDeploymentSteps.BusinessHoursCalendar,
+        [nameof(ContactCenterEntryPoint)] = ContactCenterDeploymentSteps.EntryPoint,
+        [nameof(ContactCenterSkill)] = ContactCenterDeploymentSteps.Skill,
+        [nameof(DialerProfile)] = ContactCenterDeploymentSteps.DialerProfile,
     };
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class ContactCenterConfigurationCoverageTests
             undeclared.Length == 0,
             "These entities are neither exported in a deployment plan nor declared as runtime state, so nobody has " +
             "decided whether an operator can script them: " + string.Join(", ", undeclared) + ". Register the entity " +
-            "as a configuration catalog in the Contact Center startup and add it to the configuration map, or record " +
+            "with a deployment source and recipe step in the Contact Center startup and add it to the configuration map, or record " +
             "in the runtime state map why it must not travel between environments.");
 
         var contradictory = _configuration.Keys.Intersect(_runtimeState.Keys, StringComparer.Ordinal).ToArray();

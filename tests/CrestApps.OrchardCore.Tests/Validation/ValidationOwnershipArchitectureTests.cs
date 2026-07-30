@@ -15,13 +15,17 @@ public class ValidationOwnershipArchitectureTests
 {
     private static Dictionary<string, HashSet<string>> _stringConstants;
 
-    private static readonly Regex _configurationCatalogRegex = new(
-        @"Add(?:Source)?ConfigurationCatalog<\s*(?<entity>\w+)\s*,",
+    private static readonly Regex _recipeStepRegistrationRegex = new(
+        @"AddRecipeExecutionStep<\s*(?<step>\w+)\s*>",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    private static readonly Regex _configurationCatalogDeclarationRegex = new(
-        @"\bstatic\s+[\w<>,\.\[\]\s]+\s+Add(?:Source)?ConfigurationCatalog<",
+    private static readonly Regex _recipeStepDeclarationRegex = new(
+        @"class\s+(?<step>\w+)\s*:\s*NamedRecipeStepHandler",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex _recipeStepEntityRegex = new(
+        @"^\s*(?<entity>\w+)\s+entry\s*=\s*null;",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
     private static readonly Regex _handlerRegistrationRegex = new(
         @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+)\s*>",
@@ -286,16 +290,17 @@ public class ValidationOwnershipArchitectureTests
     }
 
     /// <summary>
-    /// Finds every entity registered as a configuration catalog, together with the feature that registers it.
+    /// Finds every entity a recipe step imports as configuration, together with the feature that registers that step.
     /// </summary>
     /// <remarks>
-    /// The governed set is derived from the registrations rather than from a list someone maintains, so registering a
-    /// new configuration catalog brings it under these gates without any further step. Runtime aggregates are outside
-    /// the set by construction, because nothing registers them as configuration and no recipe authors them.
+    /// The governed set is derived from the registrations rather than from a list someone maintains, so adding a new
+    /// configuration recipe step brings its entity under these gates without any further step. Runtime aggregates are
+    /// outside the set by construction, because no recipe authors them.
     /// </remarks>
     /// <returns>The registered entity names paired with the feature and source file that register each of them.</returns>
     private static List<CatalogRegistration> GetConfigurationCatalogRegistrations()
     {
+        var entitiesByStep = GetConfigurationEntitiesByRecipeStep();
         var registrations = new List<CatalogRegistration>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
@@ -303,17 +308,12 @@ public class ValidationOwnershipArchitectureTests
         {
             foreach (var (line, feature) in EnumerateFeatureScopedLines(file))
             {
-                // Skip the extension method's own declaration, whose type parameters are not entities. The match is
-                // anchored to the declaration itself so that a registration written inside a static helper - where the
-                // call is qualified by the service collection - is still discovered.
-                if (_configurationCatalogDeclarationRegex.IsMatch(line))
+                foreach (var match in _recipeStepRegistrationRegex.Matches(line).Cast<Match>())
                 {
-                    continue;
-                }
-
-                foreach (var match in _configurationCatalogRegex.Matches(line).Cast<Match>())
-                {
-                    var entity = match.Groups["entity"].Value;
+                    if (!entitiesByStep.TryGetValue(match.Groups["step"].Value, out var entity))
+                    {
+                        continue;
+                    }
 
                     if (seen.Add($"{file.RelativePath}|{feature}|{entity}"))
                     {
@@ -324,6 +324,42 @@ public class ValidationOwnershipArchitectureTests
         }
 
         return registrations;
+    }
+
+    /// <summary>
+    /// Maps each configuration recipe step to the entity it imports.
+    /// </summary>
+    /// <remarks>
+    /// A configuration step declares the entry it is about to create or update before it looks the entry up, which is
+    /// what separates it from a step that scripts an operation rather than a catalog. Reading the declaration keeps the
+    /// mapping derived from the step itself instead of from a list that has to be kept in sync by hand.
+    /// </remarks>
+    /// <returns>The entity name imported by each recipe step handler, keyed by the handler's type name.</returns>
+    private static Dictionary<string, string> GetConfigurationEntitiesByRecipeStep()
+    {
+        var entitiesByStep = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var file in EnumerateApplicationFiles("*.cs"))
+        {
+            var text = File.ReadAllText(file.FullPath);
+            var declaration = _recipeStepDeclarationRegex.Match(text);
+
+            if (!declaration.Success)
+            {
+                continue;
+            }
+
+            var entity = _recipeStepEntityRegex.Match(text);
+
+            if (!entity.Success)
+            {
+                continue;
+            }
+
+            entitiesByStep[declaration.Groups["step"].Value] = entity.Groups["entity"].Value;
+        }
+
+        return entitiesByStep;
     }
 
     /// <summary>

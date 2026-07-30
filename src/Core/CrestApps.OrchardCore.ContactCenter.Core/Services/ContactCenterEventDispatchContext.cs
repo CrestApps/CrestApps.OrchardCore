@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -42,7 +42,7 @@ public sealed class ContactCenterEventDispatchContext
         {
             _logger.LogWarning(
                 "Skipped deferred Contact Center event dispatch because event '{EventId}' no longer exists.",
-                OperationalLogRedactor.Pseudonymize(eventId, OperationalLogIdentifierCategory.Event));
+                eventId.SanitizeLogValue());
 
             return;
         }

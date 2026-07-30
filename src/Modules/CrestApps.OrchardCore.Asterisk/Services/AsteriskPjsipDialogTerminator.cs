@@ -2,8 +2,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -79,14 +79,14 @@ internal sealed class AsteriskPjsipDialogTerminator : IAsteriskPjsipDialogTermin
                 {
                     _logger.LogWarning(
                         "Asterisk did not terminate browser SIP channel {ChannelId} for a revoked PJSIP credential. Status code: {StatusCode}.",
-                        OperationalLogRedactor.Redact(id, OperationalLogFieldKind.Identifier),
+                        id.SanitizeLogValue(),
                         deleteResponse.StatusCode);
                 }
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk browser SIP dialog teardown did not complete for a revoked credential.");
+            _logger.LogWarning(ex, "Asterisk browser SIP dialog teardown did not complete for a revoked credential.");
         }
     }
 

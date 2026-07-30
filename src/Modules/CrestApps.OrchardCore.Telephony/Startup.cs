@@ -1,5 +1,6 @@
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.Configuration;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -75,6 +77,7 @@ public sealed class Startup : StartupBase
             .ValidateOnStart();
 
         services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
+        services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
         services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,15 +21,17 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
     /// <param name="options">The configuration-backed default Asterisk options.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultAsteriskTelephonyProvider(
         IOptions<DefaultAsteriskOptions> options,
         IHttpClientFactory httpClientFactory,
         IClock clock,
+        IRedactorProvider redactorProvider,
         ILogger<DefaultAsteriskTelephonyProvider> logger,
         IStringLocalizer<DefaultAsteriskTelephonyProvider> stringLocalizer)
-        : base(httpClientFactory, clock, logger, stringLocalizer)
+        : base(httpClientFactory, clock, redactorProvider, logger, stringLocalizer)
     {
         _options = options.Value;
     }

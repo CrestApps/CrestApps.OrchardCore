@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
 using YesSql;
@@ -125,9 +125,9 @@ public sealed class ContactCenterWorkStateActivityProjection : IContactCenterWor
         // The CRM activity is a read model for this data; work state remains authoritative and the next
         // routing transition re-schedules the projection, so a losing race is logged rather than thrown.
         _logger.LogWarning(
-            "Unable to project Contact Center work state onto the CRM activity '{ActivityItemId}' after {Attempts} attempts. {Error}",
-            OperationalLogRedactor.Pseudonymize(activityItemId, OperationalLogIdentifierCategory.Activity),
-            MaxProjectionAttempts,
-            OperationalLogRedactor.RedactException(lastException));
+            lastException,
+            "Unable to project Contact Center work state onto the CRM activity '{ActivityItemId}' after {Attempts} attempts.",
+            activityItemId.SanitizeLogValue(),
+            MaxProjectionAttempts);
     }
 }

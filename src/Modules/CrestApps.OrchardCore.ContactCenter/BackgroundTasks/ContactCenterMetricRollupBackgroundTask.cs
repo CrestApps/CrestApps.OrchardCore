@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -37,7 +36,7 @@ public sealed class ContactCenterMetricRollupBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
-            logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while folding Contact Center event metric contributions.");
+            logger.LogError(ex, "An error occurred while folding Contact Center event metric contributions.");
         }
     }
 }

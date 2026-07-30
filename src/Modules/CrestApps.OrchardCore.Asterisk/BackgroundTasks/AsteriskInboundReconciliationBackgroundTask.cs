@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -48,7 +47,7 @@ public sealed class AsteriskInboundReconciliationBackgroundTask : IBackgroundTas
             catch (Exception ex)
             {
                 logger.LogError(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "The periodic Asterisk channel binding reconciliation sweep failed for provider {ProviderName}.",
                     AsteriskConstants.ProviderTechnicalName);
             }

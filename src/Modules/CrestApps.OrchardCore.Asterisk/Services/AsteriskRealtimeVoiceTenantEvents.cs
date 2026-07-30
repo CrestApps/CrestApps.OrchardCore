@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -59,7 +58,7 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "An error occurred while stopping the Asterisk real-time voice listener.");
+            _logger.LogError(ex, "An error occurred while stopping the Asterisk real-time voice listener.");
         }
 
         _applicationGate.ReleaseGeneration();
@@ -162,7 +161,7 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
         }
         catch (Exception ex)
         {
-            _logger.LogError(OperationalLogRedactor.RedactException(ex), "Failed to unprotect the tenant-configured Asterisk password for the real-time listener.");
+            _logger.LogError(ex, "Failed to unprotect the tenant-configured Asterisk password for the real-time listener.");
 
             return null;
         }

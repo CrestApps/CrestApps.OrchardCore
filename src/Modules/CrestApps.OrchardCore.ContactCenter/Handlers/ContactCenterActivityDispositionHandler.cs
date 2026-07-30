@@ -1,7 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -90,10 +90,10 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
             {
                 _logger.LogDebug(
                     "Skipped Contact Center completion reconciliation for activity '{ActivityId}'. AgentId={AgentId}, Presence={PresenceStatus}, ActiveReservationId={ActiveReservationId}.",
-                    OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
-                    OperationalLogRedactor.Pseudonymize(agent?.ItemId, OperationalLogIdentifierCategory.Agent),
+                    activity.ItemId.SanitizeLogValue(),
+                    agent?.ItemId.SanitizeLogValue(),
                     agent?.PresenceStatus,
-                    OperationalLogRedactor.Pseudonymize(agent?.ActiveReservationId, OperationalLogIdentifierCategory.Reservation));
+                    agent?.ActiveReservationId.SanitizeLogValue());
             }
 
             return;
@@ -110,8 +110,8 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
             {
                 _logger.LogInformation(
                     "Completed wrap-up for agent '{AgentId}' after activity '{ActivityId}' was dispositioned and offered {OfferedCount} queued voice activities.",
-                    OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent),
-                    OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
+                    agent.ItemId.SanitizeLogValue(),
+                    activity.ItemId.SanitizeLogValue(),
                     offered);
             }
         }

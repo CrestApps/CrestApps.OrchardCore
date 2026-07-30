@@ -1,6 +1,6 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -78,9 +78,9 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Skipped availability recovery for contended Contact Center agent '{AgentId}'.",
-                    OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
+                    agent.ItemId.SanitizeLogValue());
 
                 continue;
             }
@@ -93,7 +93,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
             recovered++;
             _logger.LogWarning(
                 "Recovered expired or orphaned after-call work for Contact Center agent '{AgentId}'.",
-                OperationalLogRedactor.Pseudonymize(agent.ItemId, OperationalLogIdentifierCategory.Agent));
+                agent.ItemId.SanitizeLogValue());
         }
 
         return recovered;

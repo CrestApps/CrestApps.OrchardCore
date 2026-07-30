@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -65,7 +64,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
             }
             catch (Exception ex)
             {
-                _logger.LogError(OperationalLogRedactor.RedactException(ex), "An incoming-call context provider of type '{ProviderType}' failed while enriching an inbound call.", provider.GetType().FullName);
+                _logger.LogError(ex, "An incoming-call context provider of type '{ProviderType}' failed while enriching an inbound call.", provider.GetType().FullName);
             }
         }
 

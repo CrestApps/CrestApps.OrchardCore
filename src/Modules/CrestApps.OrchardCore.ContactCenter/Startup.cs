@@ -1,15 +1,18 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
-using CrestApps.OrchardCore.ContactCenter.Configuration;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.ContactCenter.Deployments.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
+using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -17,6 +20,7 @@ using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -24,8 +28,6 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
-using CrestApps.OrchardCore.Core.Configuration;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Reports;
@@ -51,6 +53,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -420,13 +423,6 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
         services
-            .AddConfigurationCatalog<AgentStateReasonCode, IAgentStateReasonCodeManager>(
-                ContactCenterConfigurationCatalogs.Group,
-                ContactCenterConfigurationCatalogs.AgentStateReasonCode,
-                "ReasonCodes",
-                order: 70);
-
-        services
             .AddIndexProvider<AgentProfileIndexProvider>()
             .AddDataMigration<AgentProfileIndexMigrations>()
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
@@ -502,7 +498,7 @@ public sealed class AvailabilityStartup : StartupBase
                 {
                     logger.LogInformation(
                         "Observed Orchard logout request for user '{UserId}'.",
-                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User));
+                        userId.SanitizeLogValue());
                 }
             }
 
@@ -523,7 +519,7 @@ public sealed class AvailabilityStartup : StartupBase
             {
                 logger.LogInformation(
                     "Completed Contact Center logout synchronization for Orchard user '{UserId}' with response status {StatusCode}.",
-                    OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
+                    userId.SanitizeLogValue(),
                     context.Response.StatusCode);
             }
         });
@@ -568,7 +564,7 @@ public sealed class AvailabilityStartup : StartupBase
                     logger.LogWarning(
                         "Soft-phone credential revocation failed for provider '{ProviderName}' and user '{UserId}'. Error type: {ErrorType}.",
                         revoker.ProviderName,
-                        OperationalLogRedactor.Pseudonymize(userId, OperationalLogIdentifierCategory.User),
+                        userId.SanitizeLogValue(),
                         ex.GetType().Name);
                 }
             }
@@ -577,37 +573,127 @@ public sealed class AvailabilityStartup : StartupBase
 }
 
 /// <summary>
-/// Registers recipe execution for every Contact Center configuration catalog, so a tenant can be scripted and
-/// restored from source control.
+/// Registers the deployment steps that export the agent configuration owned by the agents feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class ContactCenterRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddConfigurationCatalogRecipeStep();
-    }
-}
-
-/// <summary>
-/// Registers the deployment step that exports every Contact Center configuration catalog, so configuration can be
-/// promoted between environments.
-/// </summary>
-[Feature(ContactCenterConstants.Feature.Area)]
+[Feature(ContactCenterConstants.Feature.Agents)]
 [RequireFeatures("OrchardCore.Deployment")]
-public sealed class ContactCenterDeploymentStartup : StartupBase
+public sealed class AgentsDeploymentStartup : StartupBase
 {
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<ContactCenterConfigurationDeploymentSource, ContactCenterConfigurationDeploymentStep>();
+        services.AddDeployment<AgentStateReasonCodeDeploymentSource, AgentStateReasonCodeDeploymentStep>();
     }
 }
 
 /// <summary>
-/// Registers the editor for the Contact Center configuration deployment step. The step itself is headless, so a
-/// tenant that runs without an administration surface can still be exported by a script; only the screen that edits
-/// the step needs the administration feature.
+/// Registers the recipe steps that import the agent configuration owned by the agents feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Agents)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class AgentsRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AgentStateReasonCodeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment steps that export the routing configuration owned by the queues feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Queues)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class QueuesDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ContactCenterSkillDeploymentSource, ContactCenterSkillDeploymentStep>();
+        services.AddDeployment<ContactCenterQueueGroupDeploymentSource, ContactCenterQueueGroupDeploymentStep>();
+        services.AddDeployment<ContactCenterBusinessHoursCalendarDeploymentSource, ContactCenterBusinessHoursCalendarDeploymentStep>();
+        services.AddDeployment<ContactCenterQueueDeploymentSource, ContactCenterQueueDeploymentStep>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe steps that import the routing configuration owned by the queues feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Queues)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class QueuesRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ContactCenterSkillStep>();
+        services.AddRecipeExecutionStep<ContactCenterQueueGroupStep>();
+        services.AddRecipeExecutionStep<ContactCenterBusinessHoursCalendarStep>();
+        services.AddRecipeExecutionStep<ContactCenterQueueStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment steps that export the entry points owned by the entry points feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class EntryPointsDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ContactCenterEntryPointDeploymentSource, ContactCenterEntryPointDeploymentStep>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe steps that import the entry points owned by the entry points feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class EntryPointsRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ContactCenterEntryPointStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment steps that export the dialer profiles owned by the dialer feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Dialer)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DialerDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ContactCenterDialerProfileDeploymentSource, ContactCenterDialerProfileDeploymentStep>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe steps that import the dialer profiles owned by the dialer feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Dialer)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DialerRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ContactCenterDialerProfileStep>();
+    }
+}
+
+/// <summary>
+/// Registers the editors for the Contact Center configuration deployment steps. The steps themselves are headless, so
+/// a tenant that runs without an administration surface can still be exported by a script; only the screens that add
+/// the steps to a plan need the administration feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Admin)]
 [RequireFeatures("OrchardCore.Deployment")]
@@ -616,7 +702,13 @@ public sealed class ContactCenterDeploymentAdminStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<DeploymentStep, ContactCenterConfigurationDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, AgentStateReasonCodeDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterSkillDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterQueueGroupDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterBusinessHoursCalendarDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterQueueDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterEntryPointDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, ContactCenterDialerProfileDeploymentStepDisplayDriver>();
     }
 }
 
@@ -649,28 +741,6 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
-
-        services
-            .AddConfigurationCatalog<ContactCenterSkill, IContactCenterSkillManager>(
-                ContactCenterConfigurationCatalogs.Group,
-                ContactCenterConfigurationCatalogs.Skill,
-                "Skills",
-                order: 10)
-            .AddConfigurationCatalog<ActivityQueueGroup, IActivityQueueGroupManager>(
-                ContactCenterConfigurationCatalogs.Group,
-                ContactCenterConfigurationCatalogs.QueueGroup,
-                "QueueGroups",
-                order: 20)
-            .AddConfigurationCatalog<BusinessHoursCalendar, IBusinessHoursCalendarManager>(
-                ContactCenterConfigurationCatalogs.Group,
-                ContactCenterConfigurationCatalogs.BusinessHoursCalendar,
-                "Calendars",
-                order: 30)
-            .AddConfigurationCatalog<ActivityQueue, IActivityQueueManager>(
-                ContactCenterConfigurationCatalogs.Group,
-                ContactCenterConfigurationCatalogs.Queue,
-                "Queues",
-                order: 40);
 
         services
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
@@ -745,12 +815,6 @@ public sealed class DialerStartup : StartupBase
                     ContactCenterConstants.Feature.Dialer,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
-
-        services.AddConfigurationCatalog<DialerProfile, IDialerProfileManager>(
-            ContactCenterConfigurationCatalogs.Group,
-            ContactCenterConfigurationCatalogs.DialerProfile,
-            "DialerProfiles",
-            order: 60);
 
         services
             .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()
@@ -1004,12 +1068,6 @@ public sealed class EntryPointsStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
-
-        services.AddConfigurationCatalog<ContactCenterEntryPoint, IContactCenterEntryPointManager>(
-            ContactCenterConfigurationCatalogs.Group,
-            ContactCenterConfigurationCatalogs.EntryPoint,
-            "EntryPoints",
-            order: 50);
 
     }
 

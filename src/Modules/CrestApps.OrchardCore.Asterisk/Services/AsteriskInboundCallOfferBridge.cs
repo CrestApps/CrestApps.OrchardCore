@@ -1,7 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
@@ -135,9 +135,9 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
             var provisioningOutcomeAmbiguous = AsteriskAriOutcomeClassifier.IsProvisioningOutcomeAmbiguous(ex);
 
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to offer inbound call {CallId}; terminating the caller.",
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
+                voiceEvent.CallId.SanitizeLogValue());
 
             await TerminateOfferAsync(voiceEvent, holdingBridgeId, answerAttempted, bridgeCreateAttempted, provisioningOutcomeAmbiguous);
 
@@ -177,9 +177,9 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
             // caller is then connected by the normal agent-connect flow) or terminates one that has none. Do NOT
             // promote here — the commit is not confirmed from this scope.
             _logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk inbound routing failed after call {CallId} was parked; retaining the offer for reconciliation.",
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
+                voiceEvent.CallId.SanitizeLogValue());
 
             return true;
         }
@@ -209,9 +209,9 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
         {
             _logger.LogInformation(
                 "Asterisk inbound real-time event {EventType} for provider {ProviderName} call {CallId} was offered to Contact Center.",
-                OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
+                voiceEvent.EventType.SanitizeLogValue(),
                 voiceEvent.ProviderName,
-                OperationalLogRedactor.Pseudonymize(voiceEvent.CallId, OperationalLogIdentifierCategory.Call));
+                voiceEvent.CallId.SanitizeLogValue());
         }
 
         return true;
@@ -291,10 +291,10 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk failed to {Operation} while compensating inbound call {CallId}.",
-                OperationalLogRedactor.Redact(operation, OperationalLogFieldKind.FreeText),
-                OperationalLogRedactor.Pseudonymize(callId, OperationalLogIdentifierCategory.Call));
+                operation.SanitizeLogValue(),
+                callId.SanitizeLogValue());
 
             return false;
         }

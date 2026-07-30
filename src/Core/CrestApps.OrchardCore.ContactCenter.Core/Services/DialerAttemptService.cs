@@ -1,7 +1,7 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -110,8 +110,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             _logger.LogWarning(
                 "The dialer attempt for activity '{ActivityItemId}' failed closed because reserved agent '{AgentId}' could not be resolved to an Orchard user.",
-                OperationalLogRedactor.Pseudonymize(reservation.ActivityItemId, OperationalLogIdentifierCategory.Activity),
-                OperationalLogRedactor.Pseudonymize(reservation.AgentId, OperationalLogIdentifierCategory.Agent));
+                reservation.ActivityItemId.SanitizeLogValue(),
+                reservation.AgentId.SanitizeLogValue());
 
             return false;
         }
@@ -216,7 +216,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         {
             _logger.LogInformation(
                 "Suppressed outbound attempt for activity '{ActivityItemId}' on profile '{Profile}': {Reason}.",
-                OperationalLogRedactor.Pseudonymize(activity.ItemId, OperationalLogIdentifierCategory.Activity),
+                activity.ItemId.SanitizeLogValue(),
                 profile.Name,
                 eligibility.Reason);
         }

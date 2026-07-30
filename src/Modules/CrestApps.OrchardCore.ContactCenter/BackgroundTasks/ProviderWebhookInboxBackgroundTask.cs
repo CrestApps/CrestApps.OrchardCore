@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -47,7 +46,7 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
         catch (Exception exception)
         {
             logger.LogError(
-                OperationalLogRedactor.RedactException(exception),
+                exception,
                 "An error occurred while dispatching the provider webhook inbox.");
         }
     }

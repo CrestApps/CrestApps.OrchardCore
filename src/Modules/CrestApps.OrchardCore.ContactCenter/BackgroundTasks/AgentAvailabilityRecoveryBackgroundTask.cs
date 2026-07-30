@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -39,7 +38,7 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
         catch (Exception ex)
         {
             logger.LogError(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "An error occurred while recovering Contact Center agent availability.");
         }
     }

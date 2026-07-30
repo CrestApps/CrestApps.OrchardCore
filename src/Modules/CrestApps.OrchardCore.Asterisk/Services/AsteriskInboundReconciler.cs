@@ -1,6 +1,6 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -151,10 +151,10 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
                 }
 
                 _logger.LogWarning(
-                    OperationalLogRedactor.RedactException(ex),
+                    ex,
                     "Asterisk inbound channel reconciliation failed for provider {ProviderName} call {CallId}; continuing the sweep.",
-                    OperationalLogRedactor.Redact(binding.ProviderName, OperationalLogFieldKind.FreeText),
-                    OperationalLogRedactor.Pseudonymize(binding.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                    binding.ProviderName.SanitizeLogValue(),
+                    binding.ProviderCallId.SanitizeLogValue());
             }
         }
     }
@@ -222,8 +222,8 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         {
             _logger.LogInformation(
                 "Reconciled an ended Asterisk channel for provider {ProviderName} call {CallId} and released its resources.",
-                OperationalLogRedactor.Redact(binding.ProviderName, OperationalLogFieldKind.FreeText),
-                OperationalLogRedactor.Pseudonymize(binding.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                binding.ProviderName.SanitizeLogValue(),
+                binding.ProviderCallId.SanitizeLogValue());
         }
 
         return handled;
@@ -335,7 +335,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
             {
                 _logger.LogInformation(
                     "Reconciliation returned a detached Asterisk caller {CallerChannelId} to holding after a crashed agent connect so the work can be re-offered.",
-                    OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call));
+                    callerChannelId.SanitizeLogValue());
             }
 
             return true;
@@ -343,9 +343,9 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         catch (Exception ex)
         {
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Reconciliation could not return detached Asterisk caller {CallerChannelId} to holding; retaining the durable record to retry on a later sweep.",
-                OperationalLogRedactor.Pseudonymize(callerChannelId, OperationalLogIdentifierCategory.Call));
+                callerChannelId.SanitizeLogValue());
 
             return false;
         }

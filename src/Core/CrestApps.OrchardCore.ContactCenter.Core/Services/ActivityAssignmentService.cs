@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -87,7 +87,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Skipped assigning the next Contact Center item for queue '{QueueId}' because its assignment lock was not acquired.",
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    queueId.SanitizeLogValue());
             }
 
             return null;
@@ -114,7 +114,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Skipped assigning Contact Center queue '{QueueId}' because its assignment lock was not acquired.",
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    queueId.SanitizeLogValue());
             }
 
             return 0;
@@ -143,7 +143,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Skipped Contact Center assignment for queue '{QueueId}' because the queue is {QueueState}.",
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
+                    queueId.SanitizeLogValue(),
                     queue is null ? "missing" : "disabled");
             }
 
@@ -158,7 +158,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Skipped Contact Center assignment for queue '{QueueId}' because its business hours are closed.",
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    queueId.SanitizeLogValue());
             }
 
             return null;
@@ -173,7 +173,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogDebug(
                     "No waiting Contact Center item is available for queue '{QueueId}'.",
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    queueId.SanitizeLogValue());
             }
 
             return null;
@@ -186,8 +186,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         {
             _logger.LogInformation(
                 "Evaluating Contact Center queue item '{QueueItemId}' for queue '{QueueId}' against {AvailableAgentCount} available agents.",
-                OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
-                OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
+                topItem.ItemId.SanitizeLogValue(),
+                queueId.SanitizeLogValue(),
                 agents.Length);
         }
 
@@ -200,13 +200,13 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
                 var candidateSummary = string.Join(
                     "; ",
                     decision.Candidates.Select(candidate =>
-                        $"{OperationalLogRedactor.Pseudonymize(candidate.Agent.ItemId, OperationalLogIdentifierCategory.Agent)}: eligible={candidate.IsEligible}, reasonCount={candidate.Reasons.Count}"));
+                        $"{candidate.Agent.ItemId.SanitizeLogValue()}: eligible={candidate.IsEligible}, reasonCount={candidate.Reasons.Count}"));
 
                 _logger.LogWarning(
                     "Contact Center routing did not assign queue item '{QueueItemId}' from queue '{QueueId}'. Reason: {Reason}. Candidates: {CandidateSummary}",
-                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue),
-                    OperationalLogRedactor.Redact(decision.Reason, OperationalLogFieldKind.FreeText),
+                    topItem.ItemId.SanitizeLogValue(),
+                    queueId.SanitizeLogValue(),
+                    decision.Reason.SanitizeLogValue(),
                     candidateSummary);
             }
 
@@ -230,9 +230,9 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogWarning(
                     "Contact Center reservation creation lost a race for queue item '{QueueItemId}' and agent '{AgentId}' in queue '{QueueId}'.",
-                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
-                    OperationalLogRedactor.Pseudonymize(decision.Agent.ItemId, OperationalLogIdentifierCategory.Agent),
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    topItem.ItemId.SanitizeLogValue(),
+                    decision.Agent.ItemId.SanitizeLogValue(),
+                    queueId.SanitizeLogValue());
             }
         }
         else
@@ -241,10 +241,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             {
                 _logger.LogInformation(
                     "Reserved Contact Center queue item '{QueueItemId}' as reservation '{ReservationId}' for agent '{AgentId}' in queue '{QueueId}'.",
-                    OperationalLogRedactor.Pseudonymize(topItem.ItemId, OperationalLogIdentifierCategory.Queue),
-                    OperationalLogRedactor.Pseudonymize(reservation.ItemId, OperationalLogIdentifierCategory.Reservation),
-                    OperationalLogRedactor.Pseudonymize(decision.Agent.ItemId, OperationalLogIdentifierCategory.Agent),
-                    OperationalLogRedactor.Pseudonymize(queueId, OperationalLogIdentifierCategory.Queue));
+                    topItem.ItemId.SanitizeLogValue(),
+                    reservation.ItemId.SanitizeLogValue(),
+                    decision.Agent.ItemId.SanitizeLogValue(),
+                    queueId.SanitizeLogValue());
             }
         }
 

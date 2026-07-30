@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -74,8 +74,8 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
             {
                 _logger.LogInformation(
                     "Released Asterisk call resources for terminal event {EventType} on channel {ChannelId}.",
-                    OperationalLogRedactor.Redact(voiceEvent.EventType, OperationalLogFieldKind.FreeText),
-                    OperationalLogRedactor.Pseudonymize(voiceEvent.ChannelId, OperationalLogIdentifierCategory.Call));
+                    voiceEvent.EventType.SanitizeLogValue(),
+                    voiceEvent.ChannelId.SanitizeLogValue());
             }
         }
         catch (Exception ex)
@@ -85,9 +85,9 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
             // failure or crash never leaks an orphaned bridge with no owner. Teardown runs inside the dispatcher's
             // finally, so it must never surface the failure to the caller.
             _logger.LogWarning(
-                OperationalLogRedactor.RedactException(ex),
+                ex,
                 "Asterisk terminal cleanup for channel {ChannelId} did not complete; leaving a durable teardown record for the reconciler to retry.",
-                OperationalLogRedactor.Pseudonymize(voiceEvent.ChannelId, OperationalLogIdentifierCategory.Call));
+                voiceEvent.ChannelId.SanitizeLogValue());
         }
     }
 
@@ -313,7 +313,7 @@ internal sealed class AsteriskCallTeardownService : IAsteriskCallTeardownService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(OperationalLogRedactor.RedactException(ex), "Asterisk terminal binding cleanup did not complete cleanly; the reconciler will retire the record.");
+            _logger.LogWarning(ex, "Asterisk terminal binding cleanup did not complete cleanly; the reconciler will retire the record.");
         }
     }
 

@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -74,7 +74,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
                 _logger.LogDebug(
                     "Skipping duplicate Contact Center event '{EventType}' with idempotency key '{IdempotencyKey}'.",
                     interactionEvent.EventType,
-                    OperationalLogRedactor.Pseudonymize(interactionEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event));
+                    interactionEvent.IdempotencyKey.SanitizeLogValue());
             }
 
             return;

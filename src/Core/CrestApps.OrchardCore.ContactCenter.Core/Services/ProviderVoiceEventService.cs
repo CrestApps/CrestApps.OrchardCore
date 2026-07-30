@@ -1,7 +1,7 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -160,7 +160,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Received a provider voice event for call '{ProviderCallId}' that does not match any interaction.",
-                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                    providerEvent.ProviderCallId.SanitizeLogValue());
             }
 
             return null;
@@ -175,7 +175,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             _logger.LogWarning(
                 "Ignored provider voice event for call '{ProviderCallId}' from provider '{ProviderName}' because the call id matched an interaction owned by active provider '{StoredProviderName}'.",
-                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
+                providerEvent.ProviderCallId.SanitizeLogValue(),
                 providerEvent.ProviderName,
                 interaction.ProviderName);
 
@@ -189,7 +189,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             _logger.LogWarning(
                 "Provider voice event for call '{ProviderCallId}' used provider '{ProviderName}', but the matching interaction was stored as '{StoredProviderName}'. Canonicalizing the interaction to the event provider.",
-                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
+                providerEvent.ProviderCallId.SanitizeLogValue(),
                 providerEvent.ProviderName,
                 interaction.ProviderName);
 
@@ -215,7 +215,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Skipping duplicate provider voice event with idempotency key '{IdempotencyKey}'.",
-                    OperationalLogRedactor.Pseudonymize(providerEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event));
+                    providerEvent.IdempotencyKey.SanitizeLogValue());
             }
 
             if (providerNameCanonicalized)
@@ -239,7 +239,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             _logger.LogWarning(
                 "Refused provider voice event for call '{ProviderCallId}' because the interaction-matched session is already bound to a different call.",
-                OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call));
+                providerEvent.ProviderCallId.SanitizeLogValue());
 
             await _session.SaveChangesAsync(cancellationToken);
 
@@ -252,8 +252,8 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             {
                 _logger.LogDebug(
                     "Ignored stale provider voice event '{IdempotencyKey}' for call '{ProviderCallId}'. Current state: {CurrentState}; incoming state: {IncomingState}; last provider event: {LastProviderEventUtc}; incoming event: {OccurredUtc}.",
-                    OperationalLogRedactor.Pseudonymize(providerEvent.IdempotencyKey, OperationalLogIdentifierCategory.Event),
-                    OperationalLogRedactor.Pseudonymize(providerEvent.ProviderCallId, OperationalLogIdentifierCategory.Call),
+                    providerEvent.IdempotencyKey.SanitizeLogValue(),
+                    providerEvent.ProviderCallId.SanitizeLogValue(),
                     session.State,
                     providerEvent.State,
                     session.LastProviderEventUtc,

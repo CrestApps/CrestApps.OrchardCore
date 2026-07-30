@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -263,7 +263,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             _logger.LogError(
                 "No provider webhook inbox handler named '{HandlerName}' is registered for message '{MessageId}'.",
                 message.HandlerName,
-                OperationalLogRedactor.Pseudonymize(message.ItemId, OperationalLogIdentifierCategory.Event));
+                message.ItemId.SanitizeLogValue());
 
             return false;
         }
@@ -304,10 +304,10 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 cancellationToken);
 
             _logger.LogError(
-                OperationalLogRedactor.RedactException(exception),
+                exception,
                 "Provider webhook inbox handler '{HandlerName}' failed for message '{MessageId}'.",
                 message.HandlerName,
-                OperationalLogRedactor.Pseudonymize(message.ItemId, OperationalLogIdentifierCategory.Event));
+                message.ItemId.SanitizeLogValue());
 
             return false;
         }
@@ -419,7 +419,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 // pass in a fresh scope, so continue draining the rest of the batch.
                 _logger.LogWarning(
                     "Isolated dispatch of provider webhook inbox message '{MessageId}' failed with {ExceptionType}; the message stays pending for the next pass.",
-                    OperationalLogRedactor.Pseudonymize(messageId, OperationalLogIdentifierCategory.Event),
+                    messageId.SanitizeLogValue(),
                     exception.GetType().Name);
             }
         }
