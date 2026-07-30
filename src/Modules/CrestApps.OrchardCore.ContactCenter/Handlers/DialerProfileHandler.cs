@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Localization;
@@ -34,6 +35,14 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     }
 
     /// <inheritdoc/>
+    public override Task InitializingAsync(InitializingContext<DialerProfile> context, CancellationToken cancellationToken = default)
+    {
+        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<DialerProfile> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -44,6 +53,8 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<DialerProfile> context, CancellationToken cancellationToken = default)
     {
+        ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
+
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;

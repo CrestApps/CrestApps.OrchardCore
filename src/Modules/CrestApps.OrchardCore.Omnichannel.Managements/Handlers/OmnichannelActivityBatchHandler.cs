@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -70,6 +71,8 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
 
     private static Task PopulateAsync(OmnichannelActivityBatch enabpoint, JsonNode data)
     {
+        OmnichannelDeploymentSerializer.Populate(enabpoint, data);
+
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(displayText))

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
@@ -27,7 +26,7 @@ internal sealed class ContactCenterQueueGroupDeploymentSource : DeploymentSource
 
         foreach (var entry in entries)
         {
-            data.Add(JsonSerializer.SerializeToNode(entry, entry.GetType(), ContactCenterDeploymentSerializer.Options));
+            data.Add(ContactCenterDeploymentSerializer.Export(entry));
         }
 
         result.Steps.Add(new JsonObject

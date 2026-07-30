@@ -105,8 +105,6 @@ public sealed class Startup : StartupBase
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
 
-        services.AddSingleton<OmnichannelContentTypeProvider>();
-        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
     }
 

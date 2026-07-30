@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -72,6 +73,8 @@ internal sealed class OmnichannelCampaignGroupHandler : CatalogEntryHandlerBase<
 
     private static Task PopulateAsync(OmnichannelCampaignGroup group, JsonNode data)
     {
+        OmnichannelDeploymentSerializer.Populate(group, data);
+
         var displayText = data[nameof(OmnichannelCampaignGroup.DisplayText)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(displayText))

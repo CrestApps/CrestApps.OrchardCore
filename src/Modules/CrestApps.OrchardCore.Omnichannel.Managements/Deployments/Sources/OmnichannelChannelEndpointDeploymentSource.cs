@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
@@ -27,7 +26,7 @@ internal sealed class OmnichannelChannelEndpointDeploymentSource : DeploymentSou
 
         foreach (var entry in entries)
         {
-            data.Add(JsonSerializer.SerializeToNode(entry, entry.GetType(), OmnichannelDeploymentSerializer.Options));
+            data.Add(OmnichannelDeploymentSerializer.Export(entry));
         }
 
         result.Steps.Add(new JsonObject
