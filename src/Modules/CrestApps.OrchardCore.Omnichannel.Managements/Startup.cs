@@ -1,47 +1,28 @@
-using CrestApps.Core;
-using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
-using CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
-using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Users;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Contents.Services;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
-using OrchardCore.Data;
-using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Security.Permissions;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -110,8 +91,8 @@ public sealed class Startup : StartupBase
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
 
-        services.AddSingleton<OmnichannelContentTypeProvider>();
-        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
+        services.AddScoped<OmnichannelContentTypeProvider>();
+        services.AddScoped<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
     }
 

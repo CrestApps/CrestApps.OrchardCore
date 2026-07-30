@@ -5,13 +5,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

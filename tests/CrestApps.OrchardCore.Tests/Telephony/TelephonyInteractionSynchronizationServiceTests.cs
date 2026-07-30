@@ -9,11 +9,11 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

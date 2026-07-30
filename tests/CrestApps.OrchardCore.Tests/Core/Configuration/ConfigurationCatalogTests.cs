@@ -326,7 +326,8 @@ public sealed class ConfigurationCatalogTests
         manager.Verify(x => x.CreateAsync(It.IsAny<TestConfigurationEntry>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static Mock<ICatalogManager<TestConfigurationEntry>> CreateManager()    {
+    private static Mock<ICatalogManager<TestConfigurationEntry>> CreateManager()
+    {
         var manager = new Mock<ICatalogManager<TestConfigurationEntry>>();
 
         manager

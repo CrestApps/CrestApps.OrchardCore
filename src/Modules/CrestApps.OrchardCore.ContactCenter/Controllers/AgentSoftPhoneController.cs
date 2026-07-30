@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;

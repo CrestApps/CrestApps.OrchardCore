@@ -335,7 +335,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class SubjectFlowsController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public SubjectFlowsController(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowSettingsCatalog, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowSettingsManager, CrestApps.Core.Services.ISourceCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionManager, CrestApps.Core.Services.ISourceCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionCatalog, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowDisplayDriver, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionDisplayDriver, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionOptions> actionOptions, OrchardCore.DisplayManagement.Notify.INotifier notifier, CrestApps.OrchardCore.Omnichannel.Managements.Services.ISubjectFlowSettingsService subjectFlowSettingsService, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> stringLocalizer) { }
+        public SubjectFlowsController(
+                    CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowSettingsCatalog,
+                    CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowSettingsManager,
+                    CrestApps.Core.Services.ISourceCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionManager,
+                    CrestApps.Core.Services.ISourceCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionCatalog,
+                    CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionsCatalog,
+                    OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager,
+                    CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider,
+                    Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService,
+                    OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor,
+                    OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> flowDisplayDriver,
+                    OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actionDisplayDriver,
+                    Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionOptions> actionOptions,
+                    OrchardCore.DisplayManagement.Notify.INotifier notifier,
+                    CrestApps.OrchardCore.Omnichannel.Managements.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> htmlLocalizer,
+                    Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> stringLocalizer) { }
         [OrchardCore.Admin.Admin("omnichannel/subject-flows/{subjectContentType}/configure", "OmnichannelSubjectFlowsConfigure")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Configure(string subjectContentType) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Configure")]
@@ -630,6 +646,29 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class OmnichannelContentTypeProvider : OrchardCore.ContentTypes.Events.IContentDefinitionEventHandler
+    {
+        public OmnichannelContentTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache) { }
+        public void ContentFieldAttached(OrchardCore.ContentTypes.Events.ContentFieldAttachedContext context) { }
+        public void ContentFieldDetached(OrchardCore.ContentTypes.Events.ContentFieldDetachedContext context) { }
+        public void ContentFieldUpdated(OrchardCore.ContentTypes.Events.ContentFieldUpdatedContext context) { }
+        public void ContentPartAttached(OrchardCore.ContentTypes.Events.ContentPartAttachedContext context) { }
+        public void ContentPartCreated(OrchardCore.ContentTypes.Events.ContentPartCreatedContext context) { }
+        public void ContentPartDetached(OrchardCore.ContentTypes.Events.ContentPartDetachedContext context) { }
+        public void ContentPartFieldUpdated(OrchardCore.ContentTypes.Events.ContentPartFieldUpdatedContext context) { }
+        public void ContentPartImported(OrchardCore.ContentTypes.Events.ContentPartImportedContext context) { }
+        public void ContentPartImporting(OrchardCore.ContentTypes.Events.ContentPartImportingContext context) { }
+        public void ContentPartRemoved(OrchardCore.ContentTypes.Events.ContentPartRemovedContext context) { }
+        public void ContentPartUpdated(OrchardCore.ContentTypes.Events.ContentPartUpdatedContext context) { }
+        public void ContentTypeCreated(OrchardCore.ContentTypes.Events.ContentTypeCreatedContext context) { }
+        public void ContentTypeImported(OrchardCore.ContentTypes.Events.ContentTypeImportedContext context) { }
+        public void ContentTypeImporting(OrchardCore.ContentTypes.Events.ContentTypeImportingContext context) { }
+        public void ContentTypePartUpdated(OrchardCore.ContentTypes.Events.ContentTypePartUpdatedContext context) { }
+        public void ContentTypeRemoved(OrchardCore.ContentTypes.Events.ContentTypeRemovedContext context) { }
+        public void ContentTypeUpdated(OrchardCore.ContentTypes.Events.ContentTypeUpdatedContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync() { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetSubjectContentTypesAsync() { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels

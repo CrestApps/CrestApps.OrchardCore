@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -107,11 +107,10 @@ public sealed class SubjectFlowsController : Controller
         }
 
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-
-        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+        var subjectContentTypeNames = await _contentTypeProvider.GetSubjectContentTypesAsync();
 
         var subjectTypes = contentTypes
-            .Where(contentType => _contentTypeProvider.IsSubjectContentType(contentType.Name))
+            .Where(contentType => subjectContentTypeNames.Contains(contentType.Name))
             .OrderBy(t => t.DisplayName)
             .ToList();
 

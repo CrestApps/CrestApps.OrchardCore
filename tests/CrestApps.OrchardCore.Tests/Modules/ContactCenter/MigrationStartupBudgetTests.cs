@@ -4,10 +4,10 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
-using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

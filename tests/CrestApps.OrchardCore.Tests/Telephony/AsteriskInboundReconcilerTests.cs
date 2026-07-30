@@ -1,7 +1,6 @@
+using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;

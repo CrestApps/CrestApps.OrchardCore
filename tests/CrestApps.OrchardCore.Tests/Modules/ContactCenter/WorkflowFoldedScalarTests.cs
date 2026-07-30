@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Xunit;
-
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>

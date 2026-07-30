@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,6 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
-using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

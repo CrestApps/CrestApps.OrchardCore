@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using YesSql;
 using CrestApps.OrchardCore.Tests.Utilities;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

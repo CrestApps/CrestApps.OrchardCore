@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.DependencyInjection;

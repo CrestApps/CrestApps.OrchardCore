@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;

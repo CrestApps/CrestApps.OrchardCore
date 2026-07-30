@@ -1,6 +1,6 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using YesSql;
 

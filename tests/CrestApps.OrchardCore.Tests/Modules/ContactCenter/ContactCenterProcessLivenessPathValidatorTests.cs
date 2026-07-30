@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

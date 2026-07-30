@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>

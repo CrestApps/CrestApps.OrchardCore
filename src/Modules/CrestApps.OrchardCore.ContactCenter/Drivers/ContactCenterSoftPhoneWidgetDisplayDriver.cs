@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
@@ -7,7 +8,6 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using CrestApps.Core.SignalR.Services;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.ResourceManagement;

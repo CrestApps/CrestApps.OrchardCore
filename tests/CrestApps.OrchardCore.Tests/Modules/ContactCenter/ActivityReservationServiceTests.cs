@@ -15,7 +15,6 @@ using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

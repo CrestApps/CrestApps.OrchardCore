@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Hosting;
-
 namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 
 internal static class AsteriskWebSecurity

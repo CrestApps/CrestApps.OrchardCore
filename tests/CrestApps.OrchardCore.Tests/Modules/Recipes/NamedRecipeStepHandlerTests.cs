@@ -15,7 +15,6 @@ using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
-using OrchardCore.Recipes.Services;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;

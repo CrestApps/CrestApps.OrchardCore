@@ -1,7 +1,4 @@
-using System;
-using System.Linq;
 using System.Security.Claims;
-using CrestApps.OrchardCore.ContactCenter.Core;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;

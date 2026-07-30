@@ -10,7 +10,7 @@ public sealed class SubjectFlowSettingsServiceTests
     public void IsConfigured_WhenAutomatedFlowHasProfileAndEndpoint_ShouldReturnTrue()
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null, null);
+        var service = new SubjectFlowSettingsService(null, null, null);
         var flowSettings = CreateAutomatedFlowSettings();
 
         // Act
@@ -24,7 +24,7 @@ public sealed class SubjectFlowSettingsServiceTests
     public void IsConfigured_WhenAutomatedFlowMissingProfile_ShouldReturnFalse()
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null, null);
+        var service = new SubjectFlowSettingsService(null, null, null);
         var flowSettings = CreateAutomatedFlowSettings();
         flowSettings.ProfileId = null;
 
@@ -39,7 +39,7 @@ public sealed class SubjectFlowSettingsServiceTests
     public void IsConfigured_WhenManualFlowHasNoProfile_ShouldReturnTrue()
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null, null);
+        var service = new SubjectFlowSettingsService(null, null, null);
         var flowSettings = new SubjectFlowSettings
         {
             SubjectContentType = "Renewal",

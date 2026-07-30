@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -21,7 +22,6 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
-using CrestApps.OrchardCore.Tests.Utilities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -835,7 +835,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         }
     }
 
-        private static bool IsGeneratedPath(string file)
+    private static bool IsGeneratedPath(string file)
     {
         var directory = Path.GetDirectoryName(file) ?? string.Empty;
 

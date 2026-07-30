@@ -1,5 +1,6 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Descriptors;
 
@@ -10,54 +11,58 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// content type has the <c>OmnichannelSubjectPart</c> attached. Subject content items are driven through the
 /// omnichannel subject flow, so the standard authoring buttons Orchard Core injects are not wanted on their editor.
 /// </summary>
-internal sealed class OmnichannelSubjectButtonsShapeTableProvider : IShapeTableProvider
+internal sealed class OmnichannelSubjectButtonsShapeTableProvider : ShapeTableProvider
 {
-    private static readonly PlacementInfo _hidden = PlacementInfo.FromLocation(PlacementInfo.HiddenLocation);
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    private static readonly string[] _shapeTypes =
-    [
-        "Content_PublishButton",
-        "Content_SaveDraftButton",
-        "ContentPreview_Button",
-    ];
-
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelSubjectButtonsShapeTableProvider"/> class.
     /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager used to warm the omnichannel content type cache.</param>
     /// <param name="contentTypeProvider">The provider that reports whether a content type is an omnichannel subject.</param>
-    public OmnichannelSubjectButtonsShapeTableProvider(
-        IContentDefinitionManager contentDefinitionManager,
-        OmnichannelContentTypeProvider contentTypeProvider)
+    public OmnichannelSubjectButtonsShapeTableProvider(IHttpContextAccessor httpContextAccessor)
     {
-        _contentDefinitionManager = contentDefinitionManager;
-        _contentTypeProvider = contentTypeProvider;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     /// <inheritdoc/>
-    public async ValueTask DiscoverAsync(ShapeTableBuilder builder)
+    public override async ValueTask DiscoverAsync(ShapeTableBuilder builder)
     {
-        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+        var contentTypeProvider = _httpContextAccessor.HttpContext.RequestServices.GetService<OmnichannelContentTypeProvider>();
 
-        var contentTypeProvider = _contentTypeProvider;
-
-        foreach (var shapeType in _shapeTypes)
+        if (contentTypeProvider is null)
         {
-            builder.Describe(shapeType)
-                .Placement(context => IsSubjectEditor(context, contentTypeProvider), _hidden);
+            return;
         }
+
+        var subjectContentTypes = await contentTypeProvider.GetSubjectContentTypesAsync();
+
+        builder.Describe("Content_UserTaskButton")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
+
+        builder.Describe("Content_PublishButton")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
+
+        builder.Describe("Content_UnpublishButton")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
+
+        builder.Describe("Content_SaveDraftButton")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
+
+        builder.Describe("Content_DeleteButton")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
+
+        builder.Describe("ContentPreview_Button")
+            .Placement(context => IsSubjectEditor(context, subjectContentTypes), PlacementInfo.Hidden);
     }
 
-    private static bool IsSubjectEditor(ShapePlacementContext context, OmnichannelContentTypeProvider contentTypeProvider)
+    private static bool IsSubjectEditor(ShapePlacementContext context, IReadOnlyCollection<string> subjectContentTypes)
     {
         if (context.ZoneShape is not null &&
             context.ZoneShape.TryGetProperty<ContentItem>("ContentItem", out var contentItem) &&
             contentItem is not null)
         {
-            return contentTypeProvider.IsSubjectContentType(contentItem.ContentType);
+            return subjectContentTypes.Contains(contentItem.ContentType);
         }
 
         return false;

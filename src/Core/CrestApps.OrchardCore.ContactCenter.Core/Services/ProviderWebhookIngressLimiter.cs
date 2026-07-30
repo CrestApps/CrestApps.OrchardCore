@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 

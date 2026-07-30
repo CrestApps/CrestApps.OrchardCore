@@ -1,17 +1,15 @@
 using System.Data.Common;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
-using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
-using YesSql.Provider.Sqlite;
-using YesSql.Sql;
-using YesSql;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using YesSql;
+using YesSql.Provider.Sqlite;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;

@@ -1,13 +1,12 @@
 using System.Net;
+using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

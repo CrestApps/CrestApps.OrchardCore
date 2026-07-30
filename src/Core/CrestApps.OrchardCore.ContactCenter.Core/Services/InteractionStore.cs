@@ -1,12 +1,11 @@
 using CrestApps.Core.Models;
-using Dapper;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using Dapper;
 using YesSql;
 using YesSql.Services;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Models;

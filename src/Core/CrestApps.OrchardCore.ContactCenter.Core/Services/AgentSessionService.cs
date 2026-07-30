@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;

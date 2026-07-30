@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Doubles;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

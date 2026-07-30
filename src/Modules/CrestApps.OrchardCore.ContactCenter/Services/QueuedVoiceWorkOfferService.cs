@@ -1,9 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;

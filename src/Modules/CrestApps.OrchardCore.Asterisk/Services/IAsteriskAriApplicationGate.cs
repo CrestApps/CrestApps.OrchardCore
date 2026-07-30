@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Asterisk.Models;
-
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
 /// <summary>

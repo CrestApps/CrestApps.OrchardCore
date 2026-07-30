@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using Aspire.Hosting.ApplicationModel;
 
 var builder = DistributedApplication.CreateBuilder(args);
 

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Web.Models;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Asterisk.Web.Services;

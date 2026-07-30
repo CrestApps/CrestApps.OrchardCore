@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;

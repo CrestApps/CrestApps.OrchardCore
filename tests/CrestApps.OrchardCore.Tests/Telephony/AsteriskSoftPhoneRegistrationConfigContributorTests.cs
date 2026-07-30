@@ -179,7 +179,7 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
             PjsipRealtimeConnectionString = "Data Source=asterisk.db",
         };
 
-    private static AsteriskSoftPhoneRegistrationConfigContributor CreateContributor(        DefaultAsteriskOptions options,
+    private static AsteriskSoftPhoneRegistrationConfigContributor CreateContributor(DefaultAsteriskOptions options,
         IAsteriskPjsipCredentialIssuer issuer,
         IClock clock,
         string environmentName = null)

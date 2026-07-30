@@ -1,10 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Web.Models;
-using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 

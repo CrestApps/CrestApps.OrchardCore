@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 

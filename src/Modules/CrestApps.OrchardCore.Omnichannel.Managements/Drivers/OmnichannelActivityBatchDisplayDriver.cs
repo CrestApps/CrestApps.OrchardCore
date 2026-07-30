@@ -1,4 +1,3 @@
-using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -128,11 +127,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
             }
 
-            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+            var contactContentTypeNames = await _contentTypeProvider.GetContactContentTypesAsync();
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (_contentTypeProvider.IsContactContentType(contentType.Name))
+                if (contactContentTypeNames.Contains(contentType.Name))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }

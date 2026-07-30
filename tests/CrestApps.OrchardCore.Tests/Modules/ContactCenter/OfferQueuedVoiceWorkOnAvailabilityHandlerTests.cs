@@ -54,13 +54,13 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
         var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
         var interactionEvent = new InteractionEvent
         {
-        EventType = ContactCenterConstants.Events.AgentPresenceChanged,
-        AggregateId = "a1",
+            EventType = ContactCenterConstants.Events.AgentPresenceChanged,
+            AggregateId = "a1",
         };
         interactionEvent.SetData(new AgentPresenceChangedEventData
         {
-        PreviousStatus = AgentPresenceStatus.Break,
-        CurrentStatus = AgentPresenceStatus.Available,
+            PreviousStatus = AgentPresenceStatus.Break,
+            CurrentStatus = AgentPresenceStatus.Available,
         });
 
         // Act
@@ -78,13 +78,13 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
         var handler = CreateHandler(queuedVoiceWorkOfferService.Object);
         var interactionEvent = new InteractionEvent
         {
-        EventType = ContactCenterConstants.Events.AgentPresenceChanged,
-        AggregateId = "a1",
+            EventType = ContactCenterConstants.Events.AgentPresenceChanged,
+            AggregateId = "a1",
         };
         interactionEvent.SetData(new AgentPresenceChangedEventData
         {
-        PreviousStatus = AgentPresenceStatus.Available,
-        CurrentStatus = AgentPresenceStatus.Break,
+            PreviousStatus = AgentPresenceStatus.Available,
+            CurrentStatus = AgentPresenceStatus.Break,
         });
 
         // Act

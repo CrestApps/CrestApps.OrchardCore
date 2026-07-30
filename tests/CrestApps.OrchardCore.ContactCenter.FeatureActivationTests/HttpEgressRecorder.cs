@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net.Http;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 

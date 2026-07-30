@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using CrestApps.OrchardCore.Asterisk.Web.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Web.Services;
 

@@ -15,8 +15,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using YesSql.Indexes;
-using PhoneNumberVerificationsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.Startup;
 using PhoneNumberVerificationsReportsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.ReportsStartup;
+using PhoneNumberVerificationsStartup = CrestApps.OrchardCore.PhoneNumbers.Verifications.Startup;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;
 

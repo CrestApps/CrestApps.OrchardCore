@@ -9,14 +9,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Configuration;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
-using CrestApps.OrchardCore.Core.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
-using OrchardCore.Json;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -666,7 +665,8 @@ public sealed class ContactCenterConfigurationPortabilityTests
         return endpoint.ItemId;
     }
 
-    private static async Task<string> ReadDescriptionAsync(ContactCenterFeatureActivationHost host, ContactCenterTenant tenant)    {
+    private static async Task<string> ReadDescriptionAsync(ContactCenterFeatureActivationHost host, ContactCenterTenant tenant)
+    {
         return await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
         {
             var campaigns = await serviceProvider.GetRequiredService<ICatalogManager<OmnichannelCampaign>>().GetAllAsync();
