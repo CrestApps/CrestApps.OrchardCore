@@ -423,34 +423,41 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (result.Result.Concluded)
                         {
-                            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-                            var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
-
-                            omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
-
-                            omnichannelActivity.Status = ActivityStatus.Completed;
-
-                            omnichannelActivity.CompletedUtc = clock.UtcNow;
-
-                            omnichannelActivity.DispositionId = result.Result.DispositionId;
-
-                            omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
-                            omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
-
-                            await store.UpdateAsync(omnichannelActivity);
-
-                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
-                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-                            var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
-
-                            await executor.ExecuteAsync(new SubjectActionExecutionContext
+                            if (flowSettings.RequireDisposition && string.IsNullOrEmpty(result.Result.DispositionId))
                             {
-                                Activity = omnichannelActivity,
-                                Contact = contact,
-                                Subject = subject,
-                                Disposition = dispositionObj,
-                            });
+                                _logger.LogWarning("The automated SMS conversation for Activity {ActivityId} reported concluded without a disposition, but its subject flow requires one. The activity is left open so the required-disposition policy is not bypassed; it will close through the existing no-response timeout or opt-out paths.", activity.ItemId.SanitizeLogValue());
+                            }
+                            else
+                            {
+                                var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+                                var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
+
+                                omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
+
+                                omnichannelActivity.Status = ActivityStatus.Completed;
+
+                                omnichannelActivity.CompletedUtc = clock.UtcNow;
+
+                                omnichannelActivity.DispositionId = result.Result.DispositionId;
+
+                                omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
+                                omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
+
+                                await store.UpdateAsync(omnichannelActivity);
+
+                                subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                                contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                                var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
+
+                                await executor.ExecuteAsync(new SubjectActionExecutionContext
+                                {
+                                    Activity = omnichannelActivity,
+                                    Contact = contact,
+                                    Subject = subject,
+                                    Disposition = dispositionObj,
+                                });
+                            }
                         }
                     }
                 });
