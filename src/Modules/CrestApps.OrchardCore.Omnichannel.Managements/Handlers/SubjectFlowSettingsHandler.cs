@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -20,6 +21,22 @@ internal sealed class SubjectFlowSettingsHandler : CatalogEntryHandlerBase<Subje
     public SubjectFlowSettingsHandler(IStringLocalizer<SubjectFlowSettingsHandler> stringLocalizer)
     {
         S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override Task InitializingAsync(InitializingContext<SubjectFlowSettings> context, CancellationToken cancellationToken = default)
+    {
+        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task UpdatingAsync(UpdatingContext<SubjectFlowSettings> context, CancellationToken cancellationToken = default)
+    {
+        OmnichannelDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
