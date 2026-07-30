@@ -133,7 +133,6 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
                 entry.DisplayName = S["Automatic"];
                 entry.Description = S["Loads unassigned activities that AI automation processes through the configured subject flow."];
                 entry.RequiresUserAssignment = false;
-                entry.ShowInCreationPicker = false;
             });
         });
 

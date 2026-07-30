@@ -222,6 +222,7 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 1. Go to `Interaction Center` → `Management` → `Load Inventory`.
 2. Click **Add Inventory Load** and choose a source:
    - **Manual** loads activities assigned to the selected users immediately.
+   - **Automatic** loads unassigned activities for an automated subject flow so the background AI automation processes them. It requires a subject flow that uses the **Automated** interaction type.
    - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
 3. Create the inventory load:
    - Select contact type
