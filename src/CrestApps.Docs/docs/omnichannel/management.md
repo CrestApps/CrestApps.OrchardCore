@@ -363,3 +363,24 @@ The page also includes a **Page size** selector so managers can review more than
 | **Change Dialer Profile** | When a dialer contributor feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
 
 Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want to move selected outbound inventory to a different dialer campaign path without recreating the activities.
+
+## Exporting and importing configuration
+
+Omnichannel configuration moves between environments through Orchard Core's standard deployment and recipe pipelines, so a tenant can be provisioned from staging to production without re-entering settings by hand.
+
+Each configurable entity has its own deployment step and a matching recipe step:
+
+| Entity | Deployment step (category **Omnichannel**) | Recipe step name |
+|--------|--------------------------------------------|------------------|
+| Dispositions | Omnichannel Dispositions | `OmnichannelDisposition` |
+| Channel endpoints | Omnichannel Channel Endpoints | `OmnichannelChannelEndpoint` |
+| Campaign groups | Omnichannel Campaign Groups | `OmnichannelCampaignGroup` |
+| Campaigns | Omnichannel Campaigns | `OmnichannelCampaign` |
+| Subject flow settings | Omnichannel Subject Flow Settings | `OmnichannelSubjectFlowSettings` |
+| Subject actions | Omnichannel Subject Actions | `OmnichannelSubjectAction` |
+
+To export, open **Configuration -> Import/Export -> Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
+
+On import, entries are matched by their identifier: an entry that already exists is updated in place, and a new entry is created with its original identifier preserved. Because identifiers are preserved, cross-references (for example a campaign that points at a campaign group, or a subject action that points at a disposition) keep working after the import.
+
+When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, then subject flow settings, and finally subject actions.

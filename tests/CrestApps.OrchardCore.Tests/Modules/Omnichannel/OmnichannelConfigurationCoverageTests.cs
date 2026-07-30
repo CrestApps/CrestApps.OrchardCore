@@ -1,6 +1,6 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Configuration;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
@@ -28,12 +28,12 @@ public sealed class OmnichannelConfigurationCoverageTests
     /// </summary>
     private static readonly Dictionary<string, string> _configuration = new(StringComparer.Ordinal)
     {
-        [nameof(OmnichannelCampaign)] = OmnichannelConfigurationCatalogs.Campaign,
-        [nameof(OmnichannelCampaignGroup)] = OmnichannelConfigurationCatalogs.CampaignGroup,
-        [nameof(OmnichannelChannelEndpoint)] = OmnichannelConfigurationCatalogs.ChannelEndpoint,
-        [nameof(OmnichannelDisposition)] = OmnichannelConfigurationCatalogs.Disposition,
-        [nameof(SubjectAction)] = OmnichannelConfigurationCatalogs.SubjectAction,
-        [nameof(SubjectFlowSettings)] = OmnichannelConfigurationCatalogs.SubjectFlowSettings,
+        [nameof(OmnichannelCampaign)] = OmnichannelDeploymentSteps.Campaign,
+        [nameof(OmnichannelCampaignGroup)] = OmnichannelDeploymentSteps.CampaignGroup,
+        [nameof(OmnichannelChannelEndpoint)] = OmnichannelDeploymentSteps.ChannelEndpoint,
+        [nameof(OmnichannelDisposition)] = OmnichannelDeploymentSteps.Disposition,
+        [nameof(SubjectAction)] = OmnichannelDeploymentSteps.SubjectAction,
+        [nameof(SubjectFlowSettings)] = OmnichannelDeploymentSteps.SubjectFlowSettings,
     };
 
     [Fact]
@@ -56,9 +56,10 @@ public sealed class OmnichannelConfigurationCoverageTests
         Assert.True(
             undeclared.Length == 0,
             "These entities are neither exported in a deployment plan nor declared as runtime state, so nobody has " +
-            "decided whether an operator can script them: " + string.Join(", ", undeclared) + ". Register the entity " +
-            "as a configuration catalog in the Omnichannel activities startup and add it to the configuration map, or " +
-            "record in the runtime state map why it must not travel between environments.");
+            "decided whether an operator can script them: " + string.Join(", ", undeclared) + ". Add a deployment " +
+            "source and recipe step for the entity and register them in the Omnichannel configuration startups, then " +
+            "add it to the configuration map, or record in the runtime state map why it must not travel between " +
+            "environments.");
 
         var contradictory = _configuration.Keys.Intersect(_runtimeState.Keys, StringComparer.Ordinal).ToArray();
 
