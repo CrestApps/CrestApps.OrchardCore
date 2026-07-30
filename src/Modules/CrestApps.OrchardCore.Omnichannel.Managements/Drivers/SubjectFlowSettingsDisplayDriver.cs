@@ -37,6 +37,7 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
         return Initialize<SubjectFlowSettingsViewModel>("SubjectFlowSettingsFields_Edit", async model =>
         {
             model.CampaignId = flowSettings.CampaignId;
+            model.Direction = flowSettings.Direction;
             model.InteractionType = flowSettings.InteractionType;
             model.Channel = flowSettings.Channel;
             model.ChannelEndpointId = flowSettings.ChannelEndpointId;
@@ -45,6 +46,12 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
             model.Campaigns = (await _campaignCatalog.GetAllAsync())
                 .Select(c => new SelectListItem(c.DisplayText, c.ItemId))
                 .OrderBy(x => x.Text);
+
+            model.Directions =
+            [
+                new(S["Outbound"], nameof(SubjectDirection.Outbound)),
+                new(S["Inbound"], nameof(SubjectDirection.Inbound)),
+            ];
 
             model.Channels =
             [
@@ -72,6 +79,7 @@ internal sealed class SubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFl
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         flowSettings.CampaignId = model.CampaignId;
+        flowSettings.Direction = model.Direction;
         flowSettings.InteractionType = model.InteractionType;
         flowSettings.Channel = model.Channel;
         flowSettings.ChannelEndpointId = model.ChannelEndpointId;

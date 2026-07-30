@@ -1159,6 +1159,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public SubjectFlowEntryViewModel() { }
         public string ContentTypeName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
         public string DisplayName { get; set; }
         public bool HasActions { get; set; }
         public bool IsConfigured { get; set; }
@@ -1177,6 +1178,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ChannelEndpoints { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Channels { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Directions { get; set; }
         public string InitialOutboundPromptPattern { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]

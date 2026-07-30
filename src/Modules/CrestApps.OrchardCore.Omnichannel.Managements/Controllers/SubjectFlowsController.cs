@@ -133,6 +133,7 @@ public sealed class SubjectFlowsController : Controller
                 ContentTypeName = t.Name,
                 DisplayName = t.DisplayName,
                 IsConfigured = flowSettingsMap.TryGetValue(t.Name, out var flowSettings) && _subjectFlowSettingsService.IsConfigured(flowSettings),
+                Direction = flowSettings?.Direction ?? SubjectDirection.Outbound,
                 HasActions = actionsPerSubject.TryGetValue(t.Name, out var count) && count > 0,
             }).ToList(),
         };

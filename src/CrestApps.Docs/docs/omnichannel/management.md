@@ -51,6 +51,7 @@ A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` beha
 Each subject flow stores:
 
 - the campaign association used for reporting and grouping
+- the direction (`Outbound` or `Inbound`), defaulting to `Outbound` for new subjects
 - the interaction type (`Manual` or `Automated`)
 - the communication channel
 - the channel endpoint used for automated work
@@ -187,13 +188,14 @@ Campaign groups let reporting users combine multiple related campaigns without c
 
 After creating your subject content types and campaigns, go to `Interaction Center` → `Management` → `Subject Flows`.
 
-1. Review the list of content types that attach `OmnichannelSubjectPart`.
+1. Review the list of content types that attach `OmnichannelSubjectPart`. Each subject shows a badge for its configured direction (**Outbound** or **Inbound**).
 2. Click **Configure** next to a subject.
-3. Select the campaign used for reporting and grouping.
-4. Select the interaction type and channel.
-5. If the subject uses automated interactions, configure the channel endpoint.
-6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
-7. Save the subject flow.
+3. Select the direction. New subjects default to **Outbound**.
+4. Select the campaign used for reporting and grouping.
+5. Select the interaction type and channel.
+6. If the subject uses automated interactions, configure the channel endpoint.
+7. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
+8. Save the subject flow.
 
 Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, inventory loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
 

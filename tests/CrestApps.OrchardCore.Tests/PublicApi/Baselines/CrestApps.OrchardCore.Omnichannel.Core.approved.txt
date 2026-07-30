@@ -690,6 +690,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
         public string Type { get; }
     }
+    public enum SubjectDirection
+    {
+        Outbound = 0,
+        Inbound = 1,
+    }
     public sealed class SubjectFlowSettings : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>, System.ICloneable
     {
         public SubjectFlowSettings() { }
@@ -700,6 +705,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Channel { get; set; }
         public string ChannelEndpointId { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
         public string DisplayText { get; set; }
         public string InitialOutboundPromptPattern { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }

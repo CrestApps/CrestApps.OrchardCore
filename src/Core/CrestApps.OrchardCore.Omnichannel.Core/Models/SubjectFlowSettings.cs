@@ -26,6 +26,12 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the primary communication direction for this subject. New subjects default to
+    /// <see cref="SubjectDirection.Outbound"/>.
+    /// </summary>
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction type for activities using this subject.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
@@ -139,6 +145,7 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
             DisplayText = DisplayText,
             SubjectContentType = SubjectContentType,
             CampaignId = CampaignId,
+            Direction = Direction,
             InteractionType = InteractionType,
             Channel = Channel,
             ChannelEndpointId = ChannelEndpointId,

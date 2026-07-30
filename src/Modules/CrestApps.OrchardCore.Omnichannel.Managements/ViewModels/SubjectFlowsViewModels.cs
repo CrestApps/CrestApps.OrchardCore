@@ -35,6 +35,11 @@ public class SubjectFlowEntryViewModel
     public bool IsConfigured { get; set; }
 
     /// <summary>
+    /// Gets or sets the primary communication direction configured for the subject.
+    /// </summary>
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether subject actions have been defined.
     /// </summary>
     public bool HasActions { get; set; }

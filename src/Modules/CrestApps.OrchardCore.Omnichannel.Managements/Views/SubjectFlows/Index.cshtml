@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 
@@ -54,6 +55,7 @@ else
                                asp-route-subjectContentType="@subject.ContentTypeName"
                                class="fw-semibold text-break">@subject.DisplayName</a>
                             <span class="text-muted ms-1">(@subject.ContentTypeName)</span>
+                            <span class="badge text-bg-light border ms-2">@(subject.Direction == SubjectDirection.Inbound ? T["Inbound"] : T["Outbound"])</span>
                             @if (subject.IsConfigured)
                             {
                                 <span class="badge text-bg-success ms-2">@T["Configured"]</span>

@@ -15,6 +15,11 @@ public class SubjectFlowSettingsViewModel
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the primary communication direction for the subject.
+    /// </summary>
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction type.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
@@ -94,6 +99,12 @@ public class SubjectFlowSettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available communication directions.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Directions { get; set; }
 
     /// <summary>
     /// Gets or sets the available interaction types.

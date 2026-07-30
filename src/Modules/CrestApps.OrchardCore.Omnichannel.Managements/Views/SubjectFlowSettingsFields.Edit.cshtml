@@ -4,6 +4,15 @@
 @model SubjectFlowSettingsViewModel
 
 <div class="ocat-wrapper">
+    <label asp-for="Direction" class="ocat-label">@T["Direction"]</label>
+    <div class="ocat-end">
+        <select asp-for="Direction" asp-items="Model.Directions" class="form-select"></select>
+        <span class="hint">@T["Whether this subject is primarily contacted proactively (outbound) or engaged in response to an incoming contact (inbound)."]</span>
+        <span asp-validation-for="Direction" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
     <div class="ocat-end">
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
