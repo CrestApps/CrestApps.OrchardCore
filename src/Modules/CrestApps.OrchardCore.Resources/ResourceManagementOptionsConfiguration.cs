@@ -119,6 +119,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.2");
 
         _manifest
+            .DefineScript("date-range-picker")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.js")
+            .SetDependencies("flatpickr", "flatpickr-culture")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("dompurify")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",

@@ -1,6 +1,12 @@
 [
   {
     "inputs": [
+      "Assets/js/date-range-picker.js"
+    ],
+    "output": "wwwroot/scripts/date-range-picker.js"
+  },
+  {
+    "inputs": [
       "Assets/js/list-management-ui.js"
     ],
     "output": "wwwroot/scripts/list-management-ui.js"

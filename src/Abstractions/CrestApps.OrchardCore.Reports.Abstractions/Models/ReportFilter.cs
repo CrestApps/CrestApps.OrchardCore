@@ -24,4 +24,10 @@ public sealed class ReportFilter : Entity
     /// Gets or sets the inclusive upper UTC bound of the reporting period.
     /// </summary>
     public DateTime? ToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected date-range preset key (for example <c>today</c>, <c>last30</c>, or
+    /// <c>custom</c>) used to restore the picker's selected option when the report is reloaded.
+    /// </summary>
+    public string DateRangeKey { get; set; }
 }

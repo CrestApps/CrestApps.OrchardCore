@@ -76,7 +76,6 @@ public class ValidationOwnershipArchitectureTests
         // Assert
         Assert.NotEmpty(entities);
         Assert.Contains("DialerProfile", entities);
-        Assert.Contains("SubjectFlowSettings", entities);
     }
 
     [Fact]

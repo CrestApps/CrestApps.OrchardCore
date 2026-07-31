@@ -345,6 +345,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments
         public const string ChannelEndpoint = "OmnichannelChannelEndpoint";
         public const string Disposition = "OmnichannelDisposition";
         public const string SubjectAction = "OmnichannelSubjectAction";
+        public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
@@ -703,10 +704,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string ContactIsPublished { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ContactPublishedOptions { get; set; }
-        public string CreatedFrom { get; set; }
-        public string CreatedTo { get; set; }
-        public string DoNotCallFrom { get; set; }
-        public string DoNotCallTo { get; set; }
+        public System.DateTime? CreatedFrom { get; set; }
+        public string CreatedRange { get; set; }
+        public System.DateTime? CreatedTo { get; set; }
+        public System.DateTime? DoNotCallFrom { get; set; }
+        public string DoNotCallRange { get; set; }
+        public System.DateTime? DoNotCallTo { get; set; }
         public string InteractionType { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> InteractionTypes { get; set; }
@@ -715,8 +718,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public CrestApps.OrchardCore.Omnichannel.Core.Models.PhoneNumberMatchType PhoneNumberMatchType { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> PhoneNumberMatchTypes { get; set; }
-        public string ScheduledFrom { get; set; }
-        public string ScheduledTo { get; set; }
+        public System.DateTime? ScheduledFrom { get; set; }
+        public string ScheduledRange { get; set; }
+        public System.DateTime? ScheduledTo { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string SelectedAssignedUsersJson { get; set; }
         public string Source { get; set; }
@@ -833,8 +837,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string Channel { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Channels { get; set; }
-        public string ScheduledFrom { get; set; }
-        public string ScheduledTo { get; set; }
+        public System.DateTime? ScheduledFrom { get; set; }
+        public string ScheduledRange { get; set; }
+        public System.DateTime? ScheduledTo { get; set; }
         public string SubjectContentType { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SubjectContentTypes { get; set; }

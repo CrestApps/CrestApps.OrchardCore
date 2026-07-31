@@ -324,8 +324,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Channel { get; set; }
         public bool? ContactIsPublished { get; set; }
         public System.DateTime? CreatedFrom { get; set; }
+        public string CreatedRange { get; set; }
         public System.DateTime? CreatedTo { get; set; }
         public System.DateTime? DoNotCallFrom { get; set; }
+        public string DoNotCallRange { get; set; }
         public System.DateTime? DoNotCallTo { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType? InteractionType { get; set; }
         public int? Limit { get; set; }
@@ -334,6 +336,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
         public System.DateTime? ScheduledFrom { get; set; }
+        public string ScheduledRange { get; set; }
         public System.DateTime? ScheduledTo { get; set; }
         public string Source { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityStatus? Status { get; set; }
@@ -375,6 +378,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
         public System.DateTime? ScheduledFrom { get; set; }
+        public string ScheduledRange { get; set; }
         public System.DateTime? ScheduledTo { get; set; }
         public string SubjectContentType { get; set; }
         public string TimeZoneId { get; set; }

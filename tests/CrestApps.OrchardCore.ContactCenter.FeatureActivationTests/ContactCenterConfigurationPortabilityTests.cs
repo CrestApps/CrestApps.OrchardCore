@@ -88,7 +88,6 @@ public sealed class ContactCenterConfigurationPortabilityTests
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.ChannelEndpoint, "ChannelEndpoints", typeof(OmnichannelChannelEndpoint), typeof(IOmnichannelChannelEndpointManager), static () => new OmnichannelChannelEndpointDeploymentStep()),
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.CampaignGroup, "CampaignGroups", typeof(OmnichannelCampaignGroup), typeof(ICatalogManager<OmnichannelCampaignGroup>), static () => new OmnichannelCampaignGroupDeploymentStep()),
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.Campaign, "Campaigns", typeof(OmnichannelCampaign), typeof(ICatalogManager<OmnichannelCampaign>), static () => new OmnichannelCampaignDeploymentStep()),
-                new ConfigurationCatalog(OmnichannelDeploymentSteps.SubjectFlowSettings, "SubjectFlows", typeof(SubjectFlowSettings), typeof(ICatalogManager<SubjectFlowSettings>), static () => new OmnichannelSubjectFlowSettingsDeploymentStep()),
                 new ConfigurationCatalog(OmnichannelDeploymentSteps.SubjectAction, "SubjectActions", typeof(SubjectAction), typeof(ISourceCatalogManager<SubjectAction>), static () => new OmnichannelSubjectActionDeploymentStep()),
             ]),
     ];

@@ -37,9 +37,19 @@ The implementation is split into three layers:
 
 Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are alphabetized within consistently ordered role-based groups: **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, **Technical & IT**, and **General**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
+## Date range filter
+
+Every report shares a single tenant-local **Date range** control rendered by the built-in filter. Instead of two separate date inputs, it is a dropdown that offers common presets grouped into **Relative days** (**Today**, **Yesterday**, **Last 7 Days**, **Last 30 Days**, **Last 90 Days**), **Calendar periods** (**This Week**, **Last Week**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, **Last Year**), and **Rolling months** (**Last 3 Months**, **Last 6 Months**, **Last 12 Months**) — plus:
+
+- **Custom Range** — two date-time inputs (from and to) editable with [Flatpickr](https://flatpickr.js.org/).
+- **On or before** — a single date-time picker that sets only the upper bound, leaving the start open.
+- **On or after** — a single date-time picker that sets only the lower bound, leaving the end open.
+
+The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_, _On or before Jan 31, 2026_, or a preset name followed by its resolved range). Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is rendered by the reusable `DateRangePicker` view component (backed by the `date-range-picker` resource) provided by the **CrestApps Resources** feature, so every report presents the same date-range experience and any module can reuse it. See the [Resources](resources.md#date-range-picker) documentation for details.
+
 ## Extensible filters
 
-Every report automatically gets a tenant-local from/to date and time range that is converted to UTC before execution. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
+Every report automatically gets the shared date range described above, converted to UTC before execution. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
 
 ```csharp
 public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>

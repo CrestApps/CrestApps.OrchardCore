@@ -26,6 +26,11 @@ public static class OmnichannelDeploymentSteps
     public const string Campaign = "OmnichannelCampaign";
 
     /// <summary>
+    /// The recipe step that carries subject flow settings.
+    /// </summary>
+    public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";
+
+    /// <summary>
     /// The recipe step that carries the actions a subject disposition triggers.
     /// </summary>
     public const string SubjectAction = "OmnichannelSubjectAction";

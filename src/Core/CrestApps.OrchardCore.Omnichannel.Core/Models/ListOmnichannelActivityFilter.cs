@@ -45,6 +45,11 @@ public sealed class ListOmnichannelActivityFilter : Entity
     public DateTime? ScheduledTo { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
+
+    /// <summary>
     /// Gets or sets the route values.
     /// </summary>
     [BindNever]

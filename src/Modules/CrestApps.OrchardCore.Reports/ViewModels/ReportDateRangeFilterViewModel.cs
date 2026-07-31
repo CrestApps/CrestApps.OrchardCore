@@ -14,4 +14,9 @@ public class ReportDateRangeFilterViewModel
     /// Gets or sets the inclusive upper bound of the reporting period.
     /// </summary>
     public DateTime? To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string Range { get; set; }
 }

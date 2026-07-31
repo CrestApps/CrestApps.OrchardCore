@@ -1,10 +1,14 @@
 @model CrestApps.OrchardCore.Reports.ViewModels.ReportDateRangeFilterViewModel
 
-<div class="col p-1">
-    <label class="form-label" asp-for="From">@T["From"]</label>
-    <input asp-for="From" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
-</div>
-<div class="col p-1">
-    <label class="form-label" asp-for="To">@T["To"]</label>
-    <input asp-for="To" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
-</div>
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.From),
+    toName = Html.NameFor(m => m.To),
+    fromId = Html.IdFor(m => m.From),
+    toId = Html.IdFor(m => m.To),
+    from = Model.From,
+    to = Model.To,
+    selectedRangeName = Html.NameFor(m => m.Range),
+    selectedRange = Model.Range,
+    label = T["Date range"].Value,
+})
