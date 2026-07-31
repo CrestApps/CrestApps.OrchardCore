@@ -1102,10 +1102,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public OmnichannelSubjectAISettingsViewModel() { }
         public bool AllowAIToUpdateContact { get; set; }
         public bool AllowAIToUpdateSubject { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public bool CanAutomate { get; set; }
         public int? NoResponseTimeoutInMinutes { get; set; }
         public string ProfileId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Profiles { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public bool ShowSmsSettings { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public bool ShowVoiceSettings { get; set; }
         public string SmsOptOutKeywords { get; set; }
         public int? SmsResponseDelayInSeconds { get; set; }
         public string SpeechToTextDeploymentName { get; set; }

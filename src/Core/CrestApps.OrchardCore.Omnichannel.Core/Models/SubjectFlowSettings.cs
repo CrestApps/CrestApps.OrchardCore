@@ -42,7 +42,7 @@ public sealed class SubjectFlowSettings
     /// subject can be completed. This is the single decision-control policy that applies to both inbound and
     /// outbound activities, enforced by the activity disposition service.
     /// </summary>
-    public bool RequireDisposition { get; set; }
+    public bool RequireDisposition { get; set; } = true;
 
     /// <summary>
     /// When the interaction is automated, this will be the initial message to start the conversation with the customer.
