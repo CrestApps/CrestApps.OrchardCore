@@ -68,8 +68,10 @@ The Resources feature ships a `DateRangePicker` view component that renders the 
 | `fromId` / `toId` | Optional HTML ids. Default to values derived from the field names. |
 | `from` / `to` | Optional `DateTime?` initial values. |
 | `label` | Optional label rendered above the control. |
+| `labelCssClass` | Optional CSS classes for the label element (defaults to `form-label`). Use `form-label form-label-sm mb-1` for dense filter forms. |
 | `placeholder` | Optional toggle placeholder shown when nothing is selected (defaults to _Select range_). |
 | `wrapperCssClass` | Optional CSS classes for the root element (defaults to `col p-1`). |
+| `toggleCssClass` | Optional CSS classes for the dropdown toggle button (defaults to `form-select`). Use `form-select form-select-sm` for dense filter forms. |
 
 The bound fields should be `DateTime?` so the machine format (`yyyy-MM-ddTHH:mm`) round-trips through model binding.
 

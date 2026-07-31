@@ -1,18 +1,10 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using System.Globalization
 
 @model BulkManageActivityFilterViewModel
 
-<style asp-name="flatpickr"></style>
 <style asp-name="crestapps-bootstrap-select"></style>
-<script asp-name="flatpickr" at="Foot"></script>
-<script asp-name="flatpickr-culture" at="Foot"></script>
 <script asp-name="crestapps-bootstrap-select" at="Foot"></script>
-
-@{
-    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
-}
 
 <fieldset class="border rounded p-3">
     <legend class="float-none w-auto px-2 fs-6">@T["Contact filters"]</legend>
@@ -46,23 +38,21 @@
     </div>
 
     <div class="col-lg-3">
-        <label class="form-label form-label-sm mb-1" for="bulk-dnc-from">@T["Do not call from"]</label>
-        <input type="text"
-               id="bulk-dnc-from"
-               asp-for="DoNotCallFrom"
-               class="form-control form-control-sm"
-               placeholder="@T["Do not call from"]" />
-        <span class="hint">@T["Only include contacts marked as do-not-call on or after this date."]</span>
-    </div>
-
-    <div class="col-lg-3">
-        <label class="form-label form-label-sm mb-1" for="bulk-dnc-to">@T["Do not call to"]</label>
-        <input type="text"
-               id="bulk-dnc-to"
-               asp-for="DoNotCallTo"
-               class="form-control form-control-sm"
-               placeholder="@T["Do not call to"]" />
-        <span class="hint">@T["Only include contacts marked as do-not-call on or before this date."]</span>
+        @await Component.InvokeAsync("DateRangePicker", new
+        {
+            fromName = Html.NameFor(m => m.DoNotCallFrom),
+            toName = Html.NameFor(m => m.DoNotCallTo),
+            fromId = Html.IdFor(m => m.DoNotCallFrom),
+            toId = Html.IdFor(m => m.DoNotCallTo),
+            from = Model.DoNotCallFrom,
+            to = Model.DoNotCallTo,
+            label = T["Do not call"].Value,
+            labelCssClass = "form-label form-label-sm mb-1",
+            toggleCssClass = "form-select form-select-sm",
+            placeholder = T["Any do-not-call date"].Value,
+            wrapperCssClass = "mb-1",
+        })
+        <span class="hint">@T["Only include contacts marked as do-not-call within the selected date range."]</span>
     </div>
     </div>
 </fieldset>
@@ -117,39 +107,37 @@
         </div>
 
         <div class="col-lg-3">
-            <label class="form-label form-label-sm mb-1" for="bulk-scheduled-from">@T["Scheduled from"]</label>
-            <input type="text"
-                   id="bulk-scheduled-from"
-                   asp-for="ScheduledFrom"
-                   class="form-control form-control-sm"
-                   placeholder="@T["Scheduled from"]" />
+            @await Component.InvokeAsync("DateRangePicker", new
+            {
+                fromName = Html.NameFor(m => m.ScheduledFrom),
+                toName = Html.NameFor(m => m.ScheduledTo),
+                fromId = Html.IdFor(m => m.ScheduledFrom),
+                toId = Html.IdFor(m => m.ScheduledTo),
+                from = Model.ScheduledFrom,
+                to = Model.ScheduledTo,
+                label = T["Scheduled"].Value,
+                labelCssClass = "form-label form-label-sm mb-1",
+                toggleCssClass = "form-select form-select-sm",
+                placeholder = T["Any schedule"].Value,
+                wrapperCssClass = "mb-0",
+            })
         </div>
 
         <div class="col-lg-3">
-            <label class="form-label form-label-sm mb-1" for="bulk-scheduled-to">@T["Scheduled to"]</label>
-            <input type="text"
-                   id="bulk-scheduled-to"
-                   asp-for="ScheduledTo"
-                   class="form-control form-control-sm"
-                   placeholder="@T["Scheduled to"]" />
-        </div>
-
-        <div class="col-lg-3">
-            <label class="form-label form-label-sm mb-1" for="bulk-created-from">@T["Created from"]</label>
-            <input type="text"
-                   id="bulk-created-from"
-                   asp-for="CreatedFrom"
-                   class="form-control form-control-sm"
-                   placeholder="@T["Created from"]" />
-        </div>
-
-        <div class="col-lg-3">
-            <label class="form-label form-label-sm mb-1" for="bulk-created-to">@T["Created to"]</label>
-            <input type="text"
-                   id="bulk-created-to"
-                   asp-for="CreatedTo"
-                   class="form-control form-control-sm"
-                   placeholder="@T["Created to"]" />
+            @await Component.InvokeAsync("DateRangePicker", new
+            {
+                fromName = Html.NameFor(m => m.CreatedFrom),
+                toName = Html.NameFor(m => m.CreatedTo),
+                fromId = Html.IdFor(m => m.CreatedFrom),
+                toId = Html.IdFor(m => m.CreatedTo),
+                from = Model.CreatedFrom,
+                to = Model.CreatedTo,
+                label = T["Created"].Value,
+                labelCssClass = "form-label form-label-sm mb-1",
+                toggleCssClass = "form-select form-select-sm",
+                placeholder = T["Any created date"].Value,
+                wrapperCssClass = "mb-0",
+            })
         </div>
 
         <div class="col-lg-3">
@@ -189,27 +177,3 @@
         </div>
     </div>
 </fieldset>
-
-<script at="Foot" depends-on="flatpickr,flatpickr-culture">
-    document.addEventListener('DOMContentLoaded', function () {
-        // flatpickr hides the original input and renders a visible alternate input without an id,
-        // so the label has to be re-pointed at the alternate input to stay usable and accessible.
-        var initializeDatePicker = function (elementId) {
-            var instance = flatpickr('#' + elementId, flatpickrCulture.createLocalizedDateConfig("@datePattern", { altInputClass: 'form-control form-control-sm' }));
-
-            if (!instance || !instance.altInput) {
-                return;
-            }
-
-            instance.altInput.id = elementId + '-display';
-
-            var label = document.querySelector('label[for="' + elementId + '"]');
-
-            if (label) {
-                label.setAttribute('for', instance.altInput.id);
-            }
-        };
-
-        ['bulk-scheduled-from', 'bulk-scheduled-to', 'bulk-created-from', 'bulk-created-to', 'bulk-dnc-from', 'bulk-dnc-to'].forEach(initializeDatePicker);
-    });
-</script>

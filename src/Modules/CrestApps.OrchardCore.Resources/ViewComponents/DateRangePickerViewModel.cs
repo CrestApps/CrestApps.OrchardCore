@@ -8,9 +8,13 @@ internal sealed class DateRangePickerViewModel
 
     public string Label { get; set; }
 
+    public string LabelCssClass { get; set; }
+
     public string Placeholder { get; set; }
 
     public string WrapperCssClass { get; set; }
+
+    public string ToggleCssClass { get; set; }
 
     public string FromName { get; set; }
 

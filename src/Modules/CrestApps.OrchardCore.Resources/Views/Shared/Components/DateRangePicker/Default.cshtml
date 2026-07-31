@@ -8,10 +8,10 @@
 <div class="@Model.WrapperCssClass" data-date-range-picker data-week-start="@Model.WeekStart" data-date-pattern="@Model.DatePattern" data-time-pattern="@Model.TimePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]">
     @if (!string.IsNullOrEmpty(Model.Label))
     {
-        <label class="form-label">@Model.Label</label>
+        <label class="@Model.LabelCssClass">@Model.Label</label>
     }
     <div class="dropdown">
-        <button type="button" class="form-select text-start text-truncate" data-drp-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+        <button type="button" class="@Model.ToggleCssClass text-start text-truncate" data-drp-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
             <span data-drp-label data-placeholder="@(Model.Placeholder ?? T["Select range"].Value)">@(Model.Placeholder ?? T["Select range"].Value)</span>
         </button>
         <div class="dropdown-menu p-2 shadow" style="min-width: 26rem;">

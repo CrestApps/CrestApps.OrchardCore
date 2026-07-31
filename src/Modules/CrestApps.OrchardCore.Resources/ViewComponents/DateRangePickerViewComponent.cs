@@ -21,8 +21,10 @@ public sealed class DateRangePickerViewComponent : ViewComponent
     /// <param name="from">The initial lower-bound value, if any.</param>
     /// <param name="to">The initial upper-bound value, if any.</param>
     /// <param name="label">The optional label rendered above the picker.</param>
+    /// <param name="labelCssClass">The CSS classes applied to the label. Defaults to <c>form-label</c>.</param>
     /// <param name="placeholder">The placeholder shown on the toggle when no range is selected.</param>
     /// <param name="wrapperCssClass">The CSS classes applied to the picker root element.</param>
+    /// <param name="toggleCssClass">The CSS classes applied to the toggle button. Defaults to <c>form-select</c>.</param>
     /// <returns>The rendered picker view.</returns>
     public IViewComponentResult Invoke(
         string fromName,
@@ -32,8 +34,10 @@ public sealed class DateRangePickerViewComponent : ViewComponent
         DateTime? from = null,
         DateTime? to = null,
         string label = null,
+        string labelCssClass = null,
         string placeholder = null,
-        string wrapperCssClass = null)
+        string wrapperCssClass = null,
+        string toggleCssClass = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(fromName);
         ArgumentException.ThrowIfNullOrEmpty(toName);
@@ -46,8 +50,10 @@ public sealed class DateRangePickerViewComponent : ViewComponent
             PickerId = pickerId,
             GroupName = pickerId + "-range",
             Label = label,
+            LabelCssClass = string.IsNullOrEmpty(labelCssClass) ? "form-label" : labelCssClass,
             Placeholder = placeholder,
             WrapperCssClass = string.IsNullOrEmpty(wrapperCssClass) ? "col p-1" : wrapperCssClass,
+            ToggleCssClass = string.IsNullOrEmpty(toggleCssClass) ? "form-select" : toggleCssClass,
             FromName = fromName,
             ToName = toName,
             FromId = string.IsNullOrEmpty(fromId) ? DeriveId(fromName) : fromId,

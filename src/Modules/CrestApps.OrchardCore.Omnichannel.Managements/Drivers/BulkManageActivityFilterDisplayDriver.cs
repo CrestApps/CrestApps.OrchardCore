@@ -81,16 +81,16 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.CampaignId = filter.CampaignId;
             model.AssignedToUserIds = filter.AssignedToUserIds ?? [];
             model.UrgencyLevel = filter.UrgencyLevel?.ToString();
-            model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd");
-            model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd");
-            model.CreatedFrom = filter.CreatedFrom?.ToString("yyyy-MM-dd");
-            model.CreatedTo = filter.CreatedTo?.ToString("yyyy-MM-dd");
+            model.ScheduledFrom = filter.ScheduledFrom;
+            model.ScheduledTo = filter.ScheduledTo;
+            model.CreatedFrom = filter.CreatedFrom;
+            model.CreatedTo = filter.CreatedTo;
             model.Limit = filter.Limit;
             model.PhoneNumber = filter.PhoneNumber;
             model.PhoneNumberMatchType = filter.PhoneNumberMatchType;
             model.TimeZoneIds = filter.TimeZoneIds ?? [];
-            model.DoNotCallFrom = filter.DoNotCallFrom?.ToString("yyyy-MM-dd");
-            model.DoNotCallTo = filter.DoNotCallTo?.ToString("yyyy-MM-dd");
+            model.DoNotCallFrom = filter.DoNotCallFrom;
+            model.DoNotCallTo = filter.DoNotCallTo;
 
             model.ContactPublishedOptions =
             [
@@ -209,16 +209,16 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.Status = null;
         filter.AssignmentStatus = null;
         filter.UrgencyLevel = null;
-        filter.ScheduledFrom = null;
-        filter.ScheduledTo = null;
-        filter.CreatedFrom = null;
-        filter.CreatedTo = null;
+        filter.ScheduledFrom = model.ScheduledFrom;
+        filter.ScheduledTo = model.ScheduledTo;
+        filter.CreatedFrom = model.CreatedFrom;
+        filter.CreatedTo = model.CreatedTo;
         filter.Limit = model.Limit;
         filter.PhoneNumber = model.PhoneNumber?.Trim();
         filter.PhoneNumberMatchType = model.PhoneNumberMatchType;
         filter.TimeZoneIds = model.TimeZoneIds;
-        filter.DoNotCallFrom = null;
-        filter.DoNotCallTo = null;
+        filter.DoNotCallFrom = model.DoNotCallFrom;
+        filter.DoNotCallTo = model.DoNotCallTo;
 
         if (!string.IsNullOrWhiteSpace(filter.PhoneNumber) &&
             !PhoneNumberSearchTerm.TryParse(filter.PhoneNumber, out _))
@@ -249,36 +249,6 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         if (!string.IsNullOrEmpty(model.AssignmentStatus) && Enum.TryParse<ActivityAssignmentStatus>(model.AssignmentStatus, out var assignmentStatus))
         {
             filter.AssignmentStatus = assignmentStatus;
-        }
-
-        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParseExact(model.ScheduledFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledFrom))
-        {
-            filter.ScheduledFrom = scheduledFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParseExact(model.ScheduledTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledTo))
-        {
-            filter.ScheduledTo = scheduledTo;
-        }
-
-        if (!string.IsNullOrEmpty(model.CreatedFrom) && DateTime.TryParseExact(model.CreatedFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdFrom))
-        {
-            filter.CreatedFrom = createdFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.CreatedTo) && DateTime.TryParseExact(model.CreatedTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdTo))
-        {
-            filter.CreatedTo = createdTo;
-        }
-
-        if (!string.IsNullOrEmpty(model.DoNotCallFrom) && DateTime.TryParseExact(model.DoNotCallFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncFrom))
-        {
-            filter.DoNotCallFrom = dncFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.DoNotCallTo) && DateTime.TryParseExact(model.DoNotCallTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncTo))
-        {
-            filter.DoNotCallTo = dncTo;
         }
 
         // Populate route values for pagination link generation.
@@ -335,22 +305,22 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
         if (filter.ScheduledFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.ScheduledTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.CreatedFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".CreatedFrom", filter.CreatedFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".CreatedFrom", filter.CreatedFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.CreatedTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".CreatedTo", filter.CreatedTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".CreatedTo", filter.CreatedTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.AssignedToUserIds is { Length: > 0 })
@@ -382,12 +352,12 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
         if (filter.DoNotCallFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".DoNotCallFrom", filter.DoNotCallFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallFrom", filter.DoNotCallFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.DoNotCallTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         return Edit(filter, context);
