@@ -14,7 +14,17 @@ public sealed class OmnichannelActivityBatchIndex : CatalogItemIndex
     public string DisplayText { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source used when loading activities from this batch.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the status.
     /// </summary>
     public OmnichannelActivityBatchStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity batch was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
 }

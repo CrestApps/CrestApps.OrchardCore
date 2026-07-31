@@ -7,7 +7,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 
 /// <summary>
-/// Adds the Phone Number Verifications settings and report entries to the admin navigation menu.
+/// Adds the Phone Number Verifications settings and queue entries to the admin navigation menu.
 /// </summary>
 internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvider
 {
@@ -30,19 +30,6 @@ internal sealed class PhoneNumberVerificationsAdminMenu : AdminNavigationProvide
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder
-            .Add(S["Reports"], "after.40", reports => reports
-                .AddClass("reports")
-                .Id("reports")
-                .Add(S["Phone Number Verifications"], S["Phone Number Verifications"].PrefixPosition(), verifications => verifications
-                    .AddClass("phone-number-verifications-report")
-                    .Id("phoneNumberVerificationsReport")
-                    .Action("Index", "Reports", PhoneNumberVerificationsConstants.Features.Area)
-                    .Permission(PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport)
-                    .LocalNav()
-                )
-            , priority: 1);
-
         builder
             .Add(S["Tools"], tools => tools
                 .Add(S["Phone Verifications Queue"], S["Phone Verifications Queue"].PrefixPosition(), verifications => verifications

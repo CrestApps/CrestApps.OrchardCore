@@ -30,6 +30,31 @@ public class BulkManageActivityFilterViewModel
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the source filter.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type filter.
+    /// </summary>
+    public string InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity status filter.
+    /// </summary>
+    public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignment status filter.
+    /// </summary>
+    public string AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign identifier filter.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets the assigned to user IDs filter.
     /// </summary>
     public string[] AssignedToUserIds { get; set; } = [];
@@ -37,22 +62,32 @@ public class BulkManageActivityFilterViewModel
     /// <summary>
     /// Gets or sets the scheduled from date filter.
     /// </summary>
-    public string ScheduledFrom { get; set; }
+    public DateTime? ScheduledFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the scheduled to date filter.
     /// </summary>
-    public string ScheduledTo { get; set; }
+    public DateTime? ScheduledTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
 
     /// <summary>
     /// Gets or sets the created from date filter.
     /// </summary>
-    public string CreatedFrom { get; set; }
+    public DateTime? CreatedFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the created to date filter.
     /// </summary>
-    public string CreatedTo { get; set; }
+    public DateTime? CreatedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected created date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string CreatedRange { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency level filter.
@@ -72,7 +107,7 @@ public class BulkManageActivityFilterViewModel
     /// <summary>
     /// Gets or sets the phone number match type.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter contacts by.
@@ -82,12 +117,17 @@ public class BulkManageActivityFilterViewModel
     /// <summary>
     /// Gets or sets the earliest Do Not Call date to filter by.
     /// </summary>
-    public string DoNotCallFrom { get; set; }
+    public DateTime? DoNotCallFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the latest Do Not Call date to filter by.
     /// </summary>
-    public string DoNotCallTo { get; set; }
+    public DateTime? DoNotCallTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected Do Not Call date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string DoNotCallRange { get; set; }
 
     /// <summary>
     /// Gets or sets the available contact published options.
@@ -112,6 +152,36 @@ public class BulkManageActivityFilterViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available activity sources.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Sources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available interaction types.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> InteractionTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available activity statuses.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available assignment statuses.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AssignmentStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available campaigns.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Campaigns { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the available urgency levels.

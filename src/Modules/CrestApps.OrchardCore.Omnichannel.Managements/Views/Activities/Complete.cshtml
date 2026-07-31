@@ -5,23 +5,36 @@
 
 @{
     var activityId = ViewContext.HttpContext.Request.RouteValues["id"];
+    var contactContentItem = Model.ContactContentItem;
 }
 
-@{
+@if (contactContentItem is not null)
+{
     var shape = new ContactNavigationAdminShapeViewModel
     {
-        ContactContentItem = Model.ContactContentItem,
+        ContactContentItem = contactContentItem,
         ShowEdit = true,
     };
+
+    @await DisplayAsync(shape)
 }
 
-@await DisplayAsync(shape)
-
-<form method="post" asp-action="Complete" asp-route-id="@activityId" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" asp-action="Complete" asp-route-id="@activityId" asp-route-returnUrl="@Model.ReturnUrl" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model)
 
     <button class="btn btn-primary" type="submit">@T["Complete"]</button>
 
-    <a class="btn btn-secondary cancel" role="button" asp-route-action="List" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId">@T["Cancel"]</a>
+    @if (!string.IsNullOrEmpty(Model.ReturnUrl))
+    {
+        <a class="btn btn-secondary cancel" role="button" href="@Model.ReturnUrl">@T["Cancel"]</a>
+    }
+    else if (contactContentItem is null)
+    {
+        <a class="btn btn-secondary cancel" role="button" asp-action="Activities">@T["Cancel"]</a>
+    }
+    else
+    {
+        <a class="btn btn-secondary cancel" role="button" asp-action="List" asp-route-contentItemId="@contactContentItem.ContentItemId">@T["Cancel"]</a>
+    }
 </form>

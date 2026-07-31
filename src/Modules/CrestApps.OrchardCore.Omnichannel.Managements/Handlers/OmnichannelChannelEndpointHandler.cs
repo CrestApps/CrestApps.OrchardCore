@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -44,14 +45,54 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
-        => PopulateAsync(context.Model, context.Data);
+    public override async Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        await PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+        Canonicalize(context.Model);
+    }
+
+    public override async Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         context.Model.ModifiedUtc = _clock.UtcNow;
 
-        return PopulateAsync(context.Model, context.Data);
+        await PopulateAsync(context.Model, context.Data);
+
+        Canonicalize(context.Model);
+    }
+
+    /// <inheritdoc/>
+    public override Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        // An editor builds a new endpoint before it binds the form to it, so the value is still empty when the entry is
+        // initialized and only the create raises after the form has been bound.
+        Canonicalize(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    private void Canonicalize(OmnichannelChannelEndpoint endpoint)
+    {
+        // A phone endpoint is matched against inbound traffic by its value, so the value a caller is recognised by
+        // has to be the same however it was written. Canonicalizing only in the editor left a recipe or an import
+        // storing whatever it was given, and an endpoint that never matched anything.
+        if (string.IsNullOrWhiteSpace(endpoint.Value))
+        {
+            return;
+        }
+
+        endpoint.Value = endpoint.Value.Trim();
+
+        if (endpoint.Channel != OmnichannelConstants.Channels.Phone &&
+            endpoint.Channel != OmnichannelConstants.Channels.Sms)
+        {
+            return;
+        }
+
+        if (_phoneNumberService.TryParse(endpoint.Value, null, out var canonicalNumber))
+        {
+            endpoint.Value = canonicalNumber.Value;
+        }
     }
 
     public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
@@ -76,7 +117,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         {
             if (context.Model.Channel == OmnichannelConstants.Channels.Phone || context.Model.Channel == OmnichannelConstants.Channels.Sms)
             {
-                if (!_phoneNumberService.TryFormatToE164(context.Model.Value, null, out _))
+                if (!_phoneNumberService.TryParse(context.Model.Value, null, out _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."], [nameof(OmnichannelChannelEndpoint.Value)]));
                 }
@@ -110,6 +151,8 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
     private Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
     {
+        OmnichannelDeploymentSerializer.Populate(enabpoint, data);
+
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(displayText))
@@ -155,11 +198,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private string NormalizePhoneValue(string channel, string value)
     {
         if ((channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms) ||
-            !_phoneNumberService.TryFormatToE164(value, null, out var e164Number))
+            !_phoneNumberService.TryParse(value, null, out var canonicalNumber))
         {
             return value;
         }
 
-        return e164Number;
+        return canonicalNumber.Value;
     }
 }

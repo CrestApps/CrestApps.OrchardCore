@@ -1,13 +1,60 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Moq;
+using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 
 public sealed class OmnichannelContactDuplicateLookupServiceTests
 {
+    [Fact]
+    public async Task GetExistingNormalizedPhoneNumbersAsync_WhenQueryingIndexes_RequiresPublishedVersions()
+    {
+        // Arrange
+        var predicates = new List<Expression<Func<OmnichannelContactIndex, bool>>>();
+        var indexQuery = new Mock<IQueryIndex<OmnichannelContactIndex>>();
+        indexQuery
+            .Setup(query => query.Where(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
+            .Callback<Expression<Func<OmnichannelContactIndex, bool>>>(predicate => predicates.Add(predicate))
+            .Returns(indexQuery.Object);
+        indexQuery
+            .Setup(query => query.ListAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var rootQuery = new Mock<IQuery>();
+        rootQuery
+            .Setup(query => query.ForIndex<OmnichannelContactIndex>())
+            .Returns(indexQuery.Object);
+
+        var session = new Mock<ISession>();
+        session
+            .Setup(currentSession => currentSession.Query(null))
+            .Returns(rootQuery.Object);
+
+        var service = new OmnichannelContactDuplicateLookupService(
+            session.Object,
+            new DefaultPhoneNumberService());
+
+        // Act
+        await service.GetExistingNormalizedPhoneNumbersAsync(
+            ["+17024993350"],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, predicates.Count);
+        Assert.All(predicates, predicate =>
+        {
+            var conjunction = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
+            Assert.Equal(ExpressionType.AndAlso, conjunction.NodeType);
+
+            var publishedMember = Assert.IsAssignableFrom<MemberExpression>(conjunction.Left);
+            Assert.Equal(nameof(OmnichannelContactIndex.Published), publishedMember.Member.Name);
+        });
+    }
+
     [Fact]
     public void AddLegacyMatches_ShouldMatchInputAgainstLegacyPhoneValues()
     {

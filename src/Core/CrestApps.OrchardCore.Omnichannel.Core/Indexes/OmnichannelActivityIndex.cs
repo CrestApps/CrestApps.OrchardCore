@@ -14,6 +14,16 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     public long DocumentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of work the activity represents.
+    /// </summary>
+    public ActivityKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source that created or is driving the activity.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the interaction type.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
@@ -72,6 +82,31 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     /// Gets or sets the assigned to utc.
     /// </summary>
     public DateTime? AssignedToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignment lifecycle status.
+    /// </summary>
+    public ActivityAssignmentStatus AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active reservation identifier.
+    /// </summary>
+    public string ReservationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user or system actor that reserved the activity.
+    /// </summary>
+    public string ReservedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity was reserved.
+    /// </summary>
+    public DateTime? ReservedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity reservation expires.
+    /// </summary>
+    public DateTime? ReservationExpiresUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the created by id.

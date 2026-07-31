@@ -18,7 +18,6 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -42,21 +41,18 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="siteService">The site service for reading settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
-    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public CanadaDnclRegistry(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IPhoneNumberService phoneNumberService,
         IStringLocalizer<CanadaDnclRegistry> stringLocalizer,
         ILogger<CanadaDnclRegistry> logger)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
-        _phoneNumberService = phoneNumberService;
         _logger = logger;
 
         DisplayName = stringLocalizer["Canada LNNTE-DNCL Registry"];
@@ -64,11 +60,13 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     }
 
     /// <inheritdoc/>
-    public async Task<HashSet<string>> GetRegisteredNumbersAsync(
-        IEnumerable<string> phoneNumbers,
+    public async Task<HashSet<PhoneNumber>> GetRegisteredNumbersAsync(
+        IEnumerable<PhoneNumber> phoneNumbers,
         CancellationToken cancellationToken = default)
     {
-        var dncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(phoneNumbers);
+
+        var dncNumbers = new HashSet<PhoneNumber>();
         var site = await _siteService.GetSiteSettingsAsync();
         var settings = site.GetOrCreate<CanadaDnclRegistrySettings>();
 
@@ -89,19 +87,19 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
 
         foreach (var phoneNumber in phoneNumbers)
         {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
+            if (!phoneNumber.HasValue)
             {
                 continue;
             }
 
             try
             {
-                if (!_phoneNumberService.TryFormatToE164(phoneNumber, "CA", out var e164Number))
+                var apiNumber = ConvertToApiFormat(phoneNumber.Value);
+
+                if (apiNumber is null)
                 {
                     continue;
                 }
-
-                var apiNumber = ConvertToApiFormat(e164Number);
                 var requestUrl = $"{baseUrl}DNCLNumbers/{apiNumber}?accountNumber={settings.AccountNumber}";
 
                 using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
@@ -111,11 +109,11 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning(
-                        "Canada DNCL API returned status {StatusCode} for phone number lookup.",
-                        response.StatusCode);
-
-                    continue;
+                    // The registry did not say the number is unlisted; it did not say anything. Continuing
+                    // here would turn that silence into a clean answer and let the number be called.
+                    throw new DoNotCallScreeningException(
+                        Key,
+                        $"The Canada LNNTE-DNCL registry returned status {response.StatusCode}, so it could not report whether the number is listed.");
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<DnclResponse>(cancellationToken);
@@ -125,11 +123,16 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
                     dncNumbers.Add(phoneNumber);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not DoNotCallScreeningException && ex is not OperationCanceledException)
             {
                 _logger.LogError(
                     ex,
-                    "Error checking phone number against Canada DNCL registry.");
+                    "Error checking phone number against the Canada DNCL registry.");
+
+                throw new DoNotCallScreeningException(
+                    Key,
+                    "The Canada LNNTE-DNCL registry could not be reached, so it could not report whether the number is listed.",
+                    ex);
             }
         }
 
@@ -137,18 +140,21 @@ public sealed class CanadaDnclRegistry : INationalDoNotCallRegistry
     }
 
     /// <summary>
-    /// Converts an E.164 number to the 10-digit format expected by the Canada DNCL API.
+    /// Converts an E.164 number to the 10-digit format expected by the Canada DNCL API, or returns
+    /// <see langword="null"/> when the number is outside the North American numbering plan. The registry
+    /// covers Canadian numbers only, so a number it cannot address is skipped rather than sent with its
+    /// country code stripped, which would ask the registry about a different number entirely.
     /// </summary>
+    /// <param name="e164Number">The canonical number.</param>
+    /// <returns>The ten-digit national number, or <see langword="null"/> when the number is not addressable.</returns>
     private static string ConvertToApiFormat(string e164Number)
     {
-        // E.164 for CA: +1XXXXXXXXXX → strip +1 to get the 10-digit number.
         if (e164Number.StartsWith("+1", StringComparison.Ordinal) && e164Number.Length == 12)
         {
-            return e164Number[2..];
+            return e164Number.Substring(2);
         }
 
-        // Fallback: strip the leading '+'.
-        return e164Number.TrimStart('+');
+        return null;
     }
 
     private sealed class DnclResponse

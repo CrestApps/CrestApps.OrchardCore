@@ -25,7 +25,9 @@ internal sealed class OmnichannelActivityBatchIndexProvider : IndexProvider<Omni
                 DisplayText = !string.IsNullOrEmpty(batch.DisplayText)
             ? batch.DisplayText.Substring(0, Math.Min(255, batch.DisplayText.Length))
             : null,
+                Source = batch.Source,
                 Status = batch.Status,
+                CreatedUtc = batch.CreatedUtc,
             });
     }
 }

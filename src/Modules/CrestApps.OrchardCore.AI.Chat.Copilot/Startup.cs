@@ -2,8 +2,11 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -53,5 +56,10 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.AddPermissionProvider<CopilotPermissionProvider>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddCopilotAuthEndpoints();
     }
 }

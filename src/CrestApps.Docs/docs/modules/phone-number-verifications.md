@@ -2,7 +2,7 @@
 sidebar_label: Phone Number Verifications
 sidebar_position: 8
 title: Phone Number Verifications
-description: A provider-agnostic framework for verifying contact phone numbers, with pluggable providers, content-part storage, SQL indexing, background revalidation, and reporting.
+description: A provider-agnostic framework for verifying contact phone numbers, with pluggable providers, content-part storage, SQL indexing, background revalidation, and shared Reports-module integration.
 ---
 
 | | |
@@ -10,7 +10,7 @@ description: A provider-agnostic framework for verifying contact phone numbers, 
 | **Feature Name** | Phone Number Verifications |
 | **Feature ID** | `CrestApps.OrchardCore.PhoneNumbers.Verifications` |
 
-The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, reporting, and a background revalidation process.
+The **Phone Number Verifications** module provides a provider-agnostic framework for verifying phone numbers and storing the results directly on content items through a content part. It manages verification providers, content-part storage helpers, SQL indexing, and a background revalidation process. When the shared [Reports](reports) module is enabled, this module also contributes its report automatically.
 
 The core feature does not depend on any external verification provider. Providers ship as separate features (for example, **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, and **Twilio Phone Number Verification**) and are discovered dynamically, so adding a provider never requires changes to the core feature.
 
@@ -36,7 +36,7 @@ The module ships with the following features:
 
 | Feature | Feature ID | Description |
 | --- | --- | --- |
-| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | The core framework, settings, content part, SQL index, automatic contact verification, reporting, and background revalidation. |
+| Phone Number Verifications | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | The core framework, settings, content part, SQL index, automatic contact verification, background revalidation, and automatic integration with the shared Reports area when `CrestApps.OrchardCore.Reports` is enabled. |
 | AbstractAPI Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | Verifies phone numbers using the [AbstractAPI Phone Validation](https://www.abstractapi.com/api/phone-validation-api) service. |
 | Veriphone Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Verifies phone numbers using the [Veriphone phone number validation API](https://veriphone.io/docs). |
 | Twilio Phone Number Verification | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Verifies phone numbers using the [Twilio Lookup API](https://www.twilio.com/docs/lookup/v2-api). |
@@ -160,7 +160,7 @@ External verification APIs are paid services, so the framework minimizes provide
 
 ## Reporting
 
-A report dashboard is available under **Reports** -> **Phone Number Verifications** for users who have the `RunPhoneNumberVerificationsReport` permission. It surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
+Enable **Reports** (`CrestApps.OrchardCore.Reports`) alongside **Phone Number Verifications** to surface the report directly under **Reports** for users who have the `RunPhoneNumberVerificationsReport` permission. The report uses the shared Reports module renderer and export pipeline, and it surfaces operational metrics such as total contacts, verified and unverified numbers, invalid numbers, mobile/landline/VoIP counts, numbers pending verification, numbers requiring revalidation, verification success rate, verification failures, and provider usage counts. The reporting infrastructure is built on the SQL index and is extensible for future dashboard widgets.
 
 ![Phone number verifications report dashboard](/img/docs/phone-number-verifications-report.png)
 

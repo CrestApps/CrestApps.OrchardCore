@@ -1,5 +1,6 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -15,7 +16,9 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("DisplayText", column => column.WithLength(255))
-            .Column<string>("Status", column => column.WithLength(20)),
+            .Column<string>("Source", column => column.WithLength(50))
+            .Column<OmnichannelActivityBatchStatus>("Status")
+            .Column<DateTime>("CreatedUtc"),
         collection: OmnichannelConstants.CollectionName
         );
 
@@ -29,6 +32,36 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 1;
+        return 3;
+    }
+
+    /// <summary>
+    /// Adds the activity batch source column.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
+        {
+            table.AddColumn<string>("Source", column => column.WithLength(50));
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the activity batch created UTC column used to order inventory loads by newest first.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
+        {
+            table.AddColumn<DateTime>("CreatedUtc");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 3;
     }
 }

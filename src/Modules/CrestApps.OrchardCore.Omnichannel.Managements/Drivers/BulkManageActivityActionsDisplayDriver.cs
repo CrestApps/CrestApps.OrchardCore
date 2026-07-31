@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<BulkManageOmnichannelActivityContainer>
 {
     private readonly LinkGenerator _linkGenerator;
+    private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
     internal readonly IStringLocalizer S;
@@ -23,14 +25,17 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
     /// Initializes a new instance of the <see cref="BulkManageActivityActionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="linkGenerator">The link generator.</param>
+    /// <param name="optionsProvider">The bulk activity form options provider.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityActionsDisplayDriver(
         LinkGenerator linkGenerator,
+        BulkActivityAdminFormOptionsProvider optionsProvider,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IStringLocalizer<BulkManageActivityActionsDisplayDriver> stringLocalizer)
     {
         _linkGenerator = linkGenerator;
+        _optionsProvider = optionsProvider;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         S = stringLocalizer;
     }
@@ -57,6 +62,9 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+            vm.SourceOptions = _optionsProvider.GetSourceOptions(string.Empty, "Select a source");
+            vm.InteractionTypeOptions = _optionsProvider.GetInteractionTypeOptions(string.Empty, "Keep current interaction type");
+            vm.DialerProfileOptions = await _optionsProvider.GetDialerProfileOptionsAsync(string.Empty, "Select a dialer profile");
             vm.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
             vm.TotalCount = model.TotalCount;
         }).Location("Content:5");

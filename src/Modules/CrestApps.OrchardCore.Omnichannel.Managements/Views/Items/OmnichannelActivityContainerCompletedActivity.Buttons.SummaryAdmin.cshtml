@@ -7,6 +7,17 @@
 
 @inject IAuthorizationService AuthorizationService
 
+@if (!string.IsNullOrEmpty(Model.Value.Activity.AIProfileId) && !string.IsNullOrEmpty(Model.Value.Activity.AISessionId))
+{
+    <a class="btn btn-sm btn-info"
+       asp-area="CrestApps.OrchardCore.AI.Chat"
+       asp-controller="Admin"
+       asp-action="Index"
+       asp-route-profileId="@Model.Value.Activity.AIProfileId"
+       asp-route-sessionId="@Model.Value.Activity.AISessionId"
+       asp-route-resourceId="@Model.Value.Activity.ItemId">@T["Review AI conversation"]</a>
+}
+
 @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity, Model.Value.Activity))
 {
     <a asp-action="Edit"

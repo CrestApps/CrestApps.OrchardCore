@@ -1,0 +1,14 @@
+@model CrestApps.OrchardCore.Reports.ViewModels.ReportDateRangeFilterViewModel
+
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.From),
+    toName = Html.NameFor(m => m.To),
+    fromId = Html.IdFor(m => m.From),
+    toId = Html.IdFor(m => m.To),
+    from = Model.From,
+    to = Model.To,
+    selectedRangeName = Html.NameFor(m => m.Range),
+    selectedRange = Model.Range,
+    label = T["Date range"].Value,
+})

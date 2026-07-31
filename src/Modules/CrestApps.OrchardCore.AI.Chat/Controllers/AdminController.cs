@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -29,6 +30,7 @@ public sealed class AdminController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IEnumerable<IAIChatSessionAccessProvider> _sessionAccessProviders;
     private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -45,6 +47,7 @@ public sealed class AdminController : Controller
     /// <param name="profileManager">The profile manager.</param>
     /// <param name="sessionManager">The session manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="sessionAccessProviders">The resource-specific system session access providers.</param>
     /// <param name="sessionDisplayManager">The session display manager.</param>
     /// <param name="optionsDisplayManager">The options display manager.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
@@ -56,6 +59,7 @@ public sealed class AdminController : Controller
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
+        IEnumerable<IAIChatSessionAccessProvider> sessionAccessProviders,
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -68,6 +72,7 @@ public sealed class AdminController : Controller
         _profileManager = profileManager;
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
+        _sessionAccessProviders = sessionAccessProviders;
         _sessionDisplayManager = sessionDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
@@ -82,11 +87,13 @@ public sealed class AdminController : Controller
     /// </summary>
     /// <param name="profileId">The profile id.</param>
     /// <param name="sessionId">The session id.</param>
+    /// <param name="resourceId">The external resource that owns a system session.</param>
     /// <param name="pagerOptions">The pager options.</param>
     [Admin("ai/chat/session/{profileId}/{sessionId?}", "AIChatSessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
         string sessionId,
+        string resourceId,
         [FromServices] IOptions<PagerOptions> pagerOptions)
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
@@ -118,7 +125,13 @@ public sealed class AdminController : Controller
                 return NotFound();
             }
 
-            if (chatSession.UserId != userId)
+            if (!string.IsNullOrEmpty(chatSession.UserId) && chatSession.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            if (string.IsNullOrEmpty(chatSession.UserId) &&
+                !await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
             {
                 return Forbid();
             }
@@ -151,6 +164,22 @@ public sealed class AdminController : Controller
         }
 
         return View(model);
+    }
+
+    private async Task<bool> CanAccessSystemSessionAsync(
+        string profileId,
+        string sessionId,
+        string resourceId)
+    {
+        foreach (var provider in _sessionAccessProviders)
+        {
+            if (await provider.CanAccessAsync(User, profileId, sessionId, resourceId))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

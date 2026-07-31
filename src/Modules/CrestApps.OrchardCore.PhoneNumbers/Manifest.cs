@@ -7,14 +7,14 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Communication",
+    Category = "Phone Verification",
     Description = "Provides phone number parsing, validation, and E.164 formatting services."
 )]
 
 [assembly: Feature(
     Name = "Phone Numbers Services",
     Id = PhoneNumberVerificationsConstants.Features.PhoneNumbers,
-    Category = "Communication",
+    Category = "Phone Verification",
     EnabledByDependencyOnly = true,
     Description = "Provides phone number parsing, validation, and E.164 formatting services."
 )]

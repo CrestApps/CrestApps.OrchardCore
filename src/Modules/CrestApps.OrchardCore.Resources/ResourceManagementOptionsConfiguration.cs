@@ -28,6 +28,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("collapsible-panel")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineStyle("item-selector")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/styles/item-selector.min.css",
@@ -111,6 +119,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.2");
 
         _manifest
+            .DefineScript("date-range-picker")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.js")
+            .SetDependencies("flatpickr", "flatpickr-culture")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("dompurify")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",
@@ -181,6 +197,33 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-cTjcD1YHMzaJ5FIvmpJhm3VZDBheTcbiNfGCQfFvBTDg1pZi7PWE5lO6VHRYX9zq",
                 "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("crestapps-bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/css/bootstrap-select.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/css/bootstrap-select.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/css/bootstrap-select.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/css/bootstrap-select.css")
+            .SetCdnIntegrity(
+                "sha384-7yj05Iamc4rfesLo160W11ywhuIME+BcB43waDx0Y1rI1LEyCK368ml0MI9Lwzr7",
+                "sha384-jN5x01dkUiVJwxGy3x+e/53AB0jN9D9bBomsrbCJehtMMCIK5vOzd7aTNXV3/bze")
+            .SetVersion("1.2.1");
+
+        _manifest
+            .DefineScript("crestapps-bootstrap-select")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/js/bootstrap-select.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/bootstrap-select/js/bootstrap-select.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/js/bootstrap-select.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/bootstrap-select@1.2.1/dist/js/bootstrap-select.js")
+            .SetCdnIntegrity(
+                "sha384-R7aQ+h/YwfYWxwVbXnRupt5dDCEB+GFE5kGRXdMRqqTb8a44gKz4FhiTVCIl1utj",
+                "sha384-OoRqHGsY2f8cxSKpRli5U/ioHYo5CO4Nqz9+jMhs/Ah3slKOn36MzgaO3Dixk2D0")
+            .SetDependencies("bootstrap")
+            .SetVersion("1.2.1");
 
         _manifest
             .DefineStyle("intl-tel-input")

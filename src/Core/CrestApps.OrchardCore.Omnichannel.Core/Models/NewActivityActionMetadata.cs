@@ -20,8 +20,13 @@ public sealed class NewActivityActionMetadata
     public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets how the owner of the new activity is selected.
+    /// </summary>
+    public SubjectActionOwnerAssignmentType AssignmentType { get; set; }
+
+    /// <summary>
     /// Gets or sets the normalized username to assign the new activity to.
-    /// When null, the activity is assigned to the user who completed the original activity.
+    /// Used when <see cref="AssignmentType"/> is <see cref="SubjectActionOwnerAssignmentType.SpecificOwner"/>.
     /// </summary>
     public string NormalizedUserName { get; set; }
 

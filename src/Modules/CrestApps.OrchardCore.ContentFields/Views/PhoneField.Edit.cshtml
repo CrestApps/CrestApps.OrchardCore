@@ -33,21 +33,22 @@
      data-phone-field="true">
     <label asp-for="PhoneNumber" class="ocat-label @(settings.Required ? "ocat-label-required" : "")">@Model.PartFieldDefinition.DisplayName()</label>
     <div class="ocat-end">
-        <input type="tel"
-               class="form-control"
-               data-intl-tel-input="true"
-               data-initial-country="@initialCountry"
-               value="@(Model.NationalNumber ?? Model.PhoneNumber)" />
+        <div class="phone-field-editor-row">
+            <input type="tel"
+                   class="form-control"
+                   data-intl-tel-input="true"
+                   data-initial-country="@initialCountry"
+                   value="@(Model.NationalNumber ?? Model.PhoneNumber)" />
+            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+            {
+                <i class="@verificationIconClass" title="@verificationTitle" aria-label="@verificationTitle"></i>
+            }
+            <span class="phone-field-dial" data-phone-dial></span>
+        </div>
         <input type="hidden" asp-for="PhoneNumber" data-phone-e164="true" />
         <input type="hidden" asp-for="CountryCode" data-phone-country="true" />
         <input type="hidden" asp-for="NationalNumber" data-phone-national="true" />
-        @if (!string.IsNullOrEmpty(Model.PhoneNumber))
-        {
-            <i class="@verificationIconClass ms-1" title="@verificationTitle" aria-label="@verificationTitle"></i>
-        }
         <span asp-validation-for="PhoneNumber"></span>
-        @* Placeholder for telephony integrations (for example the soft phone) to attach a dial button. *@
-        <span class="phone-field-dial" data-phone-dial></span>
         @if (!string.IsNullOrEmpty(settings.Hint))
         {
             <span class="hint">@settings.Hint</span>

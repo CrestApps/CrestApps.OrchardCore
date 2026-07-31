@@ -4,6 +4,13 @@
 
 @model NewActivitySubjectActionViewModel
 
+@{
+    var specificOwnerContainerId = $"{Html.IdFor(m => m.AssignmentType)}_SpecificOwner";
+    var specificOwnerClass = Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner
+        ? "ocat-wrapper"
+        : "ocat-wrapper d-none";
+}
+
 <div class="ocat-wrapper">
     <label asp-for="SubjectContentType" class="ocat-label">@T["Target subject type"]</label>
     <div class="ocat-end">
@@ -31,6 +38,23 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label asp-for="AssignmentType" class="ocat-label">@T["Assignment type"]</label>
+    <div class="ocat-end">
+        <select asp-for="AssignmentType"
+                class="form-select"
+                data-subject-action-assignment-toggle
+                data-assignment-target-id="@specificOwnerContainerId"
+                data-assignment-specific-owner-value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)"
+                aria-controls="@specificOwnerContainerId"
+                aria-expanded="@(Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner ? "true" : "false")">
+            <option value="@nameof(SubjectActionOwnerAssignmentType.SameOwner)">@T["Same owner"]</option>
+            <option value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">@T["Specific owner"]</option>
+        </select>
+        <span class="hint">@T["Choose whether the new activity stays with the completing user or is assigned to a specific user."]</span>
+    </div>
+</div>
+
+<div id="@specificOwnerContainerId" class="@specificOwnerClass">
     <label asp-for="NormalizedUserName" class="ocat-label">@T["Assign to user"]</label>
     <div class="ocat-end">
         @await Component.InvokeAsync("ItemSelector", new
@@ -54,7 +78,8 @@
             availableItemsLabel = T["Available users"].Value,
             searchButtonText = T["Search"].Value,
         })
-        <span class="hint">@T["Assign the new activity to a specific user. Leave empty to assign it to the user who completed the activity."]</span>
+        <span asp-validation-for="NormalizedUserName" class="text-danger"></span>
+        <span class="hint">@T["Select the user who will own the new activity."]</span>
     </div>
 </div>
 
@@ -65,3 +90,5 @@
         <span class="hint">@T["Default hours ahead to schedule the new activity. Used when no schedule date is provided during completion. Defaults to 24 hours."]</span>
     </div>
 </div>
+
+<script asp-name="subject-action-assignment-toggle" at="Foot"></script>

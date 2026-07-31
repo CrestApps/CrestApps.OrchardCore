@@ -1,13 +1,14 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -25,6 +26,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using OrchardCore.Users;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -47,12 +49,14 @@ public sealed class ActivitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly ISubjectActionExecutor _subjectActionExecutor;
-    private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly IActivityDispositionService _activityDispositionService;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -69,12 +73,14 @@ public sealed class ActivitiesController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
-    /// <param name="subjectActionExecutor">The subject action executor.</param>
-    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="activityDispositionService">The activity disposition service.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="displayNameProvider">The user display name provider.</param>
+    /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     public ActivitiesController(
@@ -87,12 +93,14 @@ public sealed class ActivitiesController : Controller
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        ISubjectActionExecutor subjectActionExecutor,
-        INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
+        IActivityDispositionService activityDispositionService,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IClock clock,
         ILocalClock localClock,
         INotifier notifier,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
+        IEnumerable<IActivityDialerContributor> dialerContributors,
         IStringLocalizer<ActivitiesController> stringLocalizer,
         IHtmlLocalizer<ActivitiesController> htmlLocalizer)
     {
@@ -105,12 +113,14 @@ public sealed class ActivitiesController : Controller
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
-        _subjectActionExecutor = subjectActionExecutor;
-        _dispositionsCatalog = dispositionsCatalog;
+        _activityDispositionService = activityDispositionService;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _clock = clock;
         _localClock = localClock;
         _notifier = notifier;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
+        _dialerContributors = dialerContributors;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -173,11 +183,7 @@ public sealed class ActivitiesController : Controller
         {
             var contact = contacts.FirstOrDefault(x => x.ContentItemId == entry.ContactContentItemId);
 
-            if (!contentTypeDefinitions.TryGetValue(entry.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.SubjectContentType);
-                contentTypeDefinitions[entry.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(entry.SubjectContentType, entry.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(entry, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
 
@@ -273,11 +279,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var scheduledActivity in scheduledResults.Entries)
         {
-            if (!contentTypeDefinitions.TryGetValue(scheduledActivity.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(scheduledActivity.SubjectContentType);
-                contentTypeDefinitions[scheduledActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(scheduledActivity.SubjectContentType, scheduledActivity.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(scheduledActivity, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == scheduledActivity.AssignedToId);
 
@@ -290,11 +292,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var completedActivity in completedResults.Entries)
         {
-            if (!contentTypeDefinitions.TryGetValue(completedActivity.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(completedActivity.SubjectContentType);
-                contentTypeDefinitions[completedActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(completedActivity.SubjectContentType, completedActivity.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(completedActivity, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == completedActivity.CompletedById);
 
@@ -416,13 +414,20 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false),
-            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         return View(model);
@@ -449,17 +454,27 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
 
         var model = new CompleteOmnichannelActivityContainer()
         {
             Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false),
-            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            activity.Subject = subject;
+            if (subject is not null)
+            {
+                activity.Subject = subject;
+            }
 
             await _omnichannelActivityManager.UpdateAsync(activity);
 
@@ -477,8 +492,9 @@ public sealed class ActivitiesController : Controller
     /// Performs the complete operation.
     /// </summary>
     /// <param name="id">The id.</param>
+    /// <param name="returnUrl">The optional local URL used after completing or cancelling the activity.</param>
     [Admin("omnichannel/activities/complete/{id}")]
-    public async Task<IActionResult> Complete(string id)
+    public async Task<IActionResult> Complete(string id, string returnUrl)
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
@@ -492,13 +508,25 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
 
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
         var model = new CompleteOmnichannelActivityContainer()
         {
-            ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
+            ContactContentItem = contact,
+            Contact = contact is null
+                ? null
+                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
-            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+            Subject = subject is null
+                ? null
+                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: false),
+            ReturnUrl = GetSafeReturnUrl(returnUrl),
         };
 
         return View(model);
@@ -508,14 +536,20 @@ public sealed class ActivitiesController : Controller
     /// Asynchronously performs the complete operation.
     /// </summary>
     /// <param name="id">The id.</param>
+    /// <param name="returnUrl">The optional local URL used after completing the activity.</param>
+    /// <param name="actionScheduleDates">The subject-action schedule dates submitted with the disposition.</param>
     [HttpPost]
     [ActionName(nameof(Complete))]
     [Admin("omnichannel/activities/complete/{id}")]
-    public async Task<IActionResult> CompleteAsync(string id)
+    public async Task<IActionResult> CompleteAsync(
+        string id,
+        string returnUrl,
+        [Bind(Prefix = "ActionScheduleDates")] Dictionary<string, DateTime?> actionScheduleDates)
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
-        if (activity is null || activity.Status != ActivityStatus.NotStated)
+        if (activity is null ||
+            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
         {
             return NotFound();
         }
@@ -525,43 +559,122 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        var subject = activity.Subject;
+
+        if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
+        {
+            subject = await _contentManager.NewAsync(activity.SubjectContentType);
+        }
+
+        var activityEditor = await _activityDisplayManager.UpdateEditorAsync(
+            activity,
+            _updateModelAccessor.ModelUpdater,
+            isNew: false,
+            OmnichannelConstants.CompleteActivityGroup);
+        var subjectEditor = subject is null
+            ? null
+            : await _contentItemDisplayManager.UpdateEditorAsync(
+                subject,
+                _updateModelAccessor.ModelUpdater,
+                isNew: false);
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
         var model = new CompleteOmnichannelActivityContainer()
         {
-            ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
-            Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, OmnichannelConstants.CompleteActivityGroup),
-            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
+            ContactContentItem = contact,
+            Contact = contact is null
+                ? null
+                : await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Activity = activityEditor,
+            Subject = subjectEditor,
+            ReturnUrl = GetSafeReturnUrl(returnUrl),
         };
 
         if (ModelState.IsValid)
         {
-            // Execute subject actions for the selected disposition.
-            activity.Subject = subject;
-            activity.Status = ActivityStatus.Completed;
-            activity.CompletedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            activity.CompletedByUsername = User.Identity?.Name;
-            activity.CompletedUtc = _clock.UtcNow;
+            // Disposition the activity through the source-neutral path so the configured subject flow runs.
+            if (subject is not null)
+            {
+                activity.Subject = subject;
+            }
 
-            await _omnichannelActivityManager.UpdateAsync(activity);
-            var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
-
-            var executionContext = new SubjectActionExecutionContext
+            var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
             {
                 Activity = activity,
-                Contact = model.ContactContentItem,
-                Subject = subject,
-                Disposition = disposition,
-            };
+                DispositionId = activity.DispositionId,
+                ActionScheduleDates = actionScheduleDates,
+                Source = ActivityDispositionSource.Agent,
+                ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                ActorDisplayName = await GetCurrentUserDisplayNameAsync(),
+            });
 
-            await _subjectActionExecutor.ExecuteAsync(executionContext);
+            if (result.Succeeded)
+            {
+                await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 
-            await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
+                if (!string.IsNullOrEmpty(model.ReturnUrl))
+                {
+                    return Redirect(model.ReturnUrl);
+                }
 
-            return RedirectToAction(nameof(Activities));
+                return RedirectToAction(nameof(Activities));
+            }
+
+            await _notifier.ErrorAsync(H["A disposition is required to complete this activity."]);
         }
 
         return View(model);
+    }
+
+    private string GetSafeReturnUrl(string returnUrl)
+    {
+        return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : null;
+    }
+
+    /// <summary>
+    /// Purges a scheduled activity from a contact profile.
+    /// </summary>
+    /// <param name="contentItemId">The contact content item identifier.</param>
+    /// <param name="id">The activity identifier.</param>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("omnichannel/activities/purge/{contentItemId}/{id}")]
+    public async Task<IActionResult> Purge(string contentItemId, string id)
+    {
+        var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        var activity = await _omnichannelActivityManager.FindByIdAsync(id);
+
+        if (!IsContactScheduledActivity(activity, contact.ContentItemId))
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.PurgeActivity, activity))
+        {
+            return Forbid();
+        }
+
+        var purgedAtUtc = _clock.UtcNow;
+        var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var purgedByUsername = User.Identity?.Name;
+
+        ActivityPurgeHelper.Purge(
+            activity,
+            purgedAtUtc,
+            purgedById,
+            purgedByUsername);
+        await _omnichannelActivityManager.UpdateAsync(activity);
+        await _notifier.SuccessAsync(H["The activity has been purged successfully."]);
+
+        return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
     }
 
     /// <summary>
@@ -622,11 +735,7 @@ public sealed class ActivitiesController : Controller
         {
             var contact = contacts.FirstOrDefault(x => x.ContentItemId == entry.ContactContentItemId);
 
-            if (!contentTypeDefinitions.TryGetValue(entry.SubjectContentType, out var contentTypeDefinition))
-            {
-                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.SubjectContentType);
-                contentTypeDefinitions[entry.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(entry.SubjectContentType, entry.SubjectContentType);
-            }
+            var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(entry, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
             var container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user);
@@ -656,6 +765,27 @@ public sealed class ActivitiesController : Controller
         model.BulkActions = bulkActionsShape.Content;
 
         return View(model);
+    }
+
+    private async Task<ContentTypeDefinition> GetSubjectContentTypeDefinitionAsync(
+        OmnichannelActivity activity,
+        Dictionary<string, ContentTypeDefinition> contentTypeDefinitions)
+    {
+        var subjectContentType = activity.SubjectContentType;
+
+        if (string.IsNullOrEmpty(subjectContentType))
+        {
+            return new ContentTypeDefinition(nameof(OmnichannelActivity), activity.Kind.ToString());
+        }
+
+        if (!contentTypeDefinitions.TryGetValue(subjectContentType, out var contentTypeDefinition))
+        {
+            contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType)
+                ?? new ContentTypeDefinition(subjectContentType, subjectContentType);
+            contentTypeDefinitions[subjectContentType] = contentTypeDefinition;
+        }
+
+        return contentTypeDefinition;
     }
 
     /// <summary>
@@ -696,7 +826,11 @@ public sealed class ActivitiesController : Controller
         PagerParameters pagerParameters,
         [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivities))
+        var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
+            ? OmnichannelConstants.Permissions.PurgeActivity
+            : OmnichannelConstants.Permissions.ManageActivities;
+
+        if (!await _authorizationService.AuthorizeAsync(User, requiredPermission))
         {
             return Forbid();
         }
@@ -738,7 +872,7 @@ public sealed class ActivitiesController : Controller
             {
                 var activity = await _omnichannelActivityManager.FindByIdAsync(itemId);
 
-                if (activity is not null && activity.Status == ActivityStatus.NotStated && activity.InteractionType == ActivityInteractionType.Manual)
+                if (IsBulkManageableActivity(activity))
                 {
                     activities.Add(activity);
                 }
@@ -765,7 +899,15 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.Purge:
-                processedCount = await BulkPurgeAsync(activities);
+                var purgedAtUtc = _clock.UtcNow;
+                var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var purgedByUsername = User.Identity?.Name;
+
+                processedCount = await BulkPurgeAsync(
+                    activities,
+                    purgedAtUtc,
+                    purgedById,
+                    purgedByUsername);
                 break;
 
             case BulkActivityAction.SetInstructions:
@@ -778,6 +920,18 @@ public sealed class ActivitiesController : Controller
 
             case BulkActivityAction.ChangeSubject:
                 processedCount = await BulkChangeSubjectAsync(activities, viewModel.NewSubjectContentType);
+                break;
+
+            case BulkActivityAction.ClearAssignment:
+                processedCount = await BulkClearAssignmentAsync(activities);
+                break;
+
+            case BulkActivityAction.ChangeSource:
+                processedCount = await BulkChangeSourceAsync(activities, viewModel.NewSource, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
+                break;
+
+            case BulkActivityAction.ChangeDialerProfile:
+                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, viewModel.ClearCurrentAssignment);
                 break;
         }
 
@@ -829,6 +983,9 @@ public sealed class ActivitiesController : Controller
             activity.AssignedToId = user.UserId;
             activity.AssignedToUsername = user.UserName;
             activity.AssignedToUtc = now;
+            activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
+            ClearReservationState(activity);
+            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: true);
 
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
@@ -864,13 +1021,17 @@ public sealed class ActivitiesController : Controller
         return processedCount;
     }
 
-    private async Task<int> BulkPurgeAsync(List<OmnichannelActivity> activities)
+    private async Task<int> BulkPurgeAsync(
+        List<OmnichannelActivity> activities,
+        DateTime purgedAtUtc,
+        string purgedById,
+        string purgedByUsername)
     {
         var processedCount = 0;
 
         foreach (var activity in activities)
         {
-            activity.Status = ActivityStatus.Purged;
+            ActivityPurgeHelper.Purge(activity, purgedAtUtc, purgedById, purgedByUsername);
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }
@@ -947,6 +1108,7 @@ public sealed class ActivitiesController : Controller
             activity.InteractionType = flowSettings.InteractionType;
             activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
             activity.Subject = null;
+            activity.Source = ResolveSourceForChangedSubject(activity.Source, flowSettings.InteractionType);
 
             var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -955,10 +1117,181 @@ public sealed class ActivitiesController : Controller
                 activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
             }
 
+            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(
+                activity.InteractionType,
+                hasAssignedUser: !string.IsNullOrEmpty(activity.AssignedToId));
+
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
         }
 
         return processedCount;
+    }
+
+    private async Task<int> BulkClearAssignmentAsync(List<OmnichannelActivity> activities)
+    {
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            ResetAssignment(activity);
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkChangeSourceAsync(
+        List<OmnichannelActivity> activities,
+        string newSource,
+        ActivityInteractionType? newInteractionType,
+        bool clearCurrentAssignment)
+    {
+        if (string.IsNullOrWhiteSpace(newSource))
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.Source = newSource.Trim();
+
+            if (newInteractionType.HasValue)
+            {
+                activity.InteractionType = newInteractionType.Value;
+
+                if (activity.InteractionType == ActivityInteractionType.Manual)
+                {
+                    activity.AISessionId = null;
+                }
+            }
+
+            if (clearCurrentAssignment)
+            {
+                ResetAssignment(activity);
+            }
+            else if (string.IsNullOrEmpty(activity.AssignedToId))
+            {
+                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+            }
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> BulkChangeDialerProfileAsync(
+        List<OmnichannelActivity> activities,
+        string dialerProfileId,
+        bool clearCurrentAssignment)
+    {
+        if (string.IsNullOrWhiteSpace(dialerProfileId))
+        {
+            return 0;
+        }
+
+        var dialerContributor = _dialerContributors.FirstOrDefault();
+
+        if (dialerContributor is null)
+        {
+            return 0;
+        }
+
+        var profile = await dialerContributor.FindByIdAsync(dialerProfileId);
+
+        if (profile is null)
+        {
+            return 0;
+        }
+
+        var processedCount = 0;
+
+        foreach (var activity in activities)
+        {
+            activity.CampaignId = profile.CampaignId;
+            activity.Source = profile.ActivitySource;
+            activity.InteractionType = ActivityInteractionType.Manual;
+            activity.AISessionId = null;
+
+            if (clearCurrentAssignment)
+            {
+                ResetAssignment(activity);
+            }
+            else if (string.IsNullOrEmpty(activity.AssignedToId))
+            {
+                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+            }
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        return processedCount;
+    }
+
+    private static bool IsBulkManageableActivity(OmnichannelActivity activity)
+    {
+        return activity is not null &&
+            activity.Status is ActivityStatus.NotStated or ActivityStatus.Scheduled or ActivityStatus.Pending or ActivityStatus.AwaitingAgentResponse or ActivityStatus.Failed or ActivityStatus.Cancelled;
+    }
+
+    private static bool IsContactScheduledActivity(OmnichannelActivity activity, string contactContentItemId)
+    {
+        return activity is not null &&
+            activity.Status == ActivityStatus.NotStated &&
+            activity.InteractionType == ActivityInteractionType.Manual &&
+            string.Equals(activity.ContactContentItemId, contactContentItemId, StringComparison.Ordinal);
+    }
+
+    private static void ResetAssignment(OmnichannelActivity activity)
+    {
+        activity.AssignedToId = null;
+        activity.AssignedToUsername = null;
+        activity.AssignedToUtc = null;
+        activity.AssignmentStatus = ActivityAssignmentStatus.Available;
+        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+        ClearReservationState(activity);
+    }
+
+    private static void ClearReservationState(OmnichannelActivity activity)
+    {
+        activity.ReservationId = null;
+        activity.ReservedById = null;
+        activity.ReservedByUsername = null;
+        activity.ReservedUtc = null;
+        activity.ReservationExpiresUtc = null;
+    }
+
+    private static string ResolveSourceForChangedSubject(string currentSource, ActivityInteractionType interactionType)
+    {
+        if (interactionType == ActivityInteractionType.Automated)
+        {
+            return ActivitySources.Automatic;
+        }
+
+        return string.Equals(currentSource, ActivitySources.Automatic, StringComparison.Ordinal)
+            ? ActivitySources.Manual
+            : currentSource;
+    }
+
+    private async Task<string> GetCurrentUserDisplayNameAsync()
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user is null)
+        {
+            return S["Unknown user"].Value;
+        }
+
+        var displayName = await _displayNameProvider.GetAsync(user, HttpContext.RequestAborted);
+
+        return string.IsNullOrWhiteSpace(displayName) ? S["Unknown user"].Value : displayName;
     }
 }

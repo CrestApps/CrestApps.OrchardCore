@@ -1,6 +1,6 @@
-using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -46,7 +46,9 @@ internal static class TwilioEventGridEndpoint
         ? null
         : protector.Unprotect(settings.AuthToken);
 
-        if (!IsRequestValid(context, authToken, logger))
+        var site = await siteService.GetSiteSettingsAsync();
+
+        if (!IsRequestValid(context, authToken, site.BaseUrl, logger))
         {
             logger.LogWarning("Unauthorized Twilio request.");
 
@@ -93,7 +95,7 @@ internal static class TwilioEventGridEndpoint
         return TypedResults.Ok(); // Twilio expects 200 OK
     }
 
-    private static bool IsRequestValid(HttpContext context, string authToken, ILogger logger)
+    internal static bool IsRequestValid(HttpContext context, string authToken, string siteBaseUrl, ILogger logger)
     {
         if (string.IsNullOrEmpty(authToken))
         {
@@ -105,31 +107,13 @@ internal static class TwilioEventGridEndpoint
             return false;
         }
 
-        var requestUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.Path}";
-
         var form = context.Request.HasFormContentType
-        ? context.Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString())
-        : [];
+            ? context.Request.Form.ToDictionary(entry => entry.Key, entry => entry.Value.ToString())
+            : [];
 
-        // Build string to sign
-        var sb = new StringBuilder();
-        sb.Append(requestUrl);
+        var validator = new TwillioRequestValidator(authToken);
 
-        foreach (var key in form.Keys.OrderBy(k => k, StringComparer.Ordinal))
-        {
-            sb.Append(key).Append(form[key]);
-        }
-
-        var encoding = new UTF8Encoding();
-
-        // HMAC-SHA1 required by Twilio
-#pragma warning disable CA5350
-        using var hmac = new System.Security.Cryptography.HMACSHA1(encoding.GetBytes(authToken));
-#pragma warning restore CA5350
-        var hash = hmac.ComputeHash(encoding.GetBytes(sb.ToString()));
-        var signature = Convert.ToBase64String(hash);
-
-        var isValid = signature == twilioSignature;
+        var isValid = validator.Validate(GetExternalRequestUrl(context, siteBaseUrl), form, twilioSignature.ToString());
 
         if (!isValid)
         {
@@ -137,5 +121,67 @@ internal static class TwilioEventGridEndpoint
         }
 
         return isValid;
+    }
+
+    /// <summary>
+    /// Rebuilds the absolute URL that Twilio signed.
+    /// </summary>
+    /// <param name="context">The current request.</param>
+    /// <param name="siteBaseUrl">The configured public base URL of the site, when one is set.</param>
+    private static string GetExternalRequestUrl(HttpContext context, string siteBaseUrl)
+    {
+        var request = context.Request;
+
+        // Twilio signs the URL it was configured with, which is the site's public URL. Behind a TLS-terminating
+        // proxy the request scheme, host and port are those of the internal hop, so signing them rejects genuine
+        // deliveries. Prefer the operator-configured public base URL and fall back to the request only when unset.
+        if (string.IsNullOrEmpty(siteBaseUrl) || !Uri.TryCreate(siteBaseUrl, UriKind.Absolute, out var siteBaseUri))
+        {
+            return $"{request.Scheme}://{request.Host}{request.PathBase}{request.Path}{request.QueryString}";
+        }
+
+        var authority = siteBaseUri.IsDefaultPort
+            ? siteBaseUri.Host
+            : $"{siteBaseUri.Host}:{siteBaseUri.Port}";
+
+        var siteBasePath = siteBaseUri.AbsolutePath.TrimEnd('/');
+
+        var localPath = $"{request.PathBase}{request.Path}";
+
+        // The application may be hosted under a path base, and a proxy may or may not forward that prefix. Strip
+        // whichever prefix is already present so the configured base path is applied exactly once instead of
+        // being duplicated, which would sign a URL Twilio never called.
+        localPath = TrimPrefix(localPath, request.PathBase.Value?.TrimEnd('/'));
+        localPath = TrimPrefix(localPath, siteBasePath);
+
+        return $"{siteBaseUri.Scheme}://{authority}{siteBasePath}{localPath}{request.QueryString}";
+    }
+
+    /// <summary>
+    /// Removes a leading path segment from a request path when it is present.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <param name="prefix">The prefix to remove.</param>
+    private static string TrimPrefix(string path, string prefix)
+    {
+        if (string.IsNullOrEmpty(prefix) || prefix == "/")
+        {
+            return path;
+        }
+
+        if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        var remainder = path[prefix.Length..];
+
+        // Only treat it as a prefix when it ends on a segment boundary, so "/tenant" never matches "/tenant-2".
+        if (remainder.Length > 0 && remainder[0] != '/')
+        {
+            return path;
+        }
+
+        return remainder;
     }
 }

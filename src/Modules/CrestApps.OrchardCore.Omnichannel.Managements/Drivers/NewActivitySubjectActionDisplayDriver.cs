@@ -12,6 +12,7 @@ using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -48,6 +49,7 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
             {
                 model.SubjectContentType = metadata.SubjectContentType;
                 model.UrgencyLevel = metadata.UrgencyLevel;
+                model.AssignmentType = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName);
                 model.NormalizedUserName = metadata.NormalizedUserName;
                 model.DefaultScheduleHours = metadata.DefaultScheduleHours;
 
@@ -66,7 +68,7 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
                     {
                         model.SelectedUsers =
                         [
-                            new SelectListItem(metadata.NormalizedUserName, metadata.NormalizedUserName),
+                            new SelectListItem(S["(Unknown user)"], metadata.NormalizedUserName),
                         ];
                     }
                 }
@@ -98,17 +100,19 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!string.IsNullOrWhiteSpace(model.SubjectContentType) &&
-            await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
+        var normalizedUserName = model.NormalizedUserName?.Trim();
+
+        if (model.AssignmentType != SubjectActionOwnerAssignmentType.SpecificOwner)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before it can be used by a New Activity action."]);
+            normalizedUserName = null;
         }
 
         action.Put(new NewActivityActionMetadata
         {
             SubjectContentType = model.SubjectContentType,
             UrgencyLevel = model.UrgencyLevel,
-            NormalizedUserName = model.NormalizedUserName?.Trim(),
+            AssignmentType = model.AssignmentType,
+            NormalizedUserName = normalizedUserName,
             DefaultScheduleHours = model.DefaultScheduleHours,
         });
 

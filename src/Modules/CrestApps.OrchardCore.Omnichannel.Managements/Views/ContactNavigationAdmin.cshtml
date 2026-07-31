@@ -8,6 +8,12 @@
 
 @inject IAuthorizationService AuthorizationService
 @inject IContentDefinitionManager ContentDefinitionManager
+@{
+    if (Model.ContactContentItem is null)
+    {
+        return;
+    }
+}
 
 <div class="card text-bg-theme text-right mb-3 second-action-bar">
     <div class="card-body">

@@ -16,6 +16,23 @@ public class OmnichannelActivityBatchViewModel
     public string DisplayText { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity source display name.
+    /// </summary>
+    [BindNever]
+    public string SourceDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selected source requires user assignment while loading.
+    /// </summary>
+    [BindNever]
+    public bool RequiresUserAssignment { get; set; }
+
+    /// <summary>
     /// Gets or sets the schedule at.
     /// </summary>
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
@@ -30,6 +47,31 @@ public class OmnichannelActivityBatchViewModel
     /// Gets or sets the contact content type.
     /// </summary>
     public string ContactContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign identifier used for outbound activities loaded from this batch.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the communication channel used for outbound activities loaded from this batch.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel endpoint used for outbound activities loaded from this batch.
+    /// </summary>
+    public string ChannelEndpointId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI profile identifier used by automated activities loaded from this batch.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer profile identifier used by dialer activities.
+    /// </summary>
+    public string DialerProfileId { get; set; }
 
     /// <summary>
     /// Gets or sets the instructions.
@@ -96,7 +138,7 @@ public class OmnichannelActivityBatchViewModel
     /// <summary>
     /// Gets or sets the phone number match type.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter leads by.
@@ -132,6 +174,12 @@ public class OmnichannelActivityBatchViewModel
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
 
     /// <summary>
+    /// Gets or sets the available dialer profiles.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> DialerProfiles { get; set; }
+
+    /// <summary>
     /// Gets or sets the selected users.
     /// </summary>
     [BindNever]
@@ -160,4 +208,42 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Dispositions { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selected source loads through a dialer profile, which
+    /// forces the phone channel and hides the outbound channel selection.
+    /// </summary>
+    [BindNever]
+    public bool IsDialerSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available campaigns for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Campaigns { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available channels for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Channels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available channel endpoints for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI profile selector is shown for this batch. It is shown only
+    /// for the automatic source and only when the AI feature is enabled.
+    /// </summary>
+    [BindNever]
+    public bool ShowAIProfile { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available AI profiles for automated activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AIProfiles { get; set; }
 }

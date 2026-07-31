@@ -1,8 +1,6 @@
-﻿using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Settings;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
@@ -27,7 +24,6 @@ public sealed class CopilotAuthController : Controller
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
     private readonly AdminOptions _adminOptions;
-    private readonly ISiteService _siteService;
     private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
 
     internal readonly IHtmlLocalizer H;
@@ -38,7 +34,6 @@ public sealed class CopilotAuthController : Controller
     /// <param name="oauthService">The oauth service.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="siteService">The site service.</param>
     /// <param name="callbackUrlProvider">The callback url provider.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="logger">The logger.</param>
@@ -47,7 +42,6 @@ public sealed class CopilotAuthController : Controller
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         INotifier notifier,
-        ISiteService siteService,
         CopilotCallbackUrlProvider callbackUrlProvider,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
         ILogger<CopilotAuthController> logger,
@@ -56,7 +50,6 @@ public sealed class CopilotAuthController : Controller
         _oauthService = oauthService;
         _userManager = userManager;
         _notifier = notifier;
-        _siteService = siteService;
         _callbackUrlProvider = callbackUrlProvider;
         _logger = logger;
         _adminOptions = adminOptions.Value;
@@ -100,7 +93,7 @@ public sealed class CopilotAuthController : Controller
     {
         if (!string.IsNullOrEmpty(error))
         {
-            _logger.LogWarning("GitHub OAuth error: {Error}", error.SanitizeLogValue());
+            _logger.LogWarning("GitHub returned an OAuth error.");
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
             return HandleOAuthReturn(state, success: false, username: null);
@@ -189,73 +182,6 @@ public sealed class CopilotAuthController : Controller
         await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
 
         return RedirectToLocal(returnUrl);
-    }
-
-    /// <summary>
-    /// Returns the current user's GitHub authentication status.
-    /// </summary>
-    [HttpGet("copilot/api/status")]
-    public async Task<IActionResult> GetAuthStatus()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
-
-        var userId = await _userManager.GetUserIdAsync(user);
-        var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
-        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
-        string gitHubUsername = null;
-
-        if (isAuthenticated)
-        {
-            var credential = await _oauthService.GetCredentialAsync(userId);
-            gitHubUsername = credential?.GitHubUsername;
-        }
-
-        return Json(new
-        {
-            isAuthenticated,
-            gitHubUsername,
-            isConfigured = settings.IsConfigured(),
-        });
-    }
-
-    /// <summary>
-    /// Returns the list of available Copilot models for the authenticated user.
-    /// </summary>
-    [HttpGet("copilot/api/models")]
-    public async Task<IActionResult> GetModels()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
-
-        var userId = await _userManager.GetUserIdAsync(user);
-        var models = await _oauthService.ListModelsAsync(userId);
-
-        return Json(models.Select(m => new { m.Id, m.Name, m.CostMultiplier }));
-    }
-
-    /// <summary>
-    /// Disconnects the user's GitHub account via AJAX.
-    /// </summary>
-    [HttpPost("copilot/api/disconnect")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DisconnectGitHubAjax()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
-
-        await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
-
-        return Json(new { success = true });
     }
 
     private IActionResult RedirectToLocal(string returnUrl)

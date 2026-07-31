@@ -37,12 +37,17 @@ public class ListOmnichannelActivityFilterViewModel
     /// <summary>
     /// Gets or sets the scheduled from.
     /// </summary>
-    public string ScheduledFrom { get; set; }
+    public DateTime? ScheduledFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the scheduled to.
     /// </summary>
-    public string ScheduledTo { get; set; }
+    public DateTime? ScheduledTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency levels.
