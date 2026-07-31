@@ -621,6 +621,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public OmnichannelAIChatSessionAccessProvider(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.ContentManagement.IContentManager contentManager) { }
         public System.Threading.Tasks.Task<bool> CanAccessAsync(System.Security.Claims.ClaimsPrincipal user, string profileId, string sessionId, string resourceId) { }
     }
+    public sealed class OmnichannelActivityBatchCatalog : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch, CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityBatchIndex>
+    {
+        public OmnichannelActivityBatchCatalog(YesSql.ISession session) { }
+        protected override System.Threading.Tasks.ValueTask PagingAsync<TQuery>(YesSql.IQuery<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> query, TQuery context)
+            where TQuery : CrestApps.Core.Models.QueryContext { }
+    }
     public sealed class OmnichannelContactDuplicateLookupService : CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService
     {
         public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService) { }

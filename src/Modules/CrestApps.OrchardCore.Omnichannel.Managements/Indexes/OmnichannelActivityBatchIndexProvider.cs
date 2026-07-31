@@ -27,6 +27,7 @@ internal sealed class OmnichannelActivityBatchIndexProvider : IndexProvider<Omni
             : null,
                 Source = batch.Source,
                 Status = batch.Status,
+                CreatedUtc = batch.CreatedUtc,
             });
     }
 }

@@ -90,6 +90,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
     public sealed class OmnichannelActivityBatchIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
         public OmnichannelActivityBatchIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
         public string DisplayText { get; set; }
         public string Source { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatchStatus Status { get; set; }

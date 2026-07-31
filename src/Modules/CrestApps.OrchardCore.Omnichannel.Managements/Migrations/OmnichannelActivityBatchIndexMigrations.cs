@@ -17,7 +17,8 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("DisplayText", column => column.WithLength(255))
             .Column<string>("Source", column => column.WithLength(50))
-            .Column<OmnichannelActivityBatchStatus>("Status"),
+            .Column<OmnichannelActivityBatchStatus>("Status")
+            .Column<DateTime>("CreatedUtc"),
         collection: OmnichannelConstants.CollectionName
         );
 
@@ -31,7 +32,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -47,5 +48,20 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the activity batch created UTC column used to order inventory loads by newest first.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
+        {
+            table.AddColumn<DateTime>("CreatedUtc");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 3;
     }
 }
