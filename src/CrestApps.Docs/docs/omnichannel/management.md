@@ -82,7 +82,7 @@ The editor progressively discloses these fields so only the relevant ones are vi
 
 The visibility is applied when the editor loads and updated live as you change the direction, interaction type, or channel. Hidden fields keep their stored values, so switching direction back and forth never discards configuration.
 
-Activity batches carry the AI profile, speech deployments, and voice per run for outbound automated work loaded through the **Automatic** source.
+Activity batches carry only the AI profile per run for outbound automated work loaded through the **Automatic** source; the profile selector appears in the **Inventory load settings** card directly under the campaign. Speech-to-text, text-to-speech, and voice fall back to the subject flow and then the global AI site settings.
 
 ### Subject Action
 A **Subject Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition for a given subject type.
@@ -247,9 +247,10 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 3. Create the inventory load:
    - Select contact type
    - Select subject type
-   - Select the campaign, channel, and channel endpoint to use for the loaded activities. The subject's part settings provide the defaults when a value is not chosen. The channel and endpoint are hidden for the dialer source because dialer loads always use the phone channel.
+   - Select the campaign to use for the loaded activities. The subject's part settings provide the defaults when a value is not chosen.
+   - For **Automatic** loads, optionally select the AI profile just under the campaign. Leaving it empty uses the subject flow profile. The channel endpoint is also shown only for the automatic source.
+   - Select the channel to use for the loaded activities. The channel is hidden for the dialer source because dialer loads always use the phone channel.
    - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
-   - For automated loads, optionally override the subject's AI profile, speech-to-text deployment, text-to-speech deployment, and voice. Empty speech selections fall back through the subject settings and then the global AI site settings.
    - Assign users when the selected source requires assignment.
    - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.

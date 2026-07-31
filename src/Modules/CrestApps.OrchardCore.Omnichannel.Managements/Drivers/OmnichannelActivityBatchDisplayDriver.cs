@@ -1,4 +1,6 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -35,6 +37,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
+    private readonly IAIProfileManager _aiProfileManager;
 
     internal readonly IStringLocalizer S;
 
@@ -53,6 +56,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="optionsProvider">The bulk activity options provider.</param>
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
+    /// <param name="aiProfileManagers">The optional AI profile managers, present only when the AI feature is enabled.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
         IDisplayNameProvider displayNameProvider,
@@ -67,6 +71,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISubjectFlowSettingsService subjectFlowSettingsService,
         BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
+        IEnumerable<IAIProfileManager> aiProfileManagers,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -81,6 +86,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
+        _aiProfileManager = aiProfileManagers.FirstOrDefault();
         S = stringLocalizer;
     }
 
@@ -223,6 +229,24 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.Campaigns = campaignItems;
 
+            var isAutomaticSource = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase);
+            model.ShowAIProfile = isAutomaticSource && _aiProfileManager is not null;
+
+            if (model.ShowAIProfile)
+            {
+                model.AIProfileId = batch.AIProfileId;
+
+                var selectedProfileId = batch.AIProfileId;
+
+                if (string.IsNullOrWhiteSpace(selectedProfileId) && !string.IsNullOrWhiteSpace(batch.SubjectContentType))
+                {
+                    var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
+                    selectedProfileId = flowSettings?.ProfileId;
+                }
+
+                model.AIProfiles = await GetAIProfileOptionsAsync(selectedProfileId);
+            }
+
             model.Channels =
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
@@ -326,6 +350,42 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected campaign is invalid."]);
         }
 
+        var isAutomatic = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase);
+
+        if (isAutomatic && _aiProfileManager is not null)
+        {
+            var flowSettings = !string.IsNullOrWhiteSpace(model.SubjectContentType)
+                ? await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType)
+                : null;
+            var selectedProfileId = string.IsNullOrWhiteSpace(model.AIProfileId)
+                ? flowSettings?.ProfileId
+                : model.AIProfileId.Trim();
+
+            if (string.IsNullOrWhiteSpace(selectedProfileId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["AI profile is required for automatic inventory loads."]);
+            }
+            else
+            {
+                var profile = await _aiProfileManager.FindByIdAsync(selectedProfileId);
+
+                if (profile is null || profile.Type != AIProfileType.Chat)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["The selected AI profile is invalid."]);
+                }
+                else if (!HasInitialPrompt(profile))
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileId), S["The selected AI profile must have Add initial prompt enabled."]);
+                }
+            }
+
+            batch.AIProfileId = model.AIProfileId?.Trim();
+        }
+        else
+        {
+            batch.AIProfileId = null;
+        }
+
         if (model.ScheduleAt is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
@@ -373,6 +433,26 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         }
 
         return Edit(batch, context);
+    }
+
+    private async Task<IEnumerable<SelectListItem>> GetAIProfileOptionsAsync(string selectedProfileId)
+    {
+        var chatProfiles = await _aiProfileManager.GetAsync(AIProfileType.Chat);
+
+        return chatProfiles
+            .Where(HasInitialPrompt)
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId)
+            {
+                Selected = string.Equals(profile.ItemId, selectedProfileId, StringComparison.OrdinalIgnoreCase),
+            });
+    }
+
+    private static bool HasInitialPrompt(AIProfile profile)
+    {
+        var metadata = profile.GetOrCreate<AIProfileMetadata>();
+
+        return !string.IsNullOrWhiteSpace(metadata.InitialPrompt);
     }
 
     private ActivityBatchSourceEntry GetSourceEntry(string source)
