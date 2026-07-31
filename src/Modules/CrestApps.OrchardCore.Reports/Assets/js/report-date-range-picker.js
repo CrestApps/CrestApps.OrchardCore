@@ -16,8 +16,8 @@
 **     input[type=radio][data-drp-range]  one per option; value is the preset key
 **     [data-drp-panel="custom"]        panel holding the custom inputs
 **       [data-drp-from] / [data-drp-to]  the real (asp-for) submit inputs
-**     [data-drp-panel="prior"]         panel with [data-drp-prior-value]/[data-drp-prior-unit]
-**     [data-drp-panel="after"]         panel with [data-drp-after-value]/[data-drp-after-unit]
+**     [data-drp-panel="prior"]         panel with [data-drp-prior-date] (sets To only)
+**     [data-drp-panel="after"]         panel with [data-drp-after-date] (sets From only)
 */
 
 (function () {
@@ -120,28 +120,6 @@
         }
     }
 
-    function computeRelative(direction, amount, unit) {
-        if (!isFinite(amount) || amount <= 0) {
-            return null;
-        }
-
-        var now = new Date();
-        var anchor = direction === 'after' ? startOfDay(now) : endOfDay(now);
-        var target;
-
-        if (unit === 'week') {
-            target = addDays(now, direction === 'after' ? amount * 7 : -amount * 7);
-        } else if (unit === 'month') {
-            target = addMonths(now, direction === 'after' ? amount : -amount);
-        } else {
-            target = addDays(now, direction === 'after' ? amount : -amount);
-        }
-
-        return direction === 'after'
-            ? { from: anchor, to: endOfDay(target) }
-            : { from: startOfDay(target), to: anchor };
-    }
-
     function formatMachine(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
             'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
@@ -153,21 +131,6 @@
         } catch (e) {
             return formatMachine(date);
         }
-    }
-
-    function formatRangeLabel(from, to) {
-        if (!from && !to) {
-            return '';
-        }
-
-        if (from && to) {
-            var fromLabel = formatDisplay(from);
-            var toLabel = formatDisplay(to);
-
-            return fromLabel === toLabel ? fromLabel : fromLabel + ' \u2013 ' + toLabel;
-        }
-
-        return from ? formatDisplay(from) : formatDisplay(to);
     }
 
     function initializePicker(root) {
@@ -199,13 +162,13 @@
             after: root.querySelector('[data-drp-panel="after"]')
         };
 
-        var priorValue = root.querySelector('[data-drp-prior-value]');
-        var priorUnit = root.querySelector('[data-drp-prior-unit]');
-        var afterValue = root.querySelector('[data-drp-after-value]');
-        var afterUnit = root.querySelector('[data-drp-after-unit]');
+        var priorDateInput = root.querySelector('[data-drp-prior-date]');
+        var afterDateInput = root.querySelector('[data-drp-after-date]');
 
         var fromPicker = null;
         var toPicker = null;
+        var priorPicker = null;
+        var afterPicker = null;
 
         if (typeof flatpickr === 'function') {
             var config = typeof flatpickrCulture !== 'undefined'
@@ -214,6 +177,18 @@
 
             fromPicker = flatpickr(fromInput, Object.assign({}, config, { onChange: onCustomChange }));
             toPicker = flatpickr(toInput, Object.assign({}, config, { onChange: onCustomChange }));
+
+            var dateConfig = typeof flatpickrCulture !== 'undefined'
+                ? flatpickrCulture.createLocalizedDateConfig(root.dataset.datePattern, { altInputClass: 'form-control form-control-sm flatpickr-input' })
+                : { allowInput: true, altInput: true, dateFormat: 'Y-m-d' };
+
+            if (priorDateInput) {
+                priorPicker = flatpickr(priorDateInput, Object.assign({}, dateConfig, { onChange: applyPrior }));
+            }
+
+            if (afterDateInput) {
+                afterPicker = flatpickr(afterDateInput, Object.assign({}, dateConfig, { onChange: applyAfter }));
+            }
         }
 
         function setInputValue(input, picker, date) {
@@ -221,6 +196,14 @@
                 picker.setDate(date, false);
             } else {
                 input.value = date ? formatMachine(date) : '';
+            }
+        }
+
+        function clearInput(input, picker) {
+            if (picker) {
+                picker.clear();
+            } else {
+                input.value = '';
             }
         }
 
@@ -232,10 +215,29 @@
             return input.value ? new Date(input.value) : null;
         }
 
+        function describeRange(from, to) {
+            var fromWord = root.dataset.fromWord || 'From';
+            var toWord = root.dataset.toWord || 'to';
+
+            if (from && to) {
+                return fromWord + ' ' + formatDisplay(from) + ' ' + toWord + ' ' + formatDisplay(to);
+            }
+
+            if (from) {
+                return (root.dataset.afterLabel || fromWord) + ' ' + formatDisplay(from);
+            }
+
+            if (to) {
+                return (root.dataset.priorLabel || toWord) + ' ' + formatDisplay(to);
+            }
+
+            return '';
+        }
+
         function updateLabelFromInputs(fallbackText) {
             var from = readDate(fromInput, fromPicker);
             var to = readDate(toInput, toPicker);
-            var rangeText = formatRangeLabel(from, to);
+            var rangeText = describeRange(from, to);
 
             label.textContent = rangeText || fallbackText || label.dataset.placeholder || '';
         }
@@ -283,17 +285,32 @@
             return associated ? associated.textContent.trim() : '';
         }
 
-        function applyRelative(direction) {
-            var amountInput = direction === 'after' ? afterValue : priorValue;
-            var unitSelect = direction === 'after' ? afterUnit : priorUnit;
-            var amount = amountInput ? parseInt(amountInput.value, 10) : NaN;
-            var unit = unitSelect ? unitSelect.value : 'day';
-            var range = computeRelative(direction, amount, unit);
+        function applyPrior() {
+            var date = priorPicker && priorPicker.selectedDates.length
+                ? priorPicker.selectedDates[0]
+                : (priorDateInput && priorDateInput.value ? new Date(priorDateInput.value) : null);
 
-            if (range) {
-                applyRange(range);
-                updateLabelFromInputs();
+            if (!date) {
+                return;
             }
+
+            setInputValue(toInput, toPicker, endOfDay(date));
+            clearInput(fromInput, fromPicker);
+            updateLabelFromInputs();
+        }
+
+        function applyAfter() {
+            var date = afterPicker && afterPicker.selectedDates.length
+                ? afterPicker.selectedDates[0]
+                : (afterDateInput && afterDateInput.value ? new Date(afterDateInput.value) : null);
+
+            if (!date) {
+                return;
+            }
+
+            setInputValue(fromInput, fromPicker, startOfDay(date));
+            clearInput(toInput, toPicker);
+            updateLabelFromInputs();
         }
 
         function onRadioChange(radio) {
@@ -306,16 +323,30 @@
                 return;
             }
 
-            if (key === 'prior' || key === 'after') {
-                showPanel(key);
-                applyRelative(key);
+            if (key === 'prior') {
+                showPanel('prior');
+                applyPrior();
+
+                return;
+            }
+
+            if (key === 'after') {
+                showPanel('after');
+                applyAfter();
 
                 return;
             }
 
             showPanel(null);
-            applyRange(computePreset(key, weekStart));
-            label.textContent = labelForRadio(radio);
+
+            var range = computePreset(key, weekStart);
+
+            applyRange(range);
+
+            var presetName = labelForRadio(radio);
+            var rangeText = range ? describeRange(range.from, range.to) : '';
+
+            label.textContent = rangeText ? presetName + ' \u2014 ' + rangeText : presetName;
             closeMenu();
         }
 
@@ -337,19 +368,15 @@
             });
         }
 
-        [priorValue, priorUnit].forEach(function (element) {
-            if (element) {
-                element.addEventListener('input', function () { applyRelative('prior'); });
-                element.addEventListener('change', function () { applyRelative('prior'); });
-            }
-        });
+        // Fallback wiring when flatpickr is unavailable; with flatpickr the
+        // onChange handlers registered above already drive these updates.
+        if (priorDateInput) {
+            priorDateInput.addEventListener('change', applyPrior);
+        }
 
-        [afterValue, afterUnit].forEach(function (element) {
-            if (element) {
-                element.addEventListener('input', function () { applyRelative('after'); });
-                element.addEventListener('change', function () { applyRelative('after'); });
-            }
-        });
+        if (afterDateInput) {
+            afterDateInput.addEventListener('change', applyAfter);
+        }
 
         // Reflect any pre-populated values: default to the Custom option so the
         // existing range is visible and editable.

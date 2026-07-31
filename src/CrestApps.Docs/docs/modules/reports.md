@@ -39,7 +39,13 @@ Enabling the feature adds a top-level **Reports** item to the admin menu. Report
 
 ## Date range filter
 
-Every report shares a single tenant-local **Date range** control rendered by the built-in filter. Instead of two separate date inputs, it is a dropdown that offers common presets — **Today**, **Yesterday**, **This Week**, **Last Week**, **Last 7 Days**, **Last 30 Days**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, and **Last Year** — plus a **Custom Range** editable with [Flatpickr](https://flatpickr.js.org/), and relative **Prior** (ends today, looking back _N_ days/weeks/months) and **After** (starts today, looking forward _N_ days/weeks/months) options. Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is a reusable resource (`report-date-range-picker`) so every report presents the same date-range experience.
+Every report shares a single tenant-local **Date range** control rendered by the built-in filter. Instead of two separate date inputs, it is a dropdown that offers common presets — **Today**, **Yesterday**, **This Week**, **Last Week**, **Last 7 Days**, **Last 30 Days**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, and **Last Year** — plus:
+
+- **Custom Range** — two date-time inputs (from and to) editable with [Flatpickr](https://flatpickr.js.org/).
+- **Prior** — a single date picker that sets only the upper bound (**on or before** the selected date), leaving the start open.
+- **After** — a single date picker that sets only the lower bound (**on or after** the selected date), leaving the end open.
+
+The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_, _On or before Jan 31, 2026_, or a preset name followed by its resolved range). Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is a reusable resource (`report-date-range-picker`) so every report presents the same date-range experience.
 
 ## Extensible filters
 

@@ -13,7 +13,7 @@
 <style asp-name="flatpickr"></style>
 <script asp-name="report-date-range-picker" at="Foot"></script>
 
-<div class="col p-1" data-date-range-picker data-week-start="@weekStart" data-date-pattern="@datePattern" data-time-pattern="@timePattern">
+<div class="col p-1" data-date-range-picker data-week-start="@weekStart" data-date-pattern="@datePattern" data-time-pattern="@timePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]">
     <label class="form-label">@T["Date range"]</label>
     <div class="dropdown">
         <button type="button" class="form-select text-start text-truncate" data-drp-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -97,15 +97,9 @@
                 <label class="form-check-label" for="@(pickerId)-prior">@T["Prior"]</label>
             </div>
             <div class="mt-2 ms-4 d-none" data-drp-panel="prior">
-                <div class="input-group input-group-sm">
-                    <input type="number" min="1" value="7" class="form-control" data-drp-prior-value aria-label="@T["Amount"]" />
-                    <select class="form-select" data-drp-prior-unit aria-label="@T["Unit"]">
-                        <option value="day">@T["Days"]</option>
-                        <option value="week">@T["Weeks"]</option>
-                        <option value="month">@T["Months"]</option>
-                    </select>
-                </div>
-                <div class="form-text">@T["Ends today, looking back the selected amount."]</div>
+                <label class="form-label small">@T["On or before"]</label>
+                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-prior-date readonly="readonly" aria-label="@T["On or before date"]" />
+                <div class="form-text">@T["Includes everything up to and including the selected date."]</div>
             </div>
 
             <div class="form-check mt-1">
@@ -113,15 +107,9 @@
                 <label class="form-check-label" for="@(pickerId)-after">@T["After"]</label>
             </div>
             <div class="mt-2 ms-4 d-none" data-drp-panel="after">
-                <div class="input-group input-group-sm">
-                    <input type="number" min="1" value="7" class="form-control" data-drp-after-value aria-label="@T["Amount"]" />
-                    <select class="form-select" data-drp-after-unit aria-label="@T["Unit"]">
-                        <option value="day">@T["Days"]</option>
-                        <option value="week">@T["Weeks"]</option>
-                        <option value="month">@T["Months"]</option>
-                    </select>
-                </div>
-                <div class="form-text">@T["Starts today, looking forward the selected amount."]</div>
+                <label class="form-label small">@T["On or after"]</label>
+                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-after-date readonly="readonly" aria-label="@T["On or after date"]" />
+                <div class="form-text">@T["Includes everything from the selected date onward."]</div>
             </div>
         </div>
     </div>
