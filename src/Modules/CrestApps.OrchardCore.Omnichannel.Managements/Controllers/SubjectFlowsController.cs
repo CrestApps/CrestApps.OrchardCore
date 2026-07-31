@@ -1,7 +1,8 @@
-using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -23,16 +25,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 [Admin]
 public sealed class SubjectFlowsController : Controller
 {
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
-    private readonly ICatalogManager<SubjectFlowSettings> _flowSettingsManager;
     private readonly ISourceCatalogManager<SubjectAction> _actionManager;
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<SubjectFlowSettings> _flowDisplayDriver;
     private readonly IDisplayManager<SubjectAction> _actionDisplayDriver;
     private readonly SubjectActionOptions _actionOptions;
     private readonly INotifier _notifier;
@@ -44,15 +42,12 @@ public sealed class SubjectFlowsController : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="SubjectFlowsController"/> class.
     /// </summary>
-    /// <param name="flowSettingsCatalog">The flow settings catalog.</param>
-    /// <param name="flowSettingsManager">The flow settings manager.</param>
     /// <param name="actionManager">The subject action manager.</param>
     /// <param name="actionCatalog">The subject action catalog.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
-    /// <param name="flowDisplayDriver">The flow settings display driver.</param>
     /// <param name="actionDisplayDriver">The subject action display driver.</param>
     /// <param name="actionOptions">The subject action options.</param>
     /// <param name="notifier">The notifier.</param>
@@ -60,16 +55,12 @@ public sealed class SubjectFlowsController : Controller
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SubjectFlowsController(
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
-        ICatalogManager<SubjectFlowSettings> flowSettingsManager,
         ISourceCatalogManager<SubjectAction> actionManager,
         ISourceCatalog<SubjectAction> actionCatalog,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         IContentDefinitionManager contentDefinitionManager,
-        OmnichannelContentTypeProvider contentTypeProvider,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IDisplayManager<SubjectFlowSettings> flowDisplayDriver,
         IDisplayManager<SubjectAction> actionDisplayDriver,
         IOptions<SubjectActionOptions> actionOptions,
         INotifier notifier,
@@ -77,16 +68,12 @@ public sealed class SubjectFlowsController : Controller
         IHtmlLocalizer<SubjectFlowsController> htmlLocalizer,
         IStringLocalizer<SubjectFlowsController> stringLocalizer)
     {
-        _flowSettingsCatalog = flowSettingsCatalog;
-        _flowSettingsManager = flowSettingsManager;
         _actionManager = actionManager;
         _actionCatalog = actionCatalog;
         _dispositionsCatalog = dispositionsCatalog;
         _contentDefinitionManager = contentDefinitionManager;
-        _contentTypeProvider = contentTypeProvider;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
-        _flowDisplayDriver = flowDisplayDriver;
         _actionDisplayDriver = actionDisplayDriver;
         _actionOptions = actionOptions.Value;
         _notifier = notifier;
@@ -106,147 +93,41 @@ public sealed class SubjectFlowsController : Controller
             return Forbid();
         }
 
-        var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
-
-        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
-
-        var subjectTypes = contentTypes
-            .Where(contentType => _contentTypeProvider.IsSubjectContentType(contentType.Name))
-            .OrderBy(t => t.DisplayName)
-            .ToList();
-
-        var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
-        var flowSettingsMap = allFlowSettings.ToDictionary(
-            f => f.SubjectContentType,
-            f => f,
-            StringComparer.OrdinalIgnoreCase);
+        var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
 
         var allActions = await _actionCatalog.GetAllAsync();
         var actionsPerSubject = allActions
             .GroupBy(a => a.SubjectContentType, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
+        var canEditContentTypes = await _authorizationService.AuthorizeAsync(User, new Permission("EditContentTypes"));
+
+        var entries = new List<SubjectFlowEntryViewModel>();
+
+        foreach (var subjectType in subjectTypes.OrderBy(t => t.DisplayName))
+        {
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectType.Name);
+
+            entries.Add(new SubjectFlowEntryViewModel
+            {
+                ContentTypeName = subjectType.Name,
+                DisplayName = subjectType.DisplayName,
+                Direction = flowSettings?.Direction ?? SubjectDirection.Outbound,
+                InteractionType = flowSettings?.InteractionType ?? ActivityInteractionType.Manual,
+                Channel = flowSettings?.Channel,
+                RequireDisposition = flowSettings?.RequireDisposition ?? false,
+                HasActions = actionsPerSubject.TryGetValue(subjectType.Name, out var count) && count > 0,
+            });
+        }
+
         var model = new SubjectFlowsIndexViewModel
         {
-            Subjects = subjectTypes.Select(t => new SubjectFlowEntryViewModel
-            {
-                ContentTypeName = t.Name,
-                DisplayName = t.DisplayName,
-                IsConfigured = flowSettingsMap.TryGetValue(t.Name, out var flowSettings) && _subjectFlowSettingsService.IsConfigured(flowSettings),
-                HasActions = actionsPerSubject.TryGetValue(t.Name, out var count) && count > 0,
-            }).ToList(),
+            Subjects = entries,
+            CanEditContentTypes = canEditContentTypes,
         };
 
         return View(model);
     }
-
-    /// <summary>
-    /// Configures the flow for a specific subject content type.
-    /// </summary>
-    /// <param name="subjectContentType">The subject content type name.</param>
-    [Admin("omnichannel/subject-flows/{subjectContentType}/configure", "OmnichannelSubjectFlowsConfigure")]
-    public async Task<ActionResult> Configure(string subjectContentType)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageSubjectFlows))
-        {
-            return Forbid();
-        }
-
-        var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
-
-        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
-        {
-            return NotFound();
-        }
-
-        var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
-        var flowSettings = allFlowSettings.FirstOrDefault(f =>
-            string.Equals(f.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
-
-        var isNew = flowSettings is null;
-
-        if (isNew)
-        {
-            flowSettings = await _flowSettingsManager.NewAsync();
-            flowSettings.SubjectContentType = subjectContentType;
-        }
-
-        var model = new SubjectFlowConfigureViewModel
-        {
-            SubjectContentType = subjectContentType,
-            SubjectDisplayName = contentType.DisplayName,
-            Editor = await _flowDisplayDriver.BuildEditorAsync(flowSettings, _updateModelAccessor.ModelUpdater, isNew: isNew),
-        };
-
-        return View(model);
-    }
-
-    /// <summary>
-    /// Saves the flow configuration for a specific subject content type.
-    /// </summary>
-    /// <param name="subjectContentType">The subject content type name.</param>
-    [HttpPost]
-    [ActionName(nameof(Configure))]
-    [Admin("omnichannel/subject-flows/{subjectContentType}/configure", "OmnichannelSubjectFlowsConfigure")]
-    public async Task<ActionResult> ConfigurePost(string subjectContentType)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageSubjectFlows))
-        {
-            return Forbid();
-        }
-
-        var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
-
-        if (!OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentType))
-        {
-            return NotFound();
-        }
-
-        var allFlowSettings = await _flowSettingsCatalog.GetAllAsync();
-        var flowSettings = allFlowSettings.FirstOrDefault(f =>
-            string.Equals(f.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
-
-        var isNew = flowSettings is null;
-
-        if (isNew)
-        {
-            flowSettings = await _flowSettingsManager.NewAsync();
-            flowSettings.SubjectContentType = subjectContentType;
-        }
-
-        await _flowDisplayDriver.UpdateEditorAsync(flowSettings, _updateModelAccessor.ModelUpdater, isNew: isNew);
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_flowSettingsManager, flowSettings, _updateModelAccessor.ModelUpdater, nameof(SubjectFlowSettings));
-
-        if (isValid && ModelState.IsValid)
-        {
-            if (isNew)
-            {
-                await _flowSettingsManager.CreateAsync(flowSettings);
-            }
-            else
-            {
-                await _flowSettingsManager.UpdateAsync(flowSettings);
-            }
-
-            await _notifier.SuccessAsync(H["The subject flow settings have been saved successfully."]);
-
-            return RedirectToAction(nameof(Configure), new { subjectContentType });
-        }
-
-        var model = new SubjectFlowConfigureViewModel
-        {
-            SubjectContentType = subjectContentType,
-            SubjectDisplayName = contentType.DisplayName,
-            Editor = await _flowDisplayDriver.BuildEditorAsync(flowSettings, _updateModelAccessor.ModelUpdater, isNew: isNew),
-        };
-
-        return View(model);
-    }
-
-    /// <summary>
-    /// Manages the subject actions for a specific subject content type.
-    /// </summary>
     /// <param name="subjectContentType">The subject content type name.</param>
     [Admin("omnichannel/subject-flows/{subjectContentType}/actions", "OmnichannelSubjectFlowsManageActions")]
     public async Task<ActionResult> ManageActions(string subjectContentType)

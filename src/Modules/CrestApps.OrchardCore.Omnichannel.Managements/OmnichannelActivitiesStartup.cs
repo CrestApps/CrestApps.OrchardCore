@@ -84,7 +84,6 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<OmnichannelCampaignGroup>, OmnichannelCampaignGroupHandler>();
         services.AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
         services.AddScoped<ICatalogEntryHandler<SubjectAction>, SubjectActionHandler>();
-        services.AddScoped<ICatalogEntryHandler<SubjectFlowSettings>, SubjectFlowSettingsHandler>();
 
         services
             .AddScoped<ISourceCatalog<SubjectAction>, SubjectActionCatalog>()
@@ -161,21 +160,5 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddSubjectDispositionActionsEndpoint();
-    }
-}
-
-/// <remarks>
-/// The AI rules for a subject flow belong to the feature that carries the flow's recipe step rather than to the
-/// feature that carries its editor, because a tenant can import flows without ever enabling the administration
-/// screens, and a handler that is not registered does not run.
-/// </remarks>
-[Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures("CrestApps.OrchardCore.AI")]
-public sealed class AISubjectFlowSettingsValidationStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ICatalogEntryHandler<SubjectFlowSettings>, AISubjectFlowSettingsHandler>();
     }
 }

@@ -1,53 +1,22 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
-/// Represents the view model for subject flow settings.
+/// Represents the view model for editing the AI-related <see cref="OmnichannelSubjectPart"/> flow settings.
 /// </summary>
-public class SubjectFlowSettingsViewModel
+public class OmnichannelSubjectAISettingsViewModel
 {
     /// <summary>
-    /// Gets or sets the campaign identifier.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the interaction type.
-    /// </summary>
-    public ActivityInteractionType InteractionType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the channel.
-    /// </summary>
-    public string Channel { get; set; }
-
-    /// <summary>
-    /// Gets or sets the channel endpoint identifier.
-    /// </summary>
-    public string ChannelEndpointId { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether a disposition must be selected before an activity using this subject can be completed.
-    /// </summary>
-    public bool RequireDisposition { get; set; }
-
-    /// <summary>
-    /// Gets or sets the initial outbound prompt pattern.
-    /// </summary>
-    public string InitialOutboundPromptPattern { get; set; }
-
-    /// <summary>
-    /// Gets or sets the subject goal.
-    /// </summary>
-    public string SubjectGoal { get; set; }
-
-    /// <summary>
-    /// Gets or sets the AI profile identifier.
+    /// Gets or sets the AI profile identifier used for automated interactions of this subject.
     /// </summary>
     public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject goal used by the AI to determine when to end the conversation.
+    /// </summary>
+    public string SubjectGoal { get; set; }
 
     /// <summary>
     /// Gets or sets the optional speech-to-text deployment name.
@@ -65,12 +34,12 @@ public class SubjectFlowSettingsViewModel
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether allow AI to update contact.
+    /// Gets or sets a value indicating whether the AI is allowed to update the contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether allow AI to update subject.
+    /// Gets or sets a value indicating whether the AI is allowed to update the subject.
     /// </summary>
     public bool AllowAIToUpdateSubject { get; set; }
 
@@ -88,30 +57,6 @@ public class SubjectFlowSettingsViewModel
     /// Gets or sets the SMS opt-out keywords.
     /// </summary>
     public string SmsOptOutKeywords { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available campaigns.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Campaigns { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available interaction types.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> InteractionTypes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available channels.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Channels { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available channel endpoints.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
 
     /// <summary>
     /// Gets or sets the available AI profiles.

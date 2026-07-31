@@ -12,6 +12,12 @@ public class SubjectFlowsIndexViewModel
     /// Gets or sets the list of subject content types with their flow configuration status.
     /// </summary>
     public List<SubjectFlowEntryViewModel> Subjects { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current user can edit content type definitions, which
+    /// enables the shortcut to edit the subject part settings.
+    /// </summary>
+    public bool CanEditContentTypes { get; set; }
 }
 
 /// <summary>
@@ -30,35 +36,29 @@ public class SubjectFlowEntryViewModel
     public string DisplayName { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether flow settings have been configured.
+    /// Gets or sets the primary communication direction configured for the subject.
     /// </summary>
-    public bool IsConfigured { get; set; }
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inbound interaction type configured for the subject.
+    /// </summary>
+    public ActivityInteractionType InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inbound channel configured for the subject.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a disposition is required to complete activities for the subject.
+    /// </summary>
+    public bool RequireDisposition { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether subject actions have been defined.
     /// </summary>
     public bool HasActions { get; set; }
-}
-
-/// <summary>
-/// View model for the Subject Flow configure page.
-/// </summary>
-public class SubjectFlowConfigureViewModel
-{
-    /// <summary>
-    /// Gets or sets the subject content type name.
-    /// </summary>
-    public string SubjectContentType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the subject display name.
-    /// </summary>
-    public string SubjectDisplayName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the flow settings editor shape.
-    /// </summary>
-    public IShape Editor { get; set; }
 }
 
 /// <summary>

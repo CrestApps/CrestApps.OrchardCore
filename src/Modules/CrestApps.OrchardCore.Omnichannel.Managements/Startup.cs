@@ -66,6 +66,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
+        services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectPartSettingsDisplayDriver>();
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
 
@@ -103,9 +104,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>();
 
-        services
-            .AddDisplayDriver<SubjectFlowSettings, SubjectFlowSettingsDisplayDriver>();
-
         services.AddNavigationProvider<AdminMenu>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
@@ -121,7 +119,7 @@ public sealed class AISubjectFlowStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddDisplayDriver<SubjectFlowSettings, AISubjectFlowSettingsDisplayDriver>()
+            .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
             .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();

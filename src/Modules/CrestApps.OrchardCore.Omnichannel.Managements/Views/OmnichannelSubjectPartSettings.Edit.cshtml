@@ -1,0 +1,87 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelSubjectPartSettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="Direction" class="form-label">@T["Direction"]</label>
+    <select asp-for="Direction" asp-items="Model.Directions" class="form-select"></select>
+    <span class="hint">@T["Whether this subject is primarily contacted proactively (outbound) or engaged in response to an incoming contact (inbound). Outbound activities choose their channel and endpoint when an activity batch is loaded."]</span>
+    <span asp-validation-for="Direction" class="text-danger"></span>
+</div>
+
+<div class="subject-inbound-only@(Model.Direction == SubjectDirection.Inbound ? string.Empty : " d-none")">
+    <div class="mb-3">
+        <label asp-for="InteractionType" class="form-label">@T["Interaction type"]</label>
+        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select"></select>
+        <span asp-validation-for="InteractionType" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Channel" class="form-label">@T["Channel"]</label>
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
+            <option value="">@T["Select a channel"]</option>
+        </select>
+        <span asp-validation-for="Channel" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3 subject-inbound-automated-only@(Model.Direction == SubjectDirection.Inbound && Model.InteractionType == ActivityInteractionType.Automated ? string.Empty : " d-none")">
+        <label asp-for="ChannelEndpointId" class="form-label">@T["Channel endpoint"]</label>
+        <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
+            <option value="">@T["Select an endpoint"]</option>
+        </select>
+        <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
+        <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DefaultCampaignId" class="form-label">@T["Default campaign"]</label>
+    <select asp-for="DefaultCampaignId" asp-items="Model.Campaigns" class="form-select">
+        <option value="">@T["Select a campaign"]</option>
+    </select>
+    <span class="hint">@T["The optional default campaign used when an activity batch is loaded. It can be overridden per batch. Campaigns are used for grouping and reporting only."]</span>
+    <span asp-validation-for="DefaultCampaignId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="RequireDisposition" class="form-check-input" />
+        <label asp-for="RequireDisposition" class="form-check-label">@T["Require a disposition"]</label>
+    </div>
+    <span class="hint dashed">@T["When enabled, an activity using this subject cannot be completed until a disposition is selected. Applies to both inbound and outbound activities."]</span>
+</div>
+
+<script at="Foot">
+(() => {
+    const directionSelect = document.getElementById('@Html.IdFor(m => m.Direction)');
+    const interactionTypeSelect = document.getElementById('@Html.IdFor(m => m.InteractionType)');
+    const inboundSections = document.querySelectorAll('.subject-inbound-only');
+    const inboundAutomatedSections = document.querySelectorAll('.subject-inbound-automated-only');
+
+    if (!directionSelect) {
+        return;
+    }
+
+    const toggle = () => {
+        const isInbound = directionSelect.value === 'Inbound';
+        const isAutomated = interactionTypeSelect && interactionTypeSelect.value === 'Automated';
+
+        inboundSections.forEach((section) => {
+            section.classList.toggle('d-none', !isInbound);
+        });
+
+        inboundAutomatedSections.forEach((section) => {
+            section.classList.toggle('d-none', !(isInbound && isAutomated));
+        });
+    };
+
+    directionSelect.addEventListener('change', toggle);
+
+    if (interactionTypeSelect) {
+        interactionTypeSelect.addEventListener('change', toggle);
+    }
+
+    toggle();
+})();
+</script>

@@ -13,6 +13,7 @@ using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
 

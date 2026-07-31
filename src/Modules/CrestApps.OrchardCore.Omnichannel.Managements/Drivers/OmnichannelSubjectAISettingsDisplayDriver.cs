@@ -3,68 +3,62 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
-internal sealed class AISubjectFlowSettingsDisplayDriver : DisplayDriver<SubjectFlowSettings>
+internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<OmnichannelSubjectPart>
 {
     private readonly IAIProfileManager _profileManager;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultSpeechVoicePresenter _speechVoicePresenter;
 
-    internal readonly IStringLocalizer S;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="AISubjectFlowSettingsDisplayDriver"/> class.
+    /// Initializes a new instance of the <see cref="OmnichannelSubjectAISettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
     /// <param name="speechVoicePresenter">The speech voice presenter.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public AISubjectFlowSettingsDisplayDriver(
+    public OmnichannelSubjectAISettingsDisplayDriver(
         IAIProfileManager profileManager,
         IAIDeploymentManager deploymentManager,
-        DefaultSpeechVoicePresenter speechVoicePresenter,
-        IStringLocalizer<AISubjectFlowSettingsDisplayDriver> stringLocalizer)
+        DefaultSpeechVoicePresenter speechVoicePresenter)
     {
         _profileManager = profileManager;
         _deploymentManager = deploymentManager;
         _speechVoicePresenter = speechVoicePresenter;
-        S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(SubjectFlowSettings flowSettings, BuildEditorContext context)
+    public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
-        return Initialize<SubjectFlowSettingsViewModel>("AISubjectFlowSettingsFields_Edit", async model =>
+        return Initialize<OmnichannelSubjectAISettingsViewModel>("OmnichannelSubjectAISettings_Edit", async model =>
         {
-            model.InitialOutboundPromptPattern = flowSettings.InitialOutboundPromptPattern;
-            model.SubjectGoal = flowSettings.SubjectGoal;
-            model.ProfileId = flowSettings.ProfileId;
-            model.Channel = flowSettings.Channel;
-            model.SpeechToTextDeploymentName = flowSettings.SpeechToTextDeploymentName;
-            model.TextToSpeechDeploymentName = flowSettings.TextToSpeechDeploymentName;
-            model.TextToSpeechVoiceId = flowSettings.TextToSpeechVoiceId;
-            model.AllowAIToUpdateContact = !context.IsNew && flowSettings.AllowAIToUpdateContact;
-            model.AllowAIToUpdateSubject = context.IsNew || flowSettings.AllowAIToUpdateSubject;
-            model.NoResponseTimeoutInMinutes = flowSettings.NoResponseTimeoutInMinutes;
-            model.SmsResponseDelayInSeconds = flowSettings.SmsResponseDelayInSeconds;
-            model.SmsOptOutKeywords = string.Join(Environment.NewLine, OmnichannelSmsComplianceHelper.NormalizeOptOutKeywords(flowSettings.SmsOptOutKeywords));
+            var settings = contentTypePartDefinition.GetSettings<OmnichannelSubjectAISettings>();
+
+            model.ProfileId = settings.ProfileId;
+            model.SubjectGoal = settings.SubjectGoal;
+            model.SpeechToTextDeploymentName = settings.SpeechToTextDeploymentName;
+            model.TextToSpeechDeploymentName = settings.TextToSpeechDeploymentName;
+            model.TextToSpeechVoiceId = settings.TextToSpeechVoiceId;
+            model.AllowAIToUpdateContact = settings.AllowAIToUpdateContact;
+            model.AllowAIToUpdateSubject = settings.AllowAIToUpdateSubject;
+            model.NoResponseTimeoutInMinutes = settings.NoResponseTimeoutInMinutes;
+            model.SmsResponseDelayInSeconds = settings.SmsResponseDelayInSeconds;
+            model.SmsOptOutKeywords = string.Join(Environment.NewLine, OmnichannelSmsComplianceHelper.NormalizeOptOutKeywords(settings.SmsOptOutKeywords));
 
             var chatProfiles = await _profileManager.GetAsync(AIProfileType.Chat);
 
             model.Profiles = chatProfiles
                 .Where(HasInitialPrompt)
-                .OrderBy(p => p.DisplayText ?? p.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.ItemId));
+                .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId));
             model.SpeechToTextDeployments = BuildDeploymentOptions(
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText),
                 model.SpeechToTextDeploymentName);
@@ -77,25 +71,27 @@ internal sealed class AISubjectFlowSettingsDisplayDriver : DisplayDriver<Subject
         }).Location("Content:2");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(SubjectFlowSettings flowSettings, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {
-        var model = new SubjectFlowSettingsViewModel();
+        var model = new OmnichannelSubjectAISettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        flowSettings.InitialOutboundPromptPattern = null;
-        flowSettings.SubjectGoal = model.SubjectGoal;
-        flowSettings.ProfileId = model.ProfileId;
-        flowSettings.SpeechToTextDeploymentName = model.SpeechToTextDeploymentName?.Trim();
-        flowSettings.TextToSpeechDeploymentName = model.TextToSpeechDeploymentName?.Trim();
-        flowSettings.TextToSpeechVoiceId = model.TextToSpeechVoiceId?.Trim();
-        flowSettings.AllowAIToUpdateContact = model.AllowAIToUpdateContact;
-        flowSettings.AllowAIToUpdateSubject = model.AllowAIToUpdateSubject;
-        flowSettings.NoResponseTimeoutInMinutes = model.NoResponseTimeoutInMinutes;
-        flowSettings.SmsResponseDelayInSeconds = model.SmsResponseDelayInSeconds;
-        flowSettings.SmsOptOutKeywords = OmnichannelSmsComplianceHelper.ParseOptOutKeywords(model.SmsOptOutKeywords).ToArray();
+        context.Builder.WithSettings(new OmnichannelSubjectAISettings
+        {
+            ProfileId = model.ProfileId,
+            SubjectGoal = model.SubjectGoal,
+            SpeechToTextDeploymentName = model.SpeechToTextDeploymentName?.Trim(),
+            TextToSpeechDeploymentName = model.TextToSpeechDeploymentName?.Trim(),
+            TextToSpeechVoiceId = model.TextToSpeechVoiceId?.Trim(),
+            AllowAIToUpdateContact = model.AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = model.AllowAIToUpdateSubject,
+            NoResponseTimeoutInMinutes = model.NoResponseTimeoutInMinutes,
+            SmsResponseDelayInSeconds = model.SmsResponseDelayInSeconds,
+            SmsOptOutKeywords = OmnichannelSmsComplianceHelper.ParseOptOutKeywords(model.SmsOptOutKeywords).ToArray(),
+        });
 
-        return Edit(flowSettings, context);
+        return Edit(contentTypePartDefinition, context);
     }
 
     private static bool HasInitialPrompt(AIProfile profile)

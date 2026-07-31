@@ -1,49 +1,46 @@
-using CrestApps.Core;
-using CrestApps.Core.Models;
-using CrestApps.Core.Services;
-
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// Represents the flow settings for a subject content type.
-/// Stores interaction type, channel, campaign association, and AI configuration.
+/// Represents the assembled, read-only flow settings for a subject content type. It is composed at read time
+/// from the <see cref="OmnichannelSubjectPartSettings"/> and <see cref="OmnichannelSubjectAISettings"/> stored
+/// on the subject content-type part definition; it is not persisted as a catalog item.
 /// </summary>
-public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<SubjectFlowSettings>
+public sealed class SubjectFlowSettings
 {
-    /// <summary>
-    /// Gets or sets the display text for this flow settings entry.
-    /// </summary>
-    public string DisplayText { get; set; }
-
     /// <summary>
     /// Gets or sets the subject content type this flow applies to.
     /// </summary>
     public string SubjectContentType { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign identifier that this subject belongs to.
+    /// Gets or sets the default campaign identifier that activities loaded for this subject belong to.
     /// </summary>
     public string CampaignId { get; set; }
 
     /// <summary>
-    /// Gets or sets the interaction type for activities using this subject.
+    /// Gets or sets the primary communication direction for this subject.
+    /// </summary>
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type for inbound activities using this subject.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
 
     /// <summary>
-    /// Gets or sets the communication channel for activities using this subject.
+    /// Gets or sets the communication channel for inbound activities using this subject.
     /// </summary>
     public string Channel { get; set; }
 
     /// <summary>
-    /// Gets or sets the channel endpoint identifier for activities using this subject.
+    /// Gets or sets the channel endpoint identifier for inbound activities using this subject.
     /// </summary>
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether a disposition must be selected before an activity using
-    /// this subject can be completed. This is the single decision-control policy that applies to both
-    /// inbound and outbound activities, enforced by the activity disposition service.
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using this
+    /// subject can be completed. This is the single decision-control policy that applies to both inbound and
+    /// outbound activities, enforced by the activity disposition service.
     /// </summary>
     public bool RequireDisposition { get; set; }
 
@@ -107,57 +104,4 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     /// do-not-SMS preference.
     /// </summary>
     public string[] SmsOptOutKeywords { get; set; }
-
-    /// <summary>
-    /// Gets or sets the date and time the settings were created.
-    /// </summary>
-    public DateTime CreatedUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the date and time the settings were last modified.
-    /// </summary>
-    public DateTime? ModifiedUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the author.
-    /// </summary>
-    public string Author { get; set; }
-
-    /// <summary>
-    /// Gets or sets the owner identifier.
-    /// </summary>
-    public string OwnerId { get; set; }
-
-    /// <summary>
-    /// Creates a copy of the current subject flow settings.
-    /// </summary>
-    public SubjectFlowSettings Clone()
-    {
-        return new SubjectFlowSettings
-        {
-            ItemId = ItemId,
-            DisplayText = DisplayText,
-            SubjectContentType = SubjectContentType,
-            CampaignId = CampaignId,
-            InteractionType = InteractionType,
-            Channel = Channel,
-            ChannelEndpointId = ChannelEndpointId,
-            RequireDisposition = RequireDisposition,
-            InitialOutboundPromptPattern = InitialOutboundPromptPattern,
-            SubjectGoal = SubjectGoal,
-            ProfileId = ProfileId,
-            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
-            TextToSpeechDeploymentName = TextToSpeechDeploymentName,
-            TextToSpeechVoiceId = TextToSpeechVoiceId,
-            AllowAIToUpdateContact = AllowAIToUpdateContact,
-            AllowAIToUpdateSubject = AllowAIToUpdateSubject,
-            NoResponseTimeoutInMinutes = NoResponseTimeoutInMinutes,
-            SmsResponseDelayInSeconds = SmsResponseDelayInSeconds,
-            SmsOptOutKeywords = SmsOptOutKeywords?.ToArray(),
-            CreatedUtc = CreatedUtc,
-            ModifiedUtc = ModifiedUtc,
-            Author = Author,
-            OwnerId = OwnerId,
-        };
-    }
 }

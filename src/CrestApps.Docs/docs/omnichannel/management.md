@@ -46,17 +46,20 @@ A **Campaign** is now used primarily for **reporting, grouping, and business out
 Campaigns no longer define the interaction type, channel, channel endpoint, or disposition-driven flow logic. Those settings now live on the subject flow so different subjects inside the same campaign can behave differently.
 
 ### Subject Flow
-A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves.
+A **Subject Flow** defines how a content type with `OmnichannelSubjectPart` behaves. The stable configuration of a subject now lives in the **content-type part settings** of `OmnichannelSubjectPart`, edited from the standard Orchard Core content type editor (the same place you attach the part), following the pattern used by parts such as `TitlePart`. There is no separate configure screen; volatile per-run values (campaign, channel, channel endpoint, and interaction type) are chosen when an activity batch is loaded.
 
-Each subject flow stores:
+The base part settings store:
 
-- the campaign association used for reporting and grouping
-- the interaction type (`Manual` or `Automated`)
-- the communication channel
-- the channel endpoint used for automated work
-- the subject actions that run for each disposition
+- the direction (`Outbound` or `Inbound`), defaulting to `Outbound` for new subjects
+- the interaction type (`Manual` or `Automated`) — only shown for inbound subjects
+- the communication channel — only shown for inbound subjects
+- the channel endpoint used for automated inbound work
+- the default campaign association used for reporting and grouping
+- whether a disposition is required to complete an activity for the subject
 
-When the AI feature is enabled, the subject flow editor also adds AI-specific settings for:
+For outbound subjects the interaction type and channel are resolved at load time, so those fields are hidden in the editor to keep the configuration focused. The disposition-driven **subject actions** are still managed separately from the **Manage Flow** screen.
+
+When the AI feature is enabled, a second part-settings editor adds AI-specific settings for:
 
 - the chat AI profile, filtered to profiles with **Add initial prompt** enabled
 - the subject goal
@@ -185,21 +188,21 @@ Campaign groups let reporting users combine multiple related campaigns without c
 
 ### 6) Configure Subject Flows
 
-After creating your subject content types and campaigns, go to `Interaction Center` → `Management` → `Subject Flows`.
+Subject flow configuration lives on the `OmnichannelSubjectPart` content-type part settings, so you edit it from the content type editor. The `Interaction Center` → `Management` → `Subject Flows` list gives you a read-only overview and shortcuts.
 
-1. Review the list of content types that attach `OmnichannelSubjectPart`.
-2. Click **Configure** next to a subject.
-3. Select the campaign used for reporting and grouping.
-4. Select the interaction type and channel.
-5. If the subject uses automated interactions, configure the channel endpoint.
-6. If the AI feature is enabled, automated subject flows also expose the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
-7. Save the subject flow.
+1. Go to `Interaction Center` → `Management` → `Subject Flows` and review the content types that attach `OmnichannelSubjectPart`. Each subject shows a badge for its configured direction (**Outbound** or **Inbound**), its inbound channel and interaction type when applicable, and whether a disposition is required.
+2. To change the configuration, click **Edit content type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject.
+3. In the `OmnichannelSubjectPart` settings, select the direction. New subjects default to **Outbound**.
+4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when inventory is loaded.
+5. Optionally set the default campaign used for reporting and grouping, and whether a disposition is required to complete activities for the subject.
+6. If the AI feature is enabled, the AI settings editor exposes the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
+7. Save the content type.
 
-Subjects are only considered **configured** after the flow has the required campaign, channel, and interaction settings (plus a channel endpoint and AI profile for automated flows). Activity creation, inventory loading, and subject-selection UIs only allow configured subjects because the subject flow now supplies the campaign and runtime channel settings used by each activity.
+Any content type with `OmnichannelSubjectPart` is a valid subject. The per-run campaign, channel, and channel endpoint used by each activity are chosen when an activity batch is loaded, so a subject does not need every field set on its part settings before it can be used.
 
 ### 7) Manage Flow
 
-After saving the subject flow, click **Manage Flow** from the `Subject Flows` list.
+From the `Subject Flows` list, click **Manage Flow** next to a subject.
 
 1. Click **Add Action**.
 2. Select an action type (**Finish**, **Try Again**, or **New Activity**).
@@ -222,18 +225,19 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
 1. Go to `Interaction Center` → `Management` → `Load Inventory`.
 2. Click **Add Inventory Load** and choose a source:
    - **Manual** loads activities assigned to the selected users immediately.
-   - **Automatic** loads unassigned activities for an automated subject flow so the background AI automation processes them. It requires a subject flow that uses the **Automated** interaction type.
+   - **Automatic** loads unassigned activities so the background AI automation processes them.
    - **Dialer** loads unassigned activities for outbound dialing and requires a dialer profile when the inventory load is created.
 3. Create the inventory load:
    - Select contact type
    - Select subject type
+   - Select the campaign, channel, and channel endpoint to use for the loaded activities. The subject's part settings provide the defaults when a value is not chosen. The channel and endpoint are hidden for the dialer source because dialer loads always use the phone channel.
    - For **Dialer** inventory loads, select the required dialer profile that controls the dialing mode, queue, and campaign assignment.
-   - For automated loads, optionally override the subject flow's AI profile, speech-to-text deployment, text-to-speech deployment, and voice. Empty speech selections fall back through the subject flow and then the global AI site settings.
+   - For automated loads, optionally override the subject's AI profile, speech-to-text deployment, text-to-speech deployment, and voice. Empty speech selections fall back through the subject settings and then the global AI site settings.
    - Assign users when the selected source requires assignment.
    - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
-The inventory load runs in the background and loads activities incrementally. Loaded activities use the selected subject's flow configuration to resolve the channel and channel endpoint. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads require a phone subject flow, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
+The inventory load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
 
 When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
 
@@ -377,11 +381,12 @@ Each configurable entity has its own deployment step and a matching recipe step:
 | Channel endpoints | Omnichannel Channel Endpoints | `OmnichannelChannelEndpoint` |
 | Campaign groups | Omnichannel Campaign Groups | `OmnichannelCampaignGroup` |
 | Campaigns | Omnichannel Campaigns | `OmnichannelCampaign` |
-| Subject flow settings | Omnichannel Subject Flow Settings | `OmnichannelSubjectFlowSettings` |
 | Subject actions | Omnichannel Subject Actions | `OmnichannelSubjectAction` |
 
 To export, open **Configuration -> Import/Export -> Deployment Plans**, add the Omnichannel steps you need, and execute or download the plan. Each step exports every entry of its type.
 
 On import, entries are matched by their identifier: an entry that already exists is updated in place, and a new entry is created with its original identifier preserved. Because identifiers are preserved, cross-references (for example a campaign that points at a campaign group, or a subject action that points at a disposition) keep working after the import.
 
-When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, then subject flow settings, and finally subject actions.
+When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, and finally subject actions.
+
+Subject flow configuration is stored on the `OmnichannelSubjectPart` content-type part settings, so it travels with the content type definition through the standard **Content Definition** deployment step rather than a dedicated omnichannel step.
