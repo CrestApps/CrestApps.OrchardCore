@@ -22,4 +22,9 @@ public sealed class OmnichannelActivityBatchIndex : CatalogItemIndex
     /// Gets or sets the status.
     /// </summary>
     public OmnichannelActivityBatchStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the activity batch was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
 }

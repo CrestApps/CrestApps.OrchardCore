@@ -10,7 +10,7 @@
 <zone Name="Title"><h1>@RenderTitleSegments(T["Load Inventory"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />
@@ -99,6 +99,8 @@
 
 </form>
 
+@await DisplayAsync(Model.Pager)
+
 <!-- Modal -->
 <div class="modal fade" id="modalAddActivityBatch" tabindex="-1" role="dialog" aria-labelledby="available-activity-batch-sources-title" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -131,3 +133,5 @@
         </div>
     </div>
 </div>
+
+<script asp-name="list-management-ui" at="Foot"></script>

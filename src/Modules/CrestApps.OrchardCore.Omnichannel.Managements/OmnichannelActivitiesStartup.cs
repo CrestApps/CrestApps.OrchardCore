@@ -66,6 +66,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
 
         services
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
+            .AddScoped<ICatalog<OmnichannelActivityBatch>, OmnichannelActivityBatchCatalog>()
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
             .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
