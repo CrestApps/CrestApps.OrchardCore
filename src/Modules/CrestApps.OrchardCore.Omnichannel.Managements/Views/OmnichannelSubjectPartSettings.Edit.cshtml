@@ -5,6 +5,15 @@
 @model OmnichannelSubjectPartSettingsViewModel
 
 <div class="mb-3">
+    <label asp-for="DefaultCampaignId" class="form-label">@T["Default campaign"]</label>
+    <select asp-for="DefaultCampaignId" asp-items="Model.Campaigns" class="form-select">
+        <option value="">@T["Select a campaign"]</option>
+    </select>
+    <span class="hint">@T["The campaign applied to activities of this subject that are created outside an activity batch, such as manually created activities, inbound activities, and activities moved to this subject. Activity batches pre-select it and can override it when inventory is loaded. Campaigns are used for grouping and reporting only."]</span>
+    <span asp-validation-for="DefaultCampaignId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
     <label asp-for="Direction" class="form-label">@T["Direction"]</label>
     <select asp-for="Direction" asp-items="Model.Directions" class="form-select" data-omnichannel-subject-direction></select>
     <span class="hint">@T["Whether this subject is primarily contacted proactively (outbound) or engaged in response to an incoming contact (inbound). Outbound activities choose their channel and endpoint when an activity batch is loaded."]</span>
@@ -34,15 +43,6 @@
         <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
         <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>
     </div>
-</div>
-
-<div class="mb-3">
-    <label asp-for="DefaultCampaignId" class="form-label">@T["Default campaign"]</label>
-    <select asp-for="DefaultCampaignId" asp-items="Model.Campaigns" class="form-select">
-        <option value="">@T["Select a campaign"]</option>
-    </select>
-    <span class="hint">@T["The campaign applied to activities of this subject that are created outside an activity batch, such as manually created activities, inbound activities, and activities moved to this subject. Activity batches pre-select it and can override it when inventory is loaded. Campaigns are used for grouping and reporting only."]</span>
-    <span asp-validation-for="DefaultCampaignId" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
