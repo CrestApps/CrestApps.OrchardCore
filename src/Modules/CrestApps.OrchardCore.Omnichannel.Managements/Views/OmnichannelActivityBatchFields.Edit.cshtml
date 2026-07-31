@@ -67,9 +67,41 @@
                     <option value="">@T["Select a subject content type"]</option>
                 </select>
                 <span asp-validation-for="SubjectContentType" class="text-danger"></span>
-                <span class="hint">@T["The selected subject flow determines the campaign, interaction type, and channel used when the batch loads activities."]</span>
+                <span class="hint">@T["The subject determines the flow and disposition-driven actions. The channel, endpoint, and campaign used for this load are selected below."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
+            <div class="ocat-end">
+                <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select"></select>
+                <span asp-validation-for="CampaignId" class="text-danger"></span>
+                <span class="hint">@T["Optional. Campaigns are used for grouping and reporting only."]</span>
+            </div>
+        </div>
+
+        @if (!string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
+                        <option value="">@T["Select a channel"]</option>
+                    </select>
+                    <span asp-validation-for="Channel" class="text-danger"></span>
+                    <span class="hint">@T["The communication channel used for the activities loaded from this batch."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="ChannelEndpointId" class="ocat-label">@T["Channel endpoint"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select"></select>
+                    <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
+                    <span class="hint">@T["Optional. The endpoint (such as a phone number or SMS number) used to reach contacts."]</span>
+                </div>
+            </div>
+        }
 
         @if (string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {

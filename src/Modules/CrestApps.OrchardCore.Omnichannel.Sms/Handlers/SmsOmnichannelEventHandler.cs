@@ -43,7 +43,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIProfileManager _profileManager;
     private readonly ITemplateService _aiTemplateService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly ISession _session;
@@ -68,7 +68,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="aiTemplateService">The ai template service.</param>
     /// <param name="channelEndpointsManager">The channel endpoints manager.</param>
-    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="session">The session.</param>
@@ -87,7 +87,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIProfileManager profileManager,
         ITemplateService aiTemplateService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
         IClock clock,
         ISession session,
@@ -106,7 +106,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _profileManager = profileManager;
         _aiTemplateService = aiTemplateService;
         _channelEndpointsManager = channelEndpointsManager;
-        _flowSettingsCatalog = flowSettingsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
         _clock = clock;
         _session = session;
@@ -483,10 +483,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return null;
         }
 
-        var flowSettings = await _flowSettingsCatalog.GetAllAsync(cancellationToken);
-
-        return flowSettings.FirstOrDefault(settings =>
-            string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+        return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType, cancellationToken);
     }
 
     private async Task ApplySmsOptOutAsync(

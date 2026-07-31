@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -67,7 +68,7 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
             }
 
             model.IsPhoneChannel = string.Equals(
-                flowSettings?.Channel,
+                batch.Channel,
                 OmnichannelConstants.Channels.Phone,
                 StringComparison.OrdinalIgnoreCase);
             model.AIProfiles = await GetAIProfileOptionsAsync(selectedProfileId);

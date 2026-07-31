@@ -49,6 +49,21 @@ public class OmnichannelActivityBatchViewModel
     public string ContactContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the campaign identifier used for outbound activities loaded from this batch.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the communication channel used for outbound activities loaded from this batch.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel endpoint used for outbound activities loaded from this batch.
+    /// </summary>
+    public string ChannelEndpointId { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier used by dialer activities.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -188,4 +203,29 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Dispositions { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the selected source loads through a dialer profile, which
+    /// forces the phone channel and hides the outbound channel selection.
+    /// </summary>
+    [BindNever]
+    public bool IsDialerSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available campaigns for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Campaigns { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available channels for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Channels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available channel endpoints for outbound activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
 }

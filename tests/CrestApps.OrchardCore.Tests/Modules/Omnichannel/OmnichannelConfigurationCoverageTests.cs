@@ -33,7 +33,6 @@ public sealed class OmnichannelConfigurationCoverageTests
         [nameof(OmnichannelChannelEndpoint)] = OmnichannelDeploymentSteps.ChannelEndpoint,
         [nameof(OmnichannelDisposition)] = OmnichannelDeploymentSteps.Disposition,
         [nameof(SubjectAction)] = OmnichannelDeploymentSteps.SubjectAction,
-        [nameof(SubjectFlowSettings)] = OmnichannelDeploymentSteps.SubjectFlowSettings,
     };
 
     [Fact]

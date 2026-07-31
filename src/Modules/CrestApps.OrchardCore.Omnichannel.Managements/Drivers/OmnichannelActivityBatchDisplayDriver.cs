@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
@@ -29,6 +30,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+    private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
@@ -40,10 +43,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// </summary>
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="contentTypeProvider">The content type provider.</param>
     /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="localClock">The local clock.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="campaignCatalog">The campaign catalog.</param>
+    /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="optionsProvider">The bulk activity options provider.</param>
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
@@ -56,6 +62,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ILocalClock localClock,
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
+        ICatalog<OmnichannelCampaign> campaignCatalog,
+        ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
@@ -68,6 +76,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _localClock = localClock;
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
+        _campaignCatalog = campaignCatalog;
+        _channelEndpointsCatalog = channelEndpointsCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
@@ -102,6 +112,10 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
+            model.CampaignId = batch.CampaignId;
+            model.Channel = batch.Channel;
+            model.ChannelEndpointId = batch.ChannelEndpointId;
+            model.IsDialerSource = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
             model.DialerProfileId = batch.DialerProfileId;
             model.UserIds = batch.UserIds;
             model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
@@ -196,6 +210,38 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
+
+            var campaignItems = new List<SelectListItem>
+            {
+                new(S["No campaign"], ""),
+            };
+
+            foreach (var campaign in (await _campaignCatalog.GetAllAsync()).OrderBy(campaign => campaign.DisplayText))
+            {
+                campaignItems.Add(new SelectListItem(campaign.DisplayText, campaign.ItemId));
+            }
+
+            model.Campaigns = campaignItems;
+
+            model.Channels =
+            [
+                new(S["Phone"], OmnichannelConstants.Channels.Phone),
+                new(S["SMS"], OmnichannelConstants.Channels.Sms),
+                new(S["Email"], OmnichannelConstants.Channels.Email),
+            ];
+
+            var channelEndpointItems = new List<SelectListItem>
+            {
+                new(S["No endpoint"], ""),
+            };
+
+            foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync()).OrderBy(endpoint => endpoint.DisplayText))
+            {
+                channelEndpointItems.Add(new SelectListItem(endpoint.DisplayText, endpoint.ItemId));
+            }
+
+            model.ChannelEndpoints = channelEndpointItems;
+
             model.SelectedUsers ??= [];
         }).Location("Content:1");
     }
@@ -221,20 +267,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Title is required."]);
         }
 
-        SubjectFlowSettings flowSettings = null;
-
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
         }
-        else
+        else if (await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType) is null)
         {
-            flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
-
-            if (flowSettings is null)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before inventory loads can load activities."]);
-            }
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject is invalid."]);
         }
 
         if (string.IsNullOrEmpty(model.ContactContentType))
@@ -258,24 +297,33 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["The selected dialer profile is invalid."]);
             }
         }
-
-        if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
-            flowSettings?.InteractionType != ActivityInteractionType.Automated)
+        else
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["The Automatic source requires a subject flow with the Automated interaction type."]);
+            if (string.IsNullOrWhiteSpace(model.Channel))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["A channel is required to load activities."]);
+            }
+            else if (!IsKnownChannel(model.Channel))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["The selected channel is invalid."]);
+            }
+            else if (string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(model.Channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Automatic inventory loads support only the Phone or SMS channel."]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.ChannelEndpointId) &&
+                await _channelEndpointsCatalog.FindByIdAsync(model.ChannelEndpointId) is null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["The selected channel endpoint is invalid."]);
+            }
         }
 
-        if (flowSettings?.InteractionType == ActivityInteractionType.Automated &&
-            !string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(model.CampaignId) &&
+            await _campaignCatalog.FindByIdAsync(model.CampaignId) is null)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Source), S["Automated subject flows must be loaded with the Automatic source."]);
-        }
-
-        if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) &&
-            flowSettings?.Channel is not null &&
-            !string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Dialer inventory loads require a subject flow that uses the Phone channel."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected campaign is invalid."]);
         }
 
         if (model.ScheduleAt is null)
@@ -289,11 +337,16 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must contain at least one digit."]);
         }
 
+        var isDialer = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
+
         batch.DisplayText = model.DisplayText?.Trim();
         batch.Source = model.Source?.Trim();
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
-        batch.DialerProfileId = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase)
+        batch.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId) ? null : model.CampaignId.Trim();
+        batch.Channel = isDialer || string.IsNullOrWhiteSpace(model.Channel) ? null : model.Channel.Trim();
+        batch.ChannelEndpointId = isDialer || string.IsNullOrWhiteSpace(model.ChannelEndpointId) ? null : model.ChannelEndpointId.Trim();
+        batch.DialerProfileId = isDialer
             ? model.DialerProfileId?.Trim()
             : null;
 
@@ -331,5 +384,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _activityBatchSourceOptions.Sources.TryGetValue(normalizedSource, out var entry);
 
         return entry;
+    }
+
+    private static bool IsKnownChannel(string channel)
+    {
+        return string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase);
     }
 }

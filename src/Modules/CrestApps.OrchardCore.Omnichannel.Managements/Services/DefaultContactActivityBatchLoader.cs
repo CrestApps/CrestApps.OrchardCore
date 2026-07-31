@@ -166,16 +166,6 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 _logger.LogError("Unable to find the dialer profile '{DialerProfileId}' for the dialer batch with ID '{BatchId}'.", batch.DialerProfileId, batch.ItemId);
                 return;
             }
-
-            if (!string.Equals(flowSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase))
-            {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
-
-                _logger.LogError("Dialer batches require a phone subject flow. Batch '{BatchId}' uses channel '{Channel}'.", batch.ItemId, flowSettings.Channel);
-                return;
-            }
         }
 
         long documentId = 0;
@@ -413,8 +403,12 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
                 var activitySource = sourceEntry.Source;
-                var campaignId = flowSettings.CampaignId;
-                var interactionType = flowSettings.InteractionType;
+                var channel = string.IsNullOrWhiteSpace(batch.Channel) ? flowSettings.Channel : batch.Channel;
+                var channelEndpointId = string.IsNullOrWhiteSpace(batch.ChannelEndpointId) ? flowSettings.ChannelEndpointId : batch.ChannelEndpointId;
+                var campaignId = string.IsNullOrWhiteSpace(batch.CampaignId) ? flowSettings.CampaignId : batch.CampaignId;
+                var interactionType = string.Equals(sourceEntry.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase)
+                    ? ActivityInteractionType.Automated
+                    : ActivityInteractionType.Manual;
                 var automatedSettings = OmnichannelAutomationHelper.ResolveActivitySettings(batch, flowSettings);
 
                 if (dialerProfile is not null)
@@ -422,16 +416,17 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     activitySource = dialerProfile.ActivitySource;
                     campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
+                    channel = OmnichannelConstants.Channels.Phone;
                     automatedSettings.AIProfileId = null;
                     automatedSettings.SpeechToTextDeploymentName = null;
                     automatedSettings.TextToSpeechDeploymentName = null;
                     automatedSettings.TextToSpeechVoiceId = null;
                 }
 
-                activity.Kind = GetActivityKind(flowSettings.Channel);
+                activity.Kind = GetActivityKind(channel);
                 activity.Source = activitySource;
                 activity.InteractionType = interactionType;
-                activity.Channel = flowSettings.Channel;
+                activity.Channel = channel;
                 activity.AIProfileId = automatedSettings.AIProfileId;
                 activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
                 activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
@@ -447,7 +442,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     continue;
                 }
 
-                activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
+                activity.ChannelEndpointId = channelEndpointId;
                 activity.CampaignId = campaignId;
                 activity.ScheduledUtc = scheduledUtc;
                 if (user is not null)

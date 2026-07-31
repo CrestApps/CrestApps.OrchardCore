@@ -452,6 +452,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string AIProfileId { get; set; }
         public string Author { get; set; }
         public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
         public string ContactContentType { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string DialerProfileId { get; set; }
@@ -620,9 +622,34 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool IsInbound { get; set; }
         public string ServiceAddress { get; set; }
     }
+    public sealed class OmnichannelSubjectAISettings
+    {
+        public OmnichannelSubjectAISettings() { }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
+        public string InitialOutboundPromptPattern { get; set; }
+        public int? NoResponseTimeoutInMinutes { get; set; }
+        public string ProfileId { get; set; }
+        public string[] SmsOptOutKeywords { get; set; }
+        public int? SmsResponseDelayInSeconds { get; set; }
+        public string SpeechToTextDeploymentName { get; set; }
+        public string SubjectGoal { get; set; }
+        public string TextToSpeechDeploymentName { get; set; }
+        public string TextToSpeechVoiceId { get; set; }
+    }
     public sealed class OmnichannelSubjectPart : OrchardCore.ContentManagement.ContentPart
     {
         public OmnichannelSubjectPart() { }
+    }
+    public sealed class OmnichannelSubjectPartSettings
+    {
+        public OmnichannelSubjectPartSettings() { }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public string DefaultCampaignId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
+        public bool RequireDisposition { get; set; }
     }
     public sealed class PhoneNumberInfoPart : OrchardCore.ContentManagement.ContentPart
     {
@@ -695,23 +722,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         Outbound = 0,
         Inbound = 1,
     }
-    public sealed class SubjectFlowSettings : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>, System.ICloneable
+    public sealed class SubjectFlowSettings
     {
         public SubjectFlowSettings() { }
         public bool AllowAIToUpdateContact { get; set; }
         public bool AllowAIToUpdateSubject { get; set; }
-        public string Author { get; set; }
         public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string ChannelEndpointId { get; set; }
-        public System.DateTime CreatedUtc { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
-        public string DisplayText { get; set; }
         public string InitialOutboundPromptPattern { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
-        public System.DateTime? ModifiedUtc { get; set; }
         public int? NoResponseTimeoutInMinutes { get; set; }
-        public string OwnerId { get; set; }
         public string ProfileId { get; set; }
         public bool RequireDisposition { get; set; }
         public string[] SmsOptOutKeywords { get; set; }
@@ -721,7 +743,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string SubjectGoal { get; set; }
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings Clone() { }
     }
     public sealed class TryAgainActionMetadata
     {
@@ -813,6 +834,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task ExecuteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionExecutionContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISubjectFlowSettingsService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(System.Threading.CancellationToken cancellationToken = default);
+        bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings);
+    }
     public sealed class ListOmnichannelActivityFilterContext
     {
         public ListOmnichannelActivityFilterContext(CrestApps.OrchardCore.Omnichannel.Core.Models.ListOmnichannelActivityFilter filter, YesSql.IQuery<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity, CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityIndex> query) { }
@@ -864,5 +892,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static bool IsOptOutRequest(string message, System.Collections.Generic.IEnumerable<string> keywords = null) { }
         public static System.Collections.Generic.IReadOnlyList<string> NormalizeOptOutKeywords(System.Collections.Generic.IEnumerable<string> keywords) { }
         public static System.Collections.Generic.IReadOnlyList<string> ParseOptOutKeywords(string keywords) { }
+    }
+    public sealed class SubjectFlowSettingsService : CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService
+    {
+        public SubjectFlowSettingsService(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
     }
 }
