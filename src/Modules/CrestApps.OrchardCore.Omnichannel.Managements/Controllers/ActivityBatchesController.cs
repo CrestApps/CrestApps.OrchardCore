@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -20,7 +21,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using QueryContext = CrestApps.Core.Models.QueryContext;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -85,7 +86,8 @@ public sealed class ActivityBatchesController : Controller
         CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] ISession session)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
         {
@@ -94,10 +96,20 @@ public sealed class ActivityBatchesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        var query = session.Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName);
+
+        if (!string.IsNullOrEmpty(options.Search))
         {
-            Name = options.Search,
-        });
+            query = query.Where(index => index.DisplayText.Contains(options.Search));
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var batches = await query
+            .OrderByDescending(index => index.CreatedUtc)
+            .Skip((pager.Page - 1) * pager.PageSize)
+            .Take(pager.PageSize)
+            .ListAsync();
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -111,13 +123,13 @@ public sealed class ActivityBatchesController : Controller
         {
             Models = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, totalCount, routeData),
             Sources = _activityBatchSourceOptions.Sources.Values
                 .Where(source => source.ShowInCreationPicker)
                 .OrderBy(source => source.DisplayName.Value),
         };
 
-        foreach (var model in result.Entries)
+        foreach (var model in batches)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<OmnichannelActivityBatch>
             {
