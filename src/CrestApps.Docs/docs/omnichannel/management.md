@@ -59,6 +59,10 @@ The base part settings store:
 
 For outbound subjects the interaction type and channel are resolved at load time, so those fields are hidden in the editor to keep the configuration focused. The disposition-driven **subject actions** are still managed separately from the **Manage Flow** screen.
 
+**Default campaign** is not a per-run value. It is applied directly to activities that are created outside an activity batch — manually created activities, inbound activities, and activities moved to this subject by the **Change Subject** bulk action — and it is the fallback an activity batch uses when it does not choose its own campaign. Campaigns remain grouping and reporting metadata only.
+
+**Require a disposition** is enabled by default because the disposition is what triggers the subject flow actions such as retrying, creating a follow-up activity, or updating communication preferences. Clear it only for fire-and-forget notification subjects, such as a one-way SMS alert, where the contact never responds and there is no outcome to record.
+
 When the AI feature is enabled, a second part-settings editor adds AI-specific settings for:
 
 - the chat AI profile, filtered to profiles with **Add initial prompt** enabled
@@ -66,6 +70,19 @@ When the AI feature is enabled, a second part-settings editor adds AI-specific s
 - AI update permissions for the contact and subject
 - phone automation defaults for speech-to-text deployment, text-to-speech deployment, and voice
 - SMS automation controls such as no-response timeout, response delay, and opt-out keywords
+
+The editor progressively discloses these fields so only the relevant ones are visible:
+
+| Subject configuration | AI settings shown |
+|-----------------------|-------------------|
+| Outbound | All AI settings, because an outbound subject becomes automated when its inventory is loaded with the **Automatic** source |
+| Inbound + Manual | None — the whole AI section is hidden because an inbound manual subject is always handled by an agent |
+| Inbound + Automated + Phone | AI profile, subject goal, AI permissions, and voice call automation |
+| Inbound + Automated + SMS | AI profile, subject goal, AI permissions, and SMS automation |
+
+The visibility is applied when the editor loads and updated live as you change the direction, interaction type, or channel. Hidden fields keep their stored values, so switching direction back and forth never discards configuration.
+
+Activity batches can override the AI profile and the speech deployments per run, but the subject goal, AI update permissions, and the SMS automation controls are only read from these part settings — which is why they stay available for outbound subjects.
 
 ### Subject Action
 A **Subject Action** links a disposition to an action type and defines what happens when an activity is completed with that disposition for a given subject type.
@@ -194,8 +211,8 @@ Subject flow configuration lives on the `OmnichannelSubjectPart` content-type pa
 2. To change the configuration, click **Edit content type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject.
 3. In the `OmnichannelSubjectPart` settings, select the direction. New subjects default to **Outbound**.
 4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when inventory is loaded.
-5. Optionally set the default campaign used for reporting and grouping, and whether a disposition is required to complete activities for the subject.
-6. If the AI feature is enabled, the AI settings editor exposes the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
+5. Optionally set the default campaign, which is applied to activities created outside an activity batch and used as the batch fallback. Leave **Require a disposition** enabled unless the subject is a fire-and-forget notification with no outcome to record.
+6. If the AI feature is enabled, the AI settings editor exposes the AI profile, subject goal, update permissions, speech-to-text deployment, text-to-speech deployment, voice, no-response timeout, response delay, and opt-out keyword fields. Only the fields that apply to the selected direction, interaction type, and channel are shown. Leaving a speech selection empty uses the global AI site setting when the automated conversation starts.
 7. Save the content type.
 
 Any content type with `OmnichannelSubjectPart` is a valid subject. The per-run campaign, channel, and channel endpoint used by each activity are chosen when an activity batch is loaded, so a subject does not need every field set on its part settings before it can be used.

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -41,6 +42,15 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
         return Initialize<OmnichannelSubjectAISettingsViewModel>("OmnichannelSubjectAISettings_Edit", async model =>
         {
             var settings = contentTypePartDefinition.GetSettings<OmnichannelSubjectAISettings>();
+            var baseSettings = contentTypePartDefinition.GetSettings<OmnichannelSubjectPartSettings>();
+            var isInbound = baseSettings.Direction == SubjectDirection.Inbound;
+
+            // Outbound subjects resolve their interaction type and channel when an activity batch is loaded, so
+            // every AI default must stay configurable for them. Inbound subjects declare both up front, which
+            // lets the editor hide the settings that can never apply.
+            model.CanAutomate = !isInbound || baseSettings.InteractionType == ActivityInteractionType.Automated;
+            model.ShowVoiceSettings = model.CanAutomate && (!isInbound || string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase));
+            model.ShowSmsSettings = model.CanAutomate && (!isInbound || string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase));
 
             model.ProfileId = settings.ProfileId;
             model.SubjectGoal = settings.SubjectGoal;

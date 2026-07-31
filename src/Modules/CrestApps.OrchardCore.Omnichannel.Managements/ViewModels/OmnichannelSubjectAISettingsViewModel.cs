@@ -81,4 +81,23 @@ public class OmnichannelSubjectAISettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> TextToSpeechVoices { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the subject can run automated interactions. Outbound subjects
+    /// resolve their interaction type when an activity batch is loaded, so they can always be automated.
+    /// </summary>
+    [BindNever]
+    public bool CanAutomate { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the voice call automation settings apply to the subject.
+    /// </summary>
+    [BindNever]
+    public bool ShowVoiceSettings { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the SMS automation settings apply to the subject.
+    /// </summary>
+    [BindNever]
+    public bool ShowSmsSettings { get; set; }
 }

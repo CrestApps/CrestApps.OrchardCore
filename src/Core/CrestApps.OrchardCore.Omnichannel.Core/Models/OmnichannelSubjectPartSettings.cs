@@ -36,16 +36,18 @@ public sealed class OmnichannelSubjectPartSettings
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional default campaign for the subject. It is used as the pre-selected campaign
-    /// when an activity batch is loaded and may be overridden per batch. Campaigns are used for grouping and
-    /// reporting only.
+    /// Gets or sets the optional default campaign for the subject. It is applied directly to manually created
+    /// and inbound activities, and is used as the fallback when an activity batch does not choose a campaign.
+    /// Campaigns are used for grouping and reporting only.
     /// </summary>
     public string DefaultCampaignId { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether a disposition must be selected before an activity using this
     /// subject can be completed. This is the single decision-control policy that applies to both inbound and
-    /// outbound activities and is enforced by the activity disposition service.
+    /// outbound activities and is enforced by the activity disposition service. It is enabled by default
+    /// because the disposition is what drives the subject flow actions; it should only be disabled for
+    /// fire-and-forget notification subjects that have no outcome to record.
     /// </summary>
-    public bool RequireDisposition { get; set; }
+    public bool RequireDisposition { get; set; } = true;
 }
