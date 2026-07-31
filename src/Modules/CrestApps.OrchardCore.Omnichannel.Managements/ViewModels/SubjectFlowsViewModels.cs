@@ -51,11 +51,6 @@ public class SubjectFlowEntryViewModel
     public string Channel { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether a disposition is required to complete activities for the subject.
-    /// </summary>
-    public bool RequireDisposition { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether subject actions have been defined.
     /// </summary>
     public bool HasActions { get; set; }
