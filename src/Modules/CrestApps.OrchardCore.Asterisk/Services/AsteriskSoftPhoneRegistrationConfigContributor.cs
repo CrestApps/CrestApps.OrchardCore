@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
@@ -170,7 +169,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
         // A shared secret that is published in this repository authenticates nobody: anyone who can read the
         // source can mint the same relay credential. Issuing STUN-only ICE degrades connectivity on restrictive
         // networks, which is strictly better than handing every reader of the repository a working relay.
-        if (_hostEnvironment.IsProduction() && KnownDevelopmentValues.IsDevelopmentValue(settings.TurnSharedSecret, out var reason))
+        if (_hostEnvironment.IsProduction() && IsCheckedInDevelopmentValue(settings.TurnSharedSecret, out var reason))
         {
             if (_logger.IsEnabled(LogLevel.Critical))
             {
@@ -234,5 +233,40 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
         {
             return null;
         }
+    }
+
+    private static bool IsCheckedInDevelopmentValue(string value, out string reason)
+    {
+        reason = null;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var candidate = value.Trim();
+
+        // Unsubstituted template placeholders left behind when an operator forgets to supply a real value.
+        if (candidate.Length >= 3
+            && ((candidate[0] == '<' && candidate[candidate.Length - 1] == '>')
+                || (candidate[0] == '[' && candidate[candidate.Length - 1] == ']')
+                || (candidate.StartsWith("{{", StringComparison.Ordinal) && candidate.EndsWith("}}", StringComparison.Ordinal))
+                || (candidate.StartsWith("__", StringComparison.Ordinal) && candidate.EndsWith("__", StringComparison.Ordinal))))
+        {
+            reason = "the value is an unsubstituted template placeholder";
+
+            return true;
+        }
+
+        // The sample credentials checked into this repository's development assets (Aspire AppHost) all carry
+        // the 'crestapps-dev' prefix. A value published in the repository authenticates nobody.
+        if (candidate.StartsWith("crestapps-dev", StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "the value is a development credential published in this repository, so it is not secret";
+
+            return true;
+        }
+
+        return false;
     }
 }

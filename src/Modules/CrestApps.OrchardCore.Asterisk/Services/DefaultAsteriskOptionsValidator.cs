@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -80,12 +79,58 @@ public sealed class DefaultAsteriskOptionsValidator : IValidateOptions<DefaultAs
         string settingName,
         string value)
     {
-        if (!KnownDevelopmentValues.IsDevelopmentValue(value, out var reason))
+        if (!IsCheckedInDevelopmentValue(value, out var reason))
         {
             return;
         }
 
         failures.Add(
             $"'{AsteriskConstants.DefaultConfigurationSectionPath}:{settingName}' cannot be used in a production environment because {reason}.");
+    }
+
+    private static bool IsCheckedInDevelopmentValue(string value, out string reason)
+    {
+        reason = null;
+
+        // An absent value is a different failure with a different remedy, and reporting it here would tell an
+        // operator to replace a development secret they never configured.
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var candidate = value.Trim();
+
+        // Unsubstituted template placeholders left behind when an operator forgets to supply a real value.
+        if (IsUnsubstitutedPlaceholder(candidate))
+        {
+            reason = "the value is an unsubstituted template placeholder";
+
+            return true;
+        }
+
+        // The sample credentials checked into this repository's development assets (Aspire AppHost) all carry
+        // the 'crestapps-dev' prefix. A value published in the repository authenticates nobody.
+        if (candidate.StartsWith("crestapps-dev", StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "the value is a development credential published in this repository, so it is not secret";
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsUnsubstitutedPlaceholder(string candidate)
+    {
+        if (candidate.Length < 3)
+        {
+            return false;
+        }
+
+        return (candidate[0] == '<' && candidate[candidate.Length - 1] == '>')
+            || (candidate[0] == '[' && candidate[candidate.Length - 1] == ']')
+            || (candidate.StartsWith("{{", StringComparison.Ordinal) && candidate.EndsWith("}}", StringComparison.Ordinal))
+            || (candidate.StartsWith("__", StringComparison.Ordinal) && candidate.EndsWith("__", StringComparison.Ordinal));
     }
 }
