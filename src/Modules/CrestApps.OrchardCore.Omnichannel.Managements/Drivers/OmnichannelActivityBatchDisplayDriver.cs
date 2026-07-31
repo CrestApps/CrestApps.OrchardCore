@@ -235,16 +235,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             if (model.ShowAIProfile)
             {
                 model.AIProfileId = batch.AIProfileId;
-
-                var selectedProfileId = batch.AIProfileId;
-
-                if (string.IsNullOrWhiteSpace(selectedProfileId) && !string.IsNullOrWhiteSpace(batch.SubjectContentType))
-                {
-                    var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(batch.SubjectContentType);
-                    selectedProfileId = flowSettings?.ProfileId;
-                }
-
-                model.AIProfiles = await GetAIProfileOptionsAsync(selectedProfileId);
+                model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
             }
 
             model.Channels =
