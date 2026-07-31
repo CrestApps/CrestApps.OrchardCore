@@ -1,16 +1,18 @@
 /*
-** A reusable date-range picker for reports. It enhances two machine-formatted
-** date inputs (From/To) with a Bootstrap dropdown offering common presets
-** (Today, Yesterday, This Week, ... Last Year), a Custom Range editable through
-** flatpickr, and relative "Prior X" / "After Y" ranges. Selecting an option
-** writes machine-formatted values into the underlying inputs so the surrounding
-** GET form submits them unchanged.
+** A reusable date-range picker. It enhances two machine-formatted date inputs
+** (From/To) with a Bootstrap dropdown offering common presets (Today, Yesterday,
+** This Week, ... Last Year), a Custom Range editable through flatpickr, and
+** single-date "On or before" / "On or after" bounds. Selecting an option writes
+** machine-formatted values into the underlying inputs so the surrounding form
+** submits them unchanged. It is registered as the "report-date-range-picker"
+** script resource and can be used by any module, not only reports.
 **
-** Markup contract (see ReportDateRangeFilter.Edit.cshtml):
+** Markup contract:
 **   [data-date-range-picker]           root element
 **     data-week-start                  first day of week (0=Sunday .. 6=Saturday)
 **     data-date-pattern                C# short date pattern (for flatpickr)
 **     data-time-pattern                C# short time pattern (for flatpickr)
+**     data-prior-label / data-after-label / data-from-word / data-to-word  localized label words
 **     [data-drp-toggle]                dropdown toggle button
 **       [data-drp-label]               span showing the current selection
 **     input[type=radio][data-drp-range]  one per option; value is the preset key

@@ -1,8 +1,0 @@
-[
-  {
-    "inputs": [
-      "Assets/js/report-date-range-picker.js"
-    ],
-    "output": "wwwroot/scripts/report-date-range-picker.js"
-  }
-]

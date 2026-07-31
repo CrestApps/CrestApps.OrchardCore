@@ -24,8 +24,6 @@ public sealed class Startup : StartupBase
 
         services.AddDisplayDriver<ReportFilter, ReportDateRangeFilterDisplayDriver>();
 
-        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
-
         services.AddNavigationProvider<ReportsAdminMenu>();
     }
 }
