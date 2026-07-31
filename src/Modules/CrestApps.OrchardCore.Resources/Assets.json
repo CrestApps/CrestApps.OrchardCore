@@ -1,9 +1,9 @@
 [
   {
     "inputs": [
-      "Assets/js/report-date-range-picker.js"
+      "Assets/js/date-range-picker.js"
     ],
-    "output": "wwwroot/scripts/report-date-range-picker.js"
+    "output": "wwwroot/scripts/date-range-picker.js"
   },
   {
     "inputs": [

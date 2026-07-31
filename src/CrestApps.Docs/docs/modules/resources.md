@@ -37,11 +37,11 @@ The feature also registers reusable scripts that other modules can require by na
 | `list-management-ui` | – | Select-all / row-selection behavior for admin list tables. |
 | `item-selector` | – | A reusable item selector widget (script and style). |
 | `collapsible-panel` | – | Toggle behavior for collapsible admin panels. |
-| `report-date-range-picker` | `flatpickr`, `flatpickr-culture` | A reusable date-range dropdown described below. |
+| `date-range-picker` | `flatpickr`, `flatpickr-culture` | A reusable date-range dropdown described below. |
 
 ## Date range picker
 
-`report-date-range-picker` enhances two machine-formatted date inputs (a "from" and a "to") with a single Bootstrap dropdown that offers common presets (Today, Yesterday, This Week, Last Week, Last 7 Days, Last 30 Days, This Month, Last Month, This Quarter, Last Quarter, This Year, Last Year), a **Custom Range** (two Flatpickr date-time inputs), and single-date **On or before** / **On or after** bounds. The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_).
+`date-range-picker` enhances two machine-formatted date inputs (a "from" and a "to") with a single Bootstrap dropdown that offers common presets (Today, Yesterday, This Week, Last Week, Last 7 Days, Last 30 Days, This Month, Last Month, This Quarter, Last Quarter, This Year, Last Year), a **Custom Range** (two Flatpickr date-time inputs), and single-date **On or before** / **On or after** bounds. The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_).
 
 Although it was introduced for the [Reports](reports.md) module, it is a general-purpose resource and can be used anywhere. It is purely client-side: it reads and writes the two underlying inputs, so the surrounding form submits their values unchanged.
 
@@ -51,7 +51,7 @@ Although it was introduced for the [Reports](reports.md) module, it is a general
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 <script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="report-date-range-picker" at="Foot"></script>
+<script asp-name="date-range-picker" at="Foot"></script>
 ```
 
 ### Markup contract

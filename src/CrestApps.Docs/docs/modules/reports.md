@@ -45,7 +45,7 @@ Every report shares a single tenant-local **Date range** control rendered by the
 - **Prior** — a single date picker that sets only the upper bound (**on or before** the selected date), leaving the start open.
 - **After** — a single date picker that sets only the lower bound (**on or after** the selected date), leaving the end open.
 
-The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_, _On or before Jan 31, 2026_, or a preset name followed by its resolved range). Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is a reusable resource (`report-date-range-picker`) so every report presents the same date-range experience.
+The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_, _On or before Jan 31, 2026_, or a preset name followed by its resolved range). Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is a reusable resource (`date-range-picker`) so every report presents the same date-range experience.
 
 ## Extensible filters
 

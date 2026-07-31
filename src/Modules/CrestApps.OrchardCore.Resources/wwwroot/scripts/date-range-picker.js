@@ -9,8 +9,8 @@
 ** This Week, ... Last Year), a Custom Range editable through flatpickr, and
 ** single-date "On or before" / "On or after" bounds. Selecting an option writes
 ** machine-formatted values into the underlying inputs so the surrounding form
-** submits them unchanged. It is registered as the "report-date-range-picker"
-** script resource and can be used by any module, not only reports.
+** submits them unchanged. It is registered as the "date-range-picker" script
+** resource and can be used by any module, not only reports.
 **
 ** Markup contract:
 **   [data-date-range-picker]           root element
