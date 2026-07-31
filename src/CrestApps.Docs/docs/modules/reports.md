@@ -37,9 +37,13 @@ The implementation is split into three layers:
 
 Enabling the feature adds a top-level **Reports** item to the admin menu. Reports are alphabetized within consistently ordered role-based groups: **Executive**, **Operations**, **Queue & Routing**, **Agent Performance**, **Workforce & Payroll**, **Billing & Usage**, **CRM & Campaigns**, **Compliance & Audit**, **Technical & IT**, and **General**. Each entry is gated by the report's own permission, so a user only sees the reports they are allowed to run. Selecting a report opens a page with the filter form, the rendered document, and export actions for the current filter. A single enabled exporter renders as a normal button, while multiple enabled exporters render as an **Export** dropdown that can download CSV and, when the add-on is enabled, Excel (`.xlsx`).
 
+## Date range filter
+
+Every report shares a single tenant-local **Date range** control rendered by the built-in filter. Instead of two separate date inputs, it is a dropdown that offers common presets — **Today**, **Yesterday**, **This Week**, **Last Week**, **Last 7 Days**, **Last 30 Days**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, and **Last Year** — plus a **Custom Range** editable with [Flatpickr](https://flatpickr.js.org/), and relative **Prior** (ends today, looking back _N_ days/weeks/months) and **After** (starts today, looking forward _N_ days/weeks/months) options. Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is a reusable resource (`report-date-range-picker`) so every report presents the same date-range experience.
+
 ## Extensible filters
 
-Every report automatically gets a tenant-local from/to date and time range that is converted to UTC before execution. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
+Every report automatically gets the shared date range described above, converted to UTC before execution. To add a report-specific filter (for example a queue, campaign, or channel selector), register a display driver for `ReportFilter` and gate it to your report by checking `filter.ReportName`:
 
 ```csharp
 public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>

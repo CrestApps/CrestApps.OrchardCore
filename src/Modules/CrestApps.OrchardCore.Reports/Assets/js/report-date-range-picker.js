@@ -1,0 +1,383 @@
+/*
+** A reusable date-range picker for reports. It enhances two machine-formatted
+** date inputs (From/To) with a Bootstrap dropdown offering common presets
+** (Today, Yesterday, This Week, ... Last Year), a Custom Range editable through
+** flatpickr, and relative "Prior X" / "After Y" ranges. Selecting an option
+** writes machine-formatted values into the underlying inputs so the surrounding
+** GET form submits them unchanged.
+**
+** Markup contract (see ReportDateRangeFilter.Edit.cshtml):
+**   [data-date-range-picker]           root element
+**     data-week-start                  first day of week (0=Sunday .. 6=Saturday)
+**     data-date-pattern                C# short date pattern (for flatpickr)
+**     data-time-pattern                C# short time pattern (for flatpickr)
+**     [data-drp-toggle]                dropdown toggle button
+**       [data-drp-label]               span showing the current selection
+**     input[type=radio][data-drp-range]  one per option; value is the preset key
+**     [data-drp-panel="custom"]        panel holding the custom inputs
+**       [data-drp-from] / [data-drp-to]  the real (asp-for) submit inputs
+**     [data-drp-panel="prior"]         panel with [data-drp-prior-value]/[data-drp-prior-unit]
+**     [data-drp-panel="after"]         panel with [data-drp-after-value]/[data-drp-after-unit]
+*/
+
+(function () {
+    var selector = '[data-date-range-picker]';
+
+    function pad(value) {
+        return value.toString().padStart(2, '0');
+    }
+
+    function startOfDay(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+    }
+
+    function endOfDay(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 0, 0);
+    }
+
+    function addDays(date, days) {
+        var result = new Date(date.getTime());
+        result.setDate(result.getDate() + days);
+
+        return result;
+    }
+
+    function addMonths(date, months) {
+        var year = date.getFullYear();
+        var month = date.getMonth() + months;
+        var targetYear = year + Math.floor(month / 12);
+        var targetMonth = ((month % 12) + 12) % 12;
+        var daysInTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+        var day = Math.min(date.getDate(), daysInTarget);
+
+        return new Date(targetYear, targetMonth, day, date.getHours(), date.getMinutes(), 0, 0);
+    }
+
+    function startOfWeek(date, weekStart) {
+        var diff = (date.getDay() - weekStart + 7) % 7;
+
+        return startOfDay(addDays(date, -diff));
+    }
+
+    function startOfMonth(date) {
+        return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+    }
+
+    function endOfMonth(date) {
+        return endOfDay(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+    }
+
+    function startOfQuarter(date) {
+        var quarterMonth = Math.floor(date.getMonth() / 3) * 3;
+
+        return new Date(date.getFullYear(), quarterMonth, 1, 0, 0, 0, 0);
+    }
+
+    function endOfQuarter(date) {
+        var quarterMonth = Math.floor(date.getMonth() / 3) * 3;
+
+        return endOfDay(new Date(date.getFullYear(), quarterMonth + 3, 0));
+    }
+
+    // Resolve a preset key to a { from, to } pair of Date objects, or null.
+    function computePreset(key, weekStart) {
+        var now = new Date();
+        var today = startOfDay(now);
+
+        switch (key) {
+            case 'today':
+                return { from: today, to: endOfDay(now) };
+            case 'yesterday':
+                var yesterday = addDays(today, -1);
+                return { from: yesterday, to: endOfDay(yesterday) };
+            case 'thisWeek':
+                var weekStartDate = startOfWeek(now, weekStart);
+                return { from: weekStartDate, to: endOfDay(addDays(weekStartDate, 6)) };
+            case 'lastWeek':
+                var lastWeekStart = addDays(startOfWeek(now, weekStart), -7);
+                return { from: lastWeekStart, to: endOfDay(addDays(lastWeekStart, 6)) };
+            case 'last7':
+                return { from: startOfDay(addDays(now, -6)), to: endOfDay(now) };
+            case 'last30':
+                return { from: startOfDay(addDays(now, -29)), to: endOfDay(now) };
+            case 'thisMonth':
+                return { from: startOfMonth(now), to: endOfMonth(now) };
+            case 'lastMonth':
+                var lastMonth = addMonths(now, -1);
+                return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
+            case 'thisQuarter':
+                return { from: startOfQuarter(now), to: endOfQuarter(now) };
+            case 'lastQuarter':
+                var lastQuarter = addMonths(now, -3);
+                return { from: startOfQuarter(lastQuarter), to: endOfQuarter(lastQuarter) };
+            case 'thisYear':
+                return { from: new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0), to: endOfDay(new Date(now.getFullYear(), 11, 31)) };
+            case 'lastYear':
+                var lastYear = now.getFullYear() - 1;
+                return { from: new Date(lastYear, 0, 1, 0, 0, 0, 0), to: endOfDay(new Date(lastYear, 11, 31)) };
+            default:
+                return null;
+        }
+    }
+
+    function computeRelative(direction, amount, unit) {
+        if (!isFinite(amount) || amount <= 0) {
+            return null;
+        }
+
+        var now = new Date();
+        var anchor = direction === 'after' ? startOfDay(now) : endOfDay(now);
+        var target;
+
+        if (unit === 'week') {
+            target = addDays(now, direction === 'after' ? amount * 7 : -amount * 7);
+        } else if (unit === 'month') {
+            target = addMonths(now, direction === 'after' ? amount : -amount);
+        } else {
+            target = addDays(now, direction === 'after' ? amount : -amount);
+        }
+
+        return direction === 'after'
+            ? { from: anchor, to: endOfDay(target) }
+            : { from: startOfDay(target), to: anchor };
+    }
+
+    function formatMachine(date) {
+        return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+    }
+
+    function formatDisplay(date) {
+        try {
+            return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+        } catch (e) {
+            return formatMachine(date);
+        }
+    }
+
+    function formatRangeLabel(from, to) {
+        if (!from && !to) {
+            return '';
+        }
+
+        if (from && to) {
+            var fromLabel = formatDisplay(from);
+            var toLabel = formatDisplay(to);
+
+            return fromLabel === toLabel ? fromLabel : fromLabel + ' \u2013 ' + toLabel;
+        }
+
+        return from ? formatDisplay(from) : formatDisplay(to);
+    }
+
+    function initializePicker(root) {
+        if (root.dataset.dateRangePickerInitialized === 'true') {
+            return;
+        }
+
+        root.dataset.dateRangePickerInitialized = 'true';
+
+        var weekStart = parseInt(root.dataset.weekStart, 10);
+
+        if (isNaN(weekStart)) {
+            weekStart = 1;
+        }
+
+        var toggle = root.querySelector('[data-drp-toggle]');
+        var label = root.querySelector('[data-drp-label]');
+        var radios = Array.prototype.slice.call(root.querySelectorAll('[data-drp-range]'));
+        var fromInput = root.querySelector('[data-drp-from]');
+        var toInput = root.querySelector('[data-drp-to]');
+
+        if (!fromInput || !toInput || !label) {
+            return;
+        }
+
+        var panels = {
+            custom: root.querySelector('[data-drp-panel="custom"]'),
+            prior: root.querySelector('[data-drp-panel="prior"]'),
+            after: root.querySelector('[data-drp-panel="after"]')
+        };
+
+        var priorValue = root.querySelector('[data-drp-prior-value]');
+        var priorUnit = root.querySelector('[data-drp-prior-unit]');
+        var afterValue = root.querySelector('[data-drp-after-value]');
+        var afterUnit = root.querySelector('[data-drp-after-unit]');
+
+        var fromPicker = null;
+        var toPicker = null;
+
+        if (typeof flatpickr === 'function') {
+            var config = typeof flatpickrCulture !== 'undefined'
+                ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control flatpickr-input' })
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
+
+            fromPicker = flatpickr(fromInput, Object.assign({}, config, { onChange: onCustomChange }));
+            toPicker = flatpickr(toInput, Object.assign({}, config, { onChange: onCustomChange }));
+        }
+
+        function setInputValue(input, picker, date) {
+            if (picker) {
+                picker.setDate(date, false);
+            } else {
+                input.value = date ? formatMachine(date) : '';
+            }
+        }
+
+        function readDate(input, picker) {
+            if (picker && picker.selectedDates.length) {
+                return picker.selectedDates[0];
+            }
+
+            return input.value ? new Date(input.value) : null;
+        }
+
+        function updateLabelFromInputs(fallbackText) {
+            var from = readDate(fromInput, fromPicker);
+            var to = readDate(toInput, toPicker);
+            var rangeText = formatRangeLabel(from, to);
+
+            label.textContent = rangeText || fallbackText || label.dataset.placeholder || '';
+        }
+
+        function applyRange(range) {
+            if (!range) {
+                return;
+            }
+
+            setInputValue(fromInput, fromPicker, range.from);
+            setInputValue(toInput, toPicker, range.to);
+        }
+
+        function showPanel(key) {
+            Object.keys(panels).forEach(function (name) {
+                if (panels[name]) {
+                    panels[name].classList.toggle('d-none', name !== key);
+                }
+            });
+        }
+
+        function closeMenu() {
+            if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+                window.bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+            }
+        }
+
+        function onCustomChange() {
+            var selected = root.querySelector('[data-drp-range]:checked');
+
+            if (selected && selected.value === 'custom') {
+                updateLabelFromInputs();
+            }
+        }
+
+        function labelForRadio(radio) {
+            var wrapping = radio.closest('label');
+
+            if (wrapping) {
+                return wrapping.textContent.trim();
+            }
+
+            var associated = radio.id ? root.querySelector('label[for="' + radio.id + '"]') : null;
+
+            return associated ? associated.textContent.trim() : '';
+        }
+
+        function applyRelative(direction) {
+            var amountInput = direction === 'after' ? afterValue : priorValue;
+            var unitSelect = direction === 'after' ? afterUnit : priorUnit;
+            var amount = amountInput ? parseInt(amountInput.value, 10) : NaN;
+            var unit = unitSelect ? unitSelect.value : 'day';
+            var range = computeRelative(direction, amount, unit);
+
+            if (range) {
+                applyRange(range);
+                updateLabelFromInputs();
+            }
+        }
+
+        function onRadioChange(radio) {
+            var key = radio.value;
+
+            if (key === 'custom') {
+                showPanel('custom');
+                updateLabelFromInputs(labelForRadio(radio));
+
+                return;
+            }
+
+            if (key === 'prior' || key === 'after') {
+                showPanel(key);
+                applyRelative(key);
+
+                return;
+            }
+
+            showPanel(null);
+            applyRange(computePreset(key, weekStart));
+            label.textContent = labelForRadio(radio);
+            closeMenu();
+        }
+
+        radios.forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                onRadioChange(radio);
+            });
+        });
+
+        // The radios exist only to drive the picker UI; keep them out of the
+        // submitted query string by disabling them right before the form posts.
+        var form = root.closest('form');
+
+        if (form) {
+            form.addEventListener('submit', function () {
+                radios.forEach(function (radio) {
+                    radio.disabled = true;
+                });
+            });
+        }
+
+        [priorValue, priorUnit].forEach(function (element) {
+            if (element) {
+                element.addEventListener('input', function () { applyRelative('prior'); });
+                element.addEventListener('change', function () { applyRelative('prior'); });
+            }
+        });
+
+        [afterValue, afterUnit].forEach(function (element) {
+            if (element) {
+                element.addEventListener('input', function () { applyRelative('after'); });
+                element.addEventListener('change', function () { applyRelative('after'); });
+            }
+        });
+
+        // Reflect any pre-populated values: default to the Custom option so the
+        // existing range is visible and editable.
+        var hasInitialValue = !!(fromInput.value || toInput.value);
+
+        if (hasInitialValue) {
+            var customRadio = root.querySelector('[data-drp-range][value="custom"]');
+
+            if (customRadio) {
+                customRadio.checked = true;
+            }
+
+            showPanel('custom');
+            updateLabelFromInputs();
+        } else {
+            updateLabelFromInputs();
+        }
+    }
+
+    function initialize() {
+        document.querySelectorAll(selector).forEach(initializePicker);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+
+        return;
+    }
+
+    initialize();
+})();
