@@ -115,7 +115,6 @@ public sealed class SubjectFlowsController : Controller
                 Direction = flowSettings?.Direction ?? SubjectDirection.Outbound,
                 InteractionType = flowSettings?.InteractionType ?? ActivityInteractionType.Manual,
                 Channel = flowSettings?.Channel,
-                RequireDisposition = flowSettings?.RequireDisposition ?? false,
                 HasActions = actionsPerSubject.TryGetValue(subjectType.Name, out var count) && count > 0,
             });
         }

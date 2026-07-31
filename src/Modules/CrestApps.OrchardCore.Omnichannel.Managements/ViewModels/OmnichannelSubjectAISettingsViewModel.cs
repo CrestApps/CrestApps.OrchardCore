@@ -83,8 +83,9 @@ public class OmnichannelSubjectAISettingsViewModel
     public IEnumerable<SelectListItem> TextToSpeechVoices { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the subject can run automated interactions. Outbound subjects
-    /// resolve their interaction type when an activity batch is loaded, so they can always be automated.
+    /// Gets or sets a value indicating whether the subject can run automated interactions. Only an inbound
+    /// subject configured with an automated interaction type shows the AI configuration; outbound automation
+    /// is configured when the inventory is loaded.
     /// </summary>
     [BindNever]
     public bool CanAutomate { get; set; }

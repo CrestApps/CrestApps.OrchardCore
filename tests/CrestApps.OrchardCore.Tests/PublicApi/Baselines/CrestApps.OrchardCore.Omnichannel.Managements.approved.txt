@@ -1173,7 +1173,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string DisplayName { get; set; }
         public bool HasActions { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
-        public bool RequireDisposition { get; set; }
     }
     public class SubjectFlowsIndexViewModel
     {

@@ -55,19 +55,18 @@ else
                                asp-route-subjectContentType="@subject.ContentTypeName"
                                class="fw-semibold text-break">@subject.DisplayName</a>
                             <span class="text-muted ms-1">(@subject.ContentTypeName)</span>
-                            <span class="badge text-bg-light border ms-2">@(subject.Direction == SubjectDirection.Inbound ? T["Inbound"] : T["Outbound"])</span>
-                            @if (subject.Direction == SubjectDirection.Inbound && !string.IsNullOrEmpty(subject.Channel))
+                            <span class="badge ta-badge font-weight-normal ms-2">@(subject.Direction == SubjectDirection.Inbound ? T["Inbound"] : T["Outbound"])</span>
+                            @if (subject.InteractionType == ActivityInteractionType.Automated)
                             {
-                                <span class="badge text-bg-light border ms-2">@subject.Channel</span>
-                                <span class="badge text-bg-light border ms-1">@subject.InteractionType.ToString()</span>
-                            }
-                            @if (subject.RequireDisposition)
-                            {
-                                <span class="badge text-bg-light border ms-2">@T["Disposition required"]</span>
+                                <span class="badge ta-badge font-weight-normal ms-1">@T["Automated"]</span>
+                                @if (!string.IsNullOrEmpty(subject.Channel))
+                                {
+                                    <span class="badge ta-badge font-weight-normal ms-1">@subject.Channel</span>
+                                }
                             }
                             @if (!subject.HasActions)
                             {
-                                <span class="badge text-bg-danger ms-2">@T["Missing flow"]</span>
+                                <span class="badge ta-badge bg-danger-subtle font-weight-normal ms-1">@T["Missing flow"]</span>
                             }
                         </div>
                         <div class="d-flex align-items-center gap-2">

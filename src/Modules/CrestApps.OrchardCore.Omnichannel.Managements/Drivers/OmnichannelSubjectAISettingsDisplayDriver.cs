@@ -45,12 +45,12 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
             var baseSettings = contentTypePartDefinition.GetSettings<OmnichannelSubjectPartSettings>();
             var isInbound = baseSettings.Direction == SubjectDirection.Inbound;
 
-            // Outbound subjects resolve their interaction type and channel when an activity batch is loaded, so
-            // every AI default must stay configurable for them. Inbound subjects declare both up front, which
-            // lets the editor hide the settings that can never apply.
-            model.CanAutomate = !isInbound || baseSettings.InteractionType == ActivityInteractionType.Automated;
-            model.ShowVoiceSettings = model.CanAutomate && (!isInbound || string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase));
-            model.ShowSmsSettings = model.CanAutomate && (!isInbound || string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase));
+            // AI configuration only applies to an inbound subject that runs an automated interaction. Outbound
+            // subjects are configured for automation when their inventory is loaded using the Automatic source,
+            // so the AI defaults are chosen there rather than on the subject type.
+            model.CanAutomate = isInbound && baseSettings.InteractionType == ActivityInteractionType.Automated;
+            model.ShowVoiceSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+            model.ShowSmsSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
 
             model.ProfileId = settings.ProfileId;
             model.SubjectGoal = settings.SubjectGoal;

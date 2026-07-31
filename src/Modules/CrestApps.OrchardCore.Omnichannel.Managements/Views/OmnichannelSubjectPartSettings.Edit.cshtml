@@ -49,8 +49,8 @@
     <div class="form-check">
         <input asp-for="RequireDisposition" class="form-check-input" />
         <label asp-for="RequireDisposition" class="form-check-label">@T["Require a disposition"]</label>
+        <span class="hint dashed">@T["Recommended. An activity using this subject cannot be completed until a disposition is selected, and that disposition is what triggers the subject flow actions such as retrying, creating a follow-up activity, or updating communication preferences. Clear this only for fire-and-forget notification subjects, such as a one-way SMS alert, where the contact never responds and there is no outcome to record."]</span>
     </div>
-    <span class="hint dashed">@T["Recommended. An activity using this subject cannot be completed until a disposition is selected, and that disposition is what triggers the subject flow actions such as retrying, creating a follow-up activity, or updating communication preferences. Clear this only for fire-and-forget notification subjects, such as a one-way SMS alert, where the contact never responds and there is no outcome to record."]</span>
 </div>
 
 <script at="Foot">
@@ -75,15 +75,15 @@
         const isInboundAutomated = isInbound && interactionTypeSelect && interactionTypeSelect.value === '@nameof(ActivityInteractionType.Automated)';
         const channel = isInbound && channelSelect ? channelSelect.value : '';
 
-        // Outbound subjects resolve their interaction type and channel when an activity batch is loaded, so
-        // their AI defaults stay available. Inbound subjects declare both, which lets us hide what cannot apply.
-        const canAutomate = !isInbound || isInboundAutomated;
+        // AI configuration only applies to an inbound subject running an automated interaction. Outbound AI is
+        // configured when the inventory is loaded, so the section stays hidden for outbound subjects.
+        const canAutomate = isInboundAutomated;
 
         toggle('.subject-inbound-only', isInbound);
         toggle('.subject-inbound-automated-only', isInboundAutomated);
         toggle('.subject-ai-settings', canAutomate);
-        toggle('.subject-ai-voice-only', canAutomate && (!isInbound || channel === '@OmnichannelConstants.Channels.Phone'));
-        toggle('.subject-ai-sms-only', canAutomate && (!isInbound || channel === '@OmnichannelConstants.Channels.Sms'));
+        toggle('.subject-ai-voice-only', canAutomate && channel === '@OmnichannelConstants.Channels.Phone');
+        toggle('.subject-ai-sms-only', canAutomate && channel === '@OmnichannelConstants.Channels.Sms');
     };
 
     [directionSelect, interactionTypeSelect, channelSelect].forEach((element) => {
