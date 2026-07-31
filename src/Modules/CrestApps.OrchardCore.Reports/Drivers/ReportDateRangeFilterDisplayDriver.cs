@@ -34,6 +34,7 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
             model.To = filter.ToUtc.HasValue
                 ? (await _localClock.ConvertToLocalAsync(filter.ToUtc.Value)).DateTime
                 : null;
+            model.Range = filter.DateRangeKey;
         }).Location("Content:1");
     }
 
@@ -50,6 +51,7 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
         filter.ToUtc = model.To.HasValue
             ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(model.To.Value, DateTimeKind.Unspecified))
             : null;
+        filter.DateRangeKey = model.Range;
 
         return Edit(filter, context);
     }

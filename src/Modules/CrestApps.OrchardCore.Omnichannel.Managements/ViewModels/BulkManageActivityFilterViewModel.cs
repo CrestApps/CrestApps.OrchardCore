@@ -70,6 +70,11 @@ public class BulkManageActivityFilterViewModel
     public DateTime? ScheduledTo { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
+
+    /// <summary>
     /// Gets or sets the created from date filter.
     /// </summary>
     public DateTime? CreatedFrom { get; set; }
@@ -78,6 +83,11 @@ public class BulkManageActivityFilterViewModel
     /// Gets or sets the created to date filter.
     /// </summary>
     public DateTime? CreatedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected created date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string CreatedRange { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency level filter.
@@ -113,6 +123,11 @@ public class BulkManageActivityFilterViewModel
     /// Gets or sets the latest Do Not Call date to filter by.
     /// </summary>
     public DateTime? DoNotCallTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected Do Not Call date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string DoNotCallRange { get; set; }
 
     /// <summary>
     /// Gets or sets the available contact published options.

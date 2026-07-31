@@ -13,9 +13,11 @@
 **     data-week-start                  first day of week (0=Sunday .. 6=Saturday)
 **     data-date-pattern                C# short date pattern (for flatpickr)
 **     data-time-pattern                C# short time pattern (for flatpickr)
+**     data-drp-initial                 previously selected preset key to restore on load
 **     data-prior-label / data-after-label / data-from-word / data-to-word  localized label words
 **     [data-drp-toggle]                dropdown toggle button
 **       [data-drp-label]               span showing the current selection
+**     [data-drp-selected]              optional hidden input; receives the selected preset key so it round-trips with the form
 **     input[type=radio][data-drp-range]  one per option; value is the preset key
 **     [data-drp-panel="custom"]        panel holding the custom inputs
 **       [data-drp-from] / [data-drp-to]  the real (asp-for) submit inputs
@@ -162,6 +164,7 @@
         var radios = Array.prototype.slice.call(root.querySelectorAll('[data-drp-range]'));
         var fromInput = root.querySelector('[data-drp-from]');
         var toInput = root.querySelector('[data-drp-to]');
+        var selectedInput = root.querySelector('[data-drp-selected]');
 
         if (!fromInput || !toInput || !label) {
             return;
@@ -270,6 +273,18 @@
             });
         }
 
+        // Persist the chosen preset key into the hidden input so the surrounding
+        // form posts it and the server can re-select the same option on reload.
+        function setSelectedKey(key) {
+            if (selectedInput) {
+                selectedInput.value = key || '';
+            }
+        }
+
+        function radioForKey(key) {
+            return root.querySelector('[data-drp-range][value="' + key + '"]');
+        }
+
         function closeMenu() {
             if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
                 window.bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
@@ -326,6 +341,8 @@
 
         function onRadioChange(radio) {
             var key = radio.value;
+
+            setSelectedKey(key);
 
             if (key === 'custom') {
                 showPanel('custom');
@@ -389,17 +406,81 @@
             afterDateInput.addEventListener('change', applyAfter);
         }
 
-        // Reflect any pre-populated values: default to the Custom option so the
-        // existing range is visible and editable.
+        // Restore the previously selected option. Prefer the persisted preset key
+        // (posted through the hidden input) so a reload keeps the same choice; fall
+        // back to the Custom option when only raw from/to values are present.
+        var initialKey = (root.dataset.drpInitial || '').trim();
         var hasInitialValue = !!(fromInput.value || toInput.value);
 
-        if (hasInitialValue) {
-            var customRadio = root.querySelector('[data-drp-range][value="custom"]');
+        function selectInitialPreset(key) {
+            var radio = radioForKey(key);
+
+            if (!radio) {
+                return false;
+            }
+
+            radio.checked = true;
+            setSelectedKey(key);
+
+            if (key === 'custom') {
+                showPanel('custom');
+                updateLabelFromInputs();
+
+                return true;
+            }
+
+            if (key === 'prior') {
+                showPanel('prior');
+
+                if (priorPicker) {
+                    priorPicker.setDate(toInput.value || null, false);
+                } else if (priorDateInput) {
+                    priorDateInput.value = toInput.value || '';
+                }
+
+                updateLabelFromInputs();
+
+                return true;
+            }
+
+            if (key === 'after') {
+                showPanel('after');
+
+                if (afterPicker) {
+                    afterPicker.setDate(fromInput.value || null, false);
+                } else if (afterDateInput) {
+                    afterDateInput.value = fromInput.value || '';
+                }
+
+                updateLabelFromInputs();
+
+                return true;
+            }
+
+            // A named preset: keep the stored range as filtered instead of
+            // recomputing it, but show the preset name alongside the range text.
+            showPanel(null);
+
+            var from = readDate(fromInput, fromPicker);
+            var to = readDate(toInput, toPicker);
+            var rangeText = describeRange(from, to);
+            var presetName = labelForRadio(radio);
+
+            label.textContent = rangeText ? presetName + ' \u2014 ' + rangeText : presetName;
+
+            return true;
+        }
+
+        if (initialKey && selectInitialPreset(initialKey)) {
+            // Restored from the persisted key.
+        } else if (hasInitialValue) {
+            var customRadio = radioForKey('custom');
 
             if (customRadio) {
                 customRadio.checked = true;
             }
 
+            setSelectedKey('custom');
             showPanel('custom');
             updateLabelFromInputs();
         } else {

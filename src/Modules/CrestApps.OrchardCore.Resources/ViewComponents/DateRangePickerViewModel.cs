@@ -28,6 +28,10 @@ internal sealed class DateRangePickerViewModel
 
     public string ToValue { get; set; }
 
+    public string SelectedRangeName { get; set; }
+
+    public string SelectedRange { get; set; }
+
     public string DatePattern { get; set; }
 
     public string TimePattern { get; set; }

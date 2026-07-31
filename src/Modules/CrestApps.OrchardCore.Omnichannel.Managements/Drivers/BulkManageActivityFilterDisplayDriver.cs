@@ -83,14 +83,17 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.UrgencyLevel = filter.UrgencyLevel?.ToString();
             model.ScheduledFrom = filter.ScheduledFrom;
             model.ScheduledTo = filter.ScheduledTo;
+            model.ScheduledRange = filter.ScheduledRange;
             model.CreatedFrom = filter.CreatedFrom;
             model.CreatedTo = filter.CreatedTo;
+            model.CreatedRange = filter.CreatedRange;
             model.Limit = filter.Limit;
             model.PhoneNumber = filter.PhoneNumber;
             model.PhoneNumberMatchType = filter.PhoneNumberMatchType;
             model.TimeZoneIds = filter.TimeZoneIds ?? [];
             model.DoNotCallFrom = filter.DoNotCallFrom;
             model.DoNotCallTo = filter.DoNotCallTo;
+            model.DoNotCallRange = filter.DoNotCallRange;
 
             model.ContactPublishedOptions =
             [
@@ -211,14 +214,17 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.UrgencyLevel = null;
         filter.ScheduledFrom = model.ScheduledFrom;
         filter.ScheduledTo = model.ScheduledTo;
+        filter.ScheduledRange = model.ScheduledRange;
         filter.CreatedFrom = model.CreatedFrom;
         filter.CreatedTo = model.CreatedTo;
+        filter.CreatedRange = model.CreatedRange;
         filter.Limit = model.Limit;
         filter.PhoneNumber = model.PhoneNumber?.Trim();
         filter.PhoneNumberMatchType = model.PhoneNumberMatchType;
         filter.TimeZoneIds = model.TimeZoneIds;
         filter.DoNotCallFrom = model.DoNotCallFrom;
         filter.DoNotCallTo = model.DoNotCallTo;
+        filter.DoNotCallRange = model.DoNotCallRange;
 
         if (!string.IsNullOrWhiteSpace(filter.PhoneNumber) &&
             !PhoneNumberSearchTerm.TryParse(filter.PhoneNumber, out _))
@@ -313,6 +319,11 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
+        if (!string.IsNullOrEmpty(filter.ScheduledRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledRange", filter.ScheduledRange);
+        }
+
         if (filter.CreatedFrom.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".CreatedFrom", filter.CreatedFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
@@ -321,6 +332,11 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         if (filter.CreatedTo.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".CreatedTo", filter.CreatedTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.CreatedRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".CreatedRange", filter.CreatedRange);
         }
 
         if (filter.AssignedToUserIds is { Length: > 0 })
@@ -358,6 +374,11 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         if (filter.DoNotCallTo.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.DoNotCallRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallRange", filter.DoNotCallRange);
         }
 
         return Edit(filter, context);

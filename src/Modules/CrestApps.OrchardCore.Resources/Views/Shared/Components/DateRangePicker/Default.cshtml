@@ -5,7 +5,11 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <script asp-name="date-range-picker" at="Foot"></script>
 
-<div class="@Model.WrapperCssClass" data-date-range-picker data-week-start="@Model.WeekStart" data-date-pattern="@Model.DatePattern" data-time-pattern="@Model.TimePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]">
+<div class="@Model.WrapperCssClass" data-date-range-picker data-week-start="@Model.WeekStart" data-date-pattern="@Model.DatePattern" data-time-pattern="@Model.TimePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]" data-drp-initial="@Model.SelectedRange">
+    @if (!string.IsNullOrEmpty(Model.SelectedRangeName))
+    {
+        <input type="hidden" name="@Model.SelectedRangeName" value="@Model.SelectedRange" data-drp-selected />
+    }
     @if (!string.IsNullOrEmpty(Model.Label))
     {
         <label class="@Model.LabelCssClass">@Model.Label</label>

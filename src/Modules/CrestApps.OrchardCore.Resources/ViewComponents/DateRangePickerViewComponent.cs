@@ -20,6 +20,8 @@ public sealed class DateRangePickerViewComponent : ViewComponent
     /// <param name="toId">The HTML identifier for the upper-bound input. Defaults to a value derived from <paramref name="toName"/>.</param>
     /// <param name="from">The initial lower-bound value, if any.</param>
     /// <param name="to">The initial upper-bound value, if any.</param>
+    /// <param name="selectedRangeName">The optional form field name used to persist the selected preset key (for example <c>today</c> or <c>custom</c>) so the picker restores the same option after the form is submitted. When omitted the picker falls back to the Custom option whenever initial values are present.</param>
+    /// <param name="selectedRange">The initial selected preset key, if any.</param>
     /// <param name="label">The optional label rendered above the picker.</param>
     /// <param name="labelCssClass">The CSS classes applied to the label. Defaults to <c>form-label</c>.</param>
     /// <param name="placeholder">The placeholder shown on the toggle when no range is selected.</param>
@@ -33,6 +35,8 @@ public sealed class DateRangePickerViewComponent : ViewComponent
         string toId = null,
         DateTime? from = null,
         DateTime? to = null,
+        string selectedRangeName = null,
+        string selectedRange = null,
         string label = null,
         string labelCssClass = null,
         string placeholder = null,
@@ -60,6 +64,8 @@ public sealed class DateRangePickerViewComponent : ViewComponent
             ToId = string.IsNullOrEmpty(toId) ? DeriveId(toName) : toId,
             FromValue = from?.ToString(MachineFormat, CultureInfo.InvariantCulture),
             ToValue = to?.ToString(MachineFormat, CultureInfo.InvariantCulture),
+            SelectedRangeName = selectedRangeName,
+            SelectedRange = selectedRange,
             DatePattern = culture.DateTimeFormat.ShortDatePattern,
             TimePattern = culture.DateTimeFormat.ShortTimePattern,
             WeekStart = (int)culture.DateTimeFormat.FirstDayOfWeek,

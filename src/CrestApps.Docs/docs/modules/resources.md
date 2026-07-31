@@ -58,6 +58,8 @@ The Resources feature ships a `DateRangePicker` view component that renders the 
     toId = Html.IdFor(m => m.To),
     from = Model.From,
     to = Model.To,
+    selectedRangeName = Html.NameFor(m => m.Range),
+    selectedRange = Model.Range,
     label = T["Date range"].Value,
 })
 ```
@@ -67,6 +69,8 @@ The Resources feature ships a `DateRangePicker` view component that renders the 
 | `fromName` / `toName` | **Required.** The form field names posted for the lower and upper bounds. |
 | `fromId` / `toId` | Optional HTML ids. Default to values derived from the field names. |
 | `from` / `to` | Optional `DateTime?` initial values. |
+| `selectedRangeName` | Optional form field name used to persist the selected preset key (for example `last30` or `custom`). Bind it to a `string` property so the picker restores the same option after the form is submitted; when omitted the picker falls back to the Custom option whenever initial values are present. |
+| `selectedRange` | Optional initial selected preset key (the current value of the `selectedRangeName` field). |
 | `label` | Optional label rendered above the control. |
 | `labelCssClass` | Optional CSS classes for the label element (defaults to `form-label`). Use `form-label form-label-sm mb-1` for dense filter forms. |
 | `placeholder` | Optional toggle placeholder shown when nothing is selected (defaults to _Select range_). |
@@ -74,6 +78,10 @@ The Resources feature ships a `DateRangePicker` view component that renders the 
 | `toggleCssClass` | Optional CSS classes for the dropdown toggle button (defaults to `form-select`). Use `form-select form-select-sm` for dense filter forms. |
 
 The bound fields should be `DateTime?` so the machine format (`yyyy-MM-ddTHH:mm`) round-trips through model binding.
+
+### Persisting the selected option
+
+The picker enhances two raw from/to date inputs, so on its own it cannot tell whether a reloaded range came from a preset (for example _Last 30 Days_) or a hand-picked custom range — it would default to **Custom Range** every time the page reloads. To keep the originally chosen option selected, bind `selectedRangeName` to a `string` property and echo it back through `selectedRange`. The picker writes the current preset key into a hidden input on every change, the form submits it alongside the dates, and the option is restored on reload. For paginated list filters, also add the key to your driver's route values (next to the from/to values) so it survives page navigation. Named presets keep the exact stored range that was filtered — they are **not** recomputed on reload — while the label still shows the preset name.
 
 ### Requiring the resource manually
 
@@ -92,9 +100,10 @@ The script auto-initializes every element with a `data-date-range-picker` attrib
 
 | Selector | Purpose |
 | --- | --- |
-| `[data-date-range-picker]` | Root element. Reads `data-week-start` (0=Sunday .. 6=Saturday), `data-date-pattern`, `data-time-pattern`, and the localized `data-prior-label`, `data-after-label`, `data-from-word`, `data-to-word` words. |
+| `[data-date-range-picker]` | Root element. Reads `data-week-start` (0=Sunday .. 6=Saturday), `data-date-pattern`, `data-time-pattern`, the previously selected preset key `data-drp-initial`, and the localized `data-prior-label`, `data-after-label`, `data-from-word`, `data-to-word` words. |
 | `[data-drp-toggle]` | The dropdown toggle button. |
 | `[data-drp-label]` | A child of the toggle; its text is replaced with the current selection. Its `data-placeholder` is shown when nothing is selected. |
+| `[data-drp-selected]` | Optional hidden input; the script writes the selected preset key into it so it round-trips with the form. |
 | `input[type=radio][data-drp-range]` | One radio per option; the `value` is the preset key (`today`, `yesterday`, `last7`, `last30`, `last90`, `thisWeek`, `lastWeek`, `thisMonth`, `lastMonth`, `last3Months`, `last6Months`, `last12Months`, `thisQuarter`, `lastQuarter`, `thisYear`, `lastYear`, `custom`, `prior`, `after`). |
 | `[data-drp-panel="custom"]` | Panel holding the custom inputs `[data-drp-from]` and `[data-drp-to]` — the real submit inputs. |
 | `[data-drp-panel="prior"]` | Panel with a single `[data-drp-prior-date]` date-time input; choosing a value sets only the **to** input (on or before). |

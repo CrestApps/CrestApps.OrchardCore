@@ -74,6 +74,11 @@ public sealed class BulkManageActivityFilter : Entity
     public DateTime? ScheduledTo { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
+
+    /// <summary>
     /// Gets or sets the earliest created date to filter by.
     /// </summary>
     public DateTime? CreatedFrom { get; set; }
@@ -82,6 +87,11 @@ public sealed class BulkManageActivityFilter : Entity
     /// Gets or sets the latest created date to filter by.
     /// </summary>
     public DateTime? CreatedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected created date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string CreatedRange { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency level to filter by.
@@ -121,6 +131,11 @@ public sealed class BulkManageActivityFilter : Entity
     /// Matches contacts whose Do Not Call date is on or before this value.
     /// </summary>
     public DateTime? DoNotCallTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected Do Not Call date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string DoNotCallRange { get; set; }
 
     /// <summary>
     /// Gets or sets the route values for preserving filter state during pagination.

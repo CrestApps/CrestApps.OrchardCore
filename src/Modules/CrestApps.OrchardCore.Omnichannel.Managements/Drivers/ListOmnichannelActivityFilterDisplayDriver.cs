@@ -54,6 +54,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.TimeZoneId = NormalizeTimeZoneId(filter.TimeZoneId);
             model.ScheduledFrom = filter.ScheduledFrom;
             model.ScheduledTo = filter.ScheduledTo;
+            model.ScheduledRange = filter.ScheduledRange;
 
             model.UrgencyLevels =
             [
@@ -121,6 +122,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.AttemptFilter = model.AttemptFilter;
         filter.ScheduledFrom = model.ScheduledFrom;
         filter.ScheduledTo = model.ScheduledTo;
+        filter.ScheduledRange = model.ScheduledRange;
 
         // Populate route values so other modules can extend filtering and pagination preserves filter state.
 
@@ -157,6 +159,11 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         if (filter.ScheduledTo.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.ScheduledRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledRange", filter.ScheduledRange);
         }
 
         return Edit(filter, context);

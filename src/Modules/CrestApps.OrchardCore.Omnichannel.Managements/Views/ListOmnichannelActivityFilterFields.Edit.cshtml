@@ -30,6 +30,8 @@
     toId = Html.IdFor(m => m.ScheduledTo),
     from = Model.ScheduledFrom,
     to = Model.ScheduledTo,
+    selectedRangeName = Html.NameFor(m => m.ScheduledRange),
+    selectedRange = Model.ScheduledRange,
     placeholder = T["Any schedule"].Value,
     wrapperCssClass = "col-lg-2",
 })
