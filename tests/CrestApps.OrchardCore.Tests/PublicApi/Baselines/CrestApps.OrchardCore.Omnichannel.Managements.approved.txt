@@ -196,7 +196,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [OrchardCore.Admin.Admin("omnichannel/activity/batches/edit/{id}", "OmnichannelActivityBatchesEdit")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
         [OrchardCore.Admin.Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory, [Microsoft.AspNetCore.Mvc.FromServices] YesSql.ISession session) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Index")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activity/batches", "OmnichannelActivityBatchesIndex")]
@@ -620,12 +620,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     {
         public OmnichannelAIChatSessionAccessProvider(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.ContentManagement.IContentManager contentManager) { }
         public System.Threading.Tasks.Task<bool> CanAccessAsync(System.Security.Claims.ClaimsPrincipal user, string profileId, string sessionId, string resourceId) { }
-    }
-    public sealed class OmnichannelActivityBatchCatalog : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch, CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityBatchIndex>
-    {
-        public OmnichannelActivityBatchCatalog(YesSql.ISession session) { }
-        protected override System.Threading.Tasks.ValueTask PagingAsync<TQuery>(YesSql.IQuery<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> query, TQuery context)
-            where TQuery : CrestApps.Core.Models.QueryContext { }
     }
     public sealed class OmnichannelContactDuplicateLookupService : CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService
     {
