@@ -68,7 +68,7 @@ internal sealed class OmnichannelActivityBatchAIProfileDisplayDriver : DisplayDr
             }
 
             model.IsPhoneChannel = string.Equals(
-                flowSettings?.Channel,
+                batch.Channel,
                 OmnichannelConstants.Channels.Phone,
                 StringComparison.OrdinalIgnoreCase);
             model.AIProfiles = await GetAIProfileOptionsAsync(selectedProfileId);

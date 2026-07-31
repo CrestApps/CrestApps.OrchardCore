@@ -20,6 +20,18 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the communication channel used for outbound activities loaded from this batch. When
+    /// empty, the channel configured on the subject content-type part settings is used as a fallback.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel endpoint used for outbound activities loaded from this batch. When empty,
+    /// the endpoint configured on the subject content-type part settings is used as a fallback.
+    /// </summary>
+    public string ChannelEndpointId { get; set; }
+
+    /// <summary>
     /// Gets or sets the activity source used when loading activities from this batch.
     /// </summary>
     public string Source { get; set; }
@@ -186,6 +198,8 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
+            Channel = Channel,
+            ChannelEndpointId = ChannelEndpointId,
             Source = Source,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
