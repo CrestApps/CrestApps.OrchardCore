@@ -1,118 +1,12 @@
 @model CrestApps.OrchardCore.Reports.ViewModels.ReportDateRangeFilterViewModel
-@using System.Globalization
 
-@{
-    var culture = CultureInfo.CurrentCulture;
-    var datePattern = culture.DateTimeFormat.ShortDatePattern;
-    var timePattern = culture.DateTimeFormat.ShortTimePattern;
-    var weekStart = (int)culture.DateTimeFormat.FirstDayOfWeek;
-    var pickerId = "drp-" + Guid.NewGuid().ToString("N").Substring(0, 8);
-    var groupName = pickerId + "-range";
-}
-
-<style asp-name="flatpickr"></style>
-<script asp-name="flatpickr" at="Foot"></script>
-<script asp-name="flatpickr-culture" at="Foot"></script>
-<script asp-name="date-range-picker" at="Foot"></script>
-
-<div class="col p-1" data-date-range-picker data-week-start="@weekStart" data-date-pattern="@datePattern" data-time-pattern="@timePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]">
-    <label class="form-label">@T["Date range"]</label>
-    <div class="dropdown">
-        <button type="button" class="form-select text-start text-truncate" data-drp-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-            <span data-drp-label data-placeholder="@T["Select range"]">@T["Select range"]</span>
-        </button>
-        <div class="dropdown-menu p-2 shadow" style="min-width: 22rem;">
-            <div class="row g-1">
-                <div class="col-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-today" value="today" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-today">@T["Today"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-yesterday" value="yesterday" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-yesterday">@T["Yesterday"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-this-week" value="thisWeek" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-this-week">@T["This Week"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-week" value="lastWeek" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-week">@T["Last Week"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-7" value="last7" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-7">@T["Last 7 Days"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-30" value="last30" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-30">@T["Last 30 Days"]</label>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-this-month" value="thisMonth" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-this-month">@T["This Month"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-month" value="lastMonth" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-month">@T["Last Month"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-this-quarter" value="thisQuarter" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-this-quarter">@T["This Quarter"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-quarter" value="lastQuarter" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-quarter">@T["Last Quarter"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-this-year" value="thisYear" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-this-year">@T["This Year"]</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-last-year" value="lastYear" data-drp-range />
-                        <label class="form-check-label" for="@(pickerId)-last-year">@T["Last Year"]</label>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="my-2" />
-
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-custom" value="custom" data-drp-range />
-                <label class="form-check-label" for="@(pickerId)-custom">@T["Custom Range"]</label>
-            </div>
-            <div class="mt-2 ms-4 d-none" data-drp-panel="custom">
-                <div class="mb-2">
-                    <label class="form-label small" asp-for="From">@T["From"]</label>
-                    <input asp-for="From" type="text" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control form-control-sm flatpickr-input" data-drp-from readonly="readonly" />
-                </div>
-                <div>
-                    <label class="form-label small" asp-for="To">@T["To"]</label>
-                    <input asp-for="To" type="text" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control form-control-sm flatpickr-input" data-drp-to readonly="readonly" />
-                </div>
-            </div>
-
-            <div class="form-check mt-1">
-                <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-prior" value="prior" data-drp-range />
-                <label class="form-check-label" for="@(pickerId)-prior">@T["Prior"]</label>
-            </div>
-            <div class="mt-2 ms-4 d-none" data-drp-panel="prior">
-                <label class="form-label small">@T["On or before"]</label>
-                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-prior-date readonly="readonly" aria-label="@T["On or before date"]" />
-                <div class="form-text">@T["Includes everything up to and including the selected date."]</div>
-            </div>
-
-            <div class="form-check mt-1">
-                <input class="form-check-input" type="radio" name="@groupName" id="@(pickerId)-after" value="after" data-drp-range />
-                <label class="form-check-label" for="@(pickerId)-after">@T["After"]</label>
-            </div>
-            <div class="mt-2 ms-4 d-none" data-drp-panel="after">
-                <label class="form-label small">@T["On or after"]</label>
-                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-after-date readonly="readonly" aria-label="@T["On or after date"]" />
-                <div class="form-text">@T["Includes everything from the selected date onward."]</div>
-            </div>
-        </div>
-    </div>
-</div>
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.From),
+    toName = Html.NameFor(m => m.To),
+    fromId = Html.IdFor(m => m.From),
+    toId = Html.IdFor(m => m.To),
+    from = Model.From,
+    to = Model.To,
+    label = T["Date range"].Value,
+})

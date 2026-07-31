@@ -1,17 +1,6 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore
-@using System.Globalization
 
 @model ListOmnichannelActivityFilterViewModel
-@{
-    var pattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
-    var scheduledFromId = Html.IdFor(m => m.ScheduledFrom);
-    var scheduledToId = Html.IdFor(m => m.ScheduledTo);
-}
-
-<style asp-name="flatpickr"></style>
-<script asp-name="flatpickr" at="Foot"></script>
-<script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="col-lg-2">
     <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
@@ -33,59 +22,14 @@
     <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select"></select>
 </div>
 
-<div class="col-lg-2">
-    <input type="text"
-           id="@scheduledFromId"
-           name="@Html.NameFor(m => m.ScheduledFrom)"
-           value="@Model.ScheduledFrom"
-           class="form-control"
-           placeholder="@T["Scheduled from"]" />
-</div>
-
-<div class="col-lg-2">
-    <input type="text"
-           id="@scheduledToId"
-           name="@Html.NameFor(m => m.ScheduledTo)"
-           value="@Model.ScheduledTo"
-           class="form-control"
-           placeholder="@T["Scheduled to"]" />
-</div>
-
-<script at="Foot" depends-on="flatpickr,flatpickr-culture">
-    document.addEventListener('DOMContentLoaded', function () {
-        var fromPicker = flatpickr('#@scheduledFromId', Object.assign(
-            flatpickrCulture.createLocalizedDateConfig("@pattern", {
-                altInputClass: 'form-control',
-            }),
-            {
-            onChange: function (selectedDates) {
-                if (selectedDates.length > 0) {
-                    toPicker.set('minDate', selectedDates[0]);
-                }
-            }
-            }));
-
-        var toPicker = flatpickr('#@scheduledToId', Object.assign(
-            flatpickrCulture.createLocalizedDateConfig("@pattern", {
-                altInputClass: 'form-control',
-            }),
-            {
-            onChange: function (selectedDates) {
-                if (selectedDates.length > 0) {
-                    fromPicker.set('maxDate', selectedDates[0]);
-                }
-            }
-            }));
-
-        // Set initial constraints if values exist
-        var fromValue = document.getElementById('@scheduledFromId').value;
-        var toValue = document.getElementById('@scheduledToId').value;
-
-        if (fromValue) {
-            toPicker.set('minDate', fromValue);
-        }
-        if (toValue) {
-            fromPicker.set('maxDate', toValue);
-        }
-    });
-</script>
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.ScheduledFrom),
+    toName = Html.NameFor(m => m.ScheduledTo),
+    fromId = Html.IdFor(m => m.ScheduledFrom),
+    toId = Html.IdFor(m => m.ScheduledTo),
+    from = Model.ScheduledFrom,
+    to = Model.ScheduledTo,
+    placeholder = T["Any schedule"].Value,
+    wrapperCssClass = "col-lg-2",
+})

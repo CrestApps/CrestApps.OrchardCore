@@ -1,8 +1,9 @@
 /*
 ** A reusable date-range picker. It enhances two machine-formatted date inputs
 ** (From/To) with a Bootstrap dropdown offering common presets (Today, Yesterday,
-** This Week, ... Last Year), a Custom Range editable through flatpickr, and
-** single-date "On or before" / "On or after" bounds. Selecting an option writes
+** This Week, ... Last Year, calendar-month ranges), a Custom Range editable
+** through flatpickr, and single date/time "On or before" / "On or after" bounds.
+** Selecting an option writes
 ** machine-formatted values into the underlying inputs so the surrounding form
 ** submits them unchanged. It is registered as the "date-range-picker" script
 ** resource and can be used by any module, not only reports.
@@ -102,11 +103,19 @@
                 return { from: startOfDay(addDays(now, -6)), to: endOfDay(now) };
             case 'last30':
                 return { from: startOfDay(addDays(now, -29)), to: endOfDay(now) };
+            case 'last90':
+                return { from: startOfDay(addDays(now, -89)), to: endOfDay(now) };
             case 'thisMonth':
                 return { from: startOfMonth(now), to: endOfMonth(now) };
             case 'lastMonth':
                 var lastMonth = addMonths(now, -1);
                 return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
+            case 'last3Months':
+                return { from: startOfMonth(addMonths(now, -3)), to: endOfMonth(addMonths(now, -1)) };
+            case 'last6Months':
+                return { from: startOfMonth(addMonths(now, -6)), to: endOfMonth(addMonths(now, -1)) };
+            case 'last12Months':
+                return { from: startOfMonth(addMonths(now, -12)), to: endOfMonth(addMonths(now, -1)) };
             case 'thisQuarter':
                 return { from: startOfQuarter(now), to: endOfQuarter(now) };
             case 'lastQuarter':
@@ -180,16 +189,16 @@
             fromPicker = flatpickr(fromInput, Object.assign({}, config, { onChange: onCustomChange }));
             toPicker = flatpickr(toInput, Object.assign({}, config, { onChange: onCustomChange }));
 
-            var dateConfig = typeof flatpickrCulture !== 'undefined'
-                ? flatpickrCulture.createLocalizedDateConfig(root.dataset.datePattern, { altInputClass: 'form-control form-control-sm flatpickr-input' })
-                : { allowInput: true, altInput: true, dateFormat: 'Y-m-d' };
+            var priorConfig = typeof flatpickrCulture !== 'undefined'
+                ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control form-control-sm flatpickr-input' })
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
 
             if (priorDateInput) {
-                priorPicker = flatpickr(priorDateInput, Object.assign({}, dateConfig, { onChange: applyPrior }));
+                priorPicker = flatpickr(priorDateInput, Object.assign({}, priorConfig, { defaultHour: 23, defaultMinute: 59, onChange: applyPrior }));
             }
 
             if (afterDateInput) {
-                afterPicker = flatpickr(afterDateInput, Object.assign({}, dateConfig, { onChange: applyAfter }));
+                afterPicker = flatpickr(afterDateInput, Object.assign({}, priorConfig, { defaultHour: 0, defaultMinute: 0, onChange: applyAfter }));
             }
         }
 
@@ -296,7 +305,7 @@
                 return;
             }
 
-            setInputValue(toInput, toPicker, endOfDay(date));
+            setInputValue(toInput, toPicker, date);
             clearInput(fromInput, fromPicker);
             updateLabelFromInputs();
         }
@@ -310,7 +319,7 @@
                 return;
             }
 
-            setInputValue(fromInput, fromPicker, startOfDay(date));
+            setInputValue(fromInput, fromPicker, date);
             clearInput(toInput, toPicker);
             updateLabelFromInputs();
         }

@@ -41,11 +41,41 @@ The feature also registers reusable scripts that other modules can require by na
 
 ## Date range picker
 
-`date-range-picker` enhances two machine-formatted date inputs (a "from" and a "to") with a single Bootstrap dropdown that offers common presets (Today, Yesterday, This Week, Last Week, Last 7 Days, Last 30 Days, This Month, Last Month, This Quarter, Last Quarter, This Year, Last Year), a **Custom Range** (two Flatpickr date-time inputs), and single-date **On or before** / **On or after** bounds. The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_).
+`date-range-picker` enhances two machine-formatted date/time inputs (a "from" and a "to") with a single Bootstrap dropdown that offers common presets grouped into **Relative days** (Today, Yesterday, Last 7 Days, Last 30 Days, Last 90 Days), **Calendar periods** (This Week, Last Week, This Month, Last Month, This Quarter, Last Quarter, This Year, Last Year), and **Rolling months** (Last 3 Months, Last 6 Months, Last 12 Months), a **Custom Range** (two Flatpickr date-time inputs), and single **On or before** / **On or after** date-time bounds. The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_).
 
 Although it was introduced for the [Reports](reports.md) module, it is a general-purpose resource and can be used anywhere. It is purely client-side: it reads and writes the two underlying inputs, so the surrounding form submits their values unchanged.
 
-### Requiring the resource
+### Rendering with the view component (recommended)
+
+The Resources feature ships a `DateRangePicker` view component that renders the full markup contract for you (including the required script/style resources), so you only supply the two field names and their current values:
+
+```cshtml
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.From),
+    toName = Html.NameFor(m => m.To),
+    fromId = Html.IdFor(m => m.From),
+    toId = Html.IdFor(m => m.To),
+    from = Model.From,
+    to = Model.To,
+    label = T["Date range"].Value,
+})
+```
+
+| Parameter | Purpose |
+| --- | --- |
+| `fromName` / `toName` | **Required.** The form field names posted for the lower and upper bounds. |
+| `fromId` / `toId` | Optional HTML ids. Default to values derived from the field names. |
+| `from` / `to` | Optional `DateTime?` initial values. |
+| `label` | Optional label rendered above the control. |
+| `placeholder` | Optional toggle placeholder shown when nothing is selected (defaults to _Select range_). |
+| `wrapperCssClass` | Optional CSS classes for the root element (defaults to `col p-1`). |
+
+The bound fields should be `DateTime?` so the machine format (`yyyy-MM-ddTHH:mm`) round-trips through model binding.
+
+### Requiring the resource manually
+
+If you render the markup yourself instead of using the view component, require the resources:
 
 ```html
 <style asp-name="flatpickr"></style>
@@ -63,9 +93,9 @@ The script auto-initializes every element with a `data-date-range-picker` attrib
 | `[data-date-range-picker]` | Root element. Reads `data-week-start` (0=Sunday .. 6=Saturday), `data-date-pattern`, `data-time-pattern`, and the localized `data-prior-label`, `data-after-label`, `data-from-word`, `data-to-word` words. |
 | `[data-drp-toggle]` | The dropdown toggle button. |
 | `[data-drp-label]` | A child of the toggle; its text is replaced with the current selection. Its `data-placeholder` is shown when nothing is selected. |
-| `input[type=radio][data-drp-range]` | One radio per option; the `value` is the preset key (`today`, `yesterday`, `thisWeek`, `lastWeek`, `last7`, `last30`, `thisMonth`, `lastMonth`, `thisQuarter`, `lastQuarter`, `thisYear`, `lastYear`, `custom`, `prior`, `after`). |
+| `input[type=radio][data-drp-range]` | One radio per option; the `value` is the preset key (`today`, `yesterday`, `last7`, `last30`, `last90`, `thisWeek`, `lastWeek`, `thisMonth`, `lastMonth`, `last3Months`, `last6Months`, `last12Months`, `thisQuarter`, `lastQuarter`, `thisYear`, `lastYear`, `custom`, `prior`, `after`). |
 | `[data-drp-panel="custom"]` | Panel holding the custom inputs `[data-drp-from]` and `[data-drp-to]` — the real submit inputs. |
-| `[data-drp-panel="prior"]` | Panel with a single `[data-drp-prior-date]` input; choosing a date sets only the **to** input (on or before). |
-| `[data-drp-panel="after"]` | Panel with a single `[data-drp-after-date]` input; choosing a date sets only the **from** input (on or after). |
+| `[data-drp-panel="prior"]` | Panel with a single `[data-drp-prior-date]` date-time input; choosing a value sets only the **to** input (on or before). |
+| `[data-drp-panel="after"]` | Panel with a single `[data-drp-after-date]` date-time input; choosing a value sets only the **from** input (on or after). |
 
-Presets are computed in the browser using the supplied first day of the week; the resulting range is written into the from/to inputs and the surrounding form submits them. See the Reports module's `ReportDateRangeFilter.Edit.cshtml` view for a complete, localized example.
+Presets are computed in the browser using the supplied first day of the week; the resulting range is written into the from/to inputs and the surrounding form submits them. The `DateRangePicker` view component renders this exact contract; see its `Views/Shared/Components/DateRangePicker/Default.cshtml` view for a complete, localized example.

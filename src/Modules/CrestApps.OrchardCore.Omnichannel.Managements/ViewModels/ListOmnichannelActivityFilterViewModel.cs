@@ -37,12 +37,12 @@ public class ListOmnichannelActivityFilterViewModel
     /// <summary>
     /// Gets or sets the scheduled from.
     /// </summary>
-    public string ScheduledFrom { get; set; }
+    public DateTime? ScheduledFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the scheduled to.
     /// </summary>
-    public string ScheduledTo { get; set; }
+    public DateTime? ScheduledTo { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency levels.

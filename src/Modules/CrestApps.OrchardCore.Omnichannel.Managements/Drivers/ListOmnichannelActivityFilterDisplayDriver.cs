@@ -52,8 +52,8 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
             model.TimeZoneId = NormalizeTimeZoneId(filter.TimeZoneId);
-            model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-            model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            model.ScheduledFrom = filter.ScheduledFrom;
+            model.ScheduledTo = filter.ScheduledTo;
 
             model.UrgencyLevels =
             [
@@ -119,18 +119,8 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.Channel = model.Channel;
         filter.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
         filter.AttemptFilter = model.AttemptFilter;
-        filter.ScheduledFrom = null;
-        filter.ScheduledTo = null;
-
-        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParseExact(model.ScheduledFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledFrom))
-        {
-            filter.ScheduledFrom = scheduledFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParseExact(model.ScheduledTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledTo))
-        {
-            filter.ScheduledTo = scheduledTo;
-        }
+        filter.ScheduledFrom = model.ScheduledFrom;
+        filter.ScheduledTo = model.ScheduledTo;
 
         // Populate route values so other modules can extend filtering and pagination preserves filter state.
 
@@ -161,12 +151,12 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
         if (filter.ScheduledFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.ScheduledTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         return Edit(filter, context);
