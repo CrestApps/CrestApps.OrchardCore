@@ -120,7 +120,6 @@ public sealed class AISubjectFlowStartup : StartupBase
     {
         services
             .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
-            .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchAIProfileDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
     }

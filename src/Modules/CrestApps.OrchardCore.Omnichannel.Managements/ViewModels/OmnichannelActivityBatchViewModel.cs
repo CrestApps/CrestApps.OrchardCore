@@ -64,6 +64,11 @@ public class OmnichannelActivityBatchViewModel
     public string ChannelEndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets the AI profile identifier used by automated activities loaded from this batch.
+    /// </summary>
+    public string AIProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier used by dialer activities.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -228,4 +233,17 @@ public class OmnichannelActivityBatchViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI profile selector is shown for this batch. It is shown only
+    /// for the automatic source and only when the AI feature is enabled.
+    /// </summary>
+    [BindNever]
+    public bool ShowAIProfile { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available AI profiles for automated activities.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AIProfiles { get; set; }
 }
