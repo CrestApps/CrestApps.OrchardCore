@@ -38,6 +38,10 @@ namespace CrestApps.OrchardCore.Telephony
         string ProviderName { get; }
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.SoftPhoneRegistrationConfig> BuildAsync(CrestApps.OrchardCore.Telephony.Models.SoftPhoneRegistrationConfigContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISupportsTenantMediaPurge
+    {
+        System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyAttendedTransferProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> StartAttendedTransferAsync(CrestApps.OrchardCore.Telephony.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default);

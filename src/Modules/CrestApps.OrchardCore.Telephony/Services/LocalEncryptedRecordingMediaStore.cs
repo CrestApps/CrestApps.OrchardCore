@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// beyond the key the orchestration layer already holds. The bytes on disk are always the protected
 /// ciphertext; the plaintext recording only ever exists in memory while it is being ingested or read back.
 /// </summary>
-public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore
+public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, ISupportsTenantMediaPurge
 {
     private const string ProtectedFileExtension = ".protected";
 
@@ -88,7 +88,33 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore
 
         var path = ResolvePath(storageReference);
 
+        if (await _fileStore.GetFileInfoAsync(path) is null)
+        {
+            return true;
+        }
+
         return await _fileStore.TryDeleteFileAsync(path);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryPurgeAllAsync(CancellationToken cancellationToken = default)
+    {
+        var purged = true;
+
+        await foreach (var entry in _fileStore.GetDirectoryContentAsync(includeSubDirectories: false).WithCancellation(cancellationToken))
+        {
+            if (entry.IsDirectory)
+            {
+                continue;
+            }
+
+            if (!await _fileStore.TryDeleteFileAsync(entry.Path))
+            {
+                purged = false;
+            }
+        }
+
+        return purged;
     }
 
     private static string ResolvePath(string storageKey)

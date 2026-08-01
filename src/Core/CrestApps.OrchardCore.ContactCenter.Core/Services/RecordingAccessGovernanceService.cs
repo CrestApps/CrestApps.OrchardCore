@@ -18,6 +18,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     ];
 
     private readonly IInteractionManager _interactionManager;
+    private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
 
@@ -25,14 +26,17 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     /// Initializes a new instance of the <see cref="RecordingAccessGovernanceService"/> class.
     /// </summary>
     /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="callSessionManager">The call session manager used to clear the mirrored recording reference.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp erasure instants.</param>
     public RecordingAccessGovernanceService(
         IInteractionManager interactionManager,
+        ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
         IClock clock)
     {
         _interactionManager = interactionManager;
+        _callSessionManager = callSessionManager;
         _publisher = publisher;
         _clock = clock;
     }
@@ -95,6 +99,11 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         // for completeness (including repeat requests after a prior successful erasure).
         if (string.IsNullOrEmpty(interaction.RecordingReference))
         {
+            // Defensive hygiene: the reference and its call-session mirror are cleared in the same unit of work
+            // during erasure, so an interaction with no reference should never leave a mirrored handle behind. If a
+            // prior partial failure did, clear it now so it cannot resurrect access to media that no longer exists.
+            await ClearMirroredReferenceAsync(interaction.ItemId, cancellationToken);
+
             await PublishErasureDeniedAsync(interaction, actorId, ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
 
             return RecordingErasureDecision.Deny(ContactCenterConstants.RecordingErasureDenyReason.NoRecording);
@@ -113,7 +122,9 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
 
         // The orchestration layer never stores recording media, so erasure clears the opaque retrieval handle and its
         // retrieval metadata and stamps the erasure instant; the published event carries the reference so the owning
-        // media store can delete the underlying media.
+        // media store can delete the underlying media. The pointer clears, the erasure tombstone (the stamped
+        // RecordingErasedUtc), and the outbox media-deletion enqueue all share the ambient unit of work, so they
+        // commit together or not at all.
         interaction.RecordingReference = null;
         interaction.RecordingErasedUtc = _clock.UtcNow;
 
@@ -127,6 +138,10 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: CancellationToken.None);
 
+        // The recording reference is mirrored onto the call session, so it must be cleared in the same unit of work;
+        // otherwise the mirrored handle would survive erasure and could resurrect access to the deleted media.
+        await ClearMirroredReferenceAsync(interaction.ItemId, cancellationToken);
+
         var erasedEvent = BuildEvent(interaction, ContactCenterConstants.Events.RecordingErased, actorId);
 
         erasedEvent.SetData(new RecordingErasedEventData
@@ -139,6 +154,18 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         await _publisher.PublishAsync(erasedEvent, CancellationToken.None);
 
         return RecordingErasureDecision.Erase();
+    }
+
+    private async Task ClearMirroredReferenceAsync(string interactionId, CancellationToken cancellationToken)
+    {
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interactionId, cancellationToken);
+
+        if (callSession is not null && !string.IsNullOrEmpty(callSession.RecordingReference))
+        {
+            callSession.RecordingReference = null;
+
+            await _callSessionManager.UpdateAsync(callSession, cancellationToken: CancellationToken.None);
+        }
     }
 
     private async Task PublishErasureDeniedAsync(Interaction interaction, string actorId, string denyReasonCode)

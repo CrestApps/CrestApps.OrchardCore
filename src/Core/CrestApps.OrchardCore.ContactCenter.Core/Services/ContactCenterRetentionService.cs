@@ -92,37 +92,38 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
                 catch (ContactCenterRetentionBatchException ex)
                 {
                     // One entity failing must not stop the remaining entities from draining, otherwise a single
-                    // unhealthy table would keep every other table growing forever. The batch failed partway
-                    // through staging, so its deletes must be committed and counted here: leaving them in the
-                    // session would have the next entity's flush commit them under the wrong entity's name.
-                    _logger.LogError(ex, "Contact Center retention failed while purging entity {EntityName}.", policy.EntityName);
+                    // unhealthy table would keep every other table growing forever. The failed batch staged a mix of
+                    // completed records and the failing record's partial side effects into the shared session, and the
+                    // session cannot commit only the completed records. Committing here would flush the failing
+                    // record's partial state too — for example a recording-erased event whose outbox message was never
+                    // staged, which the next cycle's idempotency key would then suppress, orphaning the media. Discard
+                    // the whole batch instead so nothing partial is ever committed: every record it touched rolls back
+                    // and is retried cleanly on the next cycle, and repeated deletes are idempotent.
+                    _logger.LogError(ex, "Contact Center retention failed while purging entity {EntityName}; the batch was discarded and will be retried on the next cycle.", policy.EntityName);
                     result.WorkRemains = true;
-
-                    if (ex.StagedBeforeFailure == 0)
-                    {
-                        break;
-                    }
 
                     try
                     {
-                        await _session.SaveChangesAsync(cancellationToken);
+                        await _session.ResetAsync();
                     }
-                    catch (Exception flushException)
+                    catch (Exception resetException)
                     {
-                        _logger.LogError(flushException, "Contact Center retention failed while committing the partial batch for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
+                        // A session that cannot even be reset is unusable, so stop the cycle rather than let the next
+                        // entity run against a poisoned session and appear to purge while its deletes are discarded.
+                        _logger.LogError(resetException, "Contact Center retention could not reset the session after a failed batch for entity {EntityName}. The cycle was stopped because the session cannot be reused.", policy.EntityName);
                         MarkUnvisitedEntitiesAsUnfinished(report, nowUtc);
 
                         return report;
                     }
 
-                    result.PurgedCount += ex.StagedBeforeFailure;
-
                     break;
                 }
                 catch (Exception ex)
                 {
-                    // Nothing was staged, because the batch failed before it began deleting. The session is
-                    // still usable, so the remaining entities can drain normally.
+                    // Reaching here means the batch failed before it staged any work — the only uncaught path left in
+                    // a batch is the query that reads the expired records, and the per-record loop converts every
+                    // later failure (a delete or a prepare side effect) into a ContactCenterRetentionBatchException.
+                    // The session is therefore still usable, so the remaining entities can drain normally.
                     _logger.LogError(ex, "Contact Center retention failed while reading expired records for entity {EntityName}.", policy.EntityName);
                     result.WorkRemains = true;
 

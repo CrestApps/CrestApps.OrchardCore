@@ -82,4 +82,10 @@ public sealed class InteractionIndex : CatalogItemIndex
     /// Gets or sets the UTC time after-call wrap-up was completed.
     /// </summary>
     public DateTime? WrapUpCompletedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the interaction's recording is under legal hold. Held interactions
+    /// are excluded from age-based retention so the query never fetches a record it is not allowed to delete.
+    /// </summary>
+    public bool RecordingLegalHold { get; set; }
 }

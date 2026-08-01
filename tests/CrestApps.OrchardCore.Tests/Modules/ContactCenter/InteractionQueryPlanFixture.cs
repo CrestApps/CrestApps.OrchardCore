@@ -53,6 +53,7 @@ internal static class InteractionQueryPlanFixture
         await migration.UpdateFrom1Async();
         await migration.UpdateFrom2Async();
         await migration.UpdateFrom3Async();
+        await migration.UpdateFrom4Async();
     }
 
     /// <summary>

@@ -21,4 +21,10 @@ public enum RecordingIngestJobStatus
     /// inspection rather than retried indefinitely.
     /// </summary>
     DeadLettered = 2,
+
+    /// <summary>
+    /// Ingest was intentionally abandoned because the interaction's recording had already been erased (or the
+    /// interaction no longer exists), so any media written for it was cleaned up and the job was not retried.
+    /// </summary>
+    Cancelled = 3,
 }

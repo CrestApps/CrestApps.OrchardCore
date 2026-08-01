@@ -280,6 +280,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public string ProviderLegId { get; set; }
         public string ProviderName { get; set; }
         public string QueueId { get; set; }
+        public bool RecordingLegalHold { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus Status { get; set; }
         public System.DateTime? WrapUpCompletedUtc { get; set; }
         public System.DateTime? WrapUpStartedUtc { get; set; }
@@ -1479,6 +1480,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime? RetainUntilUtc { get; }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingGovernanceDecision Allow(System.DateTime? retainUntilUtc, bool legalHold) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingGovernanceDecision Deny(string denyReasonCode) { }
+    }
+    public sealed class RecordingMediaDeletedEventData
+    {
+        public RecordingMediaDeletedEventData() { }
+        public string ActorId { get; set; }
+        public string Reason { get; set; }
+        public string RecordingReference { get; set; }
     }
     public static class ReservationLifecycle
     {
@@ -3151,7 +3159,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class RecordingAccessGovernanceService : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService
     {
-        public RecordingAccessGovernanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
+        public RecordingAccessGovernanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, string actorId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, string actorId, string purpose, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -3293,6 +3301,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         protected abstract double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options);
         public System.Threading.Tasks.Task<int> PurgeBatchAsync(System.DateTime cutoffUtc, int batchSize, System.Threading.CancellationToken cancellationToken = default) { }
         public bool TryGetCutoff(System.DateTime nowUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options, out System.DateTime cutoffUtc) { }
+        protected virtual System.Threading.Tasks.Task<bool> TryPrepareForDeletionAsync(TModel record, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class ContactCenterWorkStateRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterWorkStateIndex>
     {
@@ -3321,11 +3330,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
     }
     public sealed class InteractionRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction, CrestApps.OrchardCore.ContactCenter.Core.Indexes.InteractionIndex>
     {
-        public InteractionRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionStore interactionStore) { }
+        public InteractionRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionStore interactionStore, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher) { }
         public override string EntityName { get; }
         protected override bool IsSubjectToLegalHold { get; }
         protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.InteractionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
+        protected override System.Threading.Tasks.Task<bool> TryPrepareForDeletionAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction record, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class ProviderCommandRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ProviderCommandIndex>
     {

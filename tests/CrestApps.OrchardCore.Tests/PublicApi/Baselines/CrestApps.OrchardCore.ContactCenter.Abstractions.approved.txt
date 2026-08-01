@@ -79,6 +79,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string RecordingDenied = "RecordingDenied";
             public const string RecordingErased = "RecordingErased";
             public const string RecordingErasureDenied = "RecordingErasureDenied";
+            public const string RecordingMediaDeleted = "RecordingMediaDeleted";
             public const string RecordingPaused = "RecordingPaused";
             public const string RecordingResumed = "RecordingResumed";
             public const string RecordingStarted = "RecordingStarted";
@@ -136,6 +137,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         {
             public const string LegalHold = "legalHold";
             public const string NoRecording = "noRecording";
+        }
+        public static class RecordingErasureReason
+        {
+            public const string Retention = "retention";
         }
         public static class RecordingGovernanceDenyReason
         {
@@ -325,6 +330,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default);
         bool IsFresh(System.DateTime? occurredUtc);
+    }
+    public interface IRecordingErasureGuard
+    {
+        System.Threading.Tasks.Task<bool> IsRecordingErasedAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models

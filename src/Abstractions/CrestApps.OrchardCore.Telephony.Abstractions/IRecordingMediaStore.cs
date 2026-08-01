@@ -38,6 +38,9 @@ public interface IRecordingMediaStore
     /// </summary>
     /// <param name="storageReference">The storage reference returned when the recording was stored.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns><see langword="true"/> when a stored recording was deleted; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> when the store confirms that no media remains for the supplied reference; otherwise,
+    /// <see langword="false"/> when deletion could not be confirmed.
+    /// </returns>
     Task<bool> DeleteAsync(string storageReference, CancellationToken cancellationToken = default);
 }

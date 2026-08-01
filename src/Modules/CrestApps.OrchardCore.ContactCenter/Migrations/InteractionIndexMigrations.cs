@@ -108,4 +108,20 @@ internal sealed class InteractionIndexMigrations : DataMigration
 
         return 4;
     }
+
+    /// <summary>
+    /// Adds the legal-hold flag the retention purge filters on. Held interactions must never be fetched by the
+    /// age-based purge query, because a record the policy is forbidden to delete would otherwise be re-read on every
+    /// batch and could stall the drain behind a page of undeletable rows.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table =>
+            table.AddColumn<bool>("RecordingLegalHold", column => column.WithDefault(false)),
+            collection: ContactCenterConstants.CollectionName
+        );
+
+        return 5;
+    }
 }

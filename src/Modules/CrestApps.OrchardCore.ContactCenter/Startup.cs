@@ -41,6 +41,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -1065,7 +1066,28 @@ public sealed class RecordingStartup : StartupBase
         services.AddScoped<IRecordingGovernancePolicy, RecordingGovernancePolicy>();
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
         services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
+        services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionHandler>();
+        services.AddScoped<IRecordingErasureGuard, RecordingErasureGuard>();
+    }
 
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
+        routes.AddRecordingErasureEndpoint(adminOptions.AdminUrlPrefix);
+    }
+}
+
+/// <summary>
+/// Registers the Orchard Audit Trail receipt for confirmed recording-media deletion.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Recording)]
+[RequireFeatures("OrchardCore.AuditTrail")]
+public sealed class RecordingAuditTrailStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, ContactCenterAuditTrailEventConfiguration>();
+        services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionAuditTrailHandler>();
     }
 }
 

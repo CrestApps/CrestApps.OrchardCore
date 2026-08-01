@@ -47,10 +47,13 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
 
         _listener.StartAsync(listeners);
 
-        _logger.LogInformation(
-            "Started {ListenerCount} Asterisk real-time voice listener(s) for tenant '{TenantName}' under the single-active-process ownership model. ARI application ownership is tracked in process-local state on this node only, so exactly one application node may process each Asterisk ARI application at a time. Running overlapping nodes against the same Asterisk server will cross-deliver Stasis events; follow the non-overlapping deployment requirement in the telephony operations runbook.",
-            listeners.Count,
-            _shellSettings.Name);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Started {ListenerCount} Asterisk real-time voice listener(s) for tenant '{TenantName}' under the single-active-process ownership model. ARI application ownership is tracked in process-local state on this node only, so exactly one application node may process each Asterisk ARI application at a time. Running overlapping nodes against the same Asterisk server will cross-deliver Stasis events; follow the non-overlapping deployment requirement in the telephony operations runbook.",
+                listeners.Count,
+                _shellSettings.Name);
+        }
 
         return Task.CompletedTask;
     }

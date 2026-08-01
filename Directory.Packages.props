@@ -43,6 +43,7 @@
     <PackageVersion Include="OrchardCore.Alias" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ArchiveLater" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Autoroute.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.AuditTrail.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />

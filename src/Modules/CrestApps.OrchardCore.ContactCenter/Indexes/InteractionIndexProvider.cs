@@ -39,6 +39,7 @@ public sealed class InteractionIndexProvider : IndexProvider<Interaction>
                 EndedUtc = interaction.EndedUtc,
                 WrapUpStartedUtc = interaction.WrapUpStartedUtc,
                 WrapUpCompletedUtc = interaction.WrapUpCompletedUtc,
+                RecordingLegalHold = interaction.RecordingLegalHold,
             });
     }
 }

@@ -106,12 +106,13 @@ public sealed class ContactCenterRetentionServiceTests
     }
 
     [Fact]
-    public async Task PurgeAsync_WhenABatchFailsPartwayThrough_CommitsAndAttributesTheDeletesItHadAlreadyStaged()
+    public async Task PurgeAsync_WhenABatchFailsPartwayThrough_DiscardsTheEntireBatchSoNoPartialWorkIsCommitted()
     {
         // Arrange
-        // Deletes are staged into a session shared by every entity, so a batch that fails after staging some of
-        // them leaves work behind. Left uncommitted it is flushed by whichever entity runs next, which commits
-        // it under that entity's transaction and counts it against nobody.
+        // Deletes and prepare side effects are staged into a session shared by every entity, so a batch that fails
+        // after staging some of them cannot commit only the completed records. Committing the partial state would
+        // flush the failing record's half-staged side effects (for example an erased event with no outbox message),
+        // so the whole batch is discarded with a session reset and retried on the next cycle instead.
         var failing = new FakeRetentionPolicy("Interaction", [10])
         {
             Throws = true,
@@ -119,13 +120,15 @@ public sealed class ContactCenterRetentionServiceTests
         };
 
         var healthy = new FakeRetentionPolicy("CallSession", [3]);
+        var session = new Mock<ISession>();
 
         var service = CreateService([failing, healthy], new ContactCenterRetentionOptions
         {
             InteractionRetentionDays = 30,
             CallSessionRetentionDays = 30,
             PurgeBatchSize = 10,
-        });
+        },
+        session);
 
         // Act
         var report = await service.PurgeAsync(TestContext.Current.CancellationToken);
@@ -133,11 +136,13 @@ public sealed class ContactCenterRetentionServiceTests
         // Assert
         var interactions = report.Entities.Single(entity => entity.EntityName == "Interaction");
 
-        Assert.Equal(4, interactions.PurgedCount);
+        Assert.Equal(0, interactions.PurgedCount);
         Assert.True(interactions.WorkRemains);
-        Assert.Equal(7, report.TotalPurged);
+        Assert.Equal(3, report.TotalPurged);
         Assert.Equal(1, failing.BatchCalls);
         Assert.False(report.Entities.Single(entity => entity.EntityName == "CallSession").WorkRemains);
+
+        session.Verify(s => s.ResetAsync(), Times.Once);
     }
 
     [Fact]

@@ -84,13 +84,13 @@ public sealed class LocalEncryptedRecordingMediaStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_WhenRecordingMissing_ReturnsFalse()
+    public async Task DeleteAsync_WhenRecordingMissing_ConfirmsNoMediaRemains()
     {
         // Act
         var deleted = await _store.DeleteAsync("crestapps-recording-missing", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(deleted);
+        Assert.True(deleted);
     }
 
     [Fact]
@@ -101,6 +101,27 @@ public sealed class LocalEncryptedRecordingMediaStoreTests : IDisposable
 
         // Assert
         Assert.Null(stream);
+    }
+
+    [Fact]
+    public async Task TryPurgeAllAsync_RemovesEveryStoredRecording()
+    {
+        // Arrange
+        var firstReference = await _store.StoreAsync(
+            CreateRequest("crestapps-recording-interaction-4", [1, 2, 3]),
+            TestContext.Current.CancellationToken);
+        var secondReference = await _store.StoreAsync(
+            CreateRequest("crestapps-recording-interaction-5", [4, 5, 6]),
+            TestContext.Current.CancellationToken);
+
+        // Act
+        var purged = await _store.TryPurgeAllAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(purged);
+        Assert.Null(await _store.OpenReadAsync(firstReference, TestContext.Current.CancellationToken));
+        Assert.Null(await _store.OpenReadAsync(secondReference, TestContext.Current.CancellationToken));
+        Assert.Empty(Directory.GetFiles(_rootPath, "*", SearchOption.AllDirectories));
     }
 
     public void Dispose()

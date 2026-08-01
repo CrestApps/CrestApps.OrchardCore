@@ -70,7 +70,8 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc")
             .Column<DateTime>("WrapUpStartedUtc")
-            .Column<DateTime>("WrapUpCompletedUtc"),
+            .Column<DateTime>("WrapUpCompletedUtc")
+            .Column<bool>("RecordingLegalHold"),
             collection: ContactCenterConstants.CollectionName);
     }
 

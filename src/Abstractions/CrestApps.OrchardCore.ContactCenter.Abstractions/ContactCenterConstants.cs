@@ -424,6 +424,18 @@ public static class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable machine-readable reason codes describing why the recording media is being erased, carried
+    /// on the erasure event so downstream media deletion and audit can attribute the cause.
+    /// </summary>
+    public static class RecordingErasureReason
+    {
+        /// <summary>
+        /// The recording media is being erased because its retention window elapsed.
+        /// </summary>
+        public const string Retention = "retention";
+    }
+
+    /// <summary>
     /// Contains stable request-metadata keys the transfer service passes to a voice provider so the provider can
     /// execute a resolved transfer destination without receiving raw client input.
     /// </summary>
@@ -751,6 +763,13 @@ public static class ContactCenterConstants
         /// recording is under legal hold.
         /// </summary>
         public const string RecordingErasureDenied = "RecordingErasureDenied";
+
+        /// <summary>
+        /// Raised when the underlying recording media has actually been deleted from the owning media store, as
+        /// the confirmed-deletion receipt that follows a <see cref="RecordingErased"/> request. This is the
+        /// durable proof of completed deletion, distinct from mere acceptance of the erasure request.
+        /// </summary>
+        public const string RecordingMediaDeleted = "RecordingMediaDeleted";
 
         /// <summary>
         /// Raised when a supervisor starts monitoring, whispering, barging, or taking over a live call.

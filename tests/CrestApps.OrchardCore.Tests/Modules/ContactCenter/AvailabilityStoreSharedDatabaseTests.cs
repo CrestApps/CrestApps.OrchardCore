@@ -192,7 +192,8 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc")
             .Column<DateTime>("WrapUpStartedUtc")
-            .Column<DateTime>("WrapUpCompletedUtc"),
+            .Column<DateTime>("WrapUpCompletedUtc")
+            .Column<bool>("RecordingLegalHold"),
             collection: ContactCenterConstants.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

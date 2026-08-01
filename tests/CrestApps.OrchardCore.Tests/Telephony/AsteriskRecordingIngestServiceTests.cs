@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -218,24 +219,109 @@ public sealed class AsteriskRecordingIngestServiceTests
         Assert.Equal(RecordingIngestJobStatus.Completed, healthyJob.Status);
     }
 
-    private static AsteriskRecordingIngestService CreateService(
-        IAsteriskRecordingIngestJobStore jobStore,
-        IAsteriskAriClient ariClient,
-        IRecordingMediaStore mediaStore)
+    [Fact]
+    public async Task ProcessDueAsync_WhenRecordingErasedBeforeStore_CancelsWithoutStoringMedia()
     {
-        return CreateService(jobStore, ariClient, mediaStore, _now);
+        // Arrange
+        var jobStore = new FakeAsteriskRecordingIngestJobStore();
+        await jobStore.EnqueueAsync(_interactionId, _recordingName, "wav", _now, TestContext.Current.CancellationToken);
+
+        var ariClient = new Mock<IAsteriskAriClient>();
+        var mediaStore = new RecordingMediaStoreSpy();
+        var erasureGuard = new Mock<IRecordingErasureGuard>();
+        erasureGuard
+            .Setup(guard => guard.IsRecordingErasedAsync(_interactionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = CreateService(jobStore, ariClient.Object, mediaStore, erasureGuard.Object);
+
+        // Act
+        var ingested = await service.ProcessDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, ingested);
+
+        var job = await jobStore.GetByRecordingNameAsync(_recordingName, TestContext.Current.CancellationToken);
+
+        Assert.Equal(RecordingIngestJobStatus.Cancelled, job.Status);
+        Assert.Empty(mediaStore.Stored);
+
+        // Cancellation defensively deletes by the deterministic storage key even though this pass stored nothing, so
+        // media that a prior attempt stored before crashing (leaving MediaStored/MediaReference unpersisted) is still
+        // cleaned up rather than orphaned. Deletion is idempotent, so an absent object is a no-op.
+        Assert.Equal([_recordingName], mediaStore.Deleted);
+
+        ariClient.Verify(
+            client => client.DownloadStoredRecordingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        ariClient.Verify(
+            client => client.DeleteStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_WhenRecordingErasedDuringStore_DeletesStoredMediaAndCancels()
+    {
+        // Arrange
+        var jobStore = new FakeAsteriskRecordingIngestJobStore();
+        await jobStore.EnqueueAsync(_interactionId, _recordingName, "wav", _now, TestContext.Current.CancellationToken);
+
+        var recordingBytes = new byte[] { 1, 2, 3, 4 };
+        var ariClient = new Mock<IAsteriskAriClient>();
+        ariClient
+            .Setup(client => client.DownloadStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AsteriskAriStoredRecordingContent { Content = recordingBytes, ContentType = "audio/wav" });
+
+        var mediaStore = new RecordingMediaStoreSpy();
+        var erasureGuard = new Mock<IRecordingErasureGuard>();
+
+        // Not erased on the pre-store check, then erased on the post-store re-check: an erasure landed during the
+        // download/store window and the just-written media must be deleted.
+        erasureGuard
+            .SetupSequence(guard => guard.IsRecordingErasedAsync(_interactionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
+
+        var service = CreateService(jobStore, ariClient.Object, mediaStore, erasureGuard.Object);
+
+        // Act
+        var ingested = await service.ProcessDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, ingested);
+
+        var job = await jobStore.GetByRecordingNameAsync(_recordingName, TestContext.Current.CancellationToken);
+
+        Assert.Equal(RecordingIngestJobStatus.Cancelled, job.Status);
+        Assert.Single(mediaStore.Stored);
+        Assert.Equal(["media-ref-" + _recordingName], mediaStore.Deleted);
+
+        ariClient.Verify(
+            client => client.DeleteStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static AsteriskRecordingIngestService CreateService(
         IAsteriskRecordingIngestJobStore jobStore,
         IAsteriskAriClient ariClient,
         IRecordingMediaStore mediaStore,
-        DateTime nowUtc)
+        IRecordingErasureGuard erasureGuard = null)
+    {
+        return CreateService(jobStore, ariClient, mediaStore, _now, erasureGuard);
+    }
+
+    private static AsteriskRecordingIngestService CreateService(
+        IAsteriskRecordingIngestJobStore jobStore,
+        IAsteriskAriClient ariClient,
+        IRecordingMediaStore mediaStore,
+        DateTime nowUtc,
+        IRecordingErasureGuard erasureGuard = null)
     {
         return new AsteriskRecordingIngestService(
             jobStore,
             ariClient,
             mediaStore,
+            erasureGuard is null ? [] : [erasureGuard],
             new StubClock(nowUtc),
             NullLogger<AsteriskRecordingIngestService>.Instance);
     }
@@ -243,6 +329,8 @@ public sealed class AsteriskRecordingIngestServiceTests
     private sealed class RecordingMediaStoreSpy : IRecordingMediaStore
     {
         public List<RecordingMediaWriteRequest> Stored { get; } = [];
+
+        public List<string> Deleted { get; } = [];
 
         public Task<string> StoreAsync(RecordingMediaWriteRequest request, CancellationToken cancellationToken = default)
         {
@@ -258,6 +346,8 @@ public sealed class AsteriskRecordingIngestServiceTests
 
         public Task<bool> DeleteAsync(string storageReference, CancellationToken cancellationToken = default)
         {
+            Deleted.Add(storageReference);
+
             return Task.FromResult(true);
         }
     }

@@ -116,6 +116,7 @@ public sealed class Startup : StartupBase
 
             return new LocalEncryptedRecordingMediaStore(fileStore, dataProtectionProvider);
         });
+        services.AddScoped<IModularTenantEvents, RecordingMediaTenantEvents>();
 
         services
             .AddPermissionProvider<TelephonyPermissionProvider>()

@@ -228,12 +228,13 @@ namespace CrestApps.OrchardCore.Telephony.Services
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync();
         System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user);
     }
-    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore
+    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
     {
         public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
         public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class TelephonyCallHistoryVoiceEventHandler : CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler
     {

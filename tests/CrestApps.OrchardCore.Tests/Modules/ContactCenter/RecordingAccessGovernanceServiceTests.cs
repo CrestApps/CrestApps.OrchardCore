@@ -22,7 +22,7 @@ public sealed class RecordingAccessGovernanceServiceTests
             .Callback<InteractionEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock());
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
         var audited = await service.RecordAccessAsync("int1", "supervisor-1", "quality-review", TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public sealed class RecordingAccessGovernanceServiceTests
         var interactionManager = CreateInteractionManager(interaction);
         var publisher = new Mock<IContactCenterEventPublisher>();
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock());
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
         var audited = await service.RecordAccessAsync("int1", "supervisor-1", "quality-review", TestContext.Current.CancellationToken);
@@ -80,7 +80,7 @@ public sealed class RecordingAccessGovernanceServiceTests
             .Callback<InteractionEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock(erasureInstant));
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock(erasureInstant));
 
         // Act
         var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
@@ -105,6 +105,56 @@ public sealed class RecordingAccessGovernanceServiceTests
     }
 
     [Fact]
+    public async Task EraseAsync_WhenCallSessionMirrorsReference_ClearsMirroredReference()
+    {
+        // Arrange
+        var interaction = CreateInteraction(recordingReference: "storage/int1");
+        var interactionManager = CreateInteractionManager(interaction);
+        var callSession = new CallSession
+        {
+            InteractionId = "int1",
+            RecordingReference = "storage/int1",
+        };
+        var callSessionManager = CreateCallSessionManager(callSession);
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, callSessionManager.Object, publisher.Object, CreateClock());
+
+        // Act
+        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(decision.Erased);
+        Assert.Null(callSession.RecordingReference);
+        callSessionManager.Verify(m => m.UpdateAsync(callSession, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EraseAsync_WhenNoCallSession_DoesNotAttemptCallSessionUpdate()
+    {
+        // Arrange
+        var interaction = CreateInteraction(recordingReference: "storage/int1");
+        var interactionManager = CreateInteractionManager(interaction);
+        var callSessionManager = CreateCallSessionManager();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, callSessionManager.Object, publisher.Object, CreateClock());
+
+        // Act
+        var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(decision.Erased);
+        callSessionManager.Verify(m => m.UpdateAsync(It.IsAny<CallSession>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task EraseAsync_WhenUnderLegalHold_DeniesAndDoesNotClearReference()
     {
         // Arrange
@@ -118,7 +168,7 @@ public sealed class RecordingAccessGovernanceServiceTests
             .Callback<InteractionEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock());
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
         var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
@@ -151,7 +201,7 @@ public sealed class RecordingAccessGovernanceServiceTests
             .Callback<InteractionEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock());
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
         var decision = await service.EraseAsync("int1", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
@@ -179,7 +229,7 @@ public sealed class RecordingAccessGovernanceServiceTests
             .ReturnsAsync((Interaction)null);
         var publisher = new Mock<IContactCenterEventPublisher>();
 
-        var service = new RecordingAccessGovernanceService(interactionManager.Object, publisher.Object, CreateClock());
+        var service = new RecordingAccessGovernanceService(interactionManager.Object, CreateCallSessionManager().Object, publisher.Object, CreateClock());
 
         // Act
         var decision = await service.EraseAsync("missing", "dpo-1", "gdpr-subject-request", TestContext.Current.CancellationToken);
@@ -198,6 +248,16 @@ public sealed class RecordingAccessGovernanceServiceTests
             .ReturnsAsync(interaction);
 
         return interactionManager;
+    }
+
+    private static Mock<ICallSessionManager> CreateCallSessionManager(CallSession callSession = null)
+    {
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(m => m.FindByInteractionIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callSession);
+
+        return callSessionManager;
     }
 
     private static IClock CreateClock(DateTime? utcNow = null)

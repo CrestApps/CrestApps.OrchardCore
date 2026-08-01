@@ -296,7 +296,119 @@ public sealed class ContactCenterRetentionPersistenceTests
         }
     }
 
+    [Fact]
+    public async Task PurgeAsync_WhenRecordingUnderLegalHold_KeepsRecordAndDoesNotEnqueueMediaDeletion()
+    {
+        // Arrange
+        var databasePath = DatabasePath("recording-hold");
+        var store = await CreateStoreAsync(databasePath);
+        var published = new List<InteractionEvent>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((e, _) => published.Add(e))
+            .Returns(Task.CompletedTask);
+        var recordedCallSession = new CallSession
+        {
+            InteractionId = "interaction-recorded",
+            RecordingReference = "storage/recorded",
+        };
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(value => value.FindByInteractionIdAsync(
+                "interaction-recorded",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(recordedCallSession);
+
+        try
+        {
+            await using (var session = store.CreateSession())
+            {
+                await session.SaveAsync(
+                    new Interaction
+                    {
+                        ItemId = "interaction-held",
+                        Channel = InteractionChannel.Voice,
+                        Direction = InteractionDirection.Inbound,
+                        CreatedUtc = _nowUtc.AddDays(-95),
+                        EndedUtc = _nowUtc.AddDays(-89),
+                        RecordingReference = "storage/held",
+                        RecordingLegalHold = true,
+                    }.RestorePersistedStatus(InteractionStatus.Ended),
+                    collection: ContactCenterConstants.CollectionName,
+                    cancellationToken: TestContext.Current.CancellationToken);
+
+                await session.SaveAsync(
+                    new Interaction
+                    {
+                        ItemId = "interaction-recorded",
+                        Channel = InteractionChannel.Voice,
+                        Direction = InteractionDirection.Inbound,
+                        CreatedUtc = _nowUtc.AddDays(-95),
+                        EndedUtc = _nowUtc.AddDays(-89),
+                        RecordingReference = "storage/recorded",
+                    }.RestorePersistedStatus(InteractionStatus.Ended),
+                    collection: ContactCenterConstants.CollectionName,
+                    cancellationToken: TestContext.Current.CancellationToken);
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Act
+            await using (var session = store.CreateSession())
+            {
+                await CreateService(
+                    session,
+                    publisher.Object,
+                    callSessionManager.Object).PurgeAsync(TestContext.Current.CancellationToken);
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            await using (var session = store.CreateSession())
+            {
+                var interactions = await session.Query<Interaction, InteractionIndex>(collection: ContactCenterConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+
+                Assert.Equal(["interaction-held"], interactions.Select(interaction => interaction.ItemId));
+            }
+
+            var erased = Assert.Single(published);
+
+            Assert.Equal(ContactCenterConstants.Events.RecordingErased, erased.EventType);
+
+            var data = erased.GetData<RecordingErasedEventData>();
+
+            Assert.Equal("storage/recorded", data.RecordingReference);
+            Assert.Equal(ContactCenterConstants.RecordingErasureReason.Retention, data.Reason);
+            Assert.Null(recordedCallSession.RecordingReference);
+            callSessionManager.Verify(
+                value => value.UpdateAsync(
+                    recordedCallSession,
+                    null,
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static ContactCenterRetentionService CreateService(ISession session, int batchSize = 100, int maxBatches = 10_000)
+        => CreateService(
+            session,
+            Mock.Of<IContactCenterEventPublisher>(),
+            CreateCallSessionManager().Object,
+            batchSize,
+            maxBatches);
+
+    private static ContactCenterRetentionService CreateService(
+        ISession session,
+        IContactCenterEventPublisher publisher,
+        ICallSessionManager callSessionManager,
+        int batchSize = 100,
+        int maxBatches = 10_000)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_nowUtc);
@@ -315,7 +427,11 @@ public sealed class ContactCenterRetentionPersistenceTests
         [
             new QueueItemRetentionPolicy(session, new QueueItemStore(session)),
             new ProviderCommandRetentionPolicy(session, new ProviderCommandStore(session)),
-            new InteractionRetentionPolicy(session, new InteractionStore(session)),
+            new InteractionRetentionPolicy(
+                session,
+                new InteractionStore(session),
+                callSessionManager,
+                publisher),
             new ActivityReservationRetentionPolicy(session, new ActivityReservationStore(session)),
         ];
 
@@ -325,6 +441,16 @@ public sealed class ContactCenterRetentionPersistenceTests
             clock.Object,
             Options.Create(options),
             NullLogger<ContactCenterRetentionService>.Instance);
+    }
+
+    private static Mock<ICallSessionManager> CreateCallSessionManager()
+    {
+        var manager = new Mock<ICallSessionManager>();
+        manager
+            .Setup(value => value.FindByInteractionIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CallSession)null);
+
+        return manager;
     }
 
     private static QueueItem ExpiredQueueItem(string itemId)
@@ -493,6 +619,9 @@ public sealed class ContactCenterRetentionPersistenceTests
         await reservationMigration.CreateAsync();
         await interactionMigration.CreateAsync();
         await interactionMigration.UpdateFrom1Async();
+        await interactionMigration.UpdateFrom2Async();
+        await interactionMigration.UpdateFrom3Async();
+        await interactionMigration.UpdateFrom4Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

@@ -191,6 +191,7 @@ public sealed class InteractionPostgresQueryPlanBudgetTests
         await migration.UpdateFrom1Async();
         await migration.UpdateFrom2Async();
         await migration.UpdateFrom3Async();
+        await migration.UpdateFrom4Async();
     }
 
     private static async Task SeedAsync(IConfiguration configuration, DbTransaction transaction, CancellationToken cancellationToken)
