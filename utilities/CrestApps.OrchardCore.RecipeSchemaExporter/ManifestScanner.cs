@@ -107,6 +107,157 @@ internal static partial class ManifestScanner
             .ToArray();
     }
 
+    /// <summary>
+    /// Discovers all workflow activity type names from both CrestApps.OrchardCore and OrchardCore source trees,
+    /// classified into events and tasks.
+    /// </summary>
+    /// <param name="repositoryRoot">The CrestApps.OrchardCore repository root.</param>
+    /// <returns>A tuple containing the sorted, deduplicated event and task activity type names.</returns>
+    public static (string[] Events, string[] Tasks) DiscoverWorkflowActivities(string repositoryRoot)
+    {
+        var events = new HashSet<string>(StringComparer.Ordinal);
+        var tasks = new HashSet<string>(StringComparer.Ordinal);
+
+        // Scan CrestApps.OrchardCore source for workflow activities.
+        var crestAppsSrcPath = Path.Combine(repositoryRoot, "src");
+        if (Directory.Exists(crestAppsSrcPath))
+        {
+            ScanActivityClasses(crestAppsSrcPath, events, tasks);
+        }
+
+        // Scan OrchardCore source if available, otherwise fall back to the known built-in activities.
+        var orchardCoreSrcRoot = FindOrchardCoreSource(repositoryRoot);
+        if (orchardCoreSrcRoot != null)
+        {
+            var orchardSrcPath = Path.Combine(orchardCoreSrcRoot, "src");
+            if (Directory.Exists(orchardSrcPath))
+            {
+                ScanActivityClasses(orchardSrcPath, events, tasks);
+            }
+        }
+        else
+        {
+            foreach (var eventName in WorkflowActivityCatalog.KnownEventActivities)
+            {
+                events.Add(eventName);
+            }
+
+            foreach (var taskName in WorkflowActivityCatalog.KnownTaskActivities)
+            {
+                tasks.Add(taskName);
+            }
+        }
+
+        return (Sort(events), Sort(tasks));
+    }
+
+    /// <summary>
+    /// Discovers all permission names from both CrestApps.OrchardCore and OrchardCore source trees.
+    /// </summary>
+    /// <param name="repositoryRoot">The CrestApps.OrchardCore repository root.</param>
+    /// <returns>A sorted, deduplicated array of all discovered permission names.</returns>
+    public static string[] DiscoverPermissionNames(string repositoryRoot)
+    {
+        var permissionNames = new HashSet<string>(StringComparer.Ordinal);
+
+        // Scan CrestApps.OrchardCore source for permission declarations.
+        var crestAppsSrcPath = Path.Combine(repositoryRoot, "src");
+        if (Directory.Exists(crestAppsSrcPath))
+        {
+            ScanPermissionNames(crestAppsSrcPath, permissionNames);
+        }
+
+        // Scan OrchardCore source if available, otherwise fall back to the known built-in permissions.
+        var orchardCoreSrcRoot = FindOrchardCoreSource(repositoryRoot);
+        if (orchardCoreSrcRoot != null)
+        {
+            var orchardSrcPath = Path.Combine(orchardCoreSrcRoot, "src");
+            if (Directory.Exists(orchardSrcPath))
+            {
+                ScanPermissionNames(orchardSrcPath, permissionNames);
+            }
+        }
+        else
+        {
+            foreach (var permissionName in PermissionCatalog.KnownPermissions)
+            {
+                permissionNames.Add(permissionName);
+            }
+        }
+
+        return Sort(permissionNames);
+    }
+
+    private static void ScanActivityClasses(
+        string srcPath,
+        HashSet<string> events,
+        HashSet<string> tasks)
+    {
+        var activityFiles = Directory.EnumerateFiles(srcPath, "*.cs", SearchOption.AllDirectories)
+            .Where(file => file.Replace('\\', '/').Contains("/Workflows/", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var filePath in activityFiles)
+        {
+            var content = File.ReadAllText(filePath);
+
+            foreach (Match match in ActivityClassRegex().Matches(content))
+            {
+                var modifiers = match.Groups["modifiers"].Value;
+                var name = match.Groups["name"].Value;
+                var bases = match.Groups["bases"].Value;
+
+                if (modifiers.Contains("abstract", StringComparison.Ordinal) ||
+                    bases.Contains("IBackgroundTask", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (name.EndsWith("Event", StringComparison.Ordinal))
+                {
+                    events.Add(name);
+                }
+                else if (name.EndsWith("Task", StringComparison.Ordinal) &&
+                    !name.EndsWith("BackgroundTask", StringComparison.Ordinal))
+                {
+                    tasks.Add(name);
+                }
+            }
+        }
+    }
+
+    private static void ScanPermissionNames(string srcPath, HashSet<string> permissionNames)
+    {
+        var permissionFiles = Directory.EnumerateFiles(srcPath, "*.cs", SearchOption.AllDirectories)
+            .Where(file => Path.GetFileName(file).Contains("Permission", StringComparison.OrdinalIgnoreCase));
+
+        foreach (var filePath in permissionFiles)
+        {
+            var content = File.ReadAllText(filePath);
+
+            foreach (Match match in PermissionNameRegex().Matches(content))
+            {
+                var name = match.Groups[1].Value;
+
+                // Skip dynamic, template-based permission names such as "Edit_{0}".
+                if (!string.IsNullOrWhiteSpace(name) &&
+                    !name.Contains(' ') &&
+                    !name.Contains('{') &&
+                    name.Length < 64)
+                {
+                    permissionNames.Add(name);
+                }
+            }
+        }
+    }
+
+    private static string[] Sort(HashSet<string> values)
+    {
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static void ScanModulesDirectory(string modulesPath, HashSet<string> featureIds)
     {
         foreach (var moduleDirectory in Directory.GetDirectories(modulesPath))
@@ -414,4 +565,10 @@ internal static partial class ManifestScanner
 
     [GeneratedRegex("""const\s+string\s+\w+\s*=\s*"([^"]+)"\s*;""")]
     private static partial Regex ConstantStringRegex();
+
+    [GeneratedRegex("""(?<modifiers>[^\n{};]*)\bclass\s+(?<name>\w+)(?:<[^>]*>)?\s*:\s*(?<bases>[^{]+)\{""")]
+    private static partial Regex ActivityClassRegex();
+
+    [GeneratedRegex("new(?:\\s+Permission)?\\s*\\(\\s*\"([^\"]+)\"")]
+    private static partial Regex PermissionNameRegex();
 }

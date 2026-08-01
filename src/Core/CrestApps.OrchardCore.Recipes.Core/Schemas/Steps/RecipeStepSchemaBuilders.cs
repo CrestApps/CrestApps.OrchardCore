@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
@@ -113,6 +114,40 @@ internal static class RecipeStepSchemaBuilders
     /// </summary>
     public static JsonSchemaBuilder String()
         => new JsonSchemaBuilder().Type(SchemaValueType.String);
+
+    /// <summary>
+    /// Creates a string schema that surfaces the provided values as non-restrictive suggestions
+    /// (via the "examples" annotation) while still allowing any custom string value. This is used
+    /// for open-ended, extensible sets such as permissions and workflow activities, where dynamic
+    /// or third-party values that are not part of the known list must remain valid.
+    /// </summary>
+    /// <param name="suggestedValues">The well-known values to surface as suggestions.</param>
+    public static JsonSchemaBuilder SuggestedString(IEnumerable<string> suggestedValues)
+    {
+        var examples = Suggestions(suggestedValues);
+
+        var builder = String();
+
+        if (examples.Length > 0)
+        {
+            builder = builder.Examples(examples);
+        }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Converts the provided values into JSON nodes suitable for use as schema "examples",
+    /// allowing an existing string schema to surface non-restrictive suggestions.
+    /// </summary>
+    /// <param name="values">The values to convert into suggestion nodes.</param>
+    public static JsonNode[] Suggestions(IEnumerable<string> values)
+    {
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => (JsonNode)value)
+            .ToArray();
+    }
 
     /// <summary>
     /// Creates a schema builder that allows the provided schema or a null value.

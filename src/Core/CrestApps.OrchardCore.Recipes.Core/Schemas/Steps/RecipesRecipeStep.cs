@@ -68,7 +68,7 @@ public sealed class RecipesRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique execution identifier used to track the nested recipe execution.")),
-                            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames).Description("Name of the non-startup recipe to execute.")))
+                            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Examples(RecipeStepSchemaBuilders.Suggestions(recipeNames)).Description("Name of the non-startup recipe to execute.")))
                         .Required("executionid", "name")
                         .AdditionalProperties(true))
                     .Description("Referenced recipes to execute from this step.")))

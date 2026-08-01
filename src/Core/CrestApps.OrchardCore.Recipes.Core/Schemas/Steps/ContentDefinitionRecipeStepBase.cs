@@ -149,8 +149,8 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Properties(
                 ("FieldName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(fieldTypeNames)
-                    .Description("Field type name. Known Orchard field types are enumerated from the current tenant.")),
+                    .Examples(RecipeStepSchemaBuilders.Suggestions(fieldTypeNames))
+                    .Description("Field type name. Known Orchard field types are surfaced as suggestions, but any custom field type name is allowed.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Field name used inside the content part.")),
                 ("Settings", GenericSubSettings("ContentPartFieldSettings").Description("Field definition settings, including Orchard placement/editor settings and field-specific settings envelopes.")))
             .Required("FieldName", "Name", "Settings")

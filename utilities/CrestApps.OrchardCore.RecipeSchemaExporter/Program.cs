@@ -23,7 +23,16 @@ namespace CrestApps.OrchardCore.RecipeSchemaExporter;
 internal sealed class Program
 {
     private const string _agentSkillsRepositoryName = "CrestApps.AgentSkills";
-    private const string _agentSkillsRelativePath = @"CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
+
+    private static readonly string[] _recipeSchemasRelativeSegments =
+    [
+        "src",
+        "CrestApps.AgentSkills",
+        "orchardcore",
+        "orchardcore-recipes",
+        "references",
+        "recipe-schemas",
+    ];
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -32,6 +41,9 @@ internal sealed class Program
 
     private static string[] _featureIds = [];
     private static string[] _themeIds = [];
+    private static string[] _eventActivityNames = [];
+    private static string[] _taskActivityNames = [];
+    private static string[] _permissionNames = [];
 
     private static readonly string[] _fieldTypeNames =
     [
@@ -59,8 +71,11 @@ internal sealed class Program
         var repositoryRoot = FindRepositoryRoot();
         _featureIds = ManifestScanner.DiscoverFeatureIds(repositoryRoot);
         _themeIds = ManifestScanner.DiscoverThemeIds(repositoryRoot);
+        (_eventActivityNames, _taskActivityNames) = ManifestScanner.DiscoverWorkflowActivities(repositoryRoot);
+        _permissionNames = ManifestScanner.DiscoverPermissionNames(repositoryRoot);
 
         Console.WriteLine($"Discovered {_featureIds.Length} feature IDs and {_themeIds.Length} theme IDs.");
+        Console.WriteLine($"Discovered {_eventActivityNames.Length} workflow events, {_taskActivityNames.Length} workflow tasks, and {_permissionNames.Length} permissions.");
 
         var outputPath = ResolveOutputPath(args, repositoryRoot);
         var recipeSteps = CreateRecipeSteps()
@@ -138,7 +153,7 @@ internal sealed class Program
             return fallbackPath;
         }
 
-        return Path.Combine(parentDirectory.FullName, _agentSkillsRelativePath);
+        return Path.Combine([agentSkillsRoot, .._recipeSchemasRelativeSegments]);
     }
 
     private static string FindRepositoryRoot()
@@ -299,27 +314,34 @@ internal sealed class Program
 
     private static IActivityLibrary CreateActivityLibrary()
     {
-        var startActivity = new Mock<IEvent>();
-        startActivity.SetupGet(activity => activity.Name).Returns("HttpRequestEvent");
+        var activities = new List<IActivity>();
 
-        var taskActivity = new Mock<ITask>();
-        taskActivity.SetupGet(activity => activity.Name).Returns("NotifyTask");
+        foreach (var eventName in _eventActivityNames)
+        {
+            var activity = new Mock<IEvent>();
+            activity.SetupGet(item => item.Name).Returns(eventName);
+            activities.Add(activity.Object);
+        }
+
+        foreach (var taskName in _taskActivityNames)
+        {
+            var activity = new Mock<ITask>();
+            activity.SetupGet(item => item.Name).Returns(taskName);
+            activities.Add(activity.Object);
+        }
 
         var library = new Mock<IActivityLibrary>();
         library.Setup(service => service.ListActivities())
-            .Returns([startActivity.Object, taskActivity.Object]);
+            .Returns(activities);
 
         return library.Object;
     }
 
     private static IPermissionService CreatePermissionService()
     {
-        var permissions = new[]
-        {
-            new Permission("EditContent", "Edit content"),
-            new Permission("ViewContent", "View content"),
-            new Permission("ViewMediaContent", "View media content"),
-        };
+        var permissions = _permissionNames
+            .Select(name => new Permission(name, name))
+            .ToArray();
 
         var permissionService = new Mock<IPermissionService>();
         permissionService.Setup(service => service.GetPermissionsAsync())

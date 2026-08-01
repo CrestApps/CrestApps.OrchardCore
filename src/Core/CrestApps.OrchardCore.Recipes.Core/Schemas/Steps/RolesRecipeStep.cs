@@ -55,10 +55,8 @@ public sealed class RolesRecipeStep : IRecipeStep
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of the role.")),
                             ("Permissions", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder()
-                                    .Type(SchemaValueType.String)
-                                    .Enum(permissionNames))
-                                .Description("Permissions assigned to the role.")),
+                                .Items(RecipeStepSchemaBuilders.SuggestedString(permissionNames))
+                                .Description("Permissions assigned to the role. Well-known permissions are surfaced as suggestions, but any valid permission name is allowed, including dynamic per-content-type permissions (for example, 'EditContent_Article') and permissions provided by third-party modules.")),
                             ("PermissionBehavior", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Enum("Add", "Replace", "Remove")

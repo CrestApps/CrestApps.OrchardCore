@@ -78,7 +78,7 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Activity type name. Start activities must be events; non-start activities must be tasks.")),
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Activity type name. Well-known activities are surfaced as suggestions, but any custom or third-party activity name is allowed. Start activities are typically events; non-start activities are typically tasks.")),
                 ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this activity is a workflow start event.")),
                 ("X", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Number)
@@ -96,8 +96,8 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
                 .Properties(("IsStart", new JsonSchemaBuilder().Const(true)))
                 .Required("IsStart"))
             .Then(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(eventNames))))
+                .Properties(("Name", RecipeStepSchemaBuilders.SuggestedString(eventNames))))
             .Else(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(taskNames))));
+                .Properties(("Name", RecipeStepSchemaBuilders.SuggestedString(taskNames))));
     }
 }
