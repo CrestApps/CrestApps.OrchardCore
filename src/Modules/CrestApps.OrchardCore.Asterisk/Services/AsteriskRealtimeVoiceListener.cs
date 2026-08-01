@@ -9,7 +9,7 @@ using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
-internal sealed class AsteriskRealtimeVoiceListener : IAsyncDisposable
+internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceListener, IAsyncDisposable
 {
     private const int MaxBufferedRealtimeEvents = 1000;
 

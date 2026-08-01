@@ -14,7 +14,7 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly DefaultAsteriskOptions _defaultOptions;
     private readonly ShellSettings _shellSettings;
-    private readonly AsteriskRealtimeVoiceListener _listener;
+    private readonly IAsteriskRealtimeVoiceListener _listener;
     private readonly IAsteriskAriApplicationGate _applicationGate;
     private readonly ILogger<AsteriskRealtimeVoiceTenantEvents> _logger;
 
@@ -23,7 +23,7 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DefaultAsteriskOptions> defaultOptions,
         ShellSettings shellSettings,
-        AsteriskRealtimeVoiceListener listener,
+        IAsteriskRealtimeVoiceListener listener,
         IAsteriskAriApplicationGate applicationGate,
         ILogger<AsteriskRealtimeVoiceTenantEvents> logger)
     {

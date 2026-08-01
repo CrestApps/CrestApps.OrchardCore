@@ -109,7 +109,7 @@ public sealed class Startup : StartupBase
         services
             .AddSingleton<IAsteriskAriApplicationOwnershipRegistry, AsteriskAriApplicationOwnershipRegistry>()
             .AddSingleton<IAsteriskAriApplicationGate, AsteriskAriApplicationGate>()
-            .AddSingleton<AsteriskRealtimeVoiceListener>()
+            .AddSingleton<IAsteriskRealtimeVoiceListener, AsteriskRealtimeVoiceListener>()
             .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskTelephonyProviderStateReconciler>()
             .AddScoped<IModularTenantEvents, AsteriskRealtimeVoiceTenantEvents>();
