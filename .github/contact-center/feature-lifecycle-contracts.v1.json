@@ -115,16 +115,6 @@
     },
     {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
-      "component": "ProviderVoiceWebhookEndpoint",
-      "kind": "endpoint",
-      "quiesce": "Voice admission closes before descriptor mutation; new authenticated webhook requests are rejected before durable ingestion.",
-      "drain": "Disable waits for admitted endpoint work to finish its durable inbox commit.",
-      "reEnable": "The fresh shell reopens Voice admission and new deliveries use the normal authenticated durable-ingress path.",
-      "idleStatus": "verified-idle",
-      "activeWorkStatus": "implemented-r3"
-    },
-    {
-      "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
       "component": "ContactCenterVoiceTenantEvents",
       "kind": "lifecycle-participant",
       "quiesce": "The pre-disable coordinator invokes the Voice participant and atomically rejects new tenant-shell Voice work before the feature descriptor changes.",

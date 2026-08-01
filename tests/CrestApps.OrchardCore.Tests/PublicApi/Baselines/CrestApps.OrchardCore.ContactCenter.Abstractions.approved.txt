@@ -102,7 +102,6 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string DialerAutomated = "CrestApps.OrchardCore.ContactCenter.Dialer.Automated";
             public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
             public const string EntryPointsAdmin = "CrestApps.OrchardCore.ContactCenter.EntryPoints.Admin";
-            public const string Maintenance = "CrestApps.OrchardCore.ContactCenter.Maintenance";
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
             public const string QueuesAdmin = "CrestApps.OrchardCore.ContactCenter.Queues.Admin";
             public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
@@ -118,8 +117,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class HealthChecks
         {
             public const string AreaTag = "contactcenter";
+            public const string BackplaneCheckName = "contactcenter-backplane";
             public const string DependenciesRoute = "api/contact-center/health/dependencies";
             public const string DependencyTag = "contactcenter-dependency";
+            public const string DistributedLockCheckName = "contactcenter-distributed-lock";
             public const string NodeCheckName = "contactcenter-node";
             public const string NodeServingCheckName = "contactcenter-node-serving";
             public const string OutboxCheckName = "contactcenter-outbox";
@@ -127,6 +128,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
             public const string ReadinessRoute = "api/contact-center/health/ready";
             public const string ReadyTag = "contactcenter-ready";
+            public const string RedisConnectivityCheckName = "contactcenter-redis";
             public const string StorageCheckName = "contactcenter-storage";
             public const string TopologyCheckName = "contactcenter-topology";
         }
@@ -304,12 +306,6 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IProviderVoiceWebhookAdapter
-    {
-        string TechnicalName { get; }
-        System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent> Parse(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request);
-        bool ValidateSignature(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request);
-    }
     public interface IProviderWebhookInbox
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceResult> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxDelivery delivery, System.Threading.CancellationToken cancellationToken = default);
@@ -329,113 +325,6 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default);
         bool IsFresh(System.DateTime? occurredUtc);
-    }
-}
-namespace CrestApps.OrchardCore.ContactCenter.Maintenance
-{
-    public sealed class ContactCenterPreviewDataSetCount
-    {
-        public ContactCenterPreviewDataSetCount() { }
-        public required int Count { get; init; }
-        public required string GovernanceCategoryKey { get; init; }
-        public required bool IsConfiguration { get; init; }
-        public required string Key { get; init; }
-    }
-    public sealed class ContactCenterPreviewExportReport
-    {
-        public ContactCenterPreviewExportReport() { }
-        public required System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewDataSetCount> DataSets { get; init; }
-        public required int DocumentCount { get; init; }
-        public required string Receipt { get; init; }
-        public required System.DateTime TakenUtc { get; init; }
-        public required string TenantName { get; init; }
-    }
-    public sealed class ContactCenterPreviewMaintenanceOptions
-    {
-        public ContactCenterPreviewMaintenanceOptions() { }
-        public bool AllowReset { get; set; }
-        public int DrainTimeoutSeconds { get; set; }
-        public int PageSize { get; set; }
-        public bool RefuseResetInProduction { get; set; }
-    }
-    public sealed class ContactCenterPreviewMaintenanceStatus
-    {
-        public ContactCenterPreviewMaintenanceStatus() { }
-        public required System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewDataSetCount> DataSets { get; init; }
-        public required bool IsProductionRefusal { get; init; }
-        public bool IsQuiesced { get; }
-        public required bool IsResetAllowed { get; init; }
-        public required System.Collections.Generic.IReadOnlyList<string> ParticipatingFeatureIds { get; init; }
-        public required System.Collections.Generic.IReadOnlyList<string> QuiescedFeatureIds { get; init; }
-        public required string TenantName { get; init; }
-    }
-    public sealed class ContactCenterPreviewQuiesceReport
-    {
-        public ContactCenterPreviewQuiesceReport() { }
-        public required System.Collections.Generic.IReadOnlyList<string> DrainTimedOutFeatureIds { get; init; }
-        public bool IsDrained { get; }
-        public required System.Collections.Generic.IReadOnlyList<string> QuiescedFeatureIds { get; init; }
-    }
-    public enum ContactCenterPreviewResetRefusalReason
-    {
-        None = 0,
-        ResetNotAllowed = 1,
-        ProductionEnvironment = 2,
-        ConfirmationTokenMismatch = 3,
-        ExportReceiptMissing = 4,
-        ExportReceiptStale = 5,
-        WorkNotQuiesced = 6,
-    }
-    public sealed class ContactCenterPreviewResetReport
-    {
-        public ContactCenterPreviewResetReport() { }
-        public required System.Collections.Generic.IReadOnlyDictionary<string, int> DeletedByDataSet { get; init; }
-        public int DeletedCount { get; }
-        public required System.Collections.Generic.IReadOnlyList<string> PreservedDataSetKeys { get; init; }
-        public required CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetRefusalReason RefusalReason { get; init; }
-        public required CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetScope Scope { get; init; }
-        public bool Succeeded { get; }
-        public required string TenantName { get; init; }
-    }
-    public sealed class ContactCenterPreviewResetRequest
-    {
-        public ContactCenterPreviewResetRequest() { }
-        public string ConfirmationToken { get; init; }
-        public string ExportReceipt { get; init; }
-        public CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetScope Scope { get; init; }
-    }
-    public enum ContactCenterPreviewResetScope
-    {
-        OperationalData = 0,
-        All = 1,
-    }
-    public sealed class ContactCenterPreviewVerificationReport
-    {
-        public ContactCenterPreviewVerificationReport() { }
-        public required System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewDataSetCount> DataSets { get; init; }
-        public bool IsClean { get; }
-        public required System.Collections.Generic.IReadOnlyList<string> ResidualDataSetKeys { get; init; }
-        public required CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetScope Scope { get; init; }
-        public required string TenantName { get; init; }
-    }
-    public interface IContactCenterPreviewDataSet
-    {
-        string GovernanceCategoryKey { get; }
-        bool IsConfiguration { get; }
-        string Key { get; }
-        System.Threading.Tasks.Task<int> CountAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<int> DeleteAllAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<object>> ReadPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default);
-    }
-    public interface IContactCenterPreviewMaintenanceService
-    {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewExportReport> ExportAsync(System.IO.Stream destination, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewDataSetCount>> GetDataSetCountsAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewMaintenanceStatus> GetStatusAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewQuiesceReport> QuiesceAsync(System.TimeSpan drainTimeout, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetReport> ResetAsync(CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetRequest request, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ResumeAsync();
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewVerificationReport> VerifyAsync(CrestApps.OrchardCore.ContactCenter.Maintenance.ContactCenterPreviewResetScope scope, System.Threading.CancellationToken cancellationToken = default);
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models
@@ -631,7 +520,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Monitor = 512,
         Whisper = 1024,
         Barge = 2048,
-        TakeOver = 4096,
     }
     public sealed class ContactCenterVoiceProviderResult
     {
@@ -774,15 +662,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Monitor = 0,
         Whisper = 1,
         Barge = 2,
-        TakeOver = 3,
-    }
-    public sealed class ProviderVoiceWebhookRequest
-    {
-        public ProviderVoiceWebhookRequest() { }
-        public string Body { get; set; }
-        public System.Collections.Generic.IDictionary<string, string> Headers { get; init; }
-        public string Provider { get; set; }
-        public System.Collections.Generic.IDictionary<string, string> Query { get; init; }
     }
     public sealed class ProviderWebhookInboxAcceptanceResult
     {

@@ -47,8 +47,8 @@ internal static class VoiceIngressEndpoint
         // Admission is bounded here rather than by a deadline on the routing call itself. Routing performs a
         // sequence of durable writes (activity, interaction, queue item, reservation, provider command) that is
         // not atomic, so cancelling it partway strands the call. Limiting how many routes may be in flight caps
-        // resource consumption without ever tearing one, which is the same contract ProviderVoiceWebhookEndpoint
-        // relies on.
+        // resource consumption without ever tearing one, which is the same contract every provider-owned webhook
+        // endpoint relies on.
         using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
 
         if (!concurrencyLease.IsAcquired)

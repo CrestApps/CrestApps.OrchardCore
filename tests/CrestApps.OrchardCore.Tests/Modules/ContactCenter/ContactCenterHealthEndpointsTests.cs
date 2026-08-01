@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
+using OrchardCore.Redis;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -101,6 +103,76 @@ public sealed class ContactCenterHealthEndpointsTests
                 ContactCenterConstants.HealthChecks.StorageCheckName,
             ],
             selected);
+    }
+
+    [Fact]
+    public void RedisHealthChecks_RegisterTheThreeDistributedDependencyProbes_AllTaggedDependency()
+    {
+        // Arrange
+        var registrations = GetRegisteredHealthChecks(services =>
+        {
+            services.AddSingleton(Mock.Of<IRedisService>());
+            services.AddContactCenterRedisHealthChecks();
+        });
+
+        // Act
+        var selected = SelectNames(registrations, ContactCenterHealthEndpoints.IsDependencyCheck);
+
+        // Assert
+        // These three probe services only OrchardCore.Redis registers, so they are gated behind that feature and
+        // never appear in the base-feature set. Each carries the dependency tag so a shared Redis outage alerts
+        // without draining the fleet through readiness.
+        Assert.Equal(
+            [
+                ContactCenterConstants.HealthChecks.BackplaneCheckName,
+                ContactCenterConstants.HealthChecks.DistributedLockCheckName,
+                ContactCenterConstants.HealthChecks.RedisConnectivityCheckName,
+            ],
+            selected);
+
+        Assert.All(registrations, registration =>
+        {
+            Assert.Contains(ContactCenterConstants.HealthChecks.AreaTag, registration.Tags);
+            Assert.Contains(ContactCenterConstants.HealthChecks.DependencyTag, registration.Tags);
+            Assert.DoesNotContain(ContactCenterConstants.HealthChecks.ReadyTag, registration.Tags);
+        });
+    }
+
+    [Fact]
+    public void RedisHealthChecks_RegisterNothing_WhenRedisServiceIsNotRegistered()
+    {
+        // Enabling OrchardCore.Redis is not enough: Orchard skips registering IRedisService when the Redis
+        // configuration string is missing or invalid. Registering the probes anyway would make the dependency
+        // endpoint throw while constructing a check whose mandatory dependency cannot be resolved, so the probes
+        // must not register until IRedisService is present. Returning before AddHealthChecks means no health-check
+        // infrastructure is added at all.
+        var services = new ServiceCollection();
+
+        services.AddContactCenterRedisHealthChecks();
+
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(HealthCheckService));
+    }
+
+    [Fact]
+    public void BaseFeature_DoesNotRegisterAnyRedisDependentCheck()
+    {
+        // The distributed lock, Redis connectivity, and backplane probes take a mandatory Redis-owned
+        // dependency. Registering them in the base feature would make the dependency probe throw on a tenant
+        // that enables Contact Center without Redis.
+        var registrations = GetRegisteredHealthChecks(services => services
+            .AddContactCenterHealthChecks()
+            .AddContactCenterVoiceHealthChecks());
+
+        string[] redisDependentNames =
+        [
+            ContactCenterConstants.HealthChecks.DistributedLockCheckName,
+            ContactCenterConstants.HealthChecks.RedisConnectivityCheckName,
+            ContactCenterConstants.HealthChecks.BackplaneCheckName,
+        ];
+
+        Assert.DoesNotContain(
+            registrations,
+            registration => redisDependentNames.Contains(registration.Name));
     }
 
     [Fact]

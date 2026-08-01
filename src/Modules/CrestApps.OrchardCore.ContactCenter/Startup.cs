@@ -5,7 +5,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
-using CrestApps.OrchardCore.ContactCenter.Core.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
@@ -18,7 +17,6 @@ using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Maintenance;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
@@ -308,6 +306,24 @@ public sealed class ContactCenterSharedHealthEndpointStartup : StartupBase
                 _shellConfiguration["CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
                 bool.TrueString,
                 StringComparison.OrdinalIgnoreCase));
+    }
+}
+
+/// <summary>
+/// Registers the distributed-dependency health checks that only apply once Redis backs the deployment.
+/// </summary>
+/// <remarks>
+/// The distributed lock, Redis connectivity, and SignalR backplane probes depend on services that only the
+/// <c>OrchardCore.Redis</c> feature registers, so they are gated here rather than in the base feature. This
+/// mirrors how the Voice feature owns the provider-ingress check: a check must never be registered by a feature
+/// whose dependency closure cannot construct it.
+/// </remarks>
+[RequireFeatures("OrchardCore.Redis")]
+public sealed class ContactCenterRedisHealthCheckStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContactCenterRedisHealthChecks();
     }
 }
 
@@ -985,7 +1001,6 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
-            .AddScoped<IProviderVoiceWebhookProcessor, ProviderVoiceWebhookProcessor>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
@@ -1016,8 +1031,7 @@ public sealed class VoiceStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddVoiceOfferEndpoints()
-            .AddProviderVoiceWebhookEndpoint();
+            .AddVoiceOfferEndpoints();
     }
 
 }
@@ -1309,45 +1323,5 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
     {
         services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
         services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
-    }
-}
-
-/// <summary>
-/// Registers the operator-visible export, quiesce, reset, and verify procedure that makes a breaking Contact
-/// Center data change recoverable on a preview tenant.
-/// </summary>
-[Feature(ContactCenterConstants.Feature.Maintenance)]
-public sealed class ContactCenterMaintenanceStartup : StartupBase
-{
-    private readonly IShellConfiguration _shellConfiguration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterMaintenanceStartup"/> class.
-    /// </summary>
-    /// <param name="shellConfiguration">The shell configuration used to bind the preview maintenance options.</param>
-    public ContactCenterMaintenanceStartup(IShellConfiguration shellConfiguration)
-    {
-        _shellConfiguration = shellConfiguration;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.ValidateTenantOptionsOnActivation();
-
-        services
-            .AddOptions<ContactCenterPreviewMaintenanceOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:PreviewMaintenance"))
-            .Validate(
-                options => options.DrainTimeoutSeconds is >= 1 and <= 300,
-                "'CrestApps_ContactCenter:PreviewMaintenance:DrainTimeoutSeconds' must be between 1 and 300 seconds.")
-            .Validate(
-                options => options.PageSize is >= 1 and <= 10_000,
-                "'CrestApps_ContactCenter:PreviewMaintenance:PageSize' must be between 1 and 10000 documents.")
-            .ValidateOnStart();
-
-        services.AddContactCenterPreviewDataSets();
-        services.AddScoped<IContactCenterPreviewMaintenanceService, ContactCenterPreviewMaintenanceService>();
-        services.AddPermissionProvider<ContactCenterMaintenancePermissionProvider>();
-        services.AddNavigationProvider<ContactCenterMaintenanceAdminMenu>();
     }
 }

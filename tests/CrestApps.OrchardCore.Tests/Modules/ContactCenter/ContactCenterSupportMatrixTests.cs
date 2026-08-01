@@ -76,7 +76,7 @@ public sealed class ContactCenterSupportMatrixTests
 
         // Act & Assert
         Assert.Contains("Power, Progressive, or Predictive dialing", prohibitedCombinations);
-        Assert.Contains("recording, monitor, whisper, barge, take-over, or bidirectional media", prohibitedCombinations);
+        Assert.Contains("recording, monitor, whisper, barge, or bidirectional media", prohibitedCombinations);
         Assert.Contains("multi-node without a Redis SignalR backplane", prohibitedCombinations);
         Assert.Contains("multi-node without OrchardCore.Redis.Lock distributed locking", prohibitedCombinations);
         Assert.Contains("unlisted feature, provider, database, or topology combinations", prohibitedCombinations);

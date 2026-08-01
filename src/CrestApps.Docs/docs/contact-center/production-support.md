@@ -444,33 +444,16 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 
 **Backup and restore.** All durable Contact Center state lives in the tenant SQL database (see the [failure runbooks](runbooks.md)); back it up with the engine's native, point-in-time-capable mechanism. Because the interaction event log is the projection-rebuild source, keep `ProjectionReplayHorizonDays` and `LegalHoldMinimumDays` set so a point-in-time restore retains enough history to rebuild projections — after a restore, run the metrics projection rebuild to reconcile any drift. Provider-held recordings are backed up by their owning store, not by the Contact Center database backup, so a full restore must coordinate the database restore with the media store's own retention and restore policy.
 
-## Preview data maintenance
+## Configuration portability and preview data
 
-Contact Center is a preview capability, so a tenant that piloted it accumulates operational data — interactions, activities, assignments, agent sessions, dialer records — that an operator must be able to take away and clear before a real rollout. Deleting rows by hand is not a substitute: the entity set spans twenty-one document types, and a table missed by hand leaves orphaned state that later reads treat as live work.
+Contact Center configuration — queues, queue groups, skills, routing entry points, dialer profiles, business-hours calendars, and agent state reason codes — is exported and imported through the standard Orchard Core **Deployment** and **Recipes** mechanisms, exactly like every other tenant setting. Each operator-authored data set has a dedicated deployment step (for example the queue, skill, entry point, dialer profile, business-hours calendar, queue-group, and reason-code steps), so an operator builds a deployment plan, exports it, and replays it as a recipe on another tenant. There is no bespoke Contact Center export format to learn or maintain, and no parallel import path: the sanctioned Orchard pipeline is the single source of truth for configuration portability.
 
-The `CrestApps.OrchardCore.ContactCenter.Maintenance` feature provides the procedure, as four steps under **Contact Center → Preview maintenance** (guarded by the `ManageContactCenterPreviewData` permission):
+Operational data — interactions, activities, assignments, agent sessions, dialer records, and the event/metric ledgers — is **not** configuration and is deliberately excluded from Deployment/Recipes. Its lifecycle is governed two ways:
 
-1. **Export** — writes every document in the Contact Center collection to a single JSON file and returns an *export receipt*.
-2. **Quiesce** — stops each enabled feature from admitting new work and drains what is already in flight.
-3. **Reset** — deletes the data, either `OperationalData` (preserving operator-authored configuration such as queues, skills, routing entry points, agent profiles, and business hours) or `All`.
-4. **Verify** — recounts every data set and reports anything that survived.
+- **Ongoing minimization** by the retention windows and per-entity governance categories described above, which age records out automatically.
+- **Backup and restore** by the tenant SQL database's own point-in-time mechanism (see [Backup and restore](#backup-and-restore) above), which is the only mechanism that captures operational content faithfully.
 
-The steps are mechanically coupled rather than merely documented in order. The receipt is a hash of the tenant name and the per-data-set document counts at the moment of export; a reset recomputes it from live state and refuses a receipt that no longer matches. A tenant that is still admitting work therefore keeps invalidating its own receipt, so **the reset cannot succeed unless the export is genuinely complete and the tenant is genuinely quiesced**. An operator cannot reach the destructive step having skipped the step that makes it recoverable.
-
-Reset refuses unless every guard passes, and reports which one refused:
-
-| Guard | Refusal |
-| --- | --- |
-| `CrestApps_ContactCenter:PreviewMaintenance:AllowReset` is `true` | `ResetNotAllowed` — the default, so no deployment can reset without explicitly opting in. |
-| The environment is not production | `ProductionEnvironment` — overridable only by setting `RefuseResetInProduction` to `false`. |
-| The typed confirmation matches the tenant name | `ConfirmationTokenMismatch` — an operator cannot wipe the tenant they are not looking at. |
-| Every enabled feature is quiesced | `WorkNotQuiesced` |
-| A receipt was supplied | `ExportReceiptMissing` |
-| The receipt matches current counts | `ExportReceiptStale` |
-
-Which data sets belong to which governance category, and which count as operator-authored configuration, is declared in one registry that a build gate compares against the persisted document types discovered by reflection. Adding a new persisted entity without classifying it fails the build rather than silently escaping both export and reset.
-
-Reset is a preview-lifecycle tool, not a retention mechanism. Ordinary data minimization is handled by the retention windows and per-entity governance described above.
+Contact Center intentionally ships **no destructive "reset all operational data" admin action**. Clearing a preview tenant is a database-lifecycle operation (drop or restore the tenant database), not an in-app button, because an in-app bulk delete cannot offer the atomicity or point-in-time recoverability that the database engine already provides, and a count-based "receipt" is not a real backup. This keeps the destructive surface out of the running application entirely rather than gating it behind flags.
 
 ## Query-plan budgets
 
@@ -652,7 +635,7 @@ Each ledger entry resolves the applicable control-matrix ids, current unit evide
 
 Inbound provider webhooks are split by channel by design.
 
-- **Voice provider webhooks** (generic Contact Center and DialPad) use the full ingress-control stack: body/header limits, tenant-local rate and concurrency limiting, delivery freshness and replay rejection, and a durable at-least-once inbox that returns `2xx` only after the delivery is committed. Processing is decoupled from the request lifecycle, so a client disconnect after commit never drops or double-executes a delivery.
+- **Voice provider webhooks** (DialPad's provider-owned endpoint) use the full ingress-control stack: body/header limits, tenant-local rate and concurrency limiting, delivery freshness and replay rejection, and a durable at-least-once inbox that returns `2xx` only after the delivery is committed. Processing is decoupled from the request lifecycle, so a client disconnect after commit never drops or double-executes a delivery.
 - **Non-voice provider webhooks** (Twilio SMS, Twilio EventGrid, and Azure EventGrid) are authenticated at the edge — Twilio requests are verified against the account `AuthToken` HMAC signature and rejected with `403` on mismatch; Azure EventGrid requests are authenticated and bounded by a request-body cap — but they do not yet use the durable inbox. They are outside the GA-Core voice scope.
 
 Bringing the non-voice webhooks to full parity is a tracked R9 item. Because the durable inbox is intentionally coupled to Contact Center orchestration (its scope executor, provider-identity canonicalization, and persisted inbox index), parity is delivered by first promoting the reusable ingress primitives to a channel-neutral shared home at or below Omnichannel, then migrating both voice and non-voice consumers onto it — an expand-migrate-contract refactor sequenced only when a second (non-voice) channel is actually built.
@@ -660,7 +643,7 @@ Bringing the non-voice webhooks to full parity is a tracked R9 item. Because the
 ## Prohibited capabilities and combinations
 
 - Power, Progressive, and Predictive dialing.
-- Recording, monitor, whisper, barge, take-over, and bidirectional media.
+- Recording, monitor, whisper, barge, and bidirectional media.
 - More than one voice provider profile in one tenant.
 - Production on SQLite.
 - Production on a single application node without Redis distributed locking and a Redis SignalR backplane.

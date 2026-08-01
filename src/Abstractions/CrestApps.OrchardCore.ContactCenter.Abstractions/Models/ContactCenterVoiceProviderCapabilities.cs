@@ -71,9 +71,4 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can barge into a live call so all parties hear the supervisor.
     /// </summary>
     Barge = 1 << 11,
-
-    /// <summary>
-    /// The provider can take over a live call from the agent.
-    /// </summary>
-    TakeOver = 1 << 12,
 }

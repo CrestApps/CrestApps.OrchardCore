@@ -49,7 +49,7 @@ It shows three sections:
 
 Use it to spot a backing-up queue, an SLA breach, or too few available agents, and then rebalance staffing, adjust queue priorities, or open a campaign.
 
-When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, **Barge**, or **Take over** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement.
+When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, or **Barge** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement.
 
 ## For contact center managers: inbound routing runbook
 

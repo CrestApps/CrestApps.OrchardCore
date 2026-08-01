@@ -19,9 +19,4 @@ public enum MonitorMode
     /// The supervisor joins the call so all parties hear the supervisor.
     /// </summary>
     Barge,
-
-    /// <summary>
-    /// The supervisor takes the call over from the agent.
-    /// </summary>
-    TakeOver,
 }

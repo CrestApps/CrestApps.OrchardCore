@@ -7,7 +7,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         public static readonly OrchardCore.Security.Permissions.Permission ManageContactCenter;
         public static readonly OrchardCore.Security.Permissions.Permission ManageDialer;
         public static readonly OrchardCore.Security.Permissions.Permission ManageInteractions;
-        public static readonly OrchardCore.Security.Permissions.Permission ManagePreviewData;
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueueGroups;
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueues;
         public static readonly OrchardCore.Security.Permissions.Permission ManageSkills;
@@ -35,6 +34,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
     public static class BacklogHealthEvaluator
     {
         public static Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult Evaluate(string subsystem, int deadLetterCount, int overdueCount, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterHealthCheckOptions options) { }
+    }
+    public sealed class ContactCenterDistributedLockHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public ContactCenterDistributedLockHealthCheck(OrchardCore.Locking.Distributed.IDistributedLock distributedLock) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterNodeHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
@@ -315,35 +319,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
         public string QueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus Status { get; set; }
-    }
-}
-namespace CrestApps.OrchardCore.ContactCenter.Core.Maintenance
-{
-    public sealed class ContactCenterPreviewDataSetDescriptor
-    {
-        public ContactCenterPreviewDataSetDescriptor(System.Type documentType, string governanceCategoryKey, bool isConfiguration) { }
-        public System.Type DocumentType { get; }
-        public string GovernanceCategoryKey { get; }
-        public bool IsConfiguration { get; }
-    }
-    public static class ContactCenterPreviewDataSetRegistry
-    {
-        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Maintenance.ContactCenterPreviewDataSetDescriptor> Descriptors { get; }
-    }
-    public sealed class ContactCenterPreviewDataSet<TDocument> : CrestApps.OrchardCore.ContactCenter.Maintenance.IContactCenterPreviewDataSet
-        where TDocument :  class
-    {
-        public ContactCenterPreviewDataSet(YesSql.ISession session, string governanceCategoryKey, bool isConfiguration, int pageSize) { }
-        public string GovernanceCategoryKey { get; }
-        public bool IsConfiguration { get; }
-        public string Key { get; }
-        public System.Threading.Tasks.Task<int> CountAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> DeleteAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<object>> ReadPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public static class ContactCenterPreviewMaintenanceServiceCollectionExtensions
-    {
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterPreviewDataSets(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models
@@ -1386,23 +1361,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Reject = 6,
         SendToVoicemail = 7,
     }
-    public sealed class ProviderVoiceWebhookOutcome
-    {
-        public ProviderVoiceWebhookOutcome() { }
-        public int ProcessedCount { get; set; }
-        public System.TimeSpan? RetryAfter { get; set; }
-        public CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderVoiceWebhookStatus Status { get; set; }
-    }
-    public enum ProviderVoiceWebhookStatus
-    {
-        Accepted = 0,
-        UnknownProvider = 1,
-        InvalidSignature = 2,
-        MissingIdempotencyKey = 3,
-        RateLimited = 4,
-        StaleDelivery = 5,
-        InboxBusy = 6,
-    }
     public sealed class ProviderWebhookInboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
         public ProviderWebhookInboxMessage() { }
@@ -2365,16 +2323,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.EntryPointRoutingPlan CreatePlan(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint entryPoint, bool isOpen) { }
     }
-    public abstract class HmacProviderVoiceWebhookAdapterBase : CrestApps.OrchardCore.ContactCenter.IProviderVoiceWebhookAdapter
-    {
-        protected HmacProviderVoiceWebhookAdapterBase() { }
-        protected abstract string SignatureHeaderName { get; }
-        protected abstract string SigningSecret { get; }
-        public abstract string TechnicalName { get; }
-        public abstract System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent> Parse(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request);
-        public virtual bool ValidateSignature(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request) { }
-        protected static string ComputeSignature(string secret, string payload) { }
-    }
     public interface IActivityAssignmentService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> AssignNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
@@ -2881,10 +2829,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task ReconcileEndedOfferAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IProviderVoiceWebhookProcessor
-    {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderVoiceWebhookOutcome> ProcessAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request, System.Threading.CancellationToken cancellationToken = default);
-    }
     public interface IProviderWebhookInboxStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>
     {
         System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default);
@@ -3131,11 +3075,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ProviderVoiceOfferSynchronizationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, System.IServiceProvider serviceProvider, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceOfferSynchronizationService> logger) { }
         public System.Threading.Tasks.Task ReconcileEndedOfferAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public sealed class ProviderVoiceWebhookProcessor : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceWebhookProcessor
-    {
-        public ProviderVoiceWebhookProcessor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IProviderVoiceWebhookAdapter> adapters, CrestApps.OrchardCore.ContactCenter.IProviderWebhookInbox inbox, CrestApps.OrchardCore.ContactCenter.IProviderWebhookIngressLimiter ingressLimiter, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceWebhookProcessor> logger) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderVoiceWebhookOutcome> ProcessAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderVoiceWebhookRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ProviderWebhookInbox : CrestApps.OrchardCore.ContactCenter.IProviderWebhookInbox
     {

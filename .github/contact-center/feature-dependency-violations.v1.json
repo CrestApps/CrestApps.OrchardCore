@@ -493,18 +493,6 @@
       "OrchardCore.Flows",
       "OrchardCore.Users",
       "OrchardCore.Workflows"
-    ],
-    "CrestApps.OrchardCore.ContactCenter.Maintenance": [
-      "CrestApps.OrchardCore.ContactCenter",
-      "CrestApps.OrchardCore.ContentFields",
-      "CrestApps.OrchardCore.Omnichannel",
-      "CrestApps.OrchardCore.Omnichannel.Activities",
-      "CrestApps.OrchardCore.PhoneNumbers",
-      "CrestApps.OrchardCore.TimeZones",
-      "CrestApps.OrchardCore.Users",
-      "OrchardCore.Contents",
-      "OrchardCore.Flows",
-      "OrchardCore.Users"
     ]
   }
 }

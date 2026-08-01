@@ -4,9 +4,9 @@ using OrchardCore.Redis;
 namespace CrestApps.OrchardCore.ContactCenter.HealthChecks;
 
 /// <summary>
-/// Pings the Redis connection shared by the distributed lock and the SignalR backplane. It reports healthy with
-/// nothing probed when Redis is not enabled, because a deployment that declares no Redis dependency has none to
-/// be unhealthy about; the topology validator, not this probe, decides whether Redis is required.
+/// Pings the Redis connection shared by the distributed lock and the SignalR backplane. It is registered only
+/// when the <c>OrchardCore.Redis</c> feature is enabled, so a deployment that declares no Redis dependency never
+/// registers this probe; the topology validator, not this probe, decides whether Redis is required.
 /// </summary>
 public sealed class ContactCenterRedisConnectivityHealthCheck : IHealthCheck
 {
@@ -17,8 +17,8 @@ public sealed class ContactCenterRedisConnectivityHealthCheck : IHealthCheck
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRedisConnectivityHealthCheck"/> class.
     /// </summary>
-    /// <param name="redisService">The optional Redis service; <see langword="null"/> when Redis is not enabled.</param>
-    public ContactCenterRedisConnectivityHealthCheck(IRedisService redisService = null)
+    /// <param name="redisService">The Redis service to probe.</param>
+    public ContactCenterRedisConnectivityHealthCheck(IRedisService redisService)
     {
         _redisService = redisService;
     }
@@ -28,11 +28,6 @@ public sealed class ContactCenterRedisConnectivityHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        if (_redisService is null)
-        {
-            return HealthCheckResult.Healthy("Redis is not enabled; there is no Redis dependency to probe.");
-        }
-
         using var timeoutCts = new CancellationTokenSource(_probeTimeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         var deadline = linkedCts.Token;

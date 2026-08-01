@@ -66,10 +66,4 @@ public static class ContactCenterPermissions
     /// Grants read-only access to the Contact Center historical reports and their exports.
     /// </summary>
     public static readonly Permission ViewReports = new("ViewContactCenterReports", "View Contact Center reports", [MonitorContactCenter, ManageContactCenter]);
-
-    /// <summary>
-    /// Grants the ability to export, quiesce, reset, and verify the Contact Center data of a preview tenant.
-    /// It is the most destructive Contact Center permission, so it implies nothing and is implied by nothing.
-    /// </summary>
-    public static readonly Permission ManagePreviewData = new("ManageContactCenterPreviewData", "Export and reset Contact Center preview data");
 }

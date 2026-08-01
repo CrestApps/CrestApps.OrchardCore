@@ -154,8 +154,7 @@
                 var modeButtons = {
                     Monitor: ['btn-outline-secondary', label('monitor', 'Monitor')],
                     Whisper: ['btn-outline-secondary', label('whisper', 'Whisper')],
-                    Barge: ['btn-outline-secondary', label('barge', 'Barge')],
-                    TakeOver: ['btn-outline-danger', label('takeOver', 'Take over')]
+                    Barge: ['btn-outline-secondary', label('barge', 'Barge')]
                 };
                 var actions = '';
 

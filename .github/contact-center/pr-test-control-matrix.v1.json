@@ -99,8 +99,8 @@
       "severity": "P0",
       "category": "correctness",
       "planFinding": "PR9",
-      "gate": "Monitor/whisper/barge/take-over can report success without execution",
-      "invariant": "A provider that advertises only the Whisper capability must expose and execute only Whisper; Monitor, Barge, and TakeOver must each fail with NotSupported unless that specific operation is separately certified and executed by the provider, never inferred from a single combined capability flag. Today `ContactCenterMonitoringService.EngageAsync` checks `ContactCenterVoiceProviderCapabilities` and publishes `SupervisorMonitorStarted` with no per-operation provider execution proof (`ContactCenterMonitoringService.cs:33-74`).",
+      "gate": "Monitor/whisper/barge can report success without execution",
+      "invariant": "A provider that advertises only the Whisper capability must expose and execute only Whisper; Monitor and Barge must each fail with NotSupported unless that specific operation is separately certified and executed by the provider, never inferred from a single combined capability flag. Today `ContactCenterMonitoringService.EngageAsync` checks `ContactCenterVoiceProviderCapabilities` and publishes `SupervisorMonitorStarted` with no per-operation provider execution proof (`ContactCenterMonitoringService.cs:33-74`).",
       "testId": "CC-C002",
       "ciJob": {
         "id": "build_test",
@@ -118,7 +118,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares monitor/whisper/barge/take-over prohibited for every GA-Core provider profile (policy-level fail-closed). ContactCenterRecordingAndMonitoringTests.EngageAsync_WithCapabilityFlagButNoExecutableOperation_StillPublishesSuccess explicitly reproduces today's capability-flag-only runtime behavior; a Whisper-only provider test double that must fail Monitor/Barge/TakeOver at runtime is a planned:contact-center-domain-invariants R4/R8 dependency."
+      "evidenceLocation": "tests/CrestApps.OrchardCore.Tests/Modules/ContactCenter/ContactCenterSupportMatrixTests.cs proves `.github/contact-center/support-matrix.v1.json` declares monitor/whisper/barge prohibited for every GA-Core provider profile (policy-level fail-closed). ContactCenterRecordingAndMonitoringTests.EngageAsync_WithCapabilityFlagButNoExecutableOperation_StillPublishesSuccess explicitly reproduces today's capability-flag-only runtime behavior; a Whisper-only provider test double that must fail Monitor/Barge at runtime is a planned:contact-center-domain-invariants R4/R8 dependency."
     },
     {
       "id": "C003",
@@ -257,7 +257,7 @@
       "category": "correctness",
       "planFinding": "PR9",
       "gate": "Capability flags exceed executable contracts",
-      "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that provider work occurred. Live media is exposed only by a matching `IContactCenterVoiceMediaProvider` registration under the dependency-only media features, while Recording, Monitor, Whisper, Barge, and TakeOver require both their capability metadata and matching executable contracts.",
+      "invariant": "A voice provider must fail registration/selection when it advertises a capability flag for an operation it does not implement; a capability flag and a success-shaped domain event are never proof that provider work occurred. Live media is exposed only by a matching `IContactCenterVoiceMediaProvider` registration under the dependency-only media features, while Recording, Monitor, Whisper, and Barge require both their capability metadata and matching executable contracts.",
       "testId": "CC-C008",
       "ciJob": {
         "id": "build_test",
@@ -968,39 +968,6 @@
       "evidenceLocation": "ContactCenterOptionsValidationTests enumerates every *Options type in the governed assemblies by reflection and fails when one accepts operator input without a registered IValidateOptions, with discovery pinned by a floor so it cannot pass vacuously and exemptions asserted to name real types; it also pins that ValidateOnStart is inert inside a per-tenant container, which is why TenantOptionsStartupValidator exists. ContactCenterConfigurationFailClosedTests boots a real Orchard host and proves a tenant carrying a negative retention window, a sub-one health threshold or an unrecognized topology profile refuses to activate, with a valid-configuration control proving activation is otherwise reachable."
     },
     {
-      "id": "O008",
-      "severity": "P1",
-      "category": "operations",
-      "planFinding": "W8.5-preview-export-quiesce-reset",
-      "gate": "Preview data export, quiesce, reset and verify",
-      "invariant": "A tenant that piloted the preview can export every Contact Center document, quiesce all enabled features, delete either operational data or all data, and verify the result. The destructive step is coupled to the recoverable one: reset requires an export receipt derived from live per-data-set counts, so it refuses when the export is stale or the tenant is still admitting work, and it refuses by default, outside development, and on a confirmation token that does not match the tenant. Every persisted document type is classified in one registry, so a new entity cannot escape both export and reset.",
-      "testId": "CC-O008",
-      "ciJob": {
-        "id": "build_test",
-        "workflow": ".github/workflows/pr_ci.yml",
-        "status": "implemented",
-        "additionalJobs": [
-          {
-            "id": "fresh-tenant-activation",
-            "workflow": ".github/workflows/contact_center_feature_activation_matrix.yml"
-          }
-        ]
-      },
-      "context": {
-        "providers": [
-          "all-ga-core-providers"
-        ],
-        "databases": [
-          "all-supported-databases"
-        ],
-        "topologies": [
-          "single-node",
-          "single-node-distributed"
-        ]
-      },
-      "evidenceLocation": "ContactCenterPreviewMaintenanceCompletenessTests compares the data-set registry against the persisted document types discovered by reflection, with a discovery floor so it cannot pass vacuously, and fails when a type is unclassified, duplicated, or mapped to a governance category that does not resolve. ContactCenterPreviewMaintenanceTests exercises export, quiesce, reset and verify against a real YesSql SQLite store and pins each refusal path, that an operational reset preserves operator-authored configuration while an All reset does not, and that a write after the export makes the receipt stale. ContactCenterPreviewMaintenanceActivationTests repeats the whole cycle inside a real Orchard tenant so the container registration, options binding and lifecycle participants are proven, not assumed."
-    },
-    {
       "id": "O009",
       "severity": "P1",
       "category": "operations",
@@ -1188,7 +1155,7 @@
           "single-node-distributed"
         ]
       },
-      "evidenceLocation": "KnownDevelopmentValuesTests walks the tracked configuration files in this repository, extracts every published credential assignment and asserts each is recognised, and asserts no registered digest has gone stale, so a new sample credential cannot ship unguarded. ContactCenterConfigurationFailClosedTests boots a real host in Production and proves a tenant refuses to activate while carrying the ARI password or the Coturn static authentication secret read from the checked-in files at test time, and proves the identical configuration still activates in Development. AsteriskSoftPhoneRegistrationConfigContributorTests proves the TURN relay credential is withheld in production and still issued in development."
+      "evidenceLocation": "DefaultAsteriskOptionsValidatorTests proves the options validator rejects the checked-in development ARI password, the checked-in Coturn static authentication secret, and an unsubstituted placeholder secret in Production, and proves genuine credentials and the same development credential in Development still pass. ContactCenterConfigurationFailClosedTests boots a real host in Production and proves a tenant refuses to activate while carrying the ARI password or the Coturn static authentication secret read from the checked-in files at test time, and proves the identical configuration still activates in Development. AsteriskSoftPhoneRegistrationConfigContributorTests proves the TURN relay credential is withheld in production and still issued in development."
     },
     {
       "id": "T001",
@@ -1352,7 +1319,7 @@
           "single-node"
         ]
       },
-      "evidenceLocation": "ProviderWebhookIngressLimiterTests, ProviderVoiceWebhookEndpointTests, ProviderVoiceWebhookProcessorTests, DialPadWebhookEndpointTests, ProviderWebhookInboxTests, ProviderWebhookInboxPersistenceTests, ProviderVoiceEventInboxHandlerTests, DialPadWebhookInboxHandlerTests, and RequestBodyReaderTests prove 1 MiB rejection for a declared length and for a chunked body that declares none, that a body larger than the allowance is refused without being buffered or turned into a string, that a request refused for concurrency is refused without reading a single byte of its body, that a body spanning several buffers is returned whole, that a body the server itself refuses is reported the same way as one the reader refuses, that a body fed under back pressure is still read to completion, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, bounded provider-signed delivery age/future skew with missing/malformed/non-UTC rejection, explicit YesSql commit before acceptance returns, provider-delivery duplicate detection under a distributed lock, cancellation-independent persisted dispatch, retry/backoff, poison-message isolation, and dead-lettering. A real client disconnect after durable acceptance, every supported database, every GA provider, and process-crash/restart execution remain planned:contact-center-provider-contract-suite dependencies."
+      "evidenceLocation": "ProviderWebhookIngressLimiterTests, DialPadWebhookEndpointTests, ProviderWebhookInboxTests, ProviderWebhookInboxPersistenceTests, ProviderVoiceEventInboxHandlerTests, DialPadWebhookInboxHandlerTests, and RequestBodyReaderTests prove 1 MiB rejection for a declared length and for a chunked body that declares none, that a body larger than the allowance is refused without being buffered or turned into a string, that a request refused for concurrency is refused without reading a single byte of its body, that a body spanning several buffers is returned whole, that a body the server itself refuses is reported the same way as one the reader refuses, that a body fed under back pressure is still read to completion, tenant-local pre-buffering concurrency rejection, authenticated per-provider rate isolation, HTTP 429/Retry-After behavior, bounded provider-signed delivery age/future skew with missing/malformed/non-UTC rejection, explicit YesSql commit before acceptance returns, provider-delivery duplicate detection under a distributed lock, cancellation-independent persisted dispatch, retry/backoff, poison-message isolation, and dead-lettering. A real client disconnect after durable acceptance, every supported database, every GA provider, and process-crash/restart execution remain planned:contact-center-provider-contract-suite dependencies."
     },
     {
       "id": "V004",

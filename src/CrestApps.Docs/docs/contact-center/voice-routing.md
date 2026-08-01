@@ -73,11 +73,11 @@ Only provider execution consumes this deadline. After provider-confirmed success
 Inbound voice can enter the Contact Center through one of two server-side paths:
 
 1. A provider or simulator posts a normalized `InboundVoiceEvent` to `POST /api/contact-center/voice/inbound`.
-2. A provider-specific webhook adapter or controller translates the provider payload into Contact Center events first.
+2. A provider-owned webhook endpoint receives the provider's native payload, validates it, and normalizes it into Contact Center events first.
 
 Examples:
 
-- Generic provider webhook path: `POST /api/contact-center/voice/webhook/{provider}`
+- Provider-owned webhook path (each provider maps its own route): `POST /api/dialpad/webhook/call`
 - Generic normalized inbound path: `POST /api/contact-center/voice/inbound`
 - DialPad built-in path: `POST /api/dialpad/webhook/call`
 

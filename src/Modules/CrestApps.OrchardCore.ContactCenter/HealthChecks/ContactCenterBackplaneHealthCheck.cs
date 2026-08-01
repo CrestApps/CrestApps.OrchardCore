@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.ContactCenter.HealthChecks;
 /// Proves the SignalR Redis backplane by publishing a token on a dedicated, invocation-unique, tenant-qualified
 /// channel and waiting to receive it back within a bounded time. Redis connectivity alone does not prove the
 /// backplane works: a pub/sub round-trip is the only signal that a message published on one node would reach
-/// subscribers on another. Reports healthy with nothing probed when Redis is not enabled.
+/// subscribers on another. It is registered only when the <c>OrchardCore.Redis</c> feature is enabled.
 /// </summary>
 public sealed class ContactCenterBackplaneHealthCheck : IHealthCheck
 {
@@ -26,11 +26,11 @@ public sealed class ContactCenterBackplaneHealthCheck : IHealthCheck
     /// </summary>
     /// <param name="redisOptions">The Redis options, read for the instance prefix used to qualify the channel.</param>
     /// <param name="shellSettings">The tenant shell settings, used to qualify the channel per tenant.</param>
-    /// <param name="redisService">The optional Redis service; <see langword="null"/> when Redis is not enabled.</param>
+    /// <param name="redisService">The Redis service to probe.</param>
     public ContactCenterBackplaneHealthCheck(
         IOptions<RedisOptions> redisOptions,
         ShellSettings shellSettings,
-        IRedisService redisService = null)
+        IRedisService redisService)
     {
         _redisOptions = redisOptions.Value;
         _tenantName = shellSettings.Name;
@@ -42,11 +42,6 @@ public sealed class ContactCenterBackplaneHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        if (_redisService is null)
-        {
-            return HealthCheckResult.Healthy("Redis is not enabled; there is no SignalR backplane to probe.");
-        }
-
         using var timeoutCts = new CancellationTokenSource(_roundTripTimeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         var deadline = linkedCts.Token;

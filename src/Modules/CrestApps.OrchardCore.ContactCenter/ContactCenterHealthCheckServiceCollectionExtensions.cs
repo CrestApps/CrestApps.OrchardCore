@@ -2,9 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Redis;
 
 namespace CrestApps.OrchardCore.ContactCenter;
@@ -67,23 +65,44 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
             .AddCheck<ContactCenterOutboxHealthCheck>(
                 ContactCenterConstants.HealthChecks.OutboxCheckName,
-                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the distributed-dependency health checks that only make sense once Redis backs the deployment.
+    /// </summary>
+    /// <param name="services">The service collection to register the checks with.</param>
+    /// <returns>The same <paramref name="services"/> so calls can be chained.</returns>
+    /// <remarks>
+    /// The distributed lock, Redis connectivity, and SignalR backplane probes all depend on services that only
+    /// the <c>OrchardCore.Redis</c> feature registers. Enabling that feature is not sufficient: Orchard skips
+    /// registering <see cref="IRedisService"/> when the Redis configuration string is missing or invalid, so the
+    /// probes are registered only once <see cref="IRedisService"/> is actually present. This mirrors how the
+    /// Redis lock, bus, and cache sub-features guard their own registrations, and it keeps the mandatory Redis
+    /// dependency honest: the probes never register in a state where they could not construct.
+    /// </remarks>
+    public static IServiceCollection AddContactCenterRedisHealthChecks(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(IRedisService)))
+        {
+            return services;
+        }
+
+        services
+            .AddHealthChecks()
             .AddCheck<ContactCenterDistributedLockHealthCheck>(
                 ContactCenterConstants.HealthChecks.DistributedLockCheckName,
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
-            .Add(new HealthCheckRegistration(
+            .AddCheck<ContactCenterRedisConnectivityHealthCheck>(
                 ContactCenterConstants.HealthChecks.RedisConnectivityCheckName,
-                serviceProvider => new ContactCenterRedisConnectivityHealthCheck(serviceProvider.GetService<IRedisService>()),
-                failureStatus: null,
-                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]))
-            .Add(new HealthCheckRegistration(
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
+            .AddCheck<ContactCenterBackplaneHealthCheck>(
                 ContactCenterConstants.HealthChecks.BackplaneCheckName,
-                serviceProvider => new ContactCenterBackplaneHealthCheck(
-                    serviceProvider.GetRequiredService<IOptions<RedisOptions>>(),
-                    serviceProvider.GetRequiredService<ShellSettings>(),
-                    serviceProvider.GetService<IRedisService>()),
-                failureStatus: null,
-                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]));
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
 
         return services;
     }

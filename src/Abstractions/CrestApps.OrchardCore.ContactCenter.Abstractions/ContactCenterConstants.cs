@@ -292,12 +292,6 @@ public static class ContactCenterConstants
         /// The identifier of the Orchard Core Workflows integration feature.
         /// </summary>
         public const string Workflows = "CrestApps.OrchardCore.ContactCenter.Workflows";
-
-        /// <summary>
-        /// The identifier of the preview maintenance feature that exports, quiesces, resets, and verifies the
-        /// Contact Center data of a preview tenant.
-        /// </summary>
-        public const string Maintenance = "CrestApps.OrchardCore.ContactCenter.Maintenance";
     }
 
     /// <summary>

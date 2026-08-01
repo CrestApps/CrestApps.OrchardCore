@@ -9,46 +9,15 @@ using StackExchange.Redis;
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
-/// Verifies the Redis dependency probes report healthy with nothing probed when Redis is not enabled.
+/// Verifies the Redis backplane probe tears its probe subscription down even when the round-trip times out.
 /// </summary>
 /// <remarks>
-/// A deployment that declares no Redis dependency has none to be unhealthy about, and the topology validator —
-/// not these probes — decides whether Redis is required. Reporting a failure here would make a supported
-/// development or single-node deployment alert as broken.
+/// The probe subscribes to an invocation-unique channel before publishing. When the round-trip abandons the
+/// await on timeout, the underlying subscription is not cancelled, so the handler must be unsubscribed
+/// explicitly or the connection accumulates a dead subscription on every failed probe.
 /// </remarks>
 public sealed class ContactCenterRedisHealthCheckTests
 {
-    [Fact]
-    public async Task RedisConnectivity_ReportsHealthy_WhenRedisIsNotEnabled()
-    {
-        // Arrange
-        var check = new ContactCenterRedisConnectivityHealthCheck(redisService: null);
-
-        // Act
-        var result = await check.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("not enabled", result.Description, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task Backplane_ReportsHealthy_WhenRedisIsNotEnabled()
-    {
-        // Arrange
-        var check = new ContactCenterBackplaneHealthCheck(
-            Options.Create(new RedisOptions()),
-            CreateShellSettings(),
-            redisService: null);
-
-        // Act
-        var result = await check.CheckHealthAsync(CreateContext(), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("not enabled", result.Description, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static ShellSettings CreateShellSettings()
         => new() { Name = "Default" };
 

@@ -58,7 +58,6 @@ public sealed class ContactCenterHeadlessClosureTests
         ContactCenterConstants.Feature.VoiceSoftPhone,
         ContactCenterConstants.Feature.Supervision,
         ContactCenterConstants.Feature.Analytics,
-        ContactCenterConstants.Feature.Maintenance,
     ];
 
     [Fact]

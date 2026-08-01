@@ -71,7 +71,6 @@
         "monitor",
         "whisper",
         "barge",
-        "take-over",
         "bidirectional-media"
       ]
     },
@@ -91,7 +90,6 @@
         "monitor",
         "whisper",
         "barge",
-        "take-over",
         "bidirectional-media"
       ]
     }
@@ -145,7 +143,7 @@
     "multi-region active-active",
     "more than one voice provider profile in one tenant",
     "Power, Progressive, or Predictive dialing",
-    "recording, monitor, whisper, barge, take-over, or bidirectional media",
+    "recording, monitor, whisper, barge, or bidirectional media",
     "Elasticsearch in routing, assignment, provider ingest, or another correctness path",
     "unlisted feature, provider, database, or topology combinations"
   ]

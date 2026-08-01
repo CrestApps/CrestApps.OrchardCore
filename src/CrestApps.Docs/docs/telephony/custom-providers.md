@@ -29,13 +29,13 @@ There are five separate seams, and a provider may implement any combination supp
 | Contact Center call control | `IContactCenterVoiceCallControlProvider` | Dialer dialing and server-side agent bridging |
 | Contact Center queue ownership | `IContactCenterVoiceQueueAssignmentProvider` | Provider-side agent assignment and queue placement |
 | Contact Center transfer and conference | `IContactCenterVoiceTransferProvider`, `IContactCenterVoiceConferenceProvider` | Live-call transfer and conference execution |
-| Contact Center recording and monitoring | `IContactCenterVoiceRecordingProvider`, `IContactCenterVoiceMonitoringProvider` | Recording control and supervisor monitor, whisper, barge, or take-over execution |
+| Contact Center recording and monitoring | `IContactCenterVoiceRecordingProvider`, `IContactCenterVoiceMonitoringProvider` | Recording control and supervisor monitor, whisper, or barge execution |
 | Bidirectional live media | `IContactCenterVoiceMediaProvider` | Receive caller audio and inject application-generated audio into an existing provider call |
 | Provider event ingestion | `IProviderVoiceEventSink` | Submit normalized provider call-state events without referencing Contact Center persistence models |
 | Inbound provider routing | `IInboundVoiceEventSink` | Route a normalized inbound call into Contact Center work |
 | Provider reconciliation | `IProviderCallStateReconciler` | Reconcile active Contact Center calls against authoritative provider state |
 | Durable webhook ingress | `IProviderWebhookInbox`, `IProviderWebhookInboxHandler`, `IProviderWebhookIngressLimiter` | Commit authenticated deliveries, dispatch provider-owned payload handlers, and enforce ingress limits |
-| Provider event ingress | `IProviderVoiceWebhookAdapter` or provider-specific stream listener | Convert provider webhooks or stream events into normalized `ProviderVoiceEvent` instances |
+| Provider event ingress | Provider-owned webhook endpoint + `IProviderWebhookInboxHandler`, or a provider-specific stream listener | Authenticate provider deliveries at the provider's own endpoint, commit them to the durable inbox, and convert them into normalized `ProviderVoiceEvent` instances |
 
 The soft phone stays provider-agnostic because **providers never push UI updates directly to the browser**. Every provider must translate its native events into the internal Contact Center voice-event pipeline first.
 
@@ -43,7 +43,7 @@ The soft phone stays provider-agnostic because **providers never push UI updates
 Provider webhook / stream / callback
                 |
                 v
-Provider-specific adapter
+Provider endpoint or stream listener (+ durable inbox)
                 |
                 v
 ProviderVoiceEvent
@@ -126,7 +126,7 @@ If the provider participates in Contact Center voice orchestration, implement `I
 - `IContactCenterVoiceTransferProvider` for live-call transfer
 - `IContactCenterVoiceConferenceProvider` for conference creation or participant addition
 - `IContactCenterVoiceRecordingProvider` for start, stop, pause, and resume recording
-- `IContactCenterVoiceMonitoringProvider` for monitor, whisper, barge, and take-over
+- `IContactCenterVoiceMonitoringProvider` for monitor, whisper, and barge
 - `IContactCenterVoiceMediaProvider` for bidirectional live media
 
 Capability flags are discovery metadata, not executable behavior. Advertise an executable call-control, transfer, conference, recording, or monitoring capability only when the corresponding interface is implemented. Contact Center also checks the executable contract before routing or staging provider work, so a flag without an implementation fails closed. Live media is discovered only from `IContactCenterVoiceMediaProvider` registrations and has no capability flag.
@@ -199,20 +199,20 @@ Providers usually fall into one of these transport models:
 
 ### Webhook model
 
-The provider sends HTTP callbacks to Orchard.
-
-Use `IProviderVoiceWebhookAdapter` when:
+The provider sends HTTP callbacks to Orchard. Map a **provider-owned endpoint** when:
 
 - the provider signs webhook requests
-- the payload can be parsed synchronously per request
+- the payload can be authenticated per request
 - Orchard only needs to accept inbound HTTP events
 
 Typical flow:
 
-1. controller/endpoint receives the webhook
-2. adapter validates the signature
-3. adapter parses one or more `ProviderVoiceEvent` records
+1. the provider's own minimal-API endpoint receives the webhook and validates the signature
+2. the endpoint commits the raw delivery to the durable `IProviderWebhookInbox` under an idempotency key
+3. the provider's `IProviderWebhookInboxHandler` deserializes the payload and normalizes one or more `ProviderVoiceEvent` records
 4. `IProviderVoiceEventService` ingests them
+
+The durable inbox (commit-then-dispatch) makes ingress idempotent and recoverable, so a retried delivery is de-duplicated and an event is never lost to an inline dispatch race. The shipping DialPad provider follows exactly this shape (`api/dialpad/webhook/call` → inbox → `DialPadWebhookInboxHandler`).
 
 ### Live stream model
 
@@ -335,7 +335,7 @@ For a new provider module, the usual registration checklist is:
 - `IContactCenterVoiceMediaProvider`
 - `IContactCenterVoiceMediaProviderResolver`
 - `IContactCenterVoiceMediaSession`
-- `IProviderVoiceWebhookAdapter`
+- `IProviderWebhookInboxHandler`
 - `IProviderVoiceEventService`
 - `IIncomingCallContextProvider`
 - `IIncomingCallDispatcher`

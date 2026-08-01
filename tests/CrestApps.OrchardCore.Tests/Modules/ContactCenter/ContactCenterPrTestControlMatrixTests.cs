@@ -9,7 +9,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
         ["C"] = 17,
         ["D"] = 18,
         ["F"] = 10,
-        ["O"] = 9,
+        ["O"] = 8,
         ["S"] = 6,
         ["T"] = 3,
         ["V"] = 10,
@@ -32,7 +32,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
 
         // Assert
         Assert.Equal("blocked-until-r0-r8-pass", matrix["releaseStatus"]?.GetValue<string>());
-        Assert.Equal(73, gates.Count);
+        Assert.Equal(72, gates.Count);
         Assert.Equal(ids.Count, distinctIds.Count);
 
         foreach (var (prefix, expectedCount) in ExpectedGateCountByPrefix)
@@ -153,7 +153,7 @@ public sealed class ContactCenterPrTestControlMatrixTests
     [InlineData("S004", "P1", "Stored subject reaches innerHTML")]
     [InlineData("S005", "P0", "Asterisk dashboard anonymous destructive controls")]
     [InlineData("C001", "P0", "Recording state changes without media execution")]
-    [InlineData("C002", "P0", "Monitor/whisper/barge/take-over can report success without execution")]
+    [InlineData("C002", "P0", "Monitor/whisper/barge can report success without execution")]
     [InlineData("C003", "P0", "Session loss during wrap-up permanently consumes capacity")]
     [InlineData("C004", "P0", "Completed-handler identity unstable across deployment")]
     [InlineData("C005", "P0", "Ambiguous inbound matches attributed to first contact")]

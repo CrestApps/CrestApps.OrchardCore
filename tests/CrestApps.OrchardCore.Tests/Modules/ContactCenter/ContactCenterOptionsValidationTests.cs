@@ -68,7 +68,7 @@ public sealed class ContactCenterOptionsValidationTests
         // A discovery that silently returned nothing, because an assembly marker was dropped or a naming
         // convention changed, would pass every assertion below while governing nothing.
         Assert.True(
-            discovered.Length >= 16,
+            discovered.Length >= 15,
             $"This gate discovered only {discovered.Length} options types across the governed assemblies, which is " +
             "fewer than are known to exist. Discovery is broken, so the completeness check below proves nothing.");
 

@@ -17,7 +17,6 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         MonitorMode.Monitor,
         MonitorMode.Whisper,
         MonitorMode.Barge,
-        MonitorMode.TakeOver,
     ];
 
     private readonly IInteractionManager _interactionManager;
@@ -373,7 +372,6 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             MonitorMode.Monitor => ContactCenterVoiceProviderCapabilities.Monitor,
             MonitorMode.Whisper => ContactCenterVoiceProviderCapabilities.Whisper,
             MonitorMode.Barge => ContactCenterVoiceProviderCapabilities.Barge,
-            MonitorMode.TakeOver => ContactCenterVoiceProviderCapabilities.TakeOver,
             _ => ContactCenterVoiceProviderCapabilities.Monitor,
         };
     }
