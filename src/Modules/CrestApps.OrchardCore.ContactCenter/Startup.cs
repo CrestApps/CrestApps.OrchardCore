@@ -797,6 +797,12 @@ public sealed class RoutingStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
 
+        services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+            new ContactCenterFeatureWorkLifecycleParticipant(
+                ContactCenterConstants.Feature.Routing,
+                serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
         services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
     }
 }

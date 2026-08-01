@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -13,20 +14,48 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
 /// <summary>
 /// Expires stale agent reservations and assigns waiting work to available agents across enabled queues.
+/// It participates in the Routing feature's work-admission drain so it stops admitting work while that
+/// feature is quiescing (and disposes its lease so a disable can drain), it honours the cancellation token
+/// so it stops promptly on shutdown, and it bounds each run to a wall-clock budget (enforced both by an
+/// between-operations deadline check and a hard <see cref="System.Threading.CancellationTokenSource.CancelAfter(int)"/>
+/// that cancels in-flight work) which is safely below the distributed-lock expiration so a slow run cannot
+/// outlive its lock and overlap the next scheduled tick. Work that does not fit in the budget is simply
+/// picked up on the following tick.
 /// </summary>
 [BackgroundTask(
     Title = "Contact Center Reservation and Assignment",
     Schedule = "* * * * *",
     Description = "Expires stale reservations and assigns queued activities to available agents.",
     LockTimeout = 5_000,
-    LockExpiration = 60_000)]
+    LockExpiration = LockExpirationMilliseconds)]
 public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
 {
     private const int MaxVoiceOffersPerQueue = 100;
 
+    /// <summary>
+    /// The distributed-lock expiration, in milliseconds. Set to twice the one-minute schedule so the lock is
+    /// not released while a run is still in progress.
+    /// </summary>
+    private const int LockExpirationMilliseconds = 120_000;
+
+    /// <summary>
+    /// The maximum wall-clock duration of a single run, in milliseconds. Kept safely below
+    /// <see cref="LockExpirationMilliseconds"/> so the run always finishes before the lock can expire, which
+    /// guarantees the next scheduled tick cannot start an overlapping run.
+    /// </summary>
+    private const int MaxRunDurationMilliseconds = 90_000;
+
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Routing);
+
+        if (workLease is null)
+        {
+            return;
+        }
+
         var reservationService = serviceProvider.GetRequiredService<IActivityReservationService>();
         var assignmentService = serviceProvider.GetRequiredService<IActivityAssignmentService>();
         var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
@@ -39,15 +68,52 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         var session = serviceProvider.GetRequiredService<ISession>();
         var logger = serviceProvider.GetRequiredService<ILogger<ReservationExpiryBackgroundTask>>();
 
-        await reservationService.ExpireDueAsync(cancellationToken);
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        runCts.CancelAfter(MaxRunDurationMilliseconds);
+        var runToken = runCts.Token;
 
-        var queues = await queueManager.ListEnabledAsync(cancellationToken);
+        var runDeadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
+
+        IReadOnlyCollection<ActivityQueue> queues;
+
+        try
+        {
+            await reservationService.ExpireDueAsync(runToken);
+            queues = await queueManager.ListEnabledAsync(runToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException) when (runToken.IsCancellationRequested)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug(
+                    "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget while expiring reservations; deferring the remaining work to the next scheduled tick.",
+                    MaxRunDurationMilliseconds);
+            }
+
+            return;
+        }
 
         foreach (var queue in queues)
         {
+            if (clock.UtcNow >= runDeadlineUtc)
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug(
+                        "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget; deferring the remaining queues to the next scheduled tick.",
+                        MaxRunDurationMilliseconds);
+                }
+
+                break;
+            }
+
             try
             {
-                await queueService.OverflowDueAsync(queue, cancellationToken);
+                await queueService.OverflowDueAsync(queue, runToken);
 
                 var voiceWorkBlockedGenericAssignment = false;
 
@@ -55,7 +121,14 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 {
                     for (var attempt = 0; attempt < MaxVoiceOffersPerQueue; attempt++)
                     {
-                        var waitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
+                        if (clock.UtcNow >= runDeadlineUtc)
+                        {
+                            voiceWorkBlockedGenericAssignment = true;
+
+                            break;
+                        }
+
+                        var waitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, runToken);
                         var nextItem = QueueItemPrioritizer.SelectNext(waitingItems, queue, clock.UtcNow);
 
                         if (nextItem is null)
@@ -63,7 +136,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                             break;
                         }
 
-                        var interaction = await interactionManager.FindByActivityIdAsync(nextItem.ActivityItemId, cancellationToken);
+                        var interaction = await interactionManager.FindByActivityIdAsync(nextItem.ActivityItemId, runToken);
 
                         if (interaction?.Channel != InteractionChannel.Voice ||
                             interaction.Direction != InteractionDirection.Inbound ||
@@ -74,12 +147,12 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
 
                         voiceWorkBlockedGenericAssignment = true;
 
-                        if (string.IsNullOrWhiteSpace(await inboundVoiceService.OfferNextAsync(queue.ItemId, cancellationToken)))
+                        if (string.IsNullOrWhiteSpace(await inboundVoiceService.OfferNextAsync(queue.ItemId, runToken)))
                         {
                             break;
                         }
 
-                        await session.SaveChangesAsync(cancellationToken);
+                        await session.SaveChangesAsync(runToken);
                         voiceWorkBlockedGenericAssignment = attempt == MaxVoiceOffersPerQueue - 1;
                     }
                 }
@@ -89,12 +162,12 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                var genericWaitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
+                var genericWaitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, runToken);
                 var nextGenericItem = QueueItemPrioritizer.SelectNext(genericWaitingItems, queue, clock.UtcNow);
 
                 if (nextGenericItem is not null)
                 {
-                    var activity = await activityManager.FindByIdAsync(nextGenericItem.ActivityItemId, cancellationToken);
+                    var activity = await activityManager.FindByIdAsync(nextGenericItem.ActivityItemId, runToken);
 
                     if (activity?.Source is ActivitySources.PowerDial or ActivitySources.ProgressiveDial)
                     {
@@ -111,7 +184,23 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                     }
                 }
 
-                await assignmentService.AssignQueueAsync(queue.ItemId, cancellationToken);
+                await assignmentService.AssignQueueAsync(queue.ItemId, runToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (runToken.IsCancellationRequested)
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug(
+                        "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget while processing queue '{QueueId}'; deferring the remaining work to the next scheduled tick.",
+                        MaxRunDurationMilliseconds,
+                        queue.ItemId.SanitizeLogValue());
+                }
+
+                break;
             }
             catch (Exception ex)
             {

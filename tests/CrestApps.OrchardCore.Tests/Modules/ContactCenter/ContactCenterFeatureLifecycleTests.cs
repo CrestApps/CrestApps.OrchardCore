@@ -42,6 +42,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             "ProviderWebhookInboxBackgroundTask",
             "ProviderCallStateReconciliationBackgroundTask",
             "ProviderCommandRecoveryBackgroundTask",
+            "ReservationExpiryBackgroundTask",
             "ContactCenterVoiceTenantEvents",
             "ContactCenterHub",
             "AsteriskContactCenterVoiceProvider",

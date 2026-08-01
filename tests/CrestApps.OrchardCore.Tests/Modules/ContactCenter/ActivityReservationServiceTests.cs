@@ -403,6 +403,45 @@ public sealed class ActivityReservationServiceTests
         Assert.Null(interaction.AgentId);
     }
 
+    [Fact]
+    public async Task ExpireDueAsync_WhenCancelledDuringAFailedAcquisition_StopsAndDoesNotProcessRemainingCandidates()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var first = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
+        var second = new ActivityReservation { ItemId = "r2", QueueItemId = "qi-2", AgentId = "a2", ActivityItemId = "act-2" }.RestorePersistedStatus(ReservationStatus.Pending);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([first, second]);
+
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r1", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Callback(() => cts.Cancel())
+            .ReturnsAsync((null, false));
+        distributedLock
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, false));
+
+        var service = CreateService(
+            reservationManager,
+            new Mock<IQueueItemManager>(),
+            new Mock<IAgentProfileManager>(),
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            new Mock<IInteractionManager>(),
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>(),
+            distributedLock);
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ExpireDueAsync(cts.Token));
+
+        distributedLock.Verify(
+            l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()),
+            Times.Never);
+    }
+
     [Theory]
     [InlineData(InteractionStatus.Ended)]
     [InlineData(InteractionStatus.Failed)]

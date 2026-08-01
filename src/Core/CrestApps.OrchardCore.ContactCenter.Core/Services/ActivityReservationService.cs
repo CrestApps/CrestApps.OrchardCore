@@ -484,6 +484,8 @@ public sealed class ActivityReservationService : IActivityReservationService
 
         foreach (var candidate in expired)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
                 GetReservationLockKey(candidate.ItemId),
                 _lockTimeout,

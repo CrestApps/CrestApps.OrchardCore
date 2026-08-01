@@ -57,11 +57,11 @@
       "featureId": "CrestApps.OrchardCore.ContactCenter.Routing",
       "component": "ReservationExpiryBackgroundTask",
       "kind": "background-task",
-      "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
-      "drain": "Idle contract requires no reservation-expiry pass to be running.",
-      "reEnable": "The fresh shell resolves exactly one new task registration.",
+      "quiesce": "The Routing lifecycle participant closes admission before descriptor mutation; new reservation-and-assignment passes return without claiming work.",
+      "drain": "Disable waits up to the configured tenant drain timeout for the admitted reservation-and-assignment pass.",
+      "reEnable": "The fresh shell reopens Routing admission and the scheduled pass resumes.",
       "idleStatus": "verified-idle",
-      "activeWorkStatus": "deferred-follow-up"
+      "activeWorkStatus": "implemented-r3"
     },
     {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Dialer",
