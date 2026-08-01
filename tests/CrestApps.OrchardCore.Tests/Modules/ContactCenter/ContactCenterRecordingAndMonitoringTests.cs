@@ -36,7 +36,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(changed);
+        Assert.False(changed.Succeeded);
         Assert.Equal(RecordingState.None, interaction.RecordingState);
         publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -72,7 +72,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.Equal(RecordingState.Recording, interaction.RecordingState);
         publisher.Verify(
             p => p.PublishAsync(
@@ -105,7 +105,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(changed);
+        Assert.False(changed.Succeeded);
         Assert.Equal(RecordingState.None, interaction.RecordingState);
         recordingProvider.Verify(
             p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()),
@@ -149,7 +149,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.Equal(RecordingState.Recording, interaction.RecordingState);
         Assert.Equal(stampedRetainUntil, interaction.RecordingRetainUntilUtc);
         Assert.False(interaction.RecordingLegalHold);
@@ -187,7 +187,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.Equal(RecordingState.Recording, interaction.RecordingState);
         Assert.Equal(stampedRetainUntil, interaction.RecordingRetainUntilUtc);
         Assert.False(interaction.RecordingLegalHold);
@@ -220,7 +220,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.Equal(RecordingState.Recording, interaction.RecordingState);
         Assert.Equal(retainUntil, interaction.RecordingRetainUntilUtc);
         Assert.True(interaction.RecordingLegalHold);
@@ -278,7 +278,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", callerCancellation.Token);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.True(callerCancellation.IsCancellationRequested);
         Assert.Equal(RecordingState.Recording, interaction.RecordingState);
     }
@@ -312,7 +312,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(changed);
+        Assert.False(changed.Succeeded);
+        Assert.True(changed.OutcomeUnknown);
         Assert.Equal(RecordingState.None, interaction.RecordingState);
         interactionManager.Verify(
             m => m.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
@@ -321,7 +322,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
     }
 
     [Fact]
-    public async Task StartAsync_WhenProviderDeadlineExpires_ReturnsFalseWithoutPublishing()
+    public async Task StartAsync_WhenProviderDeadlineExpires_ReturnsUnknownWithoutPublishing()
     {
         // Arrange
         var interaction = CreateInteraction();
@@ -343,7 +344,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(changed);
+        Assert.False(changed.Succeeded);
+        Assert.True(changed.OutcomeUnknown);
         Assert.Equal(RecordingState.None, interaction.RecordingState);
         interactionManager.Verify(
             manager => manager.UpdateAsync(
@@ -351,6 +353,68 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 It.IsAny<System.Text.Json.Nodes.JsonNode>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenHostIsStopping_ReturnsDefiniteFailureWithoutMutating()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        _ = provider.As<IContactCenterVoiceRecordingProvider>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            new NotAdmittedTelephonyCommandExecutor(),
+            CreateGovernancePolicy());
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(changed.Succeeded);
+        Assert.False(changed.OutcomeUnknown);
+        Assert.Equal(RecordingState.None, interaction.RecordingState);
+        publisher.Verify(
+            value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenCommandInterruptedByShutdown_ReturnsUnknownWithoutMutating()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("int1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        _ = provider.As<IContactCenterVoiceRecordingProvider>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            publisher.Object,
+            new ShutdownInterruptedTelephonyCommandExecutor(),
+            CreateGovernancePolicy());
+
+        // Act
+        var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(changed.Succeeded);
+        Assert.True(changed.OutcomeUnknown);
+        Assert.Equal(RecordingState.None, interaction.RecordingState);
         publisher.Verify(
             value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -392,7 +456,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(changed);
+        Assert.True(changed.Succeeded);
         Assert.Equal("crestapps-recording-int1", interaction.RecordingReference);
         Assert.Equal("wav", interaction.TechnicalMetadata[ContactCenterConstants.RecordingMetadata.Format]);
         Assert.Equal(
@@ -423,7 +487,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(changed);
+        Assert.False(changed.Succeeded);
         recordingProvider.Verify(
             p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -797,6 +861,27 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
         {
             return Task.FromException<TResult>(new TimeoutException());
+        }
+    }
+
+    private sealed class NotAdmittedTelephonyCommandExecutor : ITelephonyCommandExecutor
+    {
+        public bool OperationInvoked { get; private set; }
+
+        public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        {
+            // Mirror the executor refusing a new command while the host is stopping: the provider operation
+            // is never invoked, so the recording state is definitely unchanged.
+            return Task.FromException<TResult>(new TelephonyCommandNotAdmittedException());
+        }
+    }
+
+    private sealed class ShutdownInterruptedTelephonyCommandExecutor : ITelephonyCommandExecutor
+    {
+        public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        {
+            return Task.FromException<TResult>(
+                new OperationCanceledException("The telephony command was interrupted because the application is stopping."));
         }
     }
 }

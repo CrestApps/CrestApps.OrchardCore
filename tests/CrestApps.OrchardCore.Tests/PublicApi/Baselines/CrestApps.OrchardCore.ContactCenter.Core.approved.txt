@@ -1429,6 +1429,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string Purpose { get; set; }
         public string RecordingReference { get; set; }
     }
+    public sealed class RecordingCommandResult
+    {
+        public RecordingCommandResult() { }
+        public bool OutcomeUnknown { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult Failure(string reason) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult Success(string reason = null) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult Unknown(string reason) { }
+    }
     public enum RecordingConsentModel
     {
         AllParties = 0,
@@ -2107,10 +2117,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class ContactCenterRecordingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterRecordingService
     {
         public ContactCenterRecordingService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor commandExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingGovernancePolicy governancePolicy) { }
-        public System.Threading.Tasks.Task<bool> PauseAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> ResumeAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> StopAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> PauseAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> ResumeAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> StopAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterReportingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterReportingService
     {
@@ -2597,10 +2607,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IContactCenterRecordingService
     {
-        System.Threading.Tasks.Task<bool> PauseAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> ResumeAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> StopAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> PauseAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> ResumeAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> StartAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> StopAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterReportingService
     {

@@ -131,7 +131,43 @@ public sealed class TelephonyCommandExecutorTests
         var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => operation);
 
         // Assert
+        Assert.IsNotType<TelephonyCommandNotAdmittedException>(exception);
         Assert.Contains("application is stopping", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenApplicationAlreadyStopping_RejectsCommandWithoutInvokingOperation()
+    {
+        // Arrange
+        using var applicationStopping = new CancellationTokenSource();
+        applicationStopping.Cancel();
+        var hostApplicationLifetime = new Mock<IHostApplicationLifetime>();
+        hostApplicationLifetime
+            .SetupGet(lifetime => lifetime.ApplicationStopping)
+            .Returns(applicationStopping.Token);
+        var executor = CreateExecutor(TimeSpan.FromSeconds(10), hostApplicationLifetime.Object);
+        var operationInvoked = false;
+
+        // Act
+        var exception = await Assert.ThrowsAsync<TelephonyCommandNotAdmittedException>(() =>
+            executor.ExecuteAsync(_ =>
+            {
+                operationInvoked = true;
+
+                return Task.FromResult(true);
+            }));
+
+        // Assert
+        Assert.False(operationInvoked);
+        Assert.Contains("application is stopping", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TelephonyCommandNotAdmittedException_IsOperationCanceledException()
+    {
+        // A not-admitted rejection must degrade through existing catch (OperationCanceledException) blocks
+        // so callers that do not distinguish it still treat the command as not applied.
+        Assert.IsAssignableFrom<OperationCanceledException>(new TelephonyCommandNotAdmittedException());
     }
 
     [Theory]

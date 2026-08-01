@@ -38,6 +38,14 @@ public sealed class DefaultTelephonyCommandExecutor : ITelephonyCommandExecutor
     {
         ArgumentNullException.ThrowIfNull(operation);
 
+        // Once the host is stopping, stop admitting new commands: refuse before the provider is ever
+        // contacted so the caller can treat the command as definitely-not-applied rather than as an
+        // indeterminate in-flight interruption.
+        if (_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+        {
+            throw new TelephonyCommandNotAdmittedException(_hostApplicationLifetime.ApplicationStopping);
+        }
+
         using var timeoutSource = new CancellationTokenSource(_options.Timeout);
         using var executionSource = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutSource.Token,

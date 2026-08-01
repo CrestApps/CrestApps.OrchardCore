@@ -39,41 +39,41 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     }
 
     /// <inheritdoc/>
-    public Task<bool> StartAsync(string interactionId, CancellationToken cancellationToken = default)
+    public Task<RecordingCommandResult> StartAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingStarted, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<bool> PauseAsync(string interactionId, CancellationToken cancellationToken = default)
+    public Task<RecordingCommandResult> PauseAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         return SetStateAsync(interactionId, RecordingState.Paused, ContactCenterConstants.Events.RecordingPaused, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<bool> ResumeAsync(string interactionId, CancellationToken cancellationToken = default)
+    public Task<RecordingCommandResult> ResumeAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingResumed, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<bool> StopAsync(string interactionId, CancellationToken cancellationToken = default)
+    public Task<RecordingCommandResult> StopAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         return SetStateAsync(interactionId, RecordingState.Stopped, ContactCenterConstants.Events.RecordingStopped, cancellationToken);
     }
 
-    private async Task<bool> SetStateAsync(string interactionId, RecordingState state, string eventType, CancellationToken cancellationToken)
+    private async Task<RecordingCommandResult> SetStateAsync(string interactionId, RecordingState state, string eventType, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(interactionId))
         {
-            return false;
+            return RecordingCommandResult.Failure("An interaction is required.");
         }
 
         var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
 
         if (interaction is null || interaction.RecordingState == state)
         {
-            return false;
+            return RecordingCommandResult.Failure("The interaction could not be found or is already in the requested recording state.");
         }
 
         var previousState = interaction.RecordingState;
@@ -84,7 +84,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             !provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.Recording) ||
             string.IsNullOrEmpty(interaction.ProviderInteractionId))
         {
-            return false;
+            return RecordingCommandResult.Failure("The voice provider does not support recording for this interaction.");
         }
 
         // Recording governance gates only the transition into an actively-recording state (start and resume); a
@@ -114,7 +114,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
 
                 await _publisher.PublishAsync(deniedEvent, CancellationToken.None);
 
-                return false;
+                return RecordingCommandResult.Failure(governanceDecision.DenyReasonCode ?? "Recording was denied by policy.");
             }
         }
 
@@ -130,18 +130,28 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
                     State = state,
                 }, commandCancellationToken));
         }
+        catch (TelephonyCommandNotAdmittedException)
+        {
+            // Refused before the provider was contacted: the recording state is definitely unchanged.
+            return RecordingCommandResult.Failure("The recording command was refused because the application is stopping.");
+        }
         catch (TimeoutException)
         {
-            return false;
+            return RecordingCommandResult.Unknown("The recording command exceeded the server-owned timeout; its provider outcome is unknown.");
         }
         catch (OperationCanceledException)
         {
-            return false;
+            return RecordingCommandResult.Unknown("The recording command was interrupted after dispatch; its provider outcome is unknown.");
         }
 
-        if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
+        if (providerResult is null || (!providerResult.Succeeded && !providerResult.OutcomeUnknown))
         {
-            return false;
+            return RecordingCommandResult.Failure("The voice provider did not apply the recording state change.");
+        }
+
+        if (providerResult.OutcomeUnknown)
+        {
+            return RecordingCommandResult.Unknown("The voice provider could not confirm the recording state change.");
         }
 
         interaction.RecordingState = state;
@@ -172,7 +182,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
             SourceComponent = ContactCenterConstants.Components.Interactions,
         }, CancellationToken.None);
 
-        return true;
+        return RecordingCommandResult.Success();
     }
 
     private static void ApplyGovernanceMetadata(Interaction interaction, RecordingGovernanceDecision decision)

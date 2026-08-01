@@ -189,6 +189,11 @@ namespace CrestApps.OrchardCore.Telephony
         public static System.Collections.Generic.IReadOnlyDictionary<CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities, System.Type> ContractsByCapability { get; }
         public static System.Type GetContract(CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities capability) { }
     }
+    public sealed class TelephonyCommandNotAdmittedException : System.OperationCanceledException
+    {
+        public TelephonyCommandNotAdmittedException() { }
+        public TelephonyCommandNotAdmittedException(System.Threading.CancellationToken cancellationToken) { }
+    }
     public sealed class TelephonyCommandOptions
     {
         public const int DefaultTimeoutSeconds = 10;
