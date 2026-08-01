@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 
@@ -16,14 +17,30 @@ internal sealed class AsteriskAriApplicationOwnershipRegistry : IAsteriskAriAppl
 {
     private static readonly ConcurrentDictionary<string, OwnershipEntry> _ownership = new(StringComparer.Ordinal);
 
+    private readonly ILogger<AsteriskAriApplicationOwnershipRegistry> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AsteriskAriApplicationOwnershipRegistry"/> class.
+    /// </summary>
+    /// <param name="logger">The logger used to record denied ownership claims.</param>
+    public AsteriskAriApplicationOwnershipRegistry(ILogger<AsteriskAriApplicationOwnershipRegistry> logger)
+    {
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public bool TryClaim(string baseUrl, string applicationName, string tenantName, string ownershipToken)
     {
         if (string.IsNullOrWhiteSpace(baseUrl) ||
             string.IsNullOrWhiteSpace(applicationName) ||
+            string.IsNullOrWhiteSpace(tenantName) ||
             string.IsNullOrWhiteSpace(ownershipToken))
         {
-            return true;
+            _logger.LogWarning(
+                "Denied an Asterisk ARI application ownership claim for tenant '{TenantName}' because required claim inputs (base URL, application name, tenant name, or ownership token) were missing. No real-time voice listener will start for an unconfigured provider.",
+                tenantName);
+
+            return false;
         }
 
         var key = NormalizeKey(baseUrl, applicationName);

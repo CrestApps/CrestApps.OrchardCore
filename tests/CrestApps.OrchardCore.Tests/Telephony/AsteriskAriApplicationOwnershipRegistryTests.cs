@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -8,7 +9,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void TryClaim_FirstClaim_ReturnsTrue()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -24,7 +25,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void TryClaim_SameTenantSameTokenSecondClaim_ReturnsTrue()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -44,7 +45,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
         // Arrange
         // A second generation of the same tenant (a different generation token) claiming the same pair must succeed
         // and reference-count alongside the first generation.
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -61,7 +62,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void TryClaim_DifferentTenant_ReturnsFalse()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -83,7 +84,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
         // Arrange
         // Two URL variations that differ only by trailing slash or host casing must normalize to the same key so
         // that a second tenant attempting to claim via the alternate form is correctly rejected.
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var app = $"app-{Guid.NewGuid():N}";
         registry.TryClaim(firstBaseUrl, app, "TenantA", Token());
 
@@ -98,7 +99,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void TryClaim_DifferentAppSameServer_BothSucceed()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
 
@@ -115,7 +116,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void TryClaim_DifferentServerSameApp_BothSucceed()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var app = $"app-{uniqueId}";
 
@@ -132,7 +133,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void Release_AfterRelease_AllowsOtherTenantToClaim()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -154,7 +155,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
         // Simulate an Orchard shell reload where a retiring generation (tokenA1) and an activating generation
         // (tokenA2) of the SAME tenant overlap. The retiring generation releasing its token must NOT free the pair
         // while the activating generation is still running, otherwise a different tenant could claim it mid-reload.
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -179,7 +180,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void Release_OnlyReleasesPairsHeldByTheGivenToken()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var appAlpha = $"app-alpha-{uniqueId}";
@@ -203,7 +204,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void Release_WhenTokenIsNullOrWhitespace_DoesNotThrowAndKeepsOwnership()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -222,7 +223,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void IsOwnedByAnotherTenant_WhenOwnedByOtherTenant_ReturnsTrue()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -239,7 +240,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void IsOwnedByAnotherTenant_WhenOwnedBySameTenant_ReturnsFalse()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -256,7 +257,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void IsOwnedByAnotherTenant_WhenUnclaimed_ReturnsFalse()
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
         var uniqueId = Guid.NewGuid().ToString("N");
         var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
         var app = $"app-{uniqueId}";
@@ -276,7 +277,7 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     public void IsOwnedByAnotherTenant_WhenBaseUrlOrApplicationNameIsBlank_ReturnsFalse(string baseUrl, string app)
     {
         // Arrange
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
 
         // Act
         var result = registry.IsOwnedByAnotherTenant(baseUrl, app, "TenantA");
@@ -295,18 +296,38 @@ public sealed class AsteriskAriApplicationOwnershipRegistryTests
     [InlineData("http://pbx.test:8088/ari/", "contact-center", null)]
     [InlineData("http://pbx.test:8088/ari/", "contact-center", "")]
     [InlineData("http://pbx.test:8088/ari/", "contact-center", "   ")]
-    public void TryClaim_WhenBaseUrlApplicationNameOrTokenIsNullOrWhitespace_ReturnsTrue(string baseUrl, string app, string token)
+    public void TryClaim_WhenBaseUrlApplicationNameOrTokenIsNullOrWhitespace_ReturnsFalse(string baseUrl, string app, string token)
     {
         // Arrange
-        // An unconfigured tenant (blank BaseUrl, ApplicationName, or token) starts no listener; returning true is
-        // safe because the tenant will never compete for ARI events.
-        var registry = new AsteriskAriApplicationOwnershipRegistry();
+        // A blank BaseUrl, ApplicationName, or token is an invalid ownership claim. The registry fails closed and
+        // denies it so a misconfigured provider never starts a listener on an unconfigured (blank) application.
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
 
         // Act
         var result = registry.TryClaim(baseUrl, app, "TenantA", token);
 
         // Assert
-        Assert.True(result);
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryClaim_WhenTenantNameIsNullOrWhitespace_ReturnsFalse(string tenantName)
+    {
+        // Arrange
+        // A blank tenant name cannot own a claim; deny it rather than recording ownership under an empty owner.
+        var registry = new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance);
+        var uniqueId = Guid.NewGuid().ToString("N");
+        var baseUrl = $"http://pbx-{uniqueId}.test:8088/ari/";
+        var app = $"app-{uniqueId}";
+
+        // Act
+        var result = registry.TryClaim(baseUrl, app, tenantName, Token());
+
+        // Assert
+        Assert.False(result);
     }
 
     private static string Token()

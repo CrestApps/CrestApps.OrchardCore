@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 
@@ -12,7 +13,7 @@ public sealed class AsteriskAriApplicationGateTests
     public void TryAcquire_WhenApplicationIsUnclaimed_ReturnsTrue()
     {
         // Arrange
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
         var settings = CreateSettings();
 
         // Act
@@ -28,10 +29,10 @@ public sealed class AsteriskAriApplicationGateTests
         // Arrange
         var settings = CreateSettings();
 
-        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance)
             .TryClaim(settings.BaseUrl, settings.ApplicationName, "OwnerTenant", Token()));
 
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantB");
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantB");
 
         // Act
         var acquired = gate.TryAcquire(settings);
@@ -44,7 +45,7 @@ public sealed class AsteriskAriApplicationGateTests
     public void TryAcquire_WhenSettingsAreNull_ReturnsTrue()
     {
         // Arrange
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
 
         // Act
         var acquired = gate.TryAcquire(null);
@@ -61,7 +62,7 @@ public sealed class AsteriskAriApplicationGateTests
         // would cross-deliver Stasis events with the default shell's listener, so the gate must deny it.
         var baseUrl = UniqueBaseUrl();
         const string applicationName = "host-default-app";
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA", new DefaultAsteriskOptions
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA", new DefaultAsteriskOptions
         {
             IsEnabled = true,
             BaseUrl = baseUrl,
@@ -82,7 +83,7 @@ public sealed class AsteriskAriApplicationGateTests
         // The default shell owns the host-default application, so resolving to it is not a cross-tenant collision.
         var baseUrl = UniqueBaseUrl();
         const string applicationName = "host-default-app";
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "Default", new DefaultAsteriskOptions
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "Default", new DefaultAsteriskOptions
         {
             IsEnabled = true,
             BaseUrl = baseUrl,
@@ -103,8 +104,8 @@ public sealed class AsteriskAriApplicationGateTests
         // IsAvailable is a read-only probe: it must not claim the application, so a different tenant can still
         // acquire it afterwards.
         var settings = CreateSettings();
-        var probeGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
-        var acquiringGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantB");
+        var probeGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
+        var acquiringGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantB");
 
         // Act
         var available = probeGate.IsAvailable(settings);
@@ -121,10 +122,10 @@ public sealed class AsteriskAriApplicationGateTests
         // Arrange
         var settings = CreateSettings();
 
-        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance)
             .TryClaim(settings.BaseUrl, settings.ApplicationName, "OwnerTenant", Token()));
 
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantB");
+        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantB");
 
         // Act
         var available = gate.IsAvailable(settings);
@@ -138,8 +139,8 @@ public sealed class AsteriskAriApplicationGateTests
     {
         // Arrange
         var settings = CreateSettings();
-        var owningGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
-        var contendingGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantB");
+        var owningGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
+        var contendingGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantB");
 
         Assert.True(owningGate.TryAcquire(settings));
         Assert.False(contendingGate.TryAcquire(settings));
@@ -159,9 +160,9 @@ public sealed class AsteriskAriApplicationGateTests
         // per-generation token. Releasing the retiring generation must not free the application while the new
         // generation still owns it, so a different tenant stays blocked until the last generation releases.
         var settings = CreateSettings();
-        var retiringGeneration = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
-        var newGeneration = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantA");
-        var contendingGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(), "TenantB");
+        var retiringGeneration = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
+        var newGeneration = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA");
+        var contendingGate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantB");
 
         Assert.True(retiringGeneration.TryAcquire(settings));
         Assert.True(newGeneration.TryAcquire(settings));

@@ -119,7 +119,7 @@ public sealed class AsteriskTelephonyProviderTests
         var baseUrl = $"http://asterisk-{Guid.NewGuid():N}.test:8088/ari/";
         const string applicationName = "shared-ari-app";
 
-        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance)
             .TryClaim(baseUrl, applicationName, "OwnerTenant", Guid.NewGuid().ToString("N")));
 
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
@@ -140,7 +140,7 @@ public sealed class AsteriskTelephonyProviderTests
 
         var shellSettings = new ShellSettings { Name = "TenantB" };
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             Options.Create(new DefaultAsteriskOptions()));
 
@@ -650,7 +650,7 @@ public sealed class AsteriskTelephonyProviderTests
 
         var shellSettings = new ShellSettings { Name = "Default" };
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             Options.Create(new DefaultAsteriskOptions()));
 

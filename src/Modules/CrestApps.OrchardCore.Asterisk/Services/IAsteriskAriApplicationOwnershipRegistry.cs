@@ -14,9 +14,11 @@ internal interface IAsteriskAriApplicationOwnershipRegistry
     /// pair for <paramref name="tenantName"/> under <paramref name="ownershipToken"/>. Returns
     /// <see langword="true"/> if the tenant now owns the pair (newly claimed, already the owner, or a
     /// concurrent generation of the same tenant owns it); returns <see langword="false"/> if a different
-    /// tenant already owns it. When <paramref name="baseUrl"/>, <paramref name="applicationName"/>, or
-    /// <paramref name="ownershipToken"/> is <see langword="null"/> or whitespace the method returns
-    /// <see langword="true"/> because an unconfigured tenant starts no listener and holds nothing.
+    /// tenant already owns it. When <paramref name="baseUrl"/>, <paramref name="applicationName"/>,
+    /// <paramref name="tenantName"/>, or <paramref name="ownershipToken"/> is <see langword="null"/> or
+    /// whitespace the claim is denied (returns <see langword="false"/>) and the denial is logged, because
+    /// an unconfigured provider must not start a listener; this fails closed rather than granting a blank
+    /// claim.
     /// </summary>
     /// <param name="baseUrl">The ARI base URL of the Asterisk server.</param>
     /// <param name="applicationName">The Stasis application name.</param>

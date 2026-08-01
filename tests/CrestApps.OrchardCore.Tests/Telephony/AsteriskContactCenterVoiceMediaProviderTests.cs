@@ -309,7 +309,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var baseUrl = $"http://asterisk-{Guid.NewGuid():N}.example/ari/";
         const string applicationName = "shared-ari-app";
 
-        Assert.True(new AsteriskAriApplicationOwnershipRegistry()
+        Assert.True(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance)
             .TryClaim(baseUrl, applicationName, "OwnerTenant", Guid.NewGuid().ToString("N")));
 
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
@@ -329,7 +329,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var shellSettings = new ShellSettings { Name = "TenantB" };
         var options = Options.Create(new DefaultAsteriskOptions());
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             options);
 
@@ -370,7 +370,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var shellSettings = new ShellSettings { Name = shellName };
         var options = Options.Create(new DefaultAsteriskOptions());
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             options);
 
@@ -400,7 +400,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var shellSettings = new ShellSettings { Name = shellName };
         var options = Options.Create(defaultOptions);
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             options);
 

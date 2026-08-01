@@ -64,7 +64,7 @@ public sealed class AsteriskAriClientAddChannelTests
         var shellSettings = new ShellSettings { Name = "Default" };
         var options = Options.Create(new DefaultAsteriskOptions());
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             options);
 

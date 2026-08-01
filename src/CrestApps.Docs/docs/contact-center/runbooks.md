@@ -67,6 +67,18 @@ Thresholds are configurable under `CrestApps_ContactCenter:HealthChecks`; tune t
 
 **Prevention.** Alert on the provider-ingress health state and on `dead_lettered` growth. Keep provider credentials and endpoints in configuration/secret storage so a provider failover does not require a code change.
 
+### Asterisk single-active-process listener ownership
+
+**Constraint.** The Asterisk real-time voice listener claims ownership of each ARI `(BaseUrl, ApplicationName)` pair in **process-local state on the node that starts it** — there is no distributed lock coordinating ownership across nodes. This is correct only under a single-active-process deployment: exactly one application node may run the listener for a given Asterisk ARI application at a time. On startup, each node logs the number of Asterisk listeners it is starting and this constraint at information level.
+
+**Requirement.** Do not run two nodes that both start the Asterisk listener against the **same** Asterisk server and Stasis application concurrently. Overlapping nodes would each open a WebSocket to the same ARI application and cross-deliver Stasis events, double-processing calls.
+
+**Deployment.** Because ownership is process-local, telephony listeners must use a **non-overlapping** cutover rather than a side-by-side rolling or blue-green swap:
+
+1. Stop the old node's listener (drain, then terminate the tenant/shell so `ReleaseGeneration` runs) before the new node starts its listener against the same ARI application.
+2. Only one overlapping node may enable the listener for a given `(BaseUrl, ApplicationName)` pair. Configuring a unique ARI application per tenant only prevents cross-tenant collisions **within a single process** — it does not make two nodes safe, because the same tenant configuration runs on both nodes and both would subscribe to the same application. To run overlapping application nodes safely, give each listening node a **distinct** ARI application (with matching dialplan segregation on the PBX) or front the listeners with an external single-writer mechanism.
+3. A blank or misconfigured ARI application is denied at the claim path (the listener does not start) and logged as a warning, so an unconfigured provider never silently competes for events.
+
 ## Node failure
 
 **Detection.** A node stops passing `/api/contact-center/health/ready`; the load balancer removes it; connected agents reconnect elsewhere.

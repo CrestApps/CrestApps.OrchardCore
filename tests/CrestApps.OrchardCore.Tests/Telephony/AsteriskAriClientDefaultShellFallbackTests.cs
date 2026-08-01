@@ -63,7 +63,7 @@ public sealed class AsteriskAriClientDefaultShellFallbackTests
         var shellSettings = new ShellSettings { Name = shellName };
         var options = Options.Create(defaultOptions);
         var gate = new AsteriskAriApplicationGate(
-            new AsteriskAriApplicationOwnershipRegistry(),
+            new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
             shellSettings,
             options);
 
