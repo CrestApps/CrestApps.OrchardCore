@@ -133,6 +133,16 @@ public sealed class ContactCenterOptionsValidationTests
             () => ResolveContactCenterOptions<ContactCenterHealthCheckOptions>(key, value));
     }
 
+    [Theory]
+    [InlineData("CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity", "0")]
+    [InlineData("CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity", "100001")]
+    [InlineData("CrestApps:Asterisk:Coordination:RealtimeEventBackpressureTimeout", "00:00:00")]
+    public void AsteriskCoordinationOptions_WhenARealtimeIngestionBoundIsOutOfRange_AreRejected(string key, string value)
+    {
+        Assert.Throws<OptionsValidationException>(
+            () => ResolveContactCenterOptions<AsteriskCoordinationOptions>(key, value));
+    }
+
     [Fact]
     public void HealthCheckOptions_WhenTheUnhealthyBoundSitsBelowTheDegradedBound_AreRejected()
     {

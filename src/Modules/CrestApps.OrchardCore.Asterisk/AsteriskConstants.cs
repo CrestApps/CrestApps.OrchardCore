@@ -44,6 +44,12 @@ public static class AsteriskConstants
     public const string BrowserMediaAdapterName = "sipjs";
 
     /// <summary>
+    /// The largest real-time event buffer capacity a deployment may configure before validation rejects it as a
+    /// memory-exhaustion risk. A saturated buffer holds up to this many raw provider payloads.
+    /// </summary>
+    public const int MaxRealtimeEventBufferCapacity = 100_000;
+
+    /// <summary>
     /// The default short-lived PJSIP credential lifetime, in minutes.
     /// </summary>
     public const int DefaultPjsipCredentialLifetimeMinutes = 15;

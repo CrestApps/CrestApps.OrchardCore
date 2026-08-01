@@ -1,9 +1,12 @@
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Asterisk.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 
@@ -11,10 +14,12 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 
 internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceListener, IAsyncDisposable
 {
-    private const int MaxBufferedRealtimeEvents = 1000;
+    private static readonly TimeSpan _healthyConnectionResetThreshold = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan _minBufferDrainBudget = TimeSpan.FromSeconds(30);
 
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
+    private readonly AsteriskCoordinationOptions _coordinationOptions;
     private readonly ILogger<AsteriskRealtimeVoiceListener> _logger;
     private readonly Lock _lock = new();
     private CancellationTokenSource _listenerCancellationTokenSource;
@@ -23,10 +28,12 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
     public AsteriskRealtimeVoiceListener(
         IShellHost shellHost,
         ShellSettings shellSettings,
+        IOptions<AsteriskCoordinationOptions> coordinationOptions,
         ILogger<AsteriskRealtimeVoiceListener> logger)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
+        _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
 
@@ -111,8 +118,21 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         {
             try
             {
-                await ListenAsync(settings, cancellationToken);
-                failureCount = 0;
+                var (backpressureTimedOut, receiveUptime) = await ListenAsync(settings, cancellationToken);
+
+                // A clean disconnect is a fresh start, so reset the backoff. A backpressure timeout means the
+                // dispatcher could not keep up; treat it as a failure so repeated saturation backs off exponentially
+                // instead of hot-looping reconnect and reconcile. An isolated timeout on a connection that had been
+                // receiving for a meaningful period is not a hot loop, so it also resets rather than pinning the
+                // ceiling. The uptime measures only the receive loop, not the post-disconnect drain.
+                if (!backpressureTimedOut || receiveUptime >= _healthyConnectionResetThreshold)
+                {
+                    failureCount = 0;
+                }
+                else
+                {
+                    failureCount++;
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -135,7 +155,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         }
     }
 
-    private async Task ListenAsync(AsteriskResolvedSettings settings, CancellationToken cancellationToken)
+    private async Task<(bool BackpressureTimedOut, TimeSpan ReceiveUptime)> ListenAsync(AsteriskResolvedSettings settings, CancellationToken cancellationToken)
     {
         using var socket = new ClientWebSocket();
         var eventsUri = AsteriskSettingsUtilities.CreateEventsUri(settings);
@@ -159,15 +179,31 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
         await ReconcileAsync(settings.ProviderName, cancellationToken);
 
-        var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(MaxBufferedRealtimeEvents)
+        // Measure only how long the connection stays up receiving events, started after reconciliation and captured
+        // before the post-disconnect drain, so the reconnect backoff sees genuine receive uptime rather than time
+        // spent reconciling or draining a slow buffer.
+        var receiveStopwatch = Stopwatch.StartNew();
+
+        var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(_coordinationOptions.RealtimeEventBufferCapacity)
         {
             SingleReader = true,
             SingleWriter = true,
             FullMode = BoundedChannelFullMode.Wait,
         });
 
-        var worker = ProcessBufferedPayloadsAsync();
+        var ingestion = new AsteriskRealtimeIngestionWriter(
+            channel.Writer,
+            channel.Reader,
+            settings.ProviderName,
+            _coordinationOptions.RealtimeEventBackpressureTimeout,
+            _logger);
+
+        // The worker drains the buffer on its own cancellation source so a bounded post-disconnect drain can stop a
+        // wedged dispatch without waiting on the shell-shutdown token.
+        using var workerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var worker = ProcessBufferedPayloadsAsync(workerCts.Token);
         var buffer = new byte[8 * 1024];
+        var backpressureTimedOut = false;
 
         try
         {
@@ -190,7 +226,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
 
-                        return;
+                        return (false, receiveStopwatch.Elapsed);
                     }
 
                     await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken);
@@ -199,41 +235,53 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
                 var payload = Encoding.UTF8.GetString(message.ToArray());
 
-                if (!channel.Writer.TryWrite(payload))
+                // Apply real backpressure rather than dropping the connection on the first full write: the receive
+                // loop stops draining the socket while the buffer is full, so TCP flow control slows the provider.
+                // Only if the reader cannot catch up within the bounded window do we reconnect and reconcile.
+                var writeResult = await ingestion.WriteAsync(payload, cancellationToken);
+
+                if (writeResult == AsteriskRealtimeIngestionWriteResult.BackpressureTimedOut)
                 {
-                    _logger.LogWarning(
-                        "The Asterisk real-time ingestion buffer for provider {ProviderName} is saturated; the listener will reconnect to recover and reconcile state.",
-                        settings.ProviderName);
+                    backpressureTimedOut = true;
 
                     break;
                 }
             }
+
+            // Capture the receive uptime before the finally drain runs so the backoff excludes drain time.
+            return (backpressureTimedOut, receiveStopwatch.Elapsed);
         }
         finally
         {
             channel.Writer.TryComplete();
 
-            try
-            {
-                await worker;
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            var drainBudget = _coordinationOptions.RealtimeEventBackpressureTimeout > _minBufferDrainBudget
+                ? _coordinationOptions.RealtimeEventBackpressureTimeout
+                : _minBufferDrainBudget;
+
+            await AsteriskRealtimeIngestionDrainer.DrainAsync(
+                worker,
+                channel.Reader,
+                workerCts,
+                _coordinationOptions.RealtimeEventBackpressureTimeout,
+                drainBudget,
+                settings.ProviderName,
+                _logger,
+                cancellationToken);
         }
 
-        async Task ProcessBufferedPayloadsAsync()
+        async Task ProcessBufferedPayloadsAsync(CancellationToken workerCancellationToken)
         {
-            await foreach (var payload in channel.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var payload in channel.Reader.ReadAllAsync(workerCancellationToken))
             {
                 // A single malformed or unroutable event, or a transient tenant-scope failure while the shell is
                 // reloading, must never tear down the live event stream. Isolate each dispatch so the socket keeps
                 // receiving; any missed state change is still reconciled by the periodic provider-truth sweep.
                 try
                 {
-                    await DispatchAsync(settings.ProviderName, payload, cancellationToken);
+                    await DispatchAsync(settings.ProviderName, payload, workerCancellationToken);
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (workerCancellationToken.IsCancellationRequested)
                 {
                     throw;
                 }

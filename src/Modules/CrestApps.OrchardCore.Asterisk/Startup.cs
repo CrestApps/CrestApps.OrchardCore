@@ -85,6 +85,15 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.HttpTotalRequestTimeout > options.HttpAttemptTimeout,
                 "'CrestApps:Asterisk:Coordination:HttpTotalRequestTimeout' must exceed 'HttpAttemptTimeout', otherwise no attempt can complete within the total budget.")
+            .Validate(
+                options => options.RealtimeEventBufferCapacity > 0,
+                "'CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity' must be greater than zero, otherwise the real-time receive loop has nowhere to buffer provider events.")
+            .Validate(
+                options => options.RealtimeEventBufferCapacity <= AsteriskConstants.MaxRealtimeEventBufferCapacity,
+                $"'CrestApps:Asterisk:Coordination:RealtimeEventBufferCapacity' must not exceed {AsteriskConstants.MaxRealtimeEventBufferCapacity}, otherwise a saturated buffer can grow large enough to exhaust process memory before backpressure engages.")
+            .Validate(
+                options => options.RealtimeEventBackpressureTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:RealtimeEventBackpressureTimeout' must be greater than zero, otherwise a saturated buffer reconnects immediately instead of applying backpressure.")
             .ValidateOnStart();
 
         services
