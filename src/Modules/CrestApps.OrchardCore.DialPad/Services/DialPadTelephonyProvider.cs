@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -975,7 +976,7 @@ public sealed class DialPadTelephonyProvider :
         };
     }
 
-    private static DateTimeOffset? ReadDateTimeOffset(JsonElement element, string propertyName)
+    internal static DateTimeOffset? ReadDateTimeOffset(JsonElement element, string propertyName)
     {
         if (!element.TryGetProperty(propertyName, out var value))
         {
@@ -983,7 +984,11 @@ public sealed class DialPadTelephonyProvider :
         }
 
         if (value.ValueKind == JsonValueKind.String &&
-            DateTimeOffset.TryParse(value.GetString(), out var parsed))
+            DateTimeOffset.TryParse(
+                value.GetString(),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
         {
             return parsed;
         }
