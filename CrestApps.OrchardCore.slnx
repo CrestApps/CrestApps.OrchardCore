@@ -20,6 +20,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
   </Folder>
@@ -32,6 +33,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
@@ -45,6 +47,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.PostgreSQL/CrestApps.OrchardCore.AI.DataSources.PostgreSQL.csproj" />
       <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
       <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/CrestApps.OrchardCore.AI.Documents.Azure.csproj" />
       <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/CrestApps.OrchardCore.AI.Documents.AzureAI.csproj" />
@@ -78,6 +81,8 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />

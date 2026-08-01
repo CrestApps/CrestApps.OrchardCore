@@ -1,12 +1,15 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
@@ -37,6 +40,12 @@ public sealed class Startup : StartupBase
         services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreElasticsearchDataSourceDocumentReader>(ElasticsearchConstants.ProviderName);
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
+        services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
+        services.AddKeyedScoped<IAIDataSourceSourceHandler, ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
+        services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
+            AIDataSourceSourceTypes.Elasticsearch,
+            S["Elasticsearch"],
+            S["Read source documents from an external Elasticsearch index using explicit connection settings."]));
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

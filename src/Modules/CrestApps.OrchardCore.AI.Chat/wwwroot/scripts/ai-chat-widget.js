@@ -497,9 +497,6 @@ window.coreAIChatWidgetBehavior = window.coreAIChatWidgetBehavior || function ()
       window.addEventListener('resize', app.widgetViewportResizeHandler);
     }
     app.reloadCurrentSession();
-    if (config.autoCreateSession && !app.getSessionId()) {
-      app.startNewSession();
-    }
     if (config.widget.showHistoryButton && app.chatHistorySection) {
       var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
       if (showHistoryButton) {
@@ -630,6 +627,7 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
     var profileName = getAttributeValue(element, 'data-coreai-chat-widget-profile-name');
     var profileDisplayText = getAttributeValue(element, 'data-coreai-chat-widget-profile-display-text');
     var profileWelcomeMessage = getAttributeValue(element, 'data-coreai-chat-widget-profile-welcome-message');
+    var profileInitialPrompt = getAttributeValue(element, 'data-coreai-chat-widget-profile-initial-prompt');
     var profileChatMode = getAttributeValue(element, 'data-coreai-chat-widget-profile-chat-mode');
     var profileTtsVoiceName = getAttributeValue(element, 'data-coreai-chat-widget-profile-tts-voice-name');
     var profileMetricsEnabled = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-profile-enable-session-metrics'));
@@ -641,6 +639,7 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
         name: profileName,
         displayText: profileDisplayText,
         welcomeMessage: profileWelcomeMessage,
+        initialPrompt: profileInitialPrompt,
         chatMode: profileChatMode,
         ttsVoiceName: profileTtsVoiceName,
         enableSessionMetrics: profileMetricsEnabled === true,
@@ -665,6 +664,7 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
       openIconHtml: getAttributeValue(element, 'data-coreai-chat-widget-open-icon-html'),
       closedIconHtml: getAttributeValue(element, 'data-coreai-chat-widget-closed-icon-html'),
       chatConfig: chatConfig ? Object.assign({}, chatConfig, {
+        initialPrompt: profileInitialPrompt || chatConfig.initialPrompt,
         widget: Object.assign({}, chatConfig.widget || {}, {
           chatWidgetContainer: widgetContainerSelector,
           chatWidgetStateName: getAttributeValue(element, 'data-coreai-chat-widget-state-name'),

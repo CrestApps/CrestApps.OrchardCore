@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
@@ -274,9 +276,12 @@ internal sealed class Program
         services.AddSingleton<IContentSchemaProvider>(contentSchemaProvider);
         services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
         services.AddSingleton<IOptions<AIOptions>>(Options.Create(new AIOptions()));
+        services.AddSingleton<IOptions<AIDataSourceSourceOptions>>(Options.Create(new AIDataSourceSourceOptions()));
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateActivityLibrary());
+        services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
+        RegisterWorkflowActivitySchemaDefinitions(services);
 
         foreach (var schemaDefinition in schemaDefinitions)
         {
@@ -312,18 +317,53 @@ internal sealed class Program
         return manager.Object;
     }
 
+    private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
     private static IActivityLibrary CreateActivityLibrary()
     {
+        var eventNames = new SortedSet<string>(_eventActivityNames, StringComparer.Ordinal);
+        var taskNames = new SortedSet<string>(_taskActivityNames, StringComparer.Ordinal);
+
+        // Ensure every registered activity schema definition is represented, even when the source
+        // scan did not surface its activity name, so no property schema is silently dropped.
+        foreach (var definitionName in GetWorkflowActivityDefinitionNames())
+        {
+            if (eventNames.Contains(definitionName) || taskNames.Contains(definitionName))
+            {
+                continue;
+            }
+
+            if (definitionName.EndsWith("Event", StringComparison.Ordinal))
+            {
+                eventNames.Add(definitionName);
+            }
+            else
+            {
+                taskNames.Add(definitionName);
+            }
+        }
+
         var activities = new List<IActivity>();
 
-        foreach (var eventName in _eventActivityNames)
+        foreach (var eventName in eventNames)
         {
             var activity = new Mock<IEvent>();
             activity.SetupGet(item => item.Name).Returns(eventName);
             activities.Add(activity.Object);
         }
 
-        foreach (var taskName in _taskActivityNames)
+        foreach (var taskName in taskNames)
         {
             var activity = new Mock<ITask>();
             activity.SetupGet(item => item.Name).Returns(taskName);
@@ -335,6 +375,18 @@ internal sealed class Program
             .Returns(activities);
 
         return library.Object;
+    }
+
+    private static IEnumerable<string> GetWorkflowActivityDefinitionNames()
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IWorkflowActivitySchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
     }
 
     private static IPermissionService CreatePermissionService()

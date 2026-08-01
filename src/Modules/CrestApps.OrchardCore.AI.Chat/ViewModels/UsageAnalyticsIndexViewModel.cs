@@ -11,14 +11,14 @@ public sealed class UsageAnalyticsIndexViewModel
     public bool IsAIUsageTrackingEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the start date utc.
+    /// Gets or sets the start date in local time.
     /// </summary>
-    public DateTime? StartDateUtc { get; set; }
+    public DateTime? StartDate { get; set; }
 
     /// <summary>
-    /// Gets or sets the end date utc.
+    /// Gets or sets the end date in local time.
     /// </summary>
-    public DateTime? EndDateUtc { get; set; }
+    public DateTime? EndDate { get; set; }
 
     /// <summary>
     /// Gets or sets the show report.

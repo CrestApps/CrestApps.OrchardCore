@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.Services;
+﻿using CrestApps.OrchardCore.Core.Validation;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -182,7 +183,9 @@ public sealed class ChannelEndpointsController : Controller
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelChannelEndpoint));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
 
@@ -249,7 +252,9 @@ public sealed class ChannelEndpointsController : Controller
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        if (ModelState.IsValid)
+        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(OmnichannelChannelEndpoint));
+
+        if (isValid && ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
 

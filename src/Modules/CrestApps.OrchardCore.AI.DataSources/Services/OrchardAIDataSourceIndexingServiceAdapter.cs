@@ -63,6 +63,18 @@ internal sealed class OrchardAIDataSourceIndexingServiceAdapter : IAIDataSourceI
         => _indexingService.IndexDocumentsAsync(sourceIndexProfileName, documentIds, cancellationToken);
 
     /// <summary>
+    /// Asynchronously performs the sync data source documents operation.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task SyncDataSourceDocumentsAsync(
+        string dataSourceId,
+        IEnumerable<string> documentIds,
+        CancellationToken cancellationToken = default)
+        => _indexingService.SyncDataSourceDocumentsAsync(dataSourceId, documentIds, cancellationToken);
+
+    /// <summary>
     /// Removes the source documents async.
     /// </summary>
     /// <param name="documentIds">The document ids.</param>
@@ -83,4 +95,16 @@ internal sealed class OrchardAIDataSourceIndexingServiceAdapter : IAIDataSourceI
         IEnumerable<string> documentIds,
         CancellationToken cancellationToken = default)
         => _indexingService.RemoveDocumentsAsync(sourceIndexProfileName, documentIds, cancellationToken);
+
+    /// <summary>
+    /// Removes the data source documents async.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task RemoveDataSourceDocumentsAsync(
+        string dataSourceId,
+        IEnumerable<string> documentIds,
+        CancellationToken cancellationToken = default)
+        => _indexingService.RemoveDataSourceDocumentsAsync(dataSourceId, documentIds, cancellationToken);
 }

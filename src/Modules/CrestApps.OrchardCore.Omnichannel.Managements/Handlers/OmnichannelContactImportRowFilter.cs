@@ -181,11 +181,46 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
         if (_ignoreDoNotCallNumbers)
         {
-            var doNotCallNumbers = await LoadDoNotCallNumbersAsync(phoneEntries, CancellationToken.None);
+            HashSet<PhoneNumber> doNotCallNumbers;
+
+            try
+            {
+                doNotCallNumbers = await LoadDoNotCallNumbersAsync(phoneEntries, CancellationToken.None);
+            }
+            catch (DoNotCallScreeningException ex)
+            {
+                context.SkipReason = ex.Message;
+
+                _logger.LogError(
+                    ex,
+                    "Skipping row {RowIndex}: {Reason}",
+                    context.RowIndex,
+                    context.SkipReason);
+
+                return true;
+            }
 
             foreach (var entry in phoneEntries)
             {
-                if (doNotCallNumbers.Contains(entry.NormalizedNumber))
+                // A number that could not be read as a phone number cannot be screened, and importing it
+                // anyway would present an unscreened number as one the registries had cleared. The row is
+                // skipped with the reason stated so the operator can supply the country the file is in.
+                if (!entry.Canonical.HasValue)
+                {
+                    context.SkipReason = $"{entry.Label} '{entry.RawValue}' could not be read as a phone number, so it could not be checked against a national do-not-call registry.";
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Skipping row {RowIndex}: {Reason}",
+                            context.RowIndex,
+                            context.SkipReason);
+                    }
+
+                    return true;
+                }
+
+                if (doNotCallNumbers.Contains(entry.Canonical))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
 
@@ -222,11 +257,13 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
             if (!string.IsNullOrEmpty(value))
             {
-                var normalizedPhoneNumber = NormalizePhoneNumber(value);
+                _phoneNumberService.TryParse(value, GetFormattingRegionCode(value), out var canonicalNumber);
+
+                var normalizedPhoneNumber = PhoneNumberComparisonKey.For(canonicalNumber, value);
 
                 if (!string.IsNullOrEmpty(normalizedPhoneNumber))
                 {
-                    entries.Add(new PhoneEntry(normalizedPhoneNumber, value, phoneType, GetComparisonKeys(value, normalizedPhoneNumber)));
+                    entries.Add(new PhoneEntry(normalizedPhoneNumber, canonicalNumber, value, phoneType, PhoneNumberComparisonKey.AllFor(canonicalNumber, value)));
                 }
             }
         }
@@ -261,15 +298,19 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         return null;
     }
 
-    private async Task<HashSet<string>> LoadDoNotCallNumbersAsync(
+    private async Task<HashSet<PhoneNumber>> LoadDoNotCallNumbersAsync(
         IEnumerable<PhoneEntry> phoneEntries,
         CancellationToken cancellationToken)
     {
-        var allDncNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var allDncNumbers = new HashSet<PhoneNumber>();
+
+        // Only canonical numbers are checked. A number the import could not canonicalize used to be sent to
+        // the registries as a digits-only string, which no registry could compare, so the row was imported as
+        // though the registries had cleared it.
         var lookupPhoneNumbers = phoneEntries
-            .Select(entry => entry.NormalizedNumber)
-            .Where(number => !string.IsNullOrWhiteSpace(number))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(entry => entry.Canonical.HasValue)
+            .Select(entry => entry.Canonical)
+            .Distinct()
             .ToArray();
 
         var selectedRegistries = _registries
@@ -286,29 +327,21 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             CountryCode = _selectedCountryCode,
         };
         var tasks = selectedRegistries.Select(registry =>
-            QueryRegistrySafeAsync(registry, lookupPhoneNumbers, searchContext, cancellationToken));
+            QueryRegistryAsync(registry, lookupPhoneNumbers, searchContext, cancellationToken));
 
         var results = await Task.WhenAll(tasks);
 
         foreach (var result in results)
         {
-            foreach (var number in result)
-            {
-                var normalizedNumber = NormalizePhoneNumber(number);
-
-                if (!string.IsNullOrEmpty(normalizedNumber))
-                {
-                    allDncNumbers.Add(normalizedNumber);
-                }
-            }
+            allDncNumbers.UnionWith(result);
         }
 
         return allDncNumbers;
     }
 
-    private async Task<HashSet<string>> QueryRegistrySafeAsync(
+    private async Task<HashSet<PhoneNumber>> QueryRegistryAsync(
         INationalDoNotCallRegistry registry,
-        IEnumerable<string> phoneNumbers,
+        IEnumerable<PhoneNumber> phoneNumbers,
         NumberSearchContext searchContext,
         CancellationToken cancellationToken)
     {
@@ -316,30 +349,29 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         {
             return await registry.GetRegisteredNumbersAsync(phoneNumbers, searchContext, cancellationToken);
         }
-        catch (Exception ex)
+        catch (DoNotCallScreeningException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(
                 ex,
                 "Error loading do-not-call numbers from registry {RegistryKey}.",
                 registry.Key);
 
-            return [];
+            // Returning an empty set here would tell the import that the registry cleared every number it
+            // was asked about, and the rows would be imported as callable. The operator asked for these
+            // numbers to be screened; a screening that did not happen is not a screening that passed.
+            throw new DoNotCallScreeningException(
+                registry.Key,
+                $"The '{registry.Key}' do-not-call registry could not be reached, so the numbers in this file could not be screened.",
+                ex);
         }
-    }
-
-    private string NormalizePhoneNumber(string phoneNumber)
-    {
-        if (_phoneNumberService.TryFormatToE164(phoneNumber, GetFormattingRegionCode(phoneNumber), out var e164))
-        {
-            return e164;
-        }
-
-        // Fallback: strip non-digits for consistent comparison of national-format numbers.
-        return new string(phoneNumber.Where(char.IsDigit).ToArray());
     }
 
     private string? GetFormattingRegionCode(string phoneNumber)
-        => !string.IsNullOrWhiteSpace(phoneNumber) && phoneNumber.TrimStart().StartsWith('+')
+        => PhoneNumber.IsE164(phoneNumber?.Trim())
             ? null
             : _selectedCountryCode;
 
@@ -419,31 +451,6 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             ? null
             : countryCode.Trim().ToUpperInvariant();
 
-    private static string[] GetComparisonKeys(string rawValue, string normalizedNumber)
-    {
-        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        if (!string.IsNullOrWhiteSpace(normalizedNumber))
-        {
-            keys.Add(normalizedNumber);
-        }
-
-        var digits = new string(rawValue.Where(char.IsDigit).ToArray());
-
-        if (!string.IsNullOrWhiteSpace(digits))
-        {
-            keys.Add(digits);
-        }
-
-        var trimmedValue = rawValue.Trim();
-
-        if (!string.IsNullOrWhiteSpace(trimmedValue))
-        {
-            keys.Add(trimmedValue);
-        }
-
-        return [.. keys];
-    }
 
     private sealed class SeenPhoneOwnerState
     {
@@ -452,5 +459,5 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         public bool HasAnonymousRows { get; set; }
     }
 
-    private sealed record PhoneEntry(string NormalizedNumber, string RawValue, string Label, string[] ComparisonKeys);
+    private sealed record PhoneEntry(string NormalizedNumber, PhoneNumber Canonical, string RawValue, string Label, string[] ComparisonKeys);
 }

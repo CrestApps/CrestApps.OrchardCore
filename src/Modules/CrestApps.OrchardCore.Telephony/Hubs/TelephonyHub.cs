@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.SignalR;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -16,6 +17,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs;
 /// OrchardCore shell scope and is authorized against <see cref="TelephonyPermissions.UseSoftPhone"/>.
 /// </summary>
 [Authorize]
+[AllowApiTokenAuthentication]
 public sealed class TelephonyHub : Hub<ITelephonyClient>
 {
     private readonly ILogger _logger;

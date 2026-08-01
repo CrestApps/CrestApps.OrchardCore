@@ -25,10 +25,11 @@ When AI profiles are configured with data sources, the system needs to search an
 - **OData filter translation** — Translates user OData filters into Azure AI Search-compatible OData with proper field prefixing.
 - **Batch document reading** — Reads source documents from Azure AI Search indexes in batches for efficient indexing.
 - **Automatic source sync** — When Orchard Core updates or deletes documents in Azure AI Search, the module forwards those provider notifications into the shared data-source indexing queue so mapped knowledge-base indexes stay aligned.
+- **External source connections** — Adds **Azure AI Search** as a selectable AI data-source **Source type** so operators can read directly from an external Azure AI Search index by configuring endpoint, authentication type, index name, and optional managed-identity client ID.
 
 ## Getting Started
 
 1. Enable the **AI Data Sources - Azure AI Search** feature in the Orchard Core admin dashboard.
 2. Create an Azure AI Search knowledge base index via **Search > Indexes** using the "AI Knowledge Base Index" type.
-3. Configure an AI data source under **Artificial Intelligence > Data Sources**, selecting an Azure AI Search source index and the knowledge base index.
+3. Configure an AI data source under **Artificial Intelligence > Data Sources**, selecting either an Orchard-managed Azure AI Search source index profile or the **Azure AI Search** external source type and the knowledge base index.
 4. The module will automatically sync documents from the source index to the knowledge base index with embeddings.

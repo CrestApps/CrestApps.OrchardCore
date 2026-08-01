@@ -45,9 +45,9 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | Manifest ID | Name | Kind | Docs |
 | --- | --- | --- | --- |
 | `CrestApps.OrchardCore.Omnichannel` | Omnichannel | Feature | [Omnichannel Communications](./omnichannel/) |
-| `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` | Omnichannel (Azure Communication Services) | Feature | [Azure Communication Services](./omnichannel/azure-communication-services) |
+| `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` | Omnichannel - Azure Communication Services | Feature | [Azure Communication Services](./omnichannel/azure-communication-services) |
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | Feature | [Management (CRM)](./omnichannel/management) |
-| `CrestApps.OrchardCore.Omnichannel.EventGrid` | Omnichannel (Azure Event Grid) | Feature | [Azure Event Grid](./omnichannel/event-grid) |
+| `CrestApps.OrchardCore.Omnichannel.EventGrid` | Omnichannel - Azure Event Grid | Feature | [Azure Event Grid](./omnichannel/event-grid) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | Feature | [SMS Automation](./omnichannel/sms) |
 
 ## Standard modules

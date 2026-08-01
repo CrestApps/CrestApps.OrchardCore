@@ -24,6 +24,8 @@ public static class AIConstants
 
         public const string ConnectionManagement = "CrestApps.OrchardCore.AI.ConnectionManagement";
 
+        public const string ToolInstances = "CrestApps.OrchardCore.AI.ToolInstances";
+
         public const string OrchardCoreAIAgent = "CrestApps.OrchardCore.AI.Agent";
 
         public const string ChatCore = "CrestApps.OrchardCore.AI.Chat.Core";
@@ -35,6 +37,8 @@ public static class AIConstants
         public const string DataSourceElasticsearch = "CrestApps.OrchardCore.AI.DataSources.Elasticsearch";
 
         public const string DataSourceAzureAI = "CrestApps.OrchardCore.AI.DataSources.AzureAI";
+
+        public const string DataSourcePostgreSQL = "CrestApps.OrchardCore.AI.DataSources.PostgreSQL";
 
         public const string DataSourceMongoDB = "CrestApps.OrchardCore.AI.DataSources.MongoDB";
 

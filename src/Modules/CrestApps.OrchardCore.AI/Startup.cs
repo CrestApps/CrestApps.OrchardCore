@@ -1,10 +1,12 @@
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
@@ -25,6 +27,7 @@ using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.Core;
@@ -77,6 +80,7 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<Core.Services.CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
+            .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
@@ -116,7 +120,6 @@ public sealed class Startup : StartupBase
             .AddScoped<DefaultAIProfileTemplateManager>()
             .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
             .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
@@ -327,5 +330,37 @@ public sealed class ChatAnalyticsStartup : StartupBase
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddDataMigration<AICompletionUsageIndexMigrations>()
             .AddIndexProvider<AICompletionUsageIndexProvider>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+public sealed class ToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The default registry surfaces every stored instance to the model, so it is skipped in favor of
+        // OrchardCoreToolInstanceRegistryProvider, which only surfaces instances the current user may access.
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddToolInstances(toolInstances => toolInstances
+                    .AddHttpApiRequestSource()
+                    .AddYesSqlStores(),
+                    useDefaultRegistry: false)
+            )
+        );
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
+
+        services
+            .AddDataMigration<AIToolInstanceIndexMigrations>()
+            .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
+            .AddNavigationProvider<AIToolInstanceAdminMenu>()
+            .AddPermissionProvider<AIToolInstancePermissionsProvider>();
     }
 }

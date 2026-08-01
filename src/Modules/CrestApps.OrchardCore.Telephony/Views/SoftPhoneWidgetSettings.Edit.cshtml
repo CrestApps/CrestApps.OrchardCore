@@ -20,6 +20,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="RecentCallsCount">
+    <label asp-for="RecentCallsCount" class="ocat-label">@T["Recent calls to display"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecentCallsCount" class="form-control" min="1" max="200" />
+        <span asp-validation-for="RecentCallsCount"></span>
+        <span class="hint">@T["The maximum number of calls shown on the soft phone's Recent tab. The default is 30."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="AccentColor">
     <label asp-for="AccentColor" class="ocat-label">@T["Accent color"]</label>
     <div class="ocat-end">

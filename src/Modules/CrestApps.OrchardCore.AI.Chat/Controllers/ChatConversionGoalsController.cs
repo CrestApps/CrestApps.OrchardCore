@@ -25,6 +25,7 @@ public sealed class ChatConversionGoalsController : Controller
     private readonly ISession _session;
     private readonly IAuthorizationService _authorizationService;
     private readonly YesSqlStoreOptions _yesSqlStoreOptions;
+    private readonly ILocalClock _localClock;
     private readonly IClock _clock;
 
     /// <summary>
@@ -33,18 +34,22 @@ public sealed class ChatConversionGoalsController : Controller
     /// <param name="profileManager">The profile manager.</param>
     /// <param name="session">The session.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="yesSqlStoreOptions">The YesSql store options.</param>
+    /// <param name="localClock">The local clock for timezone conversions.</param>
     /// <param name="clock">The clock.</param>
     public ChatConversionGoalsController(
         IAIProfileManager profileManager,
         ISession session,
         IAuthorizationService authorizationService,
         IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
+        ILocalClock localClock,
         IClock clock)
     {
         _profileManager = profileManager;
         _session = session;
         _authorizationService = authorizationService;
         _yesSqlStoreOptions = yesSqlStoreOptions.Value;
+        _localClock = localClock;
         _clock = clock;
     }
 
@@ -145,15 +150,16 @@ public sealed class ChatConversionGoalsController : Controller
             index => index.ProfileId == model.ProfileId,
             collection: _yesSqlStoreOptions.AICollectionName);
 
-        if (model.StartDateUtc.HasValue)
+        if (model.StartDate.HasValue)
         {
-            query = query.Where(index => index.SessionStartedUtc >= model.StartDateUtc.Value);
+            var startUtc = await _localClock.ConvertToUtcAsync(model.StartDate.Value);
+            query = query.Where(index => index.SessionStartedUtc >= startUtc);
         }
 
-        if (model.EndDateUtc.HasValue)
+        if (model.EndDate.HasValue)
         {
-            var end = model.EndDateUtc.Value.Date.AddDays(1).AddTicks(-1);
-            query = query.Where(index => index.SessionStartedUtc <= end);
+            var endUtc = await _localClock.ConvertToUtcAsync(model.EndDate.Value);
+            query = query.Where(index => index.SessionStartedUtc <= endUtc);
         }
 
         return (await query.ListAsync()).ToList();

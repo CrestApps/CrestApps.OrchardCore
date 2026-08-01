@@ -71,15 +71,17 @@ public sealed class NamedRecipeStepHandlerTests
             Name = "customer-support",
         };
 
-        var manager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
+        var manager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
         manager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(template));
         manager.Setup(x => x.ValidateAsync(template, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+        var options = Options.Create(new AIOptions());
 
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Recipes.AIProfileTemplateStep, CrestApps.OrchardCore.AI",
             manager.Object,
+            options,
             null);
 
         var context = CreateContext("AIProfileTemplate", new JsonObject
@@ -99,6 +101,53 @@ public sealed class NamedRecipeStepHandlerTests
 
         // Assert
         Assert.Empty(context.Errors);
+        manager.Verify(x => x.UpdateAsync(template, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AIProfileTemplate>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AIProfileTemplateStep_WhenTemplateExistsByNameAndSource_ShouldUpdateInsteadOfCreate()
+    {
+        // Arrange
+        var template = new AIProfileTemplate
+        {
+            ItemId = "template-2",
+            Name = "customer-support",
+            Source = AITemplateSources.Profile,
+        };
+
+        var manager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
+        manager.Setup(x => x.GetAsync("customer-support", AITemplateSources.Profile, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(template));
+        manager.Setup(x => x.ValidateAsync(template, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+        var options = Options.Create(new AIOptions());
+
+        var handler = CreateHandler(
+            "CrestApps.OrchardCore.AI.Recipes.AIProfileTemplateStep, CrestApps.OrchardCore.AI",
+            manager.Object,
+            options,
+            null);
+
+        var context = CreateContext("AIProfileTemplate", new JsonObject
+        {
+            ["Templates"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    [nameof(AIProfileTemplate.Name)] = "customer-support",
+                    [nameof(AIProfileTemplate.DisplayText)] = "Customer Support",
+                    [nameof(AIProfileTemplate.Source)] = AITemplateSources.Profile,
+                },
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.GetAsync("customer-support", AITemplateSources.Profile, It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.UpdateAsync(template, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(It.IsAny<AIProfileTemplate>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -250,7 +299,7 @@ public sealed class NamedRecipeStepHandlerTests
         profileManager.Setup(x => x.ValidateAsync(profile, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
-        var templateManager = new Mock<INamedCatalogManager<AIProfileTemplate>>();
+        var templateManager = new Mock<INamedSourceCatalogManager<AIProfileTemplate>>();
         templateManager.Setup(x => x.FindByIdAsync("template-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(template));
 
@@ -290,15 +339,17 @@ public sealed class NamedRecipeStepHandlerTests
             ItemId = "data-source-1",
         };
 
-        var manager = new Mock<ICatalogManager<AIDataSource>>();
+        var manager = new Mock<ISourceCatalogManager<AIDataSource>>();
         manager.Setup(x => x.FindByIdAsync("data-source-1", It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(dataSource));
         manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))
             .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
 
+        var options = CreateAIDataSourceSourceOptions();
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
             manager.Object,
+            options,
             null);
 
         var context = CreateContext("AIDataSource", new JsonObject
@@ -319,6 +370,52 @@ public sealed class NamedRecipeStepHandlerTests
         Assert.Empty(context.Errors);
         manager.Verify(x => x.UpdateAsync(dataSource, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(It.IsAny<AIDataSource>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AIDataSourceStep_WhenDataSourceIsNew_ShouldUseRecipeSourceValue()
+    {
+        // Arrange
+        var token = new JsonObject
+        {
+            [nameof(AIDataSource.DisplayText)] = "Products",
+            [nameof(AIDataSource.Source)] = "PostgreSQL",
+        };
+
+        var dataSource = new AIDataSource
+        {
+            DisplayText = "Products",
+            Source = "PostgreSQL",
+        };
+
+        var manager = new Mock<ISourceCatalogManager<AIDataSource>>();
+        manager.Setup(x => x.NewAsync("PostgreSQL", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(dataSource));
+        manager.Setup(x => x.ValidateAsync(dataSource, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var options = CreateAIDataSourceSourceOptions();
+        var handler = CreateHandler(
+            "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
+            manager.Object,
+            options,
+            null);
+
+        var context = CreateContext("AIDataSource", new JsonObject
+        {
+            ["DataSources"] = new JsonArray
+            {
+                token,
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.NewAsync("PostgreSQL", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.CreateAsync(dataSource, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -519,5 +616,16 @@ public sealed class NamedRecipeStepHandlerTests
         var task = (Task)executeMethod.Invoke(handler, [context])!;
 
         await task;
+    }
+
+    private static IOptions<AIDataSourceSourceOptions> CreateAIDataSourceSourceOptions()
+    {
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("SearchIndexProfile", new("Search Index Profile", "Search Index Profile"), new("Read source documents from an Orchard-managed search index profile.", "Read source documents from an Orchard-managed search index profile."));
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Read source documents from an external Azure AI Search index.", "Read source documents from an external Azure AI Search index."));
+        options.AddOrUpdate("Elasticsearch", new("Elasticsearch", "Elasticsearch"), new("Read source documents from an external Elasticsearch index.", "Read source documents from an external Elasticsearch index."));
+        options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
+
+        return Options.Create(options);
     }
 }

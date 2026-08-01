@@ -747,7 +747,7 @@
                 return;
             }
 
-            connection.invoke('GetInteractions', 50).then(function (items) {
+            connection.invoke('GetInteractions', config.recentCallsCount || 30).then(function (items) {
                 renderHistory(items || []);
             }).catch(function () {
                 renderHistory([]);

@@ -28,6 +28,18 @@ public static class AIPermissions
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", "Manage AI deployments");
 
     /// <summary>
+    /// Gets the permission to manage AI tool instances that were created by other users.
+    /// </summary>
+    public static readonly Permission ManageAIToolInstancesCreatedByOthers = new("ManageAIToolInstancesCreatedByOthers", "Manage AI tool instances created by others");
+
+    /// <summary>
+    /// Gets the permission to manage AI tool instances. This permission is implied by
+    /// <see cref="ManageAIToolInstancesCreatedByOthers"/>, so callers only ever need to check this one to
+    /// determine whether the user may reach the tool instance management surface.
+    /// </summary>
+    public static readonly Permission ManageAIToolInstances = new("ManageAIToolInstances", "Manage AI tool instances", [ManageAIToolInstancesCreatedByOthers]);
+
+    /// <summary>
     /// Gets the permission to manage AI data sources.
     /// </summary>
     public static readonly Permission ManageAIDataSources = new("ManageAIDataSources", "Manage AI data sources");

@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
-/// Default implementation of <see cref="ICatalogManager{AIDataSource}"/> for managing AI data source lifecycle.
+/// Default implementation of <see cref="ISourceCatalogManager{AIDataSource}"/> for managing AI data source lifecycle.
 /// </summary>
-public sealed class DefaultAIDataSourceManager : CatalogManager<AIDataSource>
+public sealed class DefaultAIDataSourceManager : SourceCatalogManager<AIDataSource>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAIDataSourceManager"/> class.
@@ -20,7 +20,7 @@ public sealed class DefaultAIDataSourceManager : CatalogManager<AIDataSource>
         IAIDataSourceStore store,
         IEnumerable<ICatalogEntryHandler<AIDataSource>> handlers,
         ILogger<DefaultAIDataSourceManager> logger)
-    : base(store, handlers, logger)
+        : base(store, handlers, logger)
     {
     }
 }

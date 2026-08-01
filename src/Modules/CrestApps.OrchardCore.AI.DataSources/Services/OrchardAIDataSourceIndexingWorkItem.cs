@@ -10,6 +10,11 @@ internal sealed class OrchardAIDataSourceIndexingWorkItem
     public AIDataSource DataSource { get; private init; }
 
     /// <summary>
+    /// Gets or sets the data source identifier.
+    /// </summary>
+    public string DataSourceId { get; private init; }
+
+    /// <summary>
     /// Gets or sets the document ids.
     /// </summary>
     public IReadOnlyCollection<string> DocumentIds { get; private init; } = [];
@@ -81,6 +86,40 @@ internal sealed class OrchardAIDataSourceIndexingWorkItem
             DocumentIds = documentIds,
             SourceIndexProfileName = sourceIndexProfileName,
             Type = OrchardAIDataSourceIndexingWorkItemType.RemoveSourceDocuments,
+        };
+    }
+
+    /// <summary>
+    /// Performs the for sync data source documents operation.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    public static OrchardAIDataSourceIndexingWorkItem ForSyncDataSourceDocuments(
+        string dataSourceId,
+        IReadOnlyCollection<string> documentIds)
+    {
+        return new()
+        {
+            DataSourceId = dataSourceId,
+            DocumentIds = documentIds,
+            Type = OrchardAIDataSourceIndexingWorkItemType.SyncDataSourceDocuments,
+        };
+    }
+
+    /// <summary>
+    /// Performs the for remove data source documents operation.
+    /// </summary>
+    /// <param name="dataSourceId">The data source identifier.</param>
+    /// <param name="documentIds">The document ids.</param>
+    public static OrchardAIDataSourceIndexingWorkItem ForRemoveDataSourceDocuments(
+        string dataSourceId,
+        IReadOnlyCollection<string> documentIds)
+    {
+        return new()
+        {
+            DataSourceId = dataSourceId,
+            DocumentIds = documentIds,
+            Type = OrchardAIDataSourceIndexingWorkItemType.RemoveDataSourceDocuments,
         };
     }
 }

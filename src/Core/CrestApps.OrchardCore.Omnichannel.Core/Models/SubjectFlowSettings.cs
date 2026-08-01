@@ -1,44 +1,48 @@
-using CrestApps.Core;
-using CrestApps.Core.Models;
-using CrestApps.Core.Services;
-
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
-/// Represents the flow settings for a subject content type.
-/// Stores interaction type, channel, campaign association, and AI configuration.
+/// Represents the assembled, read-only flow settings for a subject content type. It is composed at read time
+/// from the <see cref="OmnichannelSubjectPartSettings"/> and <see cref="OmnichannelSubjectAISettings"/> stored
+/// on the subject content-type part definition; it is not persisted as a catalog item.
 /// </summary>
-public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<SubjectFlowSettings>
+public sealed class SubjectFlowSettings
 {
-    /// <summary>
-    /// Gets or sets the display text for this flow settings entry.
-    /// </summary>
-    public string DisplayText { get; set; }
-
     /// <summary>
     /// Gets or sets the subject content type this flow applies to.
     /// </summary>
     public string SubjectContentType { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign identifier that this subject belongs to.
+    /// Gets or sets the default campaign identifier that activities loaded for this subject belong to.
     /// </summary>
     public string CampaignId { get; set; }
 
     /// <summary>
-    /// Gets or sets the interaction type for activities using this subject.
+    /// Gets or sets the primary communication direction for this subject.
+    /// </summary>
+    public SubjectDirection Direction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type for inbound activities using this subject.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
 
     /// <summary>
-    /// Gets or sets the communication channel for activities using this subject.
+    /// Gets or sets the communication channel for inbound activities using this subject.
     /// </summary>
     public string Channel { get; set; }
 
     /// <summary>
-    /// Gets or sets the channel endpoint identifier for activities using this subject.
+    /// Gets or sets the channel endpoint identifier for inbound activities using this subject.
     /// </summary>
     public string ChannelEndpointId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a disposition must be selected before an activity using this
+    /// subject can be completed. This is the single decision-control policy that applies to both inbound and
+    /// outbound activities, enforced by the activity disposition service.
+    /// </summary>
+    public bool RequireDisposition { get; set; } = true;
 
     /// <summary>
     /// When the interaction is automated, this will be the initial message to start the conversation with the customer.
@@ -57,6 +61,24 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public string ProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional speech-to-text deployment name used for automated phone calls.
+    /// When empty, the site default speech-to-text deployment is used.
+    /// </summary>
+    public string SpeechToTextDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech deployment name used for automated phone calls.
+    /// When empty, the site default text-to-speech deployment is used.
+    /// </summary>
+    public string TextToSpeechDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional text-to-speech voice identifier used for automated phone calls.
+    /// When empty, the site default voice is used.
+    /// </summary>
+    public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to allow AI to update contact.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }
@@ -67,48 +89,19 @@ public sealed class SubjectFlowSettings : CatalogItem, IDisplayTextAwareModel, I
     public bool AllowAIToUpdateSubject { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the date and time the settings were created.
+    /// Gets or sets the number of minutes to wait before an automated SMS activity is marked as failed
+    /// when the contact stops responding.
     /// </summary>
-    public DateTime CreatedUtc { get; set; }
+    public int? NoResponseTimeoutInMinutes { get; set; }
 
     /// <summary>
-    /// Gets or sets the date and time the settings were last modified.
+    /// Gets or sets the number of seconds to wait before sending each automated SMS response.
     /// </summary>
-    public DateTime? ModifiedUtc { get; set; }
+    public int? SmsResponseDelayInSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the author.
+    /// Gets or sets SMS opt-out keywords that stop automated SMS conversations and set the contact's
+    /// do-not-SMS preference.
     /// </summary>
-    public string Author { get; set; }
-
-    /// <summary>
-    /// Gets or sets the owner identifier.
-    /// </summary>
-    public string OwnerId { get; set; }
-
-    /// <summary>
-    /// Creates a copy of the current subject flow settings.
-    /// </summary>
-    public SubjectFlowSettings Clone()
-    {
-        return new SubjectFlowSettings
-        {
-            ItemId = ItemId,
-            DisplayText = DisplayText,
-            SubjectContentType = SubjectContentType,
-            CampaignId = CampaignId,
-            InteractionType = InteractionType,
-            Channel = Channel,
-            ChannelEndpointId = ChannelEndpointId,
-            InitialOutboundPromptPattern = InitialOutboundPromptPattern,
-            SubjectGoal = SubjectGoal,
-            ProfileId = ProfileId,
-            AllowAIToUpdateContact = AllowAIToUpdateContact,
-            AllowAIToUpdateSubject = AllowAIToUpdateSubject,
-            CreatedUtc = CreatedUtc,
-            ModifiedUtc = ModifiedUtc,
-            Author = Author,
-            OwnerId = OwnerId,
-        };
-    }
+    public string[] SmsOptOutKeywords { get; set; }
 }

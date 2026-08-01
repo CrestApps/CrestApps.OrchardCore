@@ -1,4 +1,6 @@
+using CrestApps.Core.AI;
 using Json.Schema;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
@@ -7,7 +9,17 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class AIProfileTemplateRecipeStep : IRecipeStep
 {
+    private readonly AIOptions _aiOptions;
     private JsonSchema _cached;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateRecipeStep"/> class.
+    /// </summary>
+    /// <param name="aiOptions">The AI options.</param>
+    public AIProfileTemplateRecipeStep(IOptions<AIOptions> aiOptions)
+    {
+        _aiOptions = aiOptions.Value;
+    }
 
     public string Name => "AIProfileTemplate";
 
@@ -21,12 +33,21 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
         return ValueTask.FromResult(_cached);
     }
 
-    private static JsonSchema CreateSchema()
+    private JsonSchema CreateSchema()
     {
+        var templateSources = _aiOptions.TemplateSources.Keys
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var templateSourceSchema = CreateTemplateSourceSchema(
+            templateSources,
+            "Template source identifier. Built-in values are 'Profile' for reusable AI profile templates and 'SystemPrompt' for reusable system prompt templates.");
         var templateSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier.")),
+                ("Source", templateSourceSchema),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique technical name for the template.")),
                 ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Human-readable display name.")),
                 ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Template description.")),
@@ -49,7 +70,7 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
                 ("AgentNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Agent profile names to include.")),
                 ("ProfileDescription", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Description of the profile's capabilities (used for Agent type).")),
                 ("Properties", AIProfileRecipeSchemaBuilder.BuildTemplatePropertiesSchema("Extended template properties. This includes the shared AI profile metadata objects plus template-specific metadata and template-stored settings objects, while still allowing additional feature-specific objects.")))
-            .Required("Name", "DisplayText")
+            .Required("Name", "Source", "DisplayText")
             .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
@@ -64,5 +85,22 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
             .Required("name", "Templates")
             .AdditionalProperties(true)
             .Build();
+    }
+
+    private static JsonSchemaBuilder CreateTemplateSourceSchema(
+        IEnumerable<string> templateSources,
+        string description)
+    {
+        var schema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Description(description);
+        var values = templateSources.ToArray();
+
+        if (values.Length > 0)
+        {
+            schema = schema.Enum(values);
+        }
+
+        return schema;
     }
 }

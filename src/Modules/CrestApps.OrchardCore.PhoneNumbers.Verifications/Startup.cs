@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Drivers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Migrations;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
@@ -46,6 +48,18 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<PhoneNumberVerificationsMigrations>();
 
         services.AddSingleton<IBackgroundTask, PhoneNumberRevalidationBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Registers the shared Reports area integration for phone number verification reporting.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IReport, PhoneNumberVerificationReportProvider>();
     }
 }
 

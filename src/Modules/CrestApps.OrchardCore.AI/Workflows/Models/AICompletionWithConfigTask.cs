@@ -2,6 +2,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Resilience;
 using Fluid;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -184,7 +185,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
                 return Outcomes("Failed");
             }
 
-            var client = await _aIClientFactory.CreateChatClientAsync(deployment);
+            var client = await _aIClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
 
             var chatOptions = new ChatOptions
             {
@@ -202,6 +203,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
                 client = client
                     .AsBuilder()
+                    .UseDefaultResilience()
                     .UseFunctionInvocation(ServiceProvider.GetRequiredService<ILoggerFactory>(), c =>
                     {
                         c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;

@@ -23,13 +23,13 @@
 
             <div class="mt-3 p-2">
                 <form asp-action="Export" method="post">
-                    @if (Model.Filter.StartDateUtc.HasValue)
+                    @if (Model.Filter.StartDate.HasValue)
                     {
-                        <input type="hidden" name="StartDate" value="@Model.Filter.StartDateUtc.Value.ToString("o")" />
+                        <input type="hidden" name="StartDate" value="@Model.Filter.StartDate.Value.ToString("yyyy-MM-ddTHH:mm")" />
                     }
-                    @if (Model.Filter.EndDateUtc.HasValue)
+                    @if (Model.Filter.EndDate.HasValue)
                     {
-                        <input type="hidden" name="EndDate" value="@Model.Filter.EndDateUtc.Value.ToString("o")" />
+                        <input type="hidden" name="EndDate" value="@Model.Filter.EndDate.Value.ToString("yyyy-MM-ddTHH:mm")" />
                     }
                     @if (!string.IsNullOrEmpty(Model.Filter.ProfileId))
                     {

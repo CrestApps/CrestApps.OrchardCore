@@ -1,6 +1,8 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -50,14 +52,17 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var iterationCount = 0;
 
+        await ExpireNoResponseActivitiesAsync(serviceProvider, session, now, logger, cancellationToken);
+
         while (true)
         {
             var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
-            x.Status == ActivityStatus.NotStated &&
-                x.InteractionType == ActivityInteractionType.Automated &&
+                    (x.Status == ActivityStatus.NotStated || x.Status == ActivityStatus.Scheduled) &&
+                    x.InteractionType == ActivityInteractionType.Automated &&
                     x.ScheduledUtc <= now &&
-                        x.Channel.IsIn(processors.Keys) &&
-                            x.DocumentId > documentId, collection: OmnichannelConstants.CollectionName)
+                    x.Channel.IsIn(processors.Keys) &&
+                    x.DocumentId > documentId,
+                collection: OmnichannelConstants.CollectionName)
                 .OrderBy(x => x.DocumentId)
                 .Skip(iterationCount++ * _batchSize)
                 .Take(_batchSize)
@@ -90,5 +95,49 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         }
 
         await session.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task ExpireNoResponseActivitiesAsync(
+        IServiceProvider serviceProvider,
+        ISession session,
+        DateTime now,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var subjectFlowSettingsService = serviceProvider.GetRequiredService<ISubjectFlowSettingsService>();
+
+        var expiredActivities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
+                x.Status == ActivityStatus.AwaitingCustomerAnswer &&
+                    x.InteractionType == ActivityInteractionType.Automated &&
+                        x.ScheduledUtc <= now,
+                collection: OmnichannelConstants.CollectionName)
+            .Take(_batchSize)
+            .ListAsync(cancellationToken);
+
+        foreach (var activity in expiredActivities)
+        {
+            var flowSettings = await subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(
+                activity.SubjectContentType,
+                cancellationToken);
+
+            if (!OmnichannelAutomationHelper.HasNoResponseTimeout(flowSettings))
+            {
+                continue;
+            }
+
+            activity.Status = ActivityStatus.Failed;
+
+            if (string.IsNullOrWhiteSpace(activity.Notes))
+            {
+                activity.Notes = "The automated SMS activity failed because the contact stopped responding.";
+            }
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Automated activity '{ActivityId}' failed because the contact did not respond before the configured timeout.", activity.ItemId);
+            }
+
+            await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
+        }
     }
 }

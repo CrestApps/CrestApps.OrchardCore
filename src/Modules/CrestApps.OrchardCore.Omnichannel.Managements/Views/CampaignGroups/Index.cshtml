@@ -1,0 +1,49 @@
+@using CrestApps.Core.Models
+@using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelCampaignGroup>>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Campaign groups"])</h1></zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add campaign group"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group">
+        @if (Model.Models.Count > 0)
+        {
+            @foreach (var entry in Model.Models)
+            {
+                <li class="list-group-item item" data-filter-value="@entry.Model.DisplayText?.ToLowerInvariant()">
+                    @await DisplayAsync(entry.Shape)
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @T["<strong>Nothing here!</strong> There are no campaign groups at the moment."]
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>

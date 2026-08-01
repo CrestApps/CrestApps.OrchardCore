@@ -19,8 +19,13 @@ public sealed class TryAgainActionMetadata
     public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets how the owner of the retry activity is selected.
+    /// </summary>
+    public SubjectActionOwnerAssignmentType AssignmentType { get; set; }
+
+    /// <summary>
     /// Gets or sets the normalized username to assign the retry activity to.
-    /// When null, the activity is assigned to the user who completed the original activity.
+    /// Used when <see cref="AssignmentType"/> is <see cref="SubjectActionOwnerAssignmentType.SpecificOwner"/>.
     /// </summary>
     public string NormalizedUserName { get; set; }
 

@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Resilience;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using Microsoft.Extensions.AI;
@@ -263,6 +264,6 @@ internal sealed class AIMemoryIndexingService
             return null;
         }
 
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment);
+        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment, builder => builder.UseDefaultResilience());
     }
 }

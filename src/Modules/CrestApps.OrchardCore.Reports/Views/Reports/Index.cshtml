@@ -1,0 +1,33 @@
+@using System.Linq
+@model ReportsIndexViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Reports"])</h1></zone>
+
+@if (Model.Reports.Count == 0)
+{
+    <div class="alert alert-info" role="alert">@T["No reports are available. Enable a module that contributes reports to see them here."]</div>
+}
+else
+{
+    @foreach (var group in Model.Reports.GroupBy(report => report.Category ?? string.Empty))
+    {
+        @if (!string.IsNullOrEmpty(group.Key))
+        {
+            <h2 class="h4 mt-3">@group.Key</h2>
+        }
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-3">
+            @foreach (var report in group)
+            {
+                <div class="col">
+                    <a class="card h-100 text-decoration-none text-reset" asp-action="Display" asp-route-id="@report.Name">
+                        <div class="card-body">
+                            <h3 class="h6">@report.DisplayName</h3>
+                            <p class="text-muted small mb-0">@report.Description</p>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+}

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -13,6 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterHandler
 {
     private const string ContactAlias = "oci";
+    private const string ContactPhoneAlias = "ocpi";
     private const string DncAlias = "dnc";
 
     /// <inheritdoc/>
@@ -42,6 +44,41 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Channel))}";
             builder.Parameters["@Channel"] = filter.Channel;
             builder.WhereAnd($"{col} = @Channel");
+        }
+
+        if (!string.IsNullOrEmpty(filter.Source))
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Source))}";
+            builder.Parameters["@Source"] = filter.Source;
+            builder.WhereAnd($"{col} = @Source");
+        }
+
+        if (filter.InteractionType.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.InteractionType))}";
+            builder.Parameters["@InteractionType"] = (int)filter.InteractionType.Value;
+            builder.WhereAnd($"{col} = @InteractionType");
+        }
+
+        if (filter.Status.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Status))}";
+            builder.Parameters["@Status"] = (int)filter.Status.Value;
+            builder.WhereAnd($"{col} = @Status");
+        }
+
+        if (filter.AssignmentStatus.HasValue)
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.AssignmentStatus))}";
+            builder.Parameters["@AssignmentStatus"] = (int)filter.AssignmentStatus.Value;
+            builder.WhereAnd($"{col} = @AssignmentStatus");
+        }
+
+        if (!string.IsNullOrEmpty(filter.CampaignId))
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.CampaignId))}";
+            builder.Parameters["@CampaignId"] = filter.CampaignId;
+            builder.WhereAnd($"{col} = @CampaignId");
         }
 
         if (filter.AssignedToUserIds is { Length: > 0 })
@@ -114,8 +151,49 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
         var dialect = context.Dialect;
         var actAlias = context.ActivityTableAlias;
 
-        // JOIN the contact index table to filter by phone number and/or timezone.
-        if (hasPhoneFilter || hasTimeZoneFilter)
+        if (hasPhoneFilter)
+        {
+            var actContactCol = nameof(OmnichannelActivityIndex.ContactContentItemId);
+            var phoneTable = context.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex));
+            var contactItemIdCol = nameof(OmnichannelContactIndex.ContentItemId);
+
+            builder.Join(
+                JoinType.Inner,
+                phoneTable,
+                ContactPhoneAlias,
+                contactItemIdCol,
+                actAlias,
+                actContactCol,
+                context.Schema,
+                ContactPhoneAlias,
+                actAlias);
+
+            var latestCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.Latest))}";
+            builder.Parameters["@PhoneLatest"] = true;
+            builder.WhereAnd($"{latestCol} = @PhoneLatest");
+
+            if (!PhoneNumberSearchTerm.TryParse(filter.PhoneNumber, out var searchTerm))
+            {
+                builder.WhereAnd("1 = 0");
+            }
+            else
+            {
+                var cellColumnName = searchTerm.IsE164
+                    ? nameof(OmnichannelContactIndex.NormalizedPrimaryCellPhoneNumber)
+                    : nameof(OmnichannelContactIndex.PrimaryCellPhoneNumber);
+                var homeColumnName = searchTerm.IsE164
+                    ? nameof(OmnichannelContactIndex.NormalizedPrimaryHomePhoneNumber)
+                    : nameof(OmnichannelContactIndex.PrimaryHomePhoneNumber);
+                var cellCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(cellColumnName)}";
+                var homeCol = $"{dialect.QuoteForAliasName(ContactPhoneAlias)}.{dialect.QuoteForColumnName(homeColumnName)}";
+                var comparison = filter.PhoneNumberMatchType == PhoneNumberMatchType.Exact ? "=" : "LIKE";
+
+                builder.Parameters["@PhonePattern"] = searchTerm.GetPattern(filter.PhoneNumberMatchType);
+                builder.WhereAnd($"({cellCol} {comparison} @PhonePattern OR {homeCol} {comparison} @PhonePattern)");
+            }
+        }
+
+        if (hasTimeZoneFilter)
         {
             var actContactCol = nameof(OmnichannelActivityIndex.ContactContentItemId);
             var contactTable = context.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex));
@@ -132,44 +210,21 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
                 ContactAlias,
                 actAlias);
 
-            if (hasPhoneFilter)
+            var latestCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.Latest))}";
+            var tzCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.TimeZoneId))}";
+            var placeholders = new string[filter.TimeZoneIds.Length];
+
+            builder.Parameters["@TimeZoneLatest"] = true;
+            builder.WhereAnd($"{latestCol} = @TimeZoneLatest");
+
+            for (var i = 0; i < filter.TimeZoneIds.Length; i++)
             {
-                var cellCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.NormalizedPrimaryCellPhoneNumber))}";
-                var homeCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.NormalizedPrimaryHomePhoneNumber))}";
-
-                switch (filter.PhoneNumberMatchType)
-                {
-                    case PhoneNumberMatchType.Exact:
-                        builder.Parameters["@PhoneNumber"] = filter.PhoneNumber;
-                        builder.WhereAnd($"({cellCol} = @PhoneNumber OR {homeCol} = @PhoneNumber)");
-                        break;
-
-                    case PhoneNumberMatchType.EndsWith:
-                        builder.Parameters["@PhonePattern"] = $"%{filter.PhoneNumber}";
-                        builder.WhereAnd($"({cellCol} LIKE @PhonePattern OR {homeCol} LIKE @PhonePattern)");
-                        break;
-
-                    default: // BeginsWith
-                        builder.Parameters["@PhonePattern"] = $"{filter.PhoneNumber}%";
-                        builder.WhereAnd($"({cellCol} LIKE @PhonePattern OR {homeCol} LIKE @PhonePattern)");
-                        break;
-                }
+                var paramName = $"@TZ{i}";
+                placeholders[i] = paramName;
+                builder.Parameters[paramName] = filter.TimeZoneIds[i];
             }
 
-            if (hasTimeZoneFilter)
-            {
-                var tzCol = $"{dialect.QuoteForAliasName(ContactAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.TimeZoneId))}";
-                var placeholders = new string[filter.TimeZoneIds.Length];
-
-                for (var i = 0; i < filter.TimeZoneIds.Length; i++)
-                {
-                    var paramName = $"@TZ{i}";
-                    placeholders[i] = paramName;
-                    builder.Parameters[paramName] = filter.TimeZoneIds[i];
-                }
-
-                builder.WhereAnd($"{tzCol} IN ({string.Join(", ", placeholders)})");
-            }
+            builder.WhereAnd($"{tzCol} IN ({string.Join(", ", placeholders)})");
         }
 
         // JOIN the DNC preference index for do-not-call date range filtering.

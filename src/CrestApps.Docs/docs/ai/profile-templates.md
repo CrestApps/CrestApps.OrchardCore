@@ -42,6 +42,8 @@ This makes profile templates the easiest way to standardize new AI profiles for 
 
 The base AI module registers Orchard recipe support for AI profile templates, so templates can be created and promoted through recipes as part of tenant provisioning or deployment workflows.
 
+Recipe imports use the `AIProfileTemplate` step. Each imported template item must supply `Name`, `DisplayText`, and `Source`. When `ItemId` is not provided, Orchard treats the `Name` + `Source` pair as the identifier used to locate an existing template before creating a new one.
+
 ## Shared framework documentation
 
 The underlying profile model and shared profile concepts are documented in **CrestApps.Core**:

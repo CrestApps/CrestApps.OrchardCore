@@ -62,7 +62,17 @@ For both `AIProfile` and `CreateAIProfileFromTemplate`, the `Properties` and `Se
 
 The `AIProfileTemplate` recipe step now extends that catalog with template-specific `ProfileTemplateMetadata` and `SystemPromptTemplateMetadata` objects, and it also documents the settings-style envelopes that templates persist in `Properties`. That makes profile templates expose the same shared AI metadata as profiles while still surfacing the template-only objects that the runtime understands.
 
+When you import `AIProfileTemplate` items, each template entry should include:
+
+- `Name`: the unique template name
+- `DisplayText`: the human-readable title shown in Orchard
+- `Source`: the template-source identifier, such as `Profile` or `SystemPrompt`
+
+If `ItemId` is omitted, the import step resolves an existing template by the combined `Name` and `Source` values before deciding whether to create a new record. That matches the runtime requirement that new template imports provide both the template name and source.
+
 The Recipes feature now also exports dedicated step schemas for `AIDataSource`, `McpConnection`, `McpPrompt`, `McpResource`, and `A2AConnection`. Their `Properties` objects document the known built-in metadata envelopes such as `SseMcpConnectionMetadata`, `StdioMcpConnectionMetadata`, `FtpConnectionMetadata`, `SftpConnectionMetadata`, and `A2AConnectionMetadata`, while still allowing extra keys for future extensions.
+
+For `AIDataSource`, the schema also derives the `Source` enum from the currently registered `AIDataSourceSourceOptions` entries, so recipe tooling can suggest only the source types that are actually enabled for the tenant. Recipe imports honor that same `Source` value and still default to `SearchIndexProfile` when older payloads omit it.
 
 More broadly, the exported recipe-step schemas now attach descriptions to the known properties across the built-in CrestApps recipe steps so human authors and AI tools can discover what each property is for directly from the schema surface.
 
@@ -392,6 +402,10 @@ Then the field settings and content payload can be expressed like this:
   ]
 }
 ```
+
+## Extending workflow activity schemas
+
+The `WorkflowType` step composes its schema from per-activity contributions, so every workflow event and task can describe its own category, outcomes and properties. See [Workflow Activity Schemas](./workflow-activity-schemas.md) for the full contract and for how to describe a custom event or task.
 
 ## How schemas stay accurate
 

@@ -8,15 +8,20 @@ public enum PhoneNumberMatchType
     /// <summary>
     /// Match phone numbers that exactly equal the given value.
     /// </summary>
-    Exact,
+    Exact = 0,
 
     /// <summary>
     /// Match phone numbers that start with the given value.
     /// </summary>
-    BeginsWith,
+    BeginsWith = 1,
 
     /// <summary>
     /// Match phone numbers that end with the given value.
     /// </summary>
-    EndsWith,
+    EndsWith = 2,
+
+    /// <summary>
+    /// Match phone numbers that contain the given value.
+    /// </summary>
+    Contains = 3,
 }

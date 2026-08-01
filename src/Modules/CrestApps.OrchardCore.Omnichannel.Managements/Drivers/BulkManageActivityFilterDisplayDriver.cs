@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -14,6 +15,7 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -24,8 +26,10 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 {
     private readonly LinkGenerator _linkGenerator;
     private readonly ISession _session;
+    private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -34,20 +38,26 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
     /// </summary>
     /// <param name="linkGenerator">The link generator.</param>
     /// <param name="session">The YesSql session.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="optionsProvider">The bulk activity form options provider.</param>
+    /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BulkManageActivityFilterDisplayDriver(
         LinkGenerator linkGenerator,
         ISession session,
+        BulkActivityAdminFormOptionsProvider optionsProvider,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IDisplayNameProvider displayNameProvider,
         IStringLocalizer<BulkManageActivityFilterDisplayDriver> stringLocalizer)
     {
         _linkGenerator = linkGenerator;
         _session = session;
+        _optionsProvider = optionsProvider;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _displayNameProvider = displayNameProvider;
         S = stringLocalizer;
     }
 
@@ -64,18 +74,26 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.AttemptFilter = filter.AttemptFilter;
             model.SubjectContentType = filter.SubjectContentType;
             model.Channel = filter.Channel;
+            model.Source = filter.Source;
+            model.InteractionType = filter.InteractionType?.ToString();
+            model.Status = filter.Status?.ToString();
+            model.AssignmentStatus = filter.AssignmentStatus?.ToString();
+            model.CampaignId = filter.CampaignId;
             model.AssignedToUserIds = filter.AssignedToUserIds ?? [];
             model.UrgencyLevel = filter.UrgencyLevel?.ToString();
-            model.ScheduledFrom = filter.ScheduledFrom?.ToString("yyyy-MM-dd");
-            model.ScheduledTo = filter.ScheduledTo?.ToString("yyyy-MM-dd");
-            model.CreatedFrom = filter.CreatedFrom?.ToString("yyyy-MM-dd");
-            model.CreatedTo = filter.CreatedTo?.ToString("yyyy-MM-dd");
+            model.ScheduledFrom = filter.ScheduledFrom;
+            model.ScheduledTo = filter.ScheduledTo;
+            model.ScheduledRange = filter.ScheduledRange;
+            model.CreatedFrom = filter.CreatedFrom;
+            model.CreatedTo = filter.CreatedTo;
+            model.CreatedRange = filter.CreatedRange;
             model.Limit = filter.Limit;
             model.PhoneNumber = filter.PhoneNumber;
             model.PhoneNumberMatchType = filter.PhoneNumberMatchType;
             model.TimeZoneIds = filter.TimeZoneIds ?? [];
-            model.DoNotCallFrom = filter.DoNotCallFrom?.ToString("yyyy-MM-dd");
-            model.DoNotCallTo = filter.DoNotCallTo?.ToString("yyyy-MM-dd");
+            model.DoNotCallFrom = filter.DoNotCallFrom;
+            model.DoNotCallTo = filter.DoNotCallTo;
+            model.DoNotCallRange = filter.DoNotCallRange;
 
             model.ContactPublishedOptions =
             [
@@ -121,8 +139,15 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                 new(S["5- attempts"], "5-"),
             ];
 
+            model.Sources = _optionsProvider.GetSourceOptions(filter.Source, "Any source");
+            model.InteractionTypes = _optionsProvider.GetInteractionTypeOptions(model.InteractionType, "Any interaction type");
+            model.Statuses = _optionsProvider.GetStatusOptions(model.Status, "Any active status");
+            model.AssignmentStatuses = _optionsProvider.GetAssignmentStatusOptions(model.AssignmentStatus, "Any assignment status");
+            model.Campaigns = await _optionsProvider.GetCampaignOptionsAsync(filter.CampaignId, "Any campaign");
+
             model.PhoneNumberMatchTypes =
             [
+                new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
                 new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
                 new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
                 new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
@@ -152,9 +177,20 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             {
                 var selectedUsers = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(filter.AssignedToUserIds))
                     .ListAsync();
+                var selectedUserOptions = new List<object>();
+
+                foreach (var selectedUser in selectedUsers)
+                {
+                    selectedUserOptions.Add(new
+                    {
+                        value = selectedUser.UserId,
+                        text = await _displayNameProvider.GetAsync(selectedUser),
+                        selected = true,
+                    });
+                }
 
                 model.SelectedAssignedUsersJson = System.Text.Json.JsonSerializer.Serialize(
-                    selectedUsers.Select(u => new { value = u.UserId, text = u.UserName, selected = true }));
+                    selectedUserOptions);
             }
         }).Location("Content:1");
     }
@@ -167,24 +203,33 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
         filter.SubjectContentType = model.SubjectContentType;
         filter.Channel = model.Channel;
+        filter.Source = model.Source;
         filter.AttemptFilter = model.AttemptFilter;
+        filter.CampaignId = model.CampaignId;
         filter.AssignedToUserIds = model.AssignedToUserIds;
         filter.ContactIsPublished = null;
+        filter.InteractionType = null;
+        filter.Status = null;
+        filter.AssignmentStatus = null;
         filter.UrgencyLevel = null;
-        filter.ScheduledFrom = null;
-        filter.ScheduledTo = null;
-        filter.CreatedFrom = null;
-        filter.CreatedTo = null;
+        filter.ScheduledFrom = model.ScheduledFrom;
+        filter.ScheduledTo = model.ScheduledTo;
+        filter.ScheduledRange = model.ScheduledRange;
+        filter.CreatedFrom = model.CreatedFrom;
+        filter.CreatedTo = model.CreatedTo;
+        filter.CreatedRange = model.CreatedRange;
         filter.Limit = model.Limit;
         filter.PhoneNumber = model.PhoneNumber?.Trim();
         filter.PhoneNumberMatchType = model.PhoneNumberMatchType;
         filter.TimeZoneIds = model.TimeZoneIds;
-        filter.DoNotCallFrom = null;
-        filter.DoNotCallTo = null;
+        filter.DoNotCallFrom = model.DoNotCallFrom;
+        filter.DoNotCallTo = model.DoNotCallTo;
+        filter.DoNotCallRange = model.DoNotCallRange;
 
-        if (!string.IsNullOrEmpty(filter.PhoneNumber) && !filter.PhoneNumber.StartsWith('+'))
+        if (!string.IsNullOrWhiteSpace(filter.PhoneNumber) &&
+            !PhoneNumberSearchTerm.TryParse(filter.PhoneNumber, out _))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must be in E.164 format (e.g., +17025551234 for US/Canada)."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PhoneNumber), S["Phone number must contain at least one digit."]);
         }
 
         if (!string.IsNullOrEmpty(model.ContactIsPublished) && bool.TryParse(model.ContactIsPublished, out var isPublished))
@@ -197,34 +242,19 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             filter.UrgencyLevel = urgencyLevel;
         }
 
-        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParseExact(model.ScheduledFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledFrom))
+        if (!string.IsNullOrEmpty(model.InteractionType) && Enum.TryParse<ActivityInteractionType>(model.InteractionType, out var interactionType))
         {
-            filter.ScheduledFrom = scheduledFrom;
+            filter.InteractionType = interactionType;
         }
 
-        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParseExact(model.ScheduledTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduledTo))
+        if (!string.IsNullOrEmpty(model.Status) && Enum.TryParse<ActivityStatus>(model.Status, out var status))
         {
-            filter.ScheduledTo = scheduledTo;
+            filter.Status = status;
         }
 
-        if (!string.IsNullOrEmpty(model.CreatedFrom) && DateTime.TryParseExact(model.CreatedFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdFrom))
+        if (!string.IsNullOrEmpty(model.AssignmentStatus) && Enum.TryParse<ActivityAssignmentStatus>(model.AssignmentStatus, out var assignmentStatus))
         {
-            filter.CreatedFrom = createdFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.CreatedTo) && DateTime.TryParseExact(model.CreatedTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdTo))
-        {
-            filter.CreatedTo = createdTo;
-        }
-
-        if (!string.IsNullOrEmpty(model.DoNotCallFrom) && DateTime.TryParseExact(model.DoNotCallFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncFrom))
-        {
-            filter.DoNotCallFrom = dncFrom;
-        }
-
-        if (!string.IsNullOrEmpty(model.DoNotCallTo) && DateTime.TryParseExact(model.DoNotCallTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dncTo))
-        {
-            filter.DoNotCallTo = dncTo;
+            filter.AssignmentStatus = assignmentStatus;
         }
 
         // Populate route values for pagination link generation.
@@ -244,9 +274,34 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             filter.RouteValues.TryAdd(Prefix + ".Channel", filter.Channel);
         }
 
+        if (!string.IsNullOrEmpty(filter.Source))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".Source", filter.Source);
+        }
+
         if (!string.IsNullOrEmpty(filter.AttemptFilter))
         {
             filter.RouteValues.TryAdd(Prefix + ".AttemptFilter", filter.AttemptFilter);
+        }
+
+        if (filter.InteractionType.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".InteractionType", filter.InteractionType.Value.ToString());
+        }
+
+        if (filter.Status.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".Status", filter.Status.Value.ToString());
+        }
+
+        if (filter.AssignmentStatus.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".AssignmentStatus", filter.AssignmentStatus.Value.ToString());
+        }
+
+        if (!string.IsNullOrEmpty(filter.CampaignId))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".CampaignId", filter.CampaignId);
         }
 
         if (filter.UrgencyLevel.HasValue)
@@ -256,22 +311,32 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
         if (filter.ScheduledFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.ScheduledTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.ScheduledRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledRange", filter.ScheduledRange);
         }
 
         if (filter.CreatedFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".CreatedFrom", filter.CreatedFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".CreatedFrom", filter.CreatedFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.CreatedTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".CreatedTo", filter.CreatedTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".CreatedTo", filter.CreatedTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.CreatedRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".CreatedRange", filter.CreatedRange);
         }
 
         if (filter.AssignedToUserIds is { Length: > 0 })
@@ -303,12 +368,17 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
 
         if (filter.DoNotCallFrom.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".DoNotCallFrom", filter.DoNotCallFrom.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallFrom", filter.DoNotCallFrom.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
         }
 
         if (filter.DoNotCallTo.HasValue)
         {
-            filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-dd"));
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallTo", filter.DoNotCallTo.Value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrEmpty(filter.DoNotCallRange))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".DoNotCallRange", filter.DoNotCallRange);
         }
 
         return Edit(filter, context);

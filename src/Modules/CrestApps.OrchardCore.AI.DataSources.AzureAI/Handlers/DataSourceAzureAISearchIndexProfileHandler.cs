@@ -25,7 +25,7 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         ILogger<DataSourceAzureAISearchIndexProfileHandler> logger)
-    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
+        : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory, logger)
     {
     }
 

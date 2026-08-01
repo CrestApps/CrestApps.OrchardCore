@@ -31,7 +31,8 @@
     <ul class="list-group with-checkbox">
         @if (Model.Models.Count > 0)
         {
-            int startIndex = 0;
+            var pager = (dynamic)Model.Pager;
+            int startIndex = (pager.Page - 1) * pager.PageSize + 1;
             int endIndex = startIndex + Model.Models.Count - 1;
 
             <li class="list-group-item text-bg-theme ignore-elements">
@@ -43,7 +44,7 @@
                             <label id="items" for="select-all">
                                 @Model.Models.Count @T["item(s)"]
                                 <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
-                                    @T[" / {0} item(s) in total", Model.Models.Count]
+                                    @T[" / {0} item(s) in total", (int)pager.TotalItemCount]
                                 </span>
                             </label>
                             <label id="selected-items" class="text-muted" for="select-all"></label>

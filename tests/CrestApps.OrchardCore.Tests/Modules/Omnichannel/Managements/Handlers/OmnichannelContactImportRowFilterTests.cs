@@ -1,9 +1,11 @@
+using System.Net.Http;
 using System.Data;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -76,24 +78,28 @@ public sealed class OmnichannelContactImportRowFilterTests
     }
 
     [Fact]
-    public async Task ShouldSkipRowAsync_ShouldSkipDoNotCallNumbers()
+    public async Task ShouldSkipRowAsync_ShouldSkipRowsWhenARegistryCannotBeReached()
     {
         // Arrange
+        // The operator asked for these numbers to be screened. A screening that could not be performed is
+        // not a screening that passed, and importing the row anyway would present an unscreened number to
+        // the dialer as one the registry had cleared.
         var registry = new Mock<INationalDoNotCallRegistry>();
         registry.SetupGet(x => x.Key).Returns("usa");
         registry.SetupGet(x => x.DisplayName).Returns("USA");
         registry.SetupGet(x => x.Description).Returns("USA registry");
         registry.Setup(x => x.GetRegisteredNumbersAsync(
-                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<PhoneNumber>>(),
                 It.IsAny<NumberSearchContext>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(["5557778888"]);
+            .ThrowsAsync(new HttpRequestException("The registry host is unreachable."));
 
         var filter = CreateFilter([registry.Object]);
         var entry = CreateEntry(new OmnichannelContactImportOptionsPart
         {
             IgnoreDuplicateByPhoneNumber = false,
             IgnoreDoNotCallNumbers = true,
+            SelectedCountryCode = "US",
             SelectedRegistryKeys = ["usa"],
         });
 
@@ -105,7 +111,48 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         Assert.True(initialized);
 
-        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "555-777-8888"));
+        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "425-777-8888"));
+
+        // Act
+        var skipped = await filter.ShouldSkipRowAsync(rowContext);
+
+        // Assert
+        Assert.True(skipped);
+        Assert.Contains("could not be reached", rowContext.SkipReason);
+    }
+
+    [Fact]
+    public async Task ShouldSkipRowAsync_ShouldSkipDoNotCallNumbers()
+    {
+        // Arrange
+        var registry = new Mock<INationalDoNotCallRegistry>();
+        registry.SetupGet(x => x.Key).Returns("usa");
+        registry.SetupGet(x => x.DisplayName).Returns("USA");
+        registry.SetupGet(x => x.Description).Returns("USA registry");
+        registry.Setup(x => x.GetRegisteredNumbersAsync(
+                It.IsAny<IEnumerable<PhoneNumber>>(),
+                It.IsAny<NumberSearchContext>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([PhoneNumber.FromE164("+14257778888")]);
+
+        var filter = CreateFilter([registry.Object]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = false,
+            IgnoreDoNotCallNumbers = true,
+            SelectedCountryCode = "US",
+            SelectedRegistryKeys = ["usa"],
+        });
+
+        var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        });
+
+        Assert.True(initialized);
+
+        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "425-777-8888"));
 
         // Act & Assert
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
@@ -318,23 +365,23 @@ public sealed class OmnichannelContactImportRowFilterTests
     public async Task ShouldSkipRowAsync_ShouldUseSelectedCountryForDncComparison()
     {
         // Arrange
-        var lookupBatches = new List<string[]>();
+        var lookupBatches = new List<PhoneNumber[]>();
         var registry = new Mock<INationalDoNotCallRegistry>();
         registry.SetupGet(x => x.Key).Returns("local-dnc");
         registry.SetupGet(x => x.DisplayName).Returns("Local");
         registry.SetupGet(x => x.Description).Returns("Local registry");
         registry.Setup(x => x.GetRegisteredNumbersAsync(
-                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<PhoneNumber>>(),
                 It.IsAny<NumberSearchContext>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> numbers, NumberSearchContext _, CancellationToken _) =>
+            .ReturnsAsync((IEnumerable<PhoneNumber> numbers, NumberSearchContext _, CancellationToken _) =>
             {
                 var batch = numbers.ToArray();
                 lookupBatches.Add(batch);
 
-                return batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase)
-                    ? ["+12502000003"]
-                    : [];
+                return batch.Contains(PhoneNumber.FromE164("+12502000003"))
+                    ? [PhoneNumber.FromE164("+12502000003")]
+                    : new HashSet<PhoneNumber>();
             });
 
         var filter = CreateFilter([registry.Object]);
@@ -361,9 +408,9 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
         Assert.Contains(
             lookupBatches,
-            batch => batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase));
+            batch => batch.Contains(PhoneNumber.FromE164("+12502000003")));
         registry.Verify(x => x.GetRegisteredNumbersAsync(
-            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<IEnumerable<PhoneNumber>>(),
             It.Is<NumberSearchContext>(context => context.CountryCode == "CA"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -372,23 +419,23 @@ public sealed class OmnichannelContactImportRowFilterTests
     public async Task ShouldSkipRowAsync_ShouldNormalizeNumbersBeforeCheckingDoNotCallRegistry()
     {
         // Arrange
-        var lookupBatches = new List<string[]>();
+        var lookupBatches = new List<PhoneNumber[]>();
         var registry = new Mock<INationalDoNotCallRegistry>();
         registry.SetupGet(x => x.Key).Returns("local-dnc");
         registry.SetupGet(x => x.DisplayName).Returns("Local");
         registry.SetupGet(x => x.Description).Returns("Local registry");
         registry.Setup(x => x.GetRegisteredNumbersAsync(
-                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<PhoneNumber>>(),
                 It.IsAny<NumberSearchContext>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> numbers, NumberSearchContext _, CancellationToken _) =>
+            .ReturnsAsync((IEnumerable<PhoneNumber> numbers, NumberSearchContext _, CancellationToken _) =>
             {
                 var batch = numbers.ToArray();
                 lookupBatches.Add(batch);
 
-                return batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase)
-                    ? ["+12502000003"]
-                    : [];
+                return batch.Contains(PhoneNumber.FromE164("+12502000003"))
+                    ? [PhoneNumber.FromE164("+12502000003")]
+                    : new HashSet<PhoneNumber>();
             });
 
         var filter = CreateFilter([registry.Object]);
@@ -432,7 +479,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.Contains("is registered on a national do-not-call registry", newRow.SkipReason);
         Assert.Contains(
             lookupBatches,
-            batch => batch.Contains("+12502000003", StringComparer.OrdinalIgnoreCase));
+            batch => batch.Contains(PhoneNumber.FromE164("+12502000003")));
     }
 
     private OmnichannelContactImportRowFilter CreateFilter(IEnumerable<INationalDoNotCallRegistry> registries)

@@ -81,6 +81,19 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+    {
+        var activities = await _store.ListByIdsAsync(itemIds, cancellationToken);
+
+        foreach (var activity in activities)
+        {
+            await LoadAsync(activity, cancellationToken);
+        }
+
+        return activities;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
         var activities = await _store.ListBulkManageableAsync(filter, cancellationToken);

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
@@ -17,6 +18,7 @@ public sealed class UsageAnalyticsController : Controller
 {
     private readonly IAICompletionUsageService _usageService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ILocalClock _localClock;
     private readonly GeneralAIOptions _generalAIOptions;
 
     /// <summary>
@@ -24,14 +26,17 @@ public sealed class UsageAnalyticsController : Controller
     /// </summary>
     /// <param name="usageService">The usage service.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="localClock">The local clock for timezone conversions.</param>
     /// <param name="generalAIOptions">The general AI options.</param>
     public UsageAnalyticsController(
         IAICompletionUsageService usageService,
         IAuthorizationService authorizationService,
+        ILocalClock localClock,
         IOptions<GeneralAIOptions> generalAIOptions)
     {
         _usageService = usageService;
         _authorizationService = authorizationService;
+        _localClock = localClock;
         _generalAIOptions = generalAIOptions.Value;
     }
 
@@ -66,7 +71,16 @@ public sealed class UsageAnalyticsController : Controller
         }
 
         model.IsAIUsageTrackingEnabled = _generalAIOptions.EnableAIUsageTracking;
-        var records = await _usageService.GetAsync(model.StartDateUtc, model.EndDateUtc);
+
+        // Convert local dates to UTC before querying.
+        DateTime? startDateUtc = model.StartDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.StartDate.Value)
+            : null;
+        DateTime? endDateUtc = model.EndDate.HasValue
+            ? await _localClock.ConvertToUtcAsync(model.EndDate.Value)
+            : null;
+
+        var records = await _usageService.GetAsync(startDateUtc, endDateUtc);
         ApplyReport(model, records);
 
         return View("Index", model);

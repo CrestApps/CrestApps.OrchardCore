@@ -1,8 +1,8 @@
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -43,12 +43,12 @@ public sealed class Startup : StartupBase
         services.AddCoreAIDataSourceRag()
             .AddCoreAIDataSourceStoresYesSql();
 
-        services.AddAIDataSourceServices();
-
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
         services.AddDataMigration<AIDataSourceIndexMigrations>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceSearchIndexProfileDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceExternalFieldsDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
@@ -64,6 +64,7 @@ public sealed class Startup : StartupBase
         services.RemoveAll<IAIDataSourceIndexingService>()
             .AddScoped<DataSourceIndexingService>()
             .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
+        services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
 
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();

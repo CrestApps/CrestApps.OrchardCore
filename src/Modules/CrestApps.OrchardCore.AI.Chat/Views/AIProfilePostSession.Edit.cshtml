@@ -5,6 +5,8 @@
 
 @{
     var hasTools = Model.PostSessionTools is not null && Model.PostSessionTools.Count > 0;
+    var hasToolInstances = Model.PostSessionToolInstances is not null && Model.PostSessionToolInstances.Length > 0;
+    var hasCapabilities = hasTools || hasToolInstances;
     var postSessionSettingsId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_settings";
     var tasksContainerId = Html.IdFor(m => m.Tasks) + "_container";
     var addTaskBtnId = Html.IdFor(m => m.Tasks) + "_add";
@@ -42,7 +44,7 @@
                 @T["Tasks"]
             </button>
         </li>
-        @if (hasTools)
+        @if (hasCapabilities)
         {
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="@capabilitiesTabId" data-bs-toggle="tab" data-bs-target="#@capabilitiesPaneId" type="button" role="tab" aria-controls="@capabilitiesPaneId" aria-selected="false">
@@ -139,11 +141,13 @@
         </div>
 
         <!-- Capabilities Tab -->
-        @if (hasTools)
+        @if (hasCapabilities)
         {
             var selectAllToolsId = Html.IdFor(m => m.PostSessionTools) + "_selectAll";
 
             <div class="tab-pane fade" id="@capabilitiesPaneId" role="tabpanel" aria-labelledby="@capabilitiesTabId">
+                @if (hasTools)
+                {
                 <div class="mb-3">
                     <span class="hint dashed d-block mb-3">@T["Select AI tools that should be available during post-session processing. When tools are configured, the AI model can invoke them to perform actions beyond text analysis."]</span>
 
@@ -208,6 +212,31 @@
 
                     <div class="ps-tool-no-results text-muted small d-none">@T["No tools match your search."]</div>
                 </div>
+                }
+
+                @if (hasToolInstances)
+                {
+                <div class="mb-3">
+                    <h5>@T["Tool Instances"]</h5>
+                    <span class="hint dashed d-block mb-3">@T["Configured tool instances the AI model may call while post-session processing runs. Each selected instance is exposed as its own function."]</span>
+
+                    @for (var i = 0; i < Model.PostSessionToolInstances.Length; i++)
+                    {
+                        <div class="form-check">
+                            <input type="hidden" asp-for="@Model.PostSessionToolInstances[i].Name" />
+                            <input asp-for="@Model.PostSessionToolInstances[i].IsSelected"
+                                   type="checkbox"
+                                   class="form-check-input"
+                                   id="post-session-tool-instance-@i" />
+
+                            <label class="form-check-label" for="post-session-tool-instance-@i">
+                                @Model.PostSessionToolInstances[i].Name
+                            </label>
+                            <span class="hint dashed">@Model.PostSessionToolInstances[i].Description</span>
+                        </div>
+                    }
+                </div>
+                }
             </div>
         }
     </div>

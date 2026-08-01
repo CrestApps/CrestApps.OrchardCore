@@ -1,4 +1,10 @@
 @model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsFilterViewModel
+@using System.Globalization
+
+@{
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+}
 
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
@@ -14,10 +20,10 @@
 </div>
 
 <script at="Foot" depends-on="flatpickr,flatpickr-culture">
-    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
+    flatpickr('#@Html.IdFor(m => m.StartDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
         altInputClass: 'form-control flatpickr-input'
     }));
-    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateConfig('@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern', {
+    flatpickr('#@Html.IdFor(m => m.EndDate)', flatpickrCulture.createLocalizedDateTimeConfig('@datePattern', '@timePattern', {
         altInputClass: 'form-control flatpickr-input'
     }));
 </script>

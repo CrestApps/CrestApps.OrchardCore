@@ -34,6 +34,31 @@ public sealed class BulkManageActivityFilter : Entity
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the activity source to filter by.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type to filter by.
+    /// </summary>
+    public ActivityInteractionType? InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the activity status to filter by.
+    /// </summary>
+    public ActivityStatus? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignment lifecycle status to filter by.
+    /// </summary>
+    public ActivityAssignmentStatus? AssignmentStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign identifier to filter by.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets the user IDs to filter activities assigned to.
     /// </summary>
     public string[] AssignedToUserIds { get; set; }
@@ -49,6 +74,11 @@ public sealed class BulkManageActivityFilter : Entity
     public DateTime? ScheduledTo { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected scheduled date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string ScheduledRange { get; set; }
+
+    /// <summary>
     /// Gets or sets the earliest created date to filter by.
     /// </summary>
     public DateTime? CreatedFrom { get; set; }
@@ -57,6 +87,11 @@ public sealed class BulkManageActivityFilter : Entity
     /// Gets or sets the latest created date to filter by.
     /// </summary>
     public DateTime? CreatedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected created date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string CreatedRange { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency level to filter by.
@@ -71,14 +106,14 @@ public sealed class BulkManageActivityFilter : Entity
 
     /// <summary>
     /// Gets or sets the phone number to search for in contact records.
-    /// The value should be in E.164 format (e.g., +17025551234).
+    /// A leading plus sign searches E.164 values; otherwise, the national number is searched.
     /// </summary>
     public string PhoneNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the match type for the phone number filter.
     /// </summary>
-    public PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+    public PhoneNumberMatchType PhoneNumberMatchType { get; set; } = PhoneNumberMatchType.Contains;
 
     /// <summary>
     /// Gets or sets the time zone identifiers to filter contacts by.
@@ -96,6 +131,11 @@ public sealed class BulkManageActivityFilter : Entity
     /// Matches contacts whose Do Not Call date is on or before this value.
     /// </summary>
     public DateTime? DoNotCallTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected Do Not Call date-range preset key used to restore the picker option on reload.
+    /// </summary>
+    public string DoNotCallRange { get; set; }
 
     /// <summary>
     /// Gets or sets the route values for preserving filter state during pagination.

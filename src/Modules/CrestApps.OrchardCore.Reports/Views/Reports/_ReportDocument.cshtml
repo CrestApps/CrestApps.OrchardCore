@@ -1,0 +1,237 @@
+@using System.Globalization
+@using System.Text.Json
+@using CrestApps.OrchardCore.Reports.Models
+@model ReportDocument
+
+<div class="row g-4 mb-4">
+    @for (var sectionIndex = 0; sectionIndex < Model.Sections.Count; sectionIndex++)
+    {
+        var reportSection = Model.Sections[sectionIndex];
+        var sectionWidth = Math.Clamp(reportSection.Width, 1, 12);
+        var chartData = reportSection.Chart is null
+            ? null
+            : JsonSerializer.Serialize(new
+            {
+                type = reportSection.Chart.Type.ToString().ToLowerInvariant(),
+                labels = reportSection.Chart.Labels,
+                datasets = reportSection.Chart.Datasets.Select(dataset => new
+                {
+                    label = dataset.Label,
+                    data = dataset.Values,
+                }),
+                stacked = reportSection.Chart.Stacked,
+                showLegend = reportSection.Chart.ShowLegend,
+                percentageScale = reportSection.Chart.PercentageScale,
+            });
+
+        <section class="report-section col-12 col-xl-@sectionWidth">
+        @if (sectionIndex > 0 && !string.IsNullOrEmpty(reportSection.Title))
+        {
+            <h2 class="h5">@reportSection.Title</h2>
+        }
+        @if (!string.IsNullOrEmpty(reportSection.Description))
+        {
+            <p class="text-muted small">@reportSection.Description</p>
+        }
+
+        @switch (reportSection.Kind)
+        {
+            case ReportSectionKind.Metrics:
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5 g-3">
+                    @foreach (var metric in reportSection.Metrics)
+                    {
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm text-bg-theme">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase">@metric.Label</div>
+                                    <div class="display-6 fw-semibold">@metric.Value</div>
+                                    @if (!string.IsNullOrEmpty(metric.Hint))
+                                    {
+                                        <div class="text-muted small">@metric.Hint</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                break;
+
+            case ReportSectionKind.Table:
+                {
+                    var alignClasses = reportSection.Columns
+                        .Select(column => column.Align == ReportColumnAlign.End ? "text-end" : column.Align == ReportColumnAlign.Center ? "text-center" : "text-start")
+                        .ToList();
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    @for (var i = 0; i < reportSection.Columns.Count; i++)
+                                    {
+                                        <th class="@alignClasses[i]">@reportSection.Columns[i].Label</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in reportSection.Rows)
+                                {
+                                    var rowClass = row.Kind switch
+                                    {
+                                        ReportRowKind.Subtotal => "fw-semibold border-top table-info",
+                                        ReportRowKind.GrandTotal => "fw-semibold border-top table-primary",
+                                        _ => null,
+                                    };
+
+                                    <tr class="@rowClass">
+                                        @for (var i = 0; i < row.Cells.Count; i++)
+                                        {
+                                            var cell = row.Cells[i];
+
+                                            <td class="@(i < alignClasses.Count ? alignClasses[i] : "text-start")">
+                                                @if (ReportValue.TryGetUserName(cell, out var userName))
+                                                {
+                                                    <user-display-name user-name="@userName" display-type="Report" cache-id="report-user-display-name" />
+                                                }
+                                                else
+                                                {
+                                                    @cell
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                break;
+
+            case ReportSectionKind.Bars:
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var bar in reportSection.Bars)
+                    {
+                        var width = (Math.Clamp(bar.Ratio, 0d, 1d) * 100d).ToString("0.###", CultureInfo.InvariantCulture);
+                        <div>
+                            <div class="d-flex justify-content-between small">
+                                <span>@bar.Label</span>
+                                <span class="fw-semibold">@bar.Value</span>
+                            </div>
+                            <div class="progress" role="progressbar" style="height: 0.6rem;">
+                                <div class="progress-bar" style="width: @width%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                break;
+
+            case ReportSectionKind.Chart:
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div style="position: relative; min-height: 20rem;">
+                            <canvas data-report-chart="@chartData" role="img" aria-label="@reportSection.Title"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                break;
+        }
+        </section>
+    }
+</div>
+
+@if (Model.Sections.Any(section => section.Kind == ReportSectionKind.Chart))
+{
+    <script asp-name="chart.js" at="Foot"></script>
+    <script asp-name="CrestApps.OrchardCore.Reports.Charts" at="Foot" depends-on="chart.js">
+        (() => {
+            const renderCharts = () => {
+                const palette = [
+                    '#2563eb',
+                    '#14b8a6',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6',
+                    '#06b6d4',
+                    '#84cc16',
+                    '#f97316'
+                ];
+                const rootStyles = getComputedStyle(document.documentElement);
+                const textColor = rootStyles.getPropertyValue('--bs-body-color').trim() || '#495057';
+                const gridColor = rootStyles.getPropertyValue('--bs-border-color').trim() || 'rgba(0, 0, 0, 0.1)';
+
+                document.querySelectorAll('canvas[data-report-chart]').forEach((canvas) => {
+                    const model = JSON.parse(canvas.dataset.reportChart);
+                    const isDoughnut = model.type === 'doughnut';
+                    const datasets = model.datasets.map((dataset, index) => ({
+                        ...dataset,
+                        backgroundColor: isDoughnut ? palette.slice(0, dataset.data.length) : palette[index % palette.length],
+                        borderColor: isDoughnut ? '#ffffff' : palette[index % palette.length],
+                        borderWidth: 2,
+                        borderRadius: model.type === 'bar' ? 6 : 0,
+                        fill: false,
+                        tension: model.type === 'line' ? 0.3 : 0
+                    }));
+
+                    new Chart(canvas, {
+                        type: model.type,
+                        data: {
+                            labels: model.labels,
+                            datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                intersect: false,
+                                mode: 'index'
+                            },
+                            plugins: {
+                                legend: {
+                                    display: model.showLegend,
+                                    position: 'bottom',
+                                    labels: {
+                                        color: textColor,
+                                        usePointStyle: true,
+                                        padding: 18
+                                    }
+                                }
+                            },
+                            scales: isDoughnut ? {} : {
+                                x: {
+                                    stacked: model.stacked,
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        color: textColor
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    stacked: model.stacked,
+                                    suggestedMax: model.percentageScale ? 100 : undefined,
+                                    grid: {
+                                        color: gridColor
+                                    },
+                                    ticks: {
+                                        color: textColor,
+                                        callback: model.percentageScale ? (value) => `${value}%` : undefined
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            };
+
+            if (document.readyState === 'complete') {
+                renderCharts();
+            } else {
+                window.addEventListener('load', renderCharts, { once: true });
+            }
+        })();
+    </script>
+}

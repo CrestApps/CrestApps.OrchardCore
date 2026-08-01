@@ -1,0 +1,135 @@
+@model CrestApps.OrchardCore.Resources.ViewComponents.DateRangePickerViewModel
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
+<script asp-name="date-range-picker" at="Foot"></script>
+
+<div class="@Model.WrapperCssClass" data-date-range-picker data-week-start="@Model.WeekStart" data-date-pattern="@Model.DatePattern" data-time-pattern="@Model.TimePattern" data-prior-label="@T["On or before"]" data-after-label="@T["On or after"]" data-from-word="@T["From"]" data-to-word="@T["to"]" data-drp-initial="@Model.SelectedRange">
+    @if (!string.IsNullOrEmpty(Model.SelectedRangeName))
+    {
+        <input type="hidden" name="@Model.SelectedRangeName" value="@Model.SelectedRange" data-drp-selected />
+    }
+    @if (!string.IsNullOrEmpty(Model.Label))
+    {
+        <label class="@Model.LabelCssClass">@Model.Label</label>
+    }
+    <div class="dropdown">
+        <button type="button" class="@Model.ToggleCssClass text-start text-truncate" data-drp-toggle data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+            <span data-drp-label data-placeholder="@(Model.Placeholder ?? T["Select range"].Value)">@(Model.Placeholder ?? T["Select range"].Value)</span>
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="min-width: 26rem;">
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="dropdown-header px-0 py-1 small text-muted">@T["Relative days"]</div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-today" value="today" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-today">@T["Today"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-yesterday" value="yesterday" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-yesterday">@T["Yesterday"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-7" value="last7" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-7">@T["Last 7 Days"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-30" value="last30" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-30">@T["Last 30 Days"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-90" value="last90" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-90">@T["Last 90 Days"]</label>
+                    </div>
+
+                    <div class="dropdown-header px-0 py-1 mt-1 small text-muted">@T["Rolling months"]</div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-3-months" value="last3Months" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-3-months">@T["Last 3 Months"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-6-months" value="last6Months" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-6-months">@T["Last 6 Months"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-12-months" value="last12Months" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-12-months">@T["Last 12 Months"]</label>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="dropdown-header px-0 py-1 small text-muted">@T["Calendar periods"]</div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-this-week" value="thisWeek" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-this-week">@T["This Week"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-week" value="lastWeek" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-week">@T["Last Week"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-this-month" value="thisMonth" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-this-month">@T["This Month"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-month" value="lastMonth" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-month">@T["Last Month"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-this-quarter" value="thisQuarter" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-this-quarter">@T["This Quarter"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-quarter" value="lastQuarter" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-quarter">@T["Last Quarter"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-this-year" value="thisYear" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-this-year">@T["This Year"]</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-last-year" value="lastYear" data-drp-range />
+                        <label class="form-check-label" for="@(Model.PickerId)-last-year">@T["Last Year"]</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-2" />
+
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-custom" value="custom" data-drp-range />
+                <label class="form-check-label" for="@(Model.PickerId)-custom">@T["Custom Range"]</label>
+            </div>
+            <div class="mt-2 ms-4 d-none" data-drp-panel="custom">
+                <div class="mb-2">
+                    <label class="form-label small" for="@Model.FromId">@T["From"]</label>
+                    <input type="text" id="@Model.FromId" name="@Model.FromName" value="@Model.FromValue" class="form-control form-control-sm flatpickr-input" data-drp-from readonly="readonly" />
+                </div>
+                <div>
+                    <label class="form-label small" for="@Model.ToId">@T["To"]</label>
+                    <input type="text" id="@Model.ToId" name="@Model.ToName" value="@Model.ToValue" class="form-control form-control-sm flatpickr-input" data-drp-to readonly="readonly" />
+                </div>
+            </div>
+
+            <div class="form-check mt-1">
+                <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-prior" value="prior" data-drp-range />
+                <label class="form-check-label" for="@(Model.PickerId)-prior">@T["On or before"]</label>
+            </div>
+            <div class="mt-2 ms-4 d-none" data-drp-panel="prior">
+                <label class="form-label small">@T["On or before"]</label>
+                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-prior-date readonly="readonly" aria-label="@T["On or before date and time"]" />
+                <div class="form-text">@T["Includes everything up to and including the selected date and time."]</div>
+            </div>
+
+            <div class="form-check mt-1">
+                <input class="form-check-input" type="radio" name="@Model.GroupName" id="@(Model.PickerId)-after" value="after" data-drp-range />
+                <label class="form-check-label" for="@(Model.PickerId)-after">@T["On or after"]</label>
+            </div>
+            <div class="mt-2 ms-4 d-none" data-drp-panel="after">
+                <label class="form-label small">@T["On or after"]</label>
+                <input type="text" class="form-control form-control-sm flatpickr-input" data-drp-after-date readonly="readonly" aria-label="@T["On or after date and time"]" />
+                <div class="form-text">@T["Includes everything from the selected date and time onward."]</div>
+            </div>
+        </div>
+    </div>
+</div>

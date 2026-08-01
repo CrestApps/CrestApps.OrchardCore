@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model EditAIDataSourceSearchIndexProfileViewModel
+
+<div data-ai-data-source-section="SearchIndexProfile"
+     data-ai-data-source-search-index-profile
+     data-ai-data-source-search-index-profile-locked="@Model.IsConfigurationLocked.ToString().ToLowerInvariant()"
+     data-ai-data-source-fields-url-base="@Url.Content("~/ai/data-sources/fields/")"
+     data-ai-data-source-preserve-content-field="@Model.ContentFieldName"
+     data-ai-data-source-preserve-title-field="@Model.TitleFieldName"
+     data-ai-data-source-preserve-key-field="@Model.KeyFieldName"
+     data-ai-data-source-select-index-placeholder="@T["Select an index first"]"
+     data-ai-data-source-content-placeholder="@T["Select a content field"]"
+     data-ai-data-source-title-placeholder="@T["Select a title field (optional)"]"
+     data-ai-data-source-key-placeholder="@T["Use document ID (_id)"]"
+     data-ai-data-source-default-suffix="@T["(Default)"]"
+     hidden>
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["Source"]</legend>
+        <div class="ocat-end">
+            <div class="mb-0">
+                <label asp-for="SourceIndexProfileName" class="form-label">@T["Source index"]</label>
+                @if (Model.IsConfigurationLocked)
+                {
+                    <input type="text" class="form-control" value="@Model.SourceIndexProfileName" readonly />
+                    <input type="hidden" asp-for="SourceIndexProfileName" />
+                }
+                else
+                {
+                    <select asp-for="SourceIndexProfileName" asp-items="Model.SourceIndexProfileNames" class="form-select" data-ai-data-source-source-index>
+                        <option value="">@T["Select an index"]</option>
+                    </select>
+                }
+                <span asp-validation-for="SourceIndexProfileName" class="text-danger"></span>
+                <span class="hint">@T["The Orchard Core index profile to use as the source for querying."]</span>
+            </div>
+        </div>
+    </fieldset>
+</div>

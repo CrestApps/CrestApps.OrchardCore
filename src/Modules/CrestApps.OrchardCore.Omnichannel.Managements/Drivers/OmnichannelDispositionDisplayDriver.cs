@@ -50,10 +50,6 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is a required field."]);
-        }
 
         var name = model.Name?.Trim();
 

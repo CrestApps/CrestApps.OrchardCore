@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -31,9 +32,10 @@ public sealed class DataSourcesController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly ICatalogManager<AIDataSource> _dataSourceManager;
+    private readonly ISourceCatalogManager<AIDataSource> _dataSourceManager;
     private readonly IDisplayManager<AIDataSource> _displayManager;
     private readonly IAIDataSourceIndexingQueue _indexingQueue;
+    private readonly AIDataSourceSourceOptions _sourceOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -47,15 +49,17 @@ public sealed class DataSourcesController : Controller
     /// <param name="dataSourceManager">The data source manager.</param>
     /// <param name="displayManager">The display manager.</param>
     /// <param name="indexingQueue">The indexing queue.</param>
+    /// <param name="sourceOptions">The source options.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        ICatalogManager<AIDataSource> dataSourceManager,
+        ISourceCatalogManager<AIDataSource> dataSourceManager,
         IDisplayManager<AIDataSource> displayManager,
         IAIDataSourceIndexingQueue indexingQueue,
+        IOptions<AIDataSourceSourceOptions> sourceOptions,
         INotifier notifier,
         IHtmlLocalizer<DataSourcesController> htmlLocalizer,
         IStringLocalizer<DataSourcesController> stringLocalizer)
@@ -65,6 +69,7 @@ public sealed class DataSourcesController : Controller
         _dataSourceManager = dataSourceManager;
         _displayManager = displayManager;
         _indexingQueue = indexingQueue;
+        _sourceOptions = sourceOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -105,11 +110,14 @@ public sealed class DataSourcesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIDataSource>>
+        var viewModel = new ListSourceModelViewModel<AIDataSourceSourceDescriptor, CatalogEntryViewModel<AIDataSource>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _sourceOptions.Sources
+                .OrderBy(source => source.DisplayName.Value, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
         };
 
         foreach (var record in result.Entries)
@@ -153,19 +161,26 @@ public sealed class DataSourcesController : Controller
     /// <summary>
     /// Creates a new .
     /// </summary>
-    [Admin("ai/data-source/create", "AIDataSourceCreate")]
-    public async Task<ActionResult> Create()
+    [Admin("ai/data-source/create/{sourceType?}", "AIDataSourceCreate")]
+    public async Task<ActionResult> Create(string sourceType)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        var dataSource = await _dataSourceManager.NewAsync();
+        if (!TryGetSource(sourceType, out var source))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a source type with the name '{0}'.", sourceType]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var dataSource = await _dataSourceManager.NewAsync(source.SourceType);
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Data Source"],
+            DisplayName = source.DisplayName,
             Editor = await _displayManager.BuildEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -177,19 +192,26 @@ public sealed class DataSourcesController : Controller
     /// </summary>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/data-source/create", "AIDataSourceCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("ai/data-source/create/{sourceType?}", "AIDataSourceCreate")]
+    public async Task<ActionResult> CreatePost(string sourceType)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        var dataSource = await _dataSourceManager.NewAsync();
+        if (!TryGetSource(sourceType, out var source))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a source type with the name '{0}'.", sourceType]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var dataSource = await _dataSourceManager.NewAsync(source.SourceType);
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Data Source"],
+            DisplayName = source.DisplayName,
             Editor = await _displayManager.UpdateEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -203,6 +225,21 @@ public sealed class DataSourcesController : Controller
         }
 
         return View(model);
+    }
+
+    private bool TryGetSource(string sourceType, out AIDataSourceSourceDescriptor source)
+    {
+        source = null;
+
+        if (string.IsNullOrWhiteSpace(sourceType))
+        {
+            return false;
+        }
+
+        source = _sourceOptions.Sources.FirstOrDefault(entry =>
+            string.Equals(entry.SourceType, sourceType, StringComparison.OrdinalIgnoreCase));
+
+        return source != null;
     }
 
     /// <summary>
