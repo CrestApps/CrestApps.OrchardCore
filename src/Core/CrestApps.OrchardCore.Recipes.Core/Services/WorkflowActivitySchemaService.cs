@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using OrchardCore.Workflows.Activities;
@@ -119,7 +120,7 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
                     .Required("IsStart"))
                 .Then(new JsonSchemaBuilder()
                     .Properties(("Name", new JsonSchemaBuilder()
-                        .Enum(eventNames)
+                        .WithSuggestions(eventNames)
                         .Description("Start activities must be workflow events.")))),
         };
 
@@ -141,7 +142,7 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
                     .Description("A unique identifier for this activity within the workflow type. The recipe step never generates one, so it must be supplied. Referenced by 'Transitions[].SourceActivityId' and 'Transitions[].DestinationActivityId'.")),
                 ("Name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(activityNames)
+                    .WithSuggestions(activityNames)
                     .Description("Activity type name. Start activities must be events. Events placed elsewhere in the workflow block execution until the matching event is triggered.")),
                 ("IsStart", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Boolean)

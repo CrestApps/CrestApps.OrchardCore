@@ -270,11 +270,13 @@ protected override async ValueTask<WorkflowActivitySchema> BuildActivitySchemaAs
     schema.Properties = schema.Properties
         .Properties(("ContentType", new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
-            .Enum(contentTypes.Select(type => (JsonNode)type.Name))));
+            .Examples(contentTypes.Select(type => (JsonNode)type.Name).ToArray())));
 
     return schema;
 }
 ```
+
+Use `Examples` rather than `Enum` for values that are dynamic or extensible (content types, provider names, roles, and similar). `Examples` surfaces the well-known values as suggestions without rejecting custom or dynamically registered values, so a valid recipe that references a type added by another module does not fail schema validation. Reserve `Enum` for concrete, C#-defined values (such as a fixed C# `enum` or a closed protocol constant) that cannot be extended at runtime.
 
 Definitions are resolved from the service provider, so a definition that needs services can take them through constructor injection. Neither seam caches its result; build the schema fresh on every call so it always reflects the supplied context.
 

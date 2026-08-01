@@ -150,6 +150,25 @@ internal static class RecipeStepSchemaBuilders
     }
 
     /// <summary>
+    /// Applies the provided values as non-restrictive "examples" suggestions to the schema when any
+    /// exist. Unlike <c>enum</c>, this surfaces the well-known values without rejecting custom or
+    /// dynamically registered values that are not part of the known list.
+    /// </summary>
+    /// <param name="builder">The schema builder to augment.</param>
+    /// <param name="values">The well-known values to surface as suggestions.</param>
+    public static JsonSchemaBuilder WithSuggestions(this JsonSchemaBuilder builder, IEnumerable<string> values)
+    {
+        var examples = Suggestions(values);
+
+        if (examples.Length > 0)
+        {
+            builder = builder.Examples(examples);
+        }
+
+        return builder;
+    }
+
+    /// <summary>
     /// Creates a schema builder that allows the provided schema or a null value.
     /// </summary>
     /// <param name="schema">The schema to make nullable.</param>

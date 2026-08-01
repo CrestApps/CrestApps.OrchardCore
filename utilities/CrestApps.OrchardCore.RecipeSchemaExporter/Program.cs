@@ -16,7 +16,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Services;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Services;
 
@@ -46,6 +48,17 @@ internal sealed class Program
     private static string[] _eventActivityNames = [];
     private static string[] _taskActivityNames = [];
     private static string[] _permissionNames = [];
+
+    private static readonly string[] _roleNames =
+    [
+        "Administrator",
+        "Anonymous",
+        "Author",
+        "Authenticated",
+        "Contributor",
+        "Editor",
+        "Moderator",
+    ];
 
     private static readonly string[] _fieldTypeNames =
     [
@@ -279,6 +292,7 @@ internal sealed class Program
         services.AddSingleton<IOptions<AIDataSourceSourceOptions>>(Options.Create(new AIDataSourceSourceOptions()));
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
+        services.AddSingleton(CreateRoleService());
         services.AddSingleton(CreateActivityLibrary());
         services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
         RegisterWorkflowActivitySchemaDefinitions(services);
@@ -402,6 +416,25 @@ internal sealed class Program
             .ReturnsAsync((Permission)null);
 
         return permissionService.Object;
+    }
+
+    private static IRoleService CreateRoleService()
+    {
+        var roles = _roleNames
+            .Select(name =>
+            {
+                var role = new Mock<IRole>();
+                role.SetupGet(instance => instance.RoleName).Returns(name);
+
+                return role.Object;
+            })
+            .ToArray();
+
+        var roleService = new Mock<IRoleService>();
+        roleService.Setup(service => service.GetRolesAsync())
+            .ReturnsAsync(roles);
+
+        return roleService.Object;
     }
 
     private static IEnumerable<IRecipeHarvester> CreateRecipeHarvesters()

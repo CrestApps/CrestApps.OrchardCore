@@ -119,7 +119,7 @@ public sealed class AIProviderConnectionsRecipeStep : IRecipeStep
 
         if (values.Length > 0)
         {
-            schema = schema.Enum(values);
+            schema = schema.WithSuggestions(values);
         }
 
         return schema;
