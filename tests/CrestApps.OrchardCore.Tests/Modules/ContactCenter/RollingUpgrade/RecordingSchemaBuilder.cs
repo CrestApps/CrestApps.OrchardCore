@@ -234,6 +234,19 @@ internal sealed class RecordingSchemaBuilder : ISchemaBuilder
 
         foreach (var column in command.TableCommands.OfType<AddColumnCommand>())
         {
+            // A column-widening rebuild adds a temporary replacement, copies into it, drops the original, and
+            // renames the replacement back to the original name. On SQLite every text column is unbounded TEXT,
+            // so widening changes nothing this recorder can observe, and the net effect on the schema is that the
+            // original column keeps its name and identity. Recording the transient replacement would model a
+            // table that still carries a column the finished rebuild has already renamed away, and every write
+            // projected from that model would name a column the real table does not have. The drop and rename
+            // that complete the swap are not recorded either — only added columns are — which leaves the original
+            // column exactly as the create step declared it.
+            if (IsRebuildTemporaryColumn(column.ColumnName))
+            {
+                continue;
+            }
+
             var added = ToRecordedColumn(column.ColumnName, column);
 
             if (_recordingUpdateStep)
@@ -245,6 +258,14 @@ internal sealed class RecordingSchemaBuilder : ISchemaBuilder
                 recorded.CreatedColumns.Add(added);
             }
         }
+    }
+
+    // Mirrors the temporary-column suffixes the rebuild helpers append while widening or re-typing a column in
+    // place. They are an implementation detail of the swap and never part of the finished schema.
+    private static bool IsRebuildTemporaryColumn(string columnName)
+    {
+        return columnName.EndsWith("__widen", StringComparison.Ordinal)
+            || columnName.EndsWith("__rebuild", StringComparison.Ordinal);
     }
 
     private RecordedTable GetOrAddTable(Type indexType, string collection)

@@ -79,6 +79,14 @@ public sealed class MigrationAdditiveOnlyGuardTests
     private const char RuntimeHolePlaceholder = '\u0001';
     private const int MaximumLocalResolutionDepth = 4;
     private const string UndeterminableTarget = "(undeterminable)";
+
+    // Names the restored object of a raw-SQL in-place rebuild that removes an engine-generated object with no stable
+    // name a rebuild can spell — a SQL Server default constraint is the case this exists for. Such a removal cannot
+    // name its object in the register, and its restoration is a computed-name operation, so the author declares this
+    // sentinel to say the object is anonymous and the restoration is verified by the presence of the restoring
+    // operation alone, exactly as a computed-name DropColumn or RenameColumn already is.
+    private const string AnonymousRestoredObject = "(anonymous)";
+    private const string RawSqlOperation = "raw SQL";
     private const string QueryBuilderTypeName = "SqlBuilder";
 
     private const string QueryBuilderTypeFullName = "YesSql.Sql.SqlBuilder";
@@ -285,6 +293,74 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "The rename retires the temporary name the replacement column was created under in this same step, and gives the column back the name callers use. The temporary name is never read by any node, so no version loses an object it depends on.",
             "AddColumn"),
+        new MigrationContractEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "IndexStringColumnRebuild",
+            "WidenAsync",
+            "DropColumn",
+            string.Empty,
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "The narrow column is dropped only after a wider replacement holding its values has been added, and the replacement takes its name in the same step, so the column exists under the same name at a wider length before and after. SQLite has no ALTER COLUMN, so add, copy, drop and rename is the only widening available on every supported engine.",
+            "RenameColumn"),
+        new MigrationContractEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "IndexStringColumnRebuild",
+            "WidenAsync",
+            "RenameColumn",
+            string.Empty,
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "The rename retires the temporary name the wider replacement column was created under in this same step, and gives the column back the name callers use. The temporary name is never read by any node, so no version loses an object it depends on.",
+            "AddColumn"),
+        new MigrationContractEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "IndexStringColumnRebuild",
+            "WidenAsync",
+            "raw SQL",
+            "alter",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQL Server refuses to drop a column while a default constraint still references it, so on SQL Server alone the auto-named default constraint the original column carried is dropped before the column is, and only when the catalog shows one is present. The replacement column re-declares the same default in the AddColumn earlier in this same method and carries it through the rename, so the finished column keeps the default the fresh install declares; the constraint is engine-generated and has no stable name, so it is declared as the anonymous restored object and its restoration is the replacement column added here. PostgreSQL, MySQL, and SQLite drop the default with the column, so the statement never runs there.",
+            "AddColumn",
+            "(anonymous)"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
+            "CallSessionIndexMigrations",
+            "UpdateFrom3Async",
+            "raw SQL",
+            "drop",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "PostgreSQL and SQLite name only the index in a drop, so the name is resolved against the connection's search path rather than the table's schema, and a tenant whose tables live in a named schema drops nothing at all. The data layer writes that drop with IF EXISTS, so the miss is silent until the recreation below reports the index already exists and the tenant cannot activate. This statement removes only the two indexes over the columns this same step widens, and both are recreated at the wider columns here; it is issued only on the engines whose own drop cannot find them.",
+            "CreateIndex",
+            "UQ_CallSessionIndex_ProviderCallClaimKey;IDX_CallSessionIndex_DocumentId"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
+            "CallSessionIndexMigrations",
+            "UpdateFrom3Async",
+            "DropIndex",
+            "UQ_CallSessionIndex_ProviderCallClaimKey",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so the unique claim index comes down before the claim column is widened and is recreated over the widened column in the same step. The claim column is widened, not re-typed, so the uniqueness it enforces is unchanged.",
+            "CreateIndex"),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
+            "CallSessionIndexMigrations",
+            "UpdateFrom3Async",
+            "DropIndex",
+            "IDX_CallSessionIndex_DocumentId",
+            MigrationContractJustification.InPlaceRebuild,
+            "2.0.0",
+            null,
+            "SQLite refuses to drop a column an index refers to, so this covering index over the widened provider-call column comes down and is recreated over the same columns in the same step.",
+            "CreateIndex"),
         new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
             "OmnichannelActivityIndexMigrations",
@@ -570,10 +646,25 @@ public sealed class MigrationAdditiveOnlyGuardTests
             // Where the name is computed there is nothing to compare, and the presence of the restoring operation
             // in the same method is the strongest statement available. A removal written as SQL is reported by its
             // leading verb rather than by an object name, so such an entry names the objects it takes away itself
-            // and every one of them is looked for, which is stricter than trusting the verb alone.
-            var removedObjects = string.IsNullOrEmpty(entry.RestoredObjects)
-                ? (entry.Target.Length > 0 ? [entry.Target] : Array.Empty<string>())
-                : entry.RestoredObjects.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            // and every one of them is looked for, which is stricter than trusting the verb alone. An engine-
+            // generated object such as a SQL Server default constraint has no stable name to spell, so a raw-SQL
+            // removal of one declares the anonymous sentinel: its restoration is a computed-name operation and is
+            // verified by the presence of the restoring operation alone, exactly as a computed-name column removal.
+            // The sentinel is valid only for a raw-SQL removal; a schema operation names its object directly, so
+            // declaring the sentinel there would silently drop the by-name match it must keep.
+            if (string.Equals(entry.RestoredObjects, AnonymousRestoredObject, StringComparison.Ordinal)
+                && !string.Equals(entry.Operation, RawSqlOperation, StringComparison.Ordinal))
+            {
+                violations.Add($"{location} declares the anonymous restored object, which is valid only for a raw-SQL removal of an engine-generated object; '{entry.Operation}' names its object directly and must restore it by name.");
+
+                continue;
+            }
+
+            var removedObjects = string.Equals(entry.RestoredObjects, AnonymousRestoredObject, StringComparison.Ordinal)
+                ? Array.Empty<string>()
+                : string.IsNullOrEmpty(entry.RestoredObjects)
+                    ? (entry.Target.Length > 0 ? [entry.Target] : Array.Empty<string>())
+                    : entry.RestoredObjects.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             foreach (var removedObject in removedObjects)
             {
@@ -1399,22 +1490,44 @@ public sealed class MigrationAdditiveOnlyGuardTests
                     _ => null,
                 };
 
-                if (name is null || !_restoringSchemaOperations.Contains(name))
+                if (name is null)
                 {
                     continue;
                 }
 
-                // A rename creates the name it renames to, which is its second argument. Every other restoring
-                // operation names the object it creates first.
-                var target = string.Equals(name, "RenameColumn", StringComparison.Ordinal)
-                    ? ReadStringArgument(invocation, 1)
-                    : ReadStringArgument(invocation, 0);
+                string operation;
+                string target;
+
+                if (_restoringSchemaOperations.Contains(name))
+                {
+                    // A rename creates the name it renames to, which is its second argument. Every other restoring
+                    // operation names the object it creates first.
+                    operation = name;
+                    target = string.Equals(name, "RenameColumn", StringComparison.Ordinal)
+                        ? ReadStringArgument(invocation, 1)
+                        : ReadStringArgument(invocation, 0);
+                }
+                else if (string.Equals(name, "CreateUniqueIndexAsync", StringComparison.Ordinal))
+                {
+                    // The data layer's own CreateIndex is never unique, so the repository's unique-index helper is
+                    // the only way to put a UNIQUE index back. It is additive by construction — registered as such
+                    // among the reviewed dynamic-SQL sites above — so a rebuild that drops a unique index and calls
+                    // it to recreate the same index has genuinely restored the object even though the recreation is
+                    // raw SQL. Recording it as a CreateIndex restoration lets the in-place-rebuild check verify that
+                    // restoration rather than being blind to it and reporting the index as removed and never put back.
+                    operation = "CreateIndex";
+                    target = ReadStringArgument(invocation, 0);
+                }
+                else
+                {
+                    continue;
+                }
 
                 restorations.Add(new MigrationRestoration(
                     relativePath,
                     FindEnclosingTypeName(invocation),
                     FindEnclosingMethodName(invocation),
-                    name,
+                    operation,
                     target ?? string.Empty));
             }
         }

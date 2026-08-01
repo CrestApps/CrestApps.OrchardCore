@@ -108,6 +108,56 @@ public sealed class ContactCenterUniquenessMigrationTests
     }
 
     [Fact]
+    public async Task CallSessionWideningMigration_DuplicateClaimKey_FailsWithRepairGuidance()
+    {
+        var databasePath = DatabasePath("callsession-widen-duplicate");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+            await CreateLegacyCallSessionIndexAsync(schemaBuilder);
+            var tableName = GetIndexTableName<CallSessionIndex>(store);
+            await InsertCallSessionAsync(schemaBuilder, tableName, 1, "session-1", "Asterisk", "call-1");
+            await InsertCallSessionAsync(schemaBuilder, tableName, 2, "session-2", "Asterisk", "call-2");
+            var migration = new CallSessionIndexMigrations(store, CreateAsteriskResolver())
+            {
+                SchemaBuilder = schemaBuilder,
+            };
+
+            // Reach the version the widening upgrades from: the claim column and its unique index, then the
+            // retention index.
+            await migration.UpdateFrom1Async();
+            await migration.UpdateFrom2Async();
+
+            // Force a duplicate claim key past the now-absent unique index, exactly the state an engine that
+            // commits each schema change on its own could reach if a previous-version node wrote a colliding
+            // key during the rebuild's index gap.
+            await schemaBuilder.AlterIndexTableAsync<CallSessionIndex>(
+                table => table.DropIndex("UQ_CallSessionIndex_ProviderCallClaimKey"),
+                collection: ContactCenterConstants.CollectionName);
+
+            await ExecuteAsync(
+                schemaBuilder,
+                $"UPDATE {tableName} SET ProviderCallClaimKey = @Claim WHERE ItemId = @ItemId",
+                ("@Claim", "Asterisk|call-1"),
+                ("@ItemId", "session-2"));
+
+            // The widening rebuild must refuse to recreate the unique index over duplicated claim keys, with
+            // actionable guidance, rather than fail opaquely when the index is recreated.
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(migration.UpdateFrom3Async);
+
+            Assert.Contains("multiple call sessions for one provider-call claim key", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task CallSessionMigration_AliasRow_RewritesProviderNameAndClaimToCanonical()
     {
         var databasePath = DatabasePath("callsession-alias-rewrite");
