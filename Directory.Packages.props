@@ -81,6 +81,7 @@
     <PackageVersion Include="OrchardCore.PublishLater" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Redis" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Redis.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Roles.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.AzureAI.Core" Version="$(OrchardCoreVersion)" />

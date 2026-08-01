@@ -45,6 +45,11 @@ public sealed class ContactCenterArchitectureGuardTests
             null,
             "Approved Orchard Core SignalR Redis backplane adapter; it tenant-prefixes the backplane channel."),
         new ArchitectureAllowlistEntry(
+            RawRedisRule,
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/HealthChecks/ContactCenterBackplaneHealthCheck.cs",
+            null,
+            "Backplane pub/sub round-trip health probe; it uses the Orchard Core IRedisService connection to publish and receive on a dedicated tenant-prefixed channel, which no higher-level Orchard primitive exposes."),
+        new ArchitectureAllowlistEntry(
             StaticMutableStateRule,
             "src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/ContentTransferPermissions.cs",
             "_permissionsByType",

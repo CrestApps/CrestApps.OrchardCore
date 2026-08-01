@@ -1,7 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Redis;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -63,7 +67,23 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
             .AddCheck<ContactCenterOutboxHealthCheck>(
                 ContactCenterConstants.HealthChecks.OutboxCheckName,
-                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
+            .AddCheck<ContactCenterDistributedLockHealthCheck>(
+                ContactCenterConstants.HealthChecks.DistributedLockCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
+            .Add(new HealthCheckRegistration(
+                ContactCenterConstants.HealthChecks.RedisConnectivityCheckName,
+                serviceProvider => new ContactCenterRedisConnectivityHealthCheck(serviceProvider.GetService<IRedisService>()),
+                failureStatus: null,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]))
+            .Add(new HealthCheckRegistration(
+                ContactCenterConstants.HealthChecks.BackplaneCheckName,
+                serviceProvider => new ContactCenterBackplaneHealthCheck(
+                    serviceProvider.GetRequiredService<IOptions<RedisOptions>>(),
+                    serviceProvider.GetRequiredService<ShellSettings>(),
+                    serviceProvider.GetService<IRedisService>()),
+                failureStatus: null,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]));
 
         return services;
     }

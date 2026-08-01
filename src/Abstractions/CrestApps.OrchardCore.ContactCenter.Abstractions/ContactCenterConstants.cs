@@ -102,6 +102,37 @@ public static class ContactCenterConstants
         public const string TopologyCheckName = "contactcenter-topology";
 
         /// <summary>
+        /// The registration name of the distributed-lock acquire/release probe.
+        /// </summary>
+        /// <remarks>
+        /// A dependency probe that proves the resolved <c>IDistributedLock</c> can be taken and released within a
+        /// bounded time. In a production topology this exercises the Redis-backed lock end to end; in a
+        /// development topology it exercises the process-local lock and is trivially satisfied.
+        /// </remarks>
+        public const string DistributedLockCheckName = "contactcenter-distributed-lock";
+
+        /// <summary>
+        /// The registration name of the Redis connectivity probe.
+        /// </summary>
+        /// <remarks>
+        /// A dependency probe that pings the Redis connection shared by the distributed lock and the SignalR
+        /// backplane. It reports healthy with nothing probed when Redis is not enabled, because a deployment
+        /// that declares no Redis dependency has none to be unhealthy about; the topology validator, not this
+        /// probe, decides whether Redis is required.
+        /// </remarks>
+        public const string RedisConnectivityCheckName = "contactcenter-redis";
+
+        /// <summary>
+        /// The registration name of the SignalR backplane publish/subscribe round-trip probe.
+        /// </summary>
+        /// <remarks>
+        /// Redis connectivity alone does not prove the backplane works: a pub/sub round-trip on a dedicated,
+        /// tenant-qualified channel is the only signal that a message published on one node would reach the
+        /// subscribers on another. Reports healthy with nothing probed when Redis is not enabled.
+        /// </remarks>
+        public const string BackplaneCheckName = "contactcenter-backplane";
+
+        /// <summary>
         /// The default path of the process liveness probe. It reports only that the process can serve a
         /// request and never consults a dependency, so a failing database or a growing backlog cannot trigger a
         /// restart.
