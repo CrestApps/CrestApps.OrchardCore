@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -65,7 +66,7 @@ internal static class AsteriskRealtimeVoiceEventMapper
             IsMuted = isMuted,
             IsOnHold = isOnHold,
             OccurredUtc = occurredUtc,
-            IdempotencyKey = BuildIdempotencyKey(providerName, payload),
+            IdempotencyKey = BuildIdempotencyKey(providerName, eventType, root),
             IsConference = TryReadParticipantCount(root, out var participantCount)
                 ? participantCount >= 2
                 : null,
@@ -172,11 +173,90 @@ internal static class AsteriskRealtimeVoiceEventMapper
         return metadata;
     }
 
-    private static string BuildIdempotencyKey(string providerName, string payload)
+    // ARI events carry no event id or sequence number, so the only stable identity available is the event content
+    // itself. Hashing the raw wire bytes is fragile: a whitespace or property-order change from an Asterisk upgrade or
+    // a proxy re-serialization would silently change the hash and defeat deduplication. Canonicalizing the payload
+    // (recursively ordering object properties) before hashing pins the key to the event's meaning rather than its
+    // formatting, so a re-serialized redelivery of the same event still deduplicates, while two genuinely distinct
+    // same-type events on one call (which differ in at least one field — timestamp, varset value, or sub-state) keep
+    // distinct keys and are both processed. The provider and event type are prefixed so the key is human-inspectable
+    // and never collides across providers or event types.
+    private static string BuildIdempotencyKey(string providerName, string eventType, JsonElement root)
     {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
+        var canonicalPayload = CanonicalizeJson(root);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonicalPayload));
 
-        return $"{providerName}:{Convert.ToHexString(hash)}";
+        return $"{providerName}:{eventType}:{Convert.ToHexString(hash)}";
+    }
+
+    private static string CanonicalizeJson(JsonElement element)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            WriteCanonical(writer, element);
+        }
+
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+    }
+
+    private static void WriteCanonical(Utf8JsonWriter writer, JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                writer.WriteStartObject();
+
+                foreach (var property in element.EnumerateObject().OrderBy(property => property.Name, StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(property.Name);
+                    WriteCanonical(writer, property.Value);
+                }
+
+                writer.WriteEndObject();
+
+                break;
+            case JsonValueKind.Array:
+                writer.WriteStartArray();
+
+                foreach (var item in element.EnumerateArray())
+                {
+                    WriteCanonical(writer, item);
+                }
+
+                writer.WriteEndArray();
+
+                break;
+            case JsonValueKind.Number:
+                // A parse/re-serialize proxy can rewrite a numeric token (1 vs 1.0 vs 1e1) without changing its value,
+                // so the raw token must be normalized or dedupe would again depend on formatting. Integers round-trip
+                // exactly through Int64/UInt64; everything else is normalized through the shortest round-trippable
+                // double form. A number that fits none of these keeps its original token rather than risk a lossy
+                // rewrite.
+                if (element.TryGetInt64(out var int64Value))
+                {
+                    writer.WriteNumberValue(int64Value);
+                }
+                else if (element.TryGetUInt64(out var uint64Value))
+                {
+                    writer.WriteNumberValue(uint64Value);
+                }
+                else if (element.TryGetDouble(out var doubleValue) && double.IsFinite(doubleValue))
+                {
+                    writer.WriteNumberValue(doubleValue);
+                }
+                else
+                {
+                    element.WriteTo(writer);
+                }
+
+                break;
+            default:
+                element.WriteTo(writer);
+
+                break;
+        }
     }
 
     private static bool ContainsStasisArgument(JsonElement root, string argumentName)

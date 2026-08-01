@@ -206,4 +206,156 @@ public sealed class AsteriskRealtimeVoiceEventMapperTests
         Assert.False(voiceEvent.IsOwnedOrigination);
         Assert.True(voiceEvent.IsInbound);
     }
+
+    [Fact]
+    public void TryMap_WhenSameEventIsReserializedWithDifferentFormatting_ProducesSameIdempotencyKey()
+    {
+        // Arrange - the same ChannelHold event delivered twice, but with different property order and whitespace, as
+        // an Asterisk upgrade or a re-serializing proxy could produce. Deduplication must survive the reformatting.
+        const string compactPayload =
+            """
+            {"type":"ChannelHold","timestamp":"2026-07-10T15:03:00.000Z","application":"crestapps-telephony","channel":{"id":"call-1","state":"Up","caller":{"number":"+15550001000"}}}
+            """;
+
+        const string reorderedPayload =
+            """
+            {
+              "channel": {
+                "caller": {
+                  "number": "+15550001000"
+                },
+                "state": "Up",
+                "id": "call-1"
+              },
+              "application": "crestapps-telephony",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "type": "ChannelHold"
+            }
+            """;
+
+        // Act
+        var mappedCompact = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", compactPayload, out var compactEvent);
+        var mappedReordered = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", reorderedPayload, out var reorderedEvent);
+
+        // Assert
+        Assert.True(mappedCompact);
+        Assert.True(mappedReordered);
+        Assert.Equal(compactEvent.IdempotencyKey, reorderedEvent.IdempotencyKey);
+    }
+
+    [Fact]
+    public void TryMap_WhenTwoDistinctSameTypeEventsOccurOnOneCall_ProduceDifferentIdempotencyKeys()
+    {
+        // Arrange - the same call is placed on hold twice (a legitimate hold/resume/hold cycle). The two ChannelHold
+        // events share provider, call id, and type, so a coarse (provider, callId, type) key would wrongly suppress
+        // the second one. They differ in timestamp, which the content-based key must keep distinct.
+        const string firstHoldPayload =
+            """
+            {
+              "type": "ChannelHold",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "channel": {
+                "id": "call-1",
+                "state": "Up",
+                "caller": {
+                  "number": "+15550001000"
+                }
+              }
+            }
+            """;
+
+        const string secondHoldPayload =
+            """
+            {
+              "type": "ChannelHold",
+              "timestamp": "2026-07-10T15:05:30.000Z",
+              "application": "crestapps-telephony",
+              "channel": {
+                "id": "call-1",
+                "state": "Up",
+                "caller": {
+                  "number": "+15550001000"
+                }
+              }
+            }
+            """;
+
+        // Act
+        var mappedFirst = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", firstHoldPayload, out var firstEvent);
+        var mappedSecond = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", secondHoldPayload, out var secondEvent);
+
+        // Assert
+        Assert.True(mappedFirst);
+        Assert.True(mappedSecond);
+        Assert.NotEqual(firstEvent.IdempotencyKey, secondEvent.IdempotencyKey);
+    }
+
+    [Fact]
+    public void TryMap_WhenNumericFieldIsReserializedWithEquivalentValue_ProducesSameIdempotencyKey()
+    {
+        // Arrange - the same ChannelDestroyed event whose numeric cause code is written as an integer in one delivery
+        // and as an equivalent decimal/exponent form in another, as a JSON parse/re-serialize proxy could produce.
+        const string integerCausePayload =
+            """
+            {
+              "type": "ChannelDestroyed",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "cause": 16,
+              "channel": {
+                "id": "call-1",
+                "state": "Up"
+              }
+            }
+            """;
+
+        const string decimalCausePayload =
+            """
+            {
+              "type": "ChannelDestroyed",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "cause": 1.6e1,
+              "channel": {
+                "id": "call-1",
+                "state": "Up"
+              }
+            }
+            """;
+
+        // Act
+        var mappedInteger = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", integerCausePayload, out var integerEvent);
+        var mappedDecimal = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", decimalCausePayload, out var decimalEvent);
+
+        // Assert
+        Assert.True(mappedInteger);
+        Assert.True(mappedDecimal);
+        Assert.Equal(integerEvent.IdempotencyKey, decimalEvent.IdempotencyKey);
+    }
+
+    [Fact]
+    public void TryMap_BuildsIdempotencyKeyPrefixedWithProviderAndEventType()
+    {
+        // Arrange
+        const string payload =
+            """
+            {
+              "type": "ChannelHold",
+              "timestamp": "2026-07-10T15:03:00.000Z",
+              "application": "crestapps-telephony",
+              "channel": {
+                "id": "call-1",
+                "state": "Up"
+              }
+            }
+            """;
+
+        // Act
+        var mapped = AsteriskRealtimeVoiceEventMapper.TryMap("Asterisk", payload, out var voiceEvent);
+
+        // Assert
+        Assert.True(mapped);
+        Assert.StartsWith("Asterisk:ChannelHold:", voiceEvent.IdempotencyKey);
+    }
 }
