@@ -127,11 +127,11 @@ public sealed class AIProfileRecipeStepTests
     }
 
     [Fact]
-    public async Task AIDataSourceSchema_UsesRegisteredSourceTypesForSourceEnums()
+    public async Task AIDataSourceSchema_UsesRegisteredSourceTypesForSourceExamples()
     {
         var step = new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions());
         var json = JsonNode.Parse(JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken)))!;
-        var sourceValues = json["properties"]?["DataSources"]?["items"]?["properties"]?["Source"]?["enum"]?
+        var sourceValues = json["properties"]?["DataSources"]?["items"]?["properties"]?["Source"]?["examples"]?
             .AsArray()
             .Select(node => node?.GetValue<string>())
             .ToArray();
@@ -147,7 +147,7 @@ public sealed class AIProfileRecipeStepTests
     }
 
     [Fact]
-    public async Task AIProviderConnectionsSchema_UsesRegisteredProviderNamesForSourceEnums()
+    public async Task AIProviderConnectionsSchema_UsesRegisteredProviderNamesForSourceExamples()
     {
         var options = new AIOptions();
         var connectionSources = Assert.IsAssignableFrom<IDictionary<string, AIProviderConnectionOptionsEntry>>(options.ConnectionSources);
@@ -157,11 +157,11 @@ public sealed class AIProfileRecipeStepTests
         var step = new AIProviderConnectionsRecipeStep(Microsoft.Extensions.Options.Options.Create(options));
 
         var json = JsonNode.Parse(JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken)))!;
-        var sourceValues = json["properties"]?["Connections"]?["items"]?["properties"]?["Source"]?["enum"]?
+        var sourceValues = json["properties"]?["Connections"]?["items"]?["properties"]?["Source"]?["examples"]?
             .AsArray()
             .Select(node => node?.GetValue<string>())
             .ToArray();
-        var clientNameValues = json["properties"]?["Connections"]?["items"]?["properties"]?["ClientName"]?["enum"]?
+        var clientNameValues = json["properties"]?["Connections"]?["items"]?["properties"]?["ClientName"]?["examples"]?
             .AsArray()
             .Select(node => node?.GetValue<string>())
             .ToArray();

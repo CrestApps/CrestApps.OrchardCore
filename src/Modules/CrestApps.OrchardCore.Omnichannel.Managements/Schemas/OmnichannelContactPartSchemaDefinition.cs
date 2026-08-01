@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
@@ -69,7 +70,7 @@ public sealed class OmnichannelContactPartSchemaDefinition : PartSchemaDefinitio
 
         if (timeZoneIds.Length > 0)
         {
-            timeZoneIdSchema = timeZoneIdSchema.Enum(timeZoneIds);
+            timeZoneIdSchema = timeZoneIdSchema.Examples(timeZoneIds.Select(id => (JsonNode)id).ToArray());
         }
 
         return new JsonSchemaBuilder()

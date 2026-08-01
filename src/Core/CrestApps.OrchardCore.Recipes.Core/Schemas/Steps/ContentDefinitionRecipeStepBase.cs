@@ -123,10 +123,8 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Properties(
                 ("PartName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .AnyOf(
-                        new JsonSchemaBuilder().Enum(knownPartNames),
-                        new JsonSchemaBuilder().Type(SchemaValueType.String).Pattern(@"^(?!.*Field$).+"))
-                    .Description("Attached part type name. Known part names are enumerated when available.")),
+                    .Examples(RecipeStepSchemaBuilders.Suggestions(knownPartNames))
+                    .Description("Attached part type name. Known part names are surfaced as suggestions, but any custom part name is allowed.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Attachment name used on the content type. Usually matches PartName.")),
                 ("Settings", GenericSubSettings("ContentTypePartSettings").Description("Attachment settings for this part on the content type.")))
             .Required("PartName", "Name", "Settings")
@@ -149,8 +147,8 @@ public abstract class ContentDefinitionRecipeStepBase(
             .Properties(
                 ("FieldName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(fieldTypeNames)
-                    .Description("Field type name. Known Orchard field types are enumerated from the current tenant.")),
+                    .Examples(RecipeStepSchemaBuilders.Suggestions(fieldTypeNames))
+                    .Description("Field type name. Known Orchard field types are surfaced as suggestions, but any custom field type name is allowed.")),
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Field name used inside the content part.")),
                 ("Settings", GenericSubSettings("ContentPartFieldSettings").Description("Field definition settings, including Orchard placement/editor settings and field-specific settings envelopes.")))
             .Required("FieldName", "Name", "Settings")

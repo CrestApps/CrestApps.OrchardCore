@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Tests.Agent.Recipes;
 public sealed class ImportRecipeBaseToolTests
 {
     [Fact]
-    public async Task InvokeAsync_WithUnknownStepName_ShouldReturnSharedSchemaValidationMessage()
+    public async Task InvokeAsync_WithSchemaInvalidRecipe_ShouldReturnSharedSchemaValidationMessage()
     {
         // Arrange
         var featureStep = CreateRecipeStep(
@@ -42,7 +42,7 @@ public sealed class ImportRecipeBaseToolTests
         var services = CreateServices([featureStep.Object, contentStep.Object]);
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
-            ["recipe"] = """{"steps":[{"name":"unknown"}]}""",
+            ["recipe"] = """{"steps":[{"name":"feature","enable":"not-an-array"}]}""",
         })
         {
             Services = services,
@@ -56,7 +56,7 @@ public sealed class ImportRecipeBaseToolTests
         var text = Assert.IsType<string>(result);
         Assert.Contains("Invalid recipe format.", text, StringComparison.Ordinal);
         Assert.Contains("\"steps\"", text, StringComparison.Ordinal);
-        Assert.Contains("\"enum\":[\"content\",\"feature\"]", text, StringComparison.Ordinal);
+        Assert.Contains("\"examples\":[\"content\",\"feature\"]", text, StringComparison.Ordinal);
     }
 
     [Fact]

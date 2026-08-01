@@ -42,7 +42,7 @@ public sealed class AIDataSourceRecipeStep : IRecipeStep
 
         if (sourceTypes.Length > 0)
         {
-            sourceSchema = sourceSchema.Enum(sourceTypes);
+            sourceSchema = sourceSchema.WithSuggestions(sourceTypes);
         }
 
         var dataSourceSchema = new JsonSchemaBuilder()
