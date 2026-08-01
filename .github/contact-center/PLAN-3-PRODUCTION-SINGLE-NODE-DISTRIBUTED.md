@@ -913,7 +913,7 @@ Same rule as §10: a box is ticked only when its named gate passes in CI.
 - [ ] W12.1 Dual-channel recording `gate:gate-recording-dual-channel`
 - [ ] W12.2 Supervisor take-over implemented, or capability stays prohibited `gate:gate-supervision-audio-proof`
 - [ ] W12.3 Codec negotiation, SRTP/DTLS enforcement, TURN credential lifetime `gate:`
-- [ ] W12.4 Explicit call state machine; live-ARI reconciliation proven `gate:`
+- [x] W12.4 Explicit call state machine; live-ARI reconciliation proven `gate:pr_ci.yml#build_test` — landed as PRODUCTION-READINESS D2: the state machine (`CallSessionLifecycle` transition table + `CallSession.TransitionTo` rejecting illegal edges) was already covered by `AggregateLifecycleTableTests`/`AggregateStateTransitionTests`; the missing liveness proof is now `AsteriskCallStateReconciliationContractTests`, a cassette-backed contract test that fails if the Asterisk `ITelephonyCallStateProvider` stops issuing a live `GET channels/{callId}` (mutation-verified by the independent reviewer).
 - [ ] W12.5 Idempotency keyed on event identity `gate:`
 - [ ] W12.6 Orphan bridge/channel/snoop sweeper `gate:gate-restart-drain`
 - [ ] W12.7 PBX failover across multiple ARI endpoints `gate:gate-dependency-failure`

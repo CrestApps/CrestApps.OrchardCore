@@ -168,6 +168,53 @@ internal sealed class AsteriskContractCassettes
     }
 
     /// <summary>
+    /// Reads a single recorded Asterisk REST Interface response by its HTTP method and path template.
+    /// </summary>
+    /// <param name="httpMethod">The HTTP method, for example <c>GET</c>.</param>
+    /// <param name="pathTemplate">The recorded path template, for example <c>channels/{channelId}</c>.</param>
+    /// <param name="statusCode">When this method returns, the recorded status code, if a match was found.</param>
+    /// <param name="body">When this method returns, the recorded response body, if a match was found.</param>
+    /// <returns><see langword="true"/> if a matching recorded response exists; otherwise <see langword="false"/>.</returns>
+    public bool TryReadRecordedRestResponse(string httpMethod, string pathTemplate, out int statusCode, out string body)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(httpMethod);
+        ArgumentException.ThrowIfNullOrWhiteSpace(pathTemplate);
+
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(DirectoryPath, "rest", "responses.json")));
+
+        foreach (var recorded in document.RootElement.GetProperty("responses").EnumerateArray())
+        {
+            if (!string.Equals(recorded.GetProperty("httpMethod").GetString(), httpMethod, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(recorded.GetProperty("pathTemplate").GetString(), pathTemplate, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            statusCode = recorded.GetProperty("statusCode").GetInt32();
+
+            if (recorded.TryGetProperty("body", out var bodyElement))
+            {
+                body = bodyElement.GetRawText();
+            }
+            else if (recorded.TryGetProperty("textBody", out var textElement))
+            {
+                body = textElement.GetString();
+            }
+            else
+            {
+                body = null;
+            }
+
+            return true;
+        }
+
+        statusCode = 0;
+        body = null;
+
+        return false;
+    }
+
+    /// <summary>
     /// Reads a repository file relative to the repository root.
     /// </summary>
     /// <param name="relativePath">The forward-slash separated path relative to the repository root.</param>
