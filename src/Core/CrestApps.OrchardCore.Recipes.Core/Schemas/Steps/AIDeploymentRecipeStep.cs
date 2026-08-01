@@ -68,7 +68,7 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
 
         if (clientNames.Length > 0)
         {
-            clientNameSchema = clientNameSchema.Examples(RecipeStepSchemaBuilders.Suggestions(clientNames));
+            clientNameSchema = clientNameSchema.Enum(clientNames);
         }
 
         var deploymentSchema = new JsonSchemaBuilder()
