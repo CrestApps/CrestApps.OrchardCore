@@ -25,7 +25,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
     // than any real provider call identifier while keeping the composed claim key within SQL Server's 900-byte
     // unique-index key limit. The claim key length is derived from the two parts it concatenates so it can never
     // truncate a value the source columns can hold, and 385 stays within that limit.
-    private const int ProviderNameLength = 128;
+    private const int ProviderNameLength = ContactCenterConstants.ProviderNameLength;
     private const int ProviderCallIdLength = 256;
     private const int ProviderCallClaimKeyLength = ProviderNameLength + 1 + ProviderCallIdLength;
 

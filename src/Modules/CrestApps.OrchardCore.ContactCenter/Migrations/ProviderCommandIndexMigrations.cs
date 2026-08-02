@@ -45,7 +45,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ProviderCommandIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("CommandId", column => column.NotNull().Unique().WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(100))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
             .Column<ProviderCommandStatus>("Status")
             .Column<long>("FenceToken", column => column.NotNull().WithDefault(0L))
             .Column<string>("InteractionId", column => column.WithLength(26))

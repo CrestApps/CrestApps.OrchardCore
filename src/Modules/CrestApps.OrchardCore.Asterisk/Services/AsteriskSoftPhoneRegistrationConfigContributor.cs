@@ -141,7 +141,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
             PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes,
             PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds,
             PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName,
-            PjsipRealtimeConnectionString = settings.PjsipRealtimeConnectionString,
+            PjsipRealtimeConnectionString = Unprotect(settings.PjsipRealtimeConnectionString),
             PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix,
         };
 

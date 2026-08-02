@@ -40,7 +40,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(100))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<ProviderWebhookInboxStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())

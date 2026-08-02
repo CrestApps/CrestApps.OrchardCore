@@ -103,7 +103,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
             PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes,
             PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds,
             PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName,
-            PjsipRealtimeConnectionString = settings.PjsipRealtimeConnectionString,
+            PjsipRealtimeConnectionString = UnprotectPassword(settings.PjsipRealtimeConnectionString),
             PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix,
         };
 

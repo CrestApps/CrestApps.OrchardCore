@@ -6,6 +6,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         public const int CurrentEventSchemaVersion = 1;
         public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
         public const int MetricsProjectionVersion = 1;
+        public const int ProviderNameLength = 128;
         public const string SystemActor = "system";
         public static class AttendedTransferMetadata
         {

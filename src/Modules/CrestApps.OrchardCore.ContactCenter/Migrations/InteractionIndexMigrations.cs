@@ -22,7 +22,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
             .Column<InteractionDirection>("Direction")
             .Column<InteractionStatus>("Status")
             .Column<string>("ActivityItemId", column => column.WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(128))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
             .Column<string>("ProviderInteractionId", column => column.WithLength(128))
             .Column<string>("ProviderLegId", column => column.WithLength(128))
             .Column<string>("QueueId", column => column.WithLength(26))

@@ -34,6 +34,14 @@ public static class ContactCenterConstants
     public const string SystemActor = "system";
 
     /// <summary>
+    /// The maximum stored length, in characters, of a canonicalized telephony provider name. The same canonical
+    /// value is persisted across several Contact Center index tables, so every migration that stores it must pin
+    /// this width to keep the column definitions consistent and avoid a value that fits in one table but truncates
+    /// in another.
+    /// </summary>
+    public const int ProviderNameLength = 128;
+
+    /// <summary>
     /// Contains the identifiers used to register and select the Contact Center operational health checks.
     /// The readiness endpoint selects checks by <see cref="HealthChecks.ReadyTag"/>, so a registration that
     /// omits the tag silently disappears from readiness. Both sides must reference these constants.
