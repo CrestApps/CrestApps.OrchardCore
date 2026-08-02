@@ -37,28 +37,17 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .SetupSequence(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new QueueItem
-                {
-                    ActivityItemId = "manual-activity",
-                    EnqueuedUtc = utcNow,
-                },
-                new QueueItem
-                {
-                    ActivityItemId = "activity-1",
-                    EnqueuedUtc = utcNow.AddMinutes(-5),
-                },
-            ])
-            .ReturnsAsync(
-            [
-                new QueueItem
-                {
-                    ActivityItemId = "activity-1",
-                    EnqueuedUtc = utcNow.AddMinutes(-5),
-                },
-            ]);
+            .SetupSequence(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ActivityItemId = "activity-1",
+                EnqueuedUtc = utcNow.AddMinutes(-5),
+            })
+            .ReturnsAsync(new QueueItem
+            {
+                ActivityItemId = "activity-1",
+                EnqueuedUtc = utcNow.AddMinutes(-5),
+            });
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
         interactionManager
@@ -120,8 +109,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<QueueItem>());
+            .Setup(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QueueItem)null);
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
 
@@ -169,8 +158,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new QueueItem { ActivityItemId = "activity-1" }]);
+            .Setup(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager
@@ -222,8 +211,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(manager => manager.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new QueueItem { ActivityItemId = "activity-1" }]);
+            .Setup(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
         interactionManager
@@ -370,8 +359,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync([queue1, queue2]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(manager => manager.ListWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<QueueItem>());
+            .Setup(manager => manager.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QueueItem)null);
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
         var inboundVoiceService = new Mock<IInboundVoiceService>();

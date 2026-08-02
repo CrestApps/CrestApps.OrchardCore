@@ -142,6 +142,19 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     }
 
     /// <inheritdoc/>
+    public async Task<QueueItem> FindNextWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterConstants.CollectionName)
+            .OrderByDescending(index => index.Priority)
+            .ThenBy(index => index.EnqueuedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<QueueItem> FindLongestWaitingAsync(string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);

@@ -164,8 +164,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        var waiting = await _queueItemManager.ListWaitingAsync(queueId, cancellationToken);
-        var topItem = QueueItemPrioritizer.SelectNext(waiting, queue, now);
+        var topItem = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
 
         if (topItem is null)
         {

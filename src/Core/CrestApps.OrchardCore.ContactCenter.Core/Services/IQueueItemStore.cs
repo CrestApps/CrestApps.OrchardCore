@@ -66,6 +66,17 @@ public interface IQueueItemStore : ICatalog<QueueItem>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the single next waiting item to route in the specified queue using a bounded top-one query,
+    /// ordered highest priority then oldest first, without loading the whole waiting backlog. This is the
+    /// routing winner whenever the queue does not apply SLA aging, so callers can avoid materializing every
+    /// waiting row on the assignment hot path.
+    /// </summary>
+    /// <param name="queueId">The queue identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The next waiting item to route, or <see langword="null"/> when the queue has none waiting.</returns>
+    Task<QueueItem> FindNextWaitingAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the single oldest waiting item in the specified queue using a bounded top-one query, without
     /// loading the whole waiting backlog. This supports longest-wait measurement.
     /// </summary>

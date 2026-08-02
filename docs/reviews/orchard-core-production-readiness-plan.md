@@ -385,13 +385,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-022 — Routing repeatedly materializes entire queue backlogs
 
-- **Priority:** High · **Status:** Not Started · **Category:** Performance · **Effort:** L · **Risk:** High · **Dependencies:** YesSql index/query changes
+- **Priority:** High · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** High · **Dependencies:** YesSql index/query changes
 
 **Problem.** Verified: `QueueItemStore.ListWaitingAsync` (`ContactCenter.Core/Services/QueueItemStore.cs:31-44`) queries all waiting items for a queue with `.ListAsync()` and no pagination or limit, then `.ToArray()`. Assignment and offer loops call it repeatedly after individual state changes (`ActivityAssignmentService.cs:127,167`, `ReservationExpiryBackgroundTask.cs:131,165`).
 
 **Why it matters.** A queue spike produces roughly quadratic query traffic and allocations precisely when assignment latency matters most.
 
 **Recommended solution.** Query only the next eligible indexed item or a bounded ordered page; reuse one batch per cycle; maintain queue depth as a separate aggregate.
+
+**Resolution.** The three single-item hot paths that materialized the entire waiting backlog only to pick one item now use a bounded top-one query. Added `IQueueItemStore.FindNextWaitingAsync` (a `FirstOrDefaultAsync` with the exact `Priority` desc → `EnqueuedUtc` asc ordering of `ListWaitingAsync`) and `IQueueItemManager.FindNextWaitingAsync(ActivityQueue queue, DateTime utcNow, …)`. The manager selects a fast path when the queue does not apply SLA aging — where an item's effective priority equals its base priority, so the store's first row is provably identical to `QueueItemPrioritizer.SelectNext` without materializing the backlog — and falls back to the full in-memory scan only for queues that opt into SLA aging (aging can reorder items by wait time, so all candidates must be scored). The assignment loop (`ActivityAssignmentService`) and both voice/generic offer paths (`ReservationExpiryBackgroundTask`) now call `FindNextWaitingAsync`; `ListWaitingAsync` is retained for the aging fallback and for `OverflowDueAsync`, which legitimately iterates the whole backlog. Added `QueueItemManagerTests` proving the fast path calls only the bounded store query and the aging path scores the backlog (an aged low-priority item beats a newer highest-priority item). Independently reviewed (gpt-5.6-sol) and approved; all 1483 ContactCenter tests pass.
 
 ---
 
@@ -750,7 +752,7 @@ Strongly recommended before first release:
 - [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
-- [ ] OC-022, OC-023, OC-024 — load-bearing performance items
+- [ ] OC-022 (done), OC-023, OC-024 — load-bearing performance items
 - [x] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs
 

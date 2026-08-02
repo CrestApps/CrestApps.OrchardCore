@@ -17,6 +17,20 @@ public interface IQueueItemManager : ICatalogManager<QueueItem>
     Task<IReadOnlyCollection<QueueItem>> ListWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the single next item to route in the specified queue. When the queue does not apply SLA aging
+    /// this uses a bounded top-one query and does not materialize the waiting backlog; when SLA aging is
+    /// enabled the waiting items are scored in memory because aging can reorder them by wait time.
+    /// </summary>
+    /// <param name="queue">The queue whose routing policy selects and orders the next item.</param>
+    /// <param name="utcNow">The current UTC instant used to measure wait time for SLA aging.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The next item to route, or <see langword="null"/> when the queue has none waiting.</returns>
+    Task<QueueItem> FindNextWaitingAsync(
+        ActivityQueue queue,
+        DateTime utcNow,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the active queue item for the specified activity.
     /// </summary>
     /// <param name="activityItemId">The CRM activity identifier.</param>

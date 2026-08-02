@@ -40,6 +40,42 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
     }
 
     /// <inheritdoc/>
+    public async Task<QueueItem> FindNextWaitingAsync(
+        ActivityQueue queue,
+        DateTime utcNow,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        QueueItem item;
+
+        if (!queue.EnableSlaAging || queue.SlaThresholdSeconds <= 0)
+        {
+            // Without SLA aging an item's effective priority equals its base priority, so the routing winner
+            // is deterministically the first row of the stored routing order (priority descending, then oldest
+            // first) — exactly what QueueItemPrioritizer.SelectNext would return. A bounded top-one query
+            // therefore yields the same item without materializing the whole waiting backlog.
+            item = await _store.FindNextWaitingAsync(queue.ItemId, cancellationToken);
+        }
+        else
+        {
+            // SLA aging promotes an older item above a newer higher-priority one by an amount that grows with
+            // how long it has waited, so the winner cannot be expressed as a fixed stored order and every
+            // candidate must be scored in memory. Aging is opt-in per queue, so this fuller scan is confined
+            // to queues that have explicitly requested it.
+            var waiting = await _store.ListWaitingAsync(queue.ItemId, cancellationToken);
+            item = QueueItemPrioritizer.SelectNext(waiting, queue, utcNow);
+        }
+
+        if (item is not null)
+        {
+            await LoadAsync(item, cancellationToken);
+        }
+
+        return item;
+    }
+
+    /// <inheritdoc/>
     public async Task<QueueItem> FindByActivityIdAsync(string activityItemId, CancellationToken cancellationToken = default)
     {
         var item = await _store.FindByActivityIdAsync(activityItemId, cancellationToken);

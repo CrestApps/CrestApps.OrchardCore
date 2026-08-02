@@ -17,8 +17,8 @@ public sealed class ActivityAssignmentServiceTests
         // Arrange
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QueueItem)null);
 
         var service = CreateService(queueItemManager, new Mock<IAgentProfileManager>(), new Mock<IActivityReservationService>());
 
@@ -35,8 +35,8 @@ public sealed class ActivityAssignmentServiceTests
         // Arrange
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new QueueItem { ItemId = "i1", QueueId = "q1" }]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "i1", QueueId = "q1" });
 
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
@@ -59,8 +59,8 @@ public sealed class ActivityAssignmentServiceTests
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([topItem]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
 
         var disconnectedAgent = new AgentProfile
         {
@@ -117,8 +117,8 @@ public sealed class ActivityAssignmentServiceTests
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([topItem]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
 
         var idleAgent = new AgentProfile { ItemId = "a1", PresenceChangedUtc = new DateTime(2026, 1, 1) };
         var busyAgent = new AgentProfile { ItemId = "a2", PresenceChangedUtc = new DateTime(2026, 1, 2) };
@@ -154,8 +154,8 @@ public sealed class ActivityAssignmentServiceTests
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([topItem]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
 
         var missingSkillAgent = new AgentProfile
         {
@@ -209,8 +209,8 @@ public sealed class ActivityAssignmentServiceTests
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([topItem]);
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
 
         var reservationService = new Mock<IActivityReservationService>();
 
@@ -226,7 +226,7 @@ public sealed class ActivityAssignmentServiceTests
 
         // Assert
         Assert.Null(reservation);
-        queueItemManager.Verify(m => m.ListWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        queueItemManager.Verify(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         reservationService.Verify(
             s => s.ReserveAsync(It.IsAny<QueueItem>(), It.IsAny<AgentProfile>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -239,9 +239,9 @@ public sealed class ActivityAssignmentServiceTests
         var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
-            .SetupSequence(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([topItem])
-            .ReturnsAsync([]);
+            .SetupSequence(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem)
+            .ReturnsAsync((QueueItem)null);
 
         var agent = new AgentProfile { ItemId = "a1" };
         var agentManager = new Mock<IAgentProfileManager>();

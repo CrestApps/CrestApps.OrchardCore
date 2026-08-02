@@ -128,8 +128,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                             break;
                         }
 
-                        var waitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, runToken);
-                        var nextItem = QueueItemPrioritizer.SelectNext(waitingItems, queue, clock.UtcNow);
+                        var nextItem = await queueItemManager.FindNextWaitingAsync(queue, clock.UtcNow, runToken);
 
                         if (nextItem is null)
                         {
@@ -162,8 +161,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                var genericWaitingItems = await queueItemManager.ListWaitingAsync(queue.ItemId, runToken);
-                var nextGenericItem = QueueItemPrioritizer.SelectNext(genericWaitingItems, queue, clock.UtcNow);
+                var nextGenericItem = await queueItemManager.FindNextWaitingAsync(queue, clock.UtcNow, runToken);
 
                 if (nextGenericItem is not null)
                 {
