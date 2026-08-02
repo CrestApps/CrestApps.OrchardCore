@@ -217,6 +217,18 @@ public sealed class ChatInteractionsPromptingWorkflowsStartup : StartupBase
 }
 
 /// <summary>
+/// Contributes the AI tool instances field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.ToolInstances, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsToolInstancesWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigToolInstancesDisplayDriver>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the OCDeployments feature.
 /// </summary>
 [RequireFeatures("OrchardCore.Deployment")]

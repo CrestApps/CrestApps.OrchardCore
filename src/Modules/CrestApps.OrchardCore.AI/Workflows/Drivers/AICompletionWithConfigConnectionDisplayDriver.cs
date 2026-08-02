@@ -62,7 +62,7 @@ public sealed class AICompletionWithConfigConnectionDisplayDriver : DisplayDrive
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
-        }).Location("Content:2#Settings;1");
+        }).Location("Content:2#Content;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

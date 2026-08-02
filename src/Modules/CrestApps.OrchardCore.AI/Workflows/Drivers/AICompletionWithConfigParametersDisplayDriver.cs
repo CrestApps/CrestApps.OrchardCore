@@ -24,7 +24,7 @@ public sealed class AICompletionWithConfigParametersDisplayDriver : DisplayDrive
             model.TopP = interaction.TopP;
             model.FrequencyPenalty = interaction.FrequencyPenalty;
             model.PresencePenalty = interaction.PresencePenalty;
-        }).Location("Content:4#Settings;1");
+        }).Location("Content:4#Content;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

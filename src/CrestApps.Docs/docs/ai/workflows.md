@@ -31,9 +31,9 @@ The generated response will be saved in this property.
 
 This task exposes the same parameters available in the **Chat Interactions** experience, and its editor is organized into the same tabs. Each enabled feature contributes its own fields through dedicated display drivers, so the options you see depend on which features are turned on:
 
-- **Settings** — orchestrator, chat deployment, utility deployment, system instructions, prompt template selectors, max response tokens, temperature, top P, frequency penalty, and presence penalty.
+- **Content** — result property name, prompt template, orchestrator, chat deployment, utility deployment, system instructions, prompt template selectors, max response tokens, temperature, top P, frequency penalty, and presence penalty.
 - **Knowledge** — data source, restrict answers to retrieved data only, strictness, retrieved documents, and the OData filter (contributed by the **AI Data Sources** feature).
-- **Capabilities** — tools, tool instances, MCP connections (contributed by the **AI MCP** feature), and A2A connections (contributed by the **AI A2A** feature).
+- **Capabilities** — tools, tool instances (contributed by the **AI Tool Instances** feature), MCP connections (contributed by the **AI MCP** feature), and A2A connections (contributed by the **AI A2A** feature).
 
 :::note
 This task requires the **AI Chat Interactions** feature (`CrestApps.OrchardCore.AI.Chat.Interactions`) to be enabled, because it reuses the same configuration model and completion flow used by Chat Interactions.

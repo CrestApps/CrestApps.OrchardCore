@@ -44,7 +44,7 @@ public sealed class AICompletionWithConfigPromptSelectionDisplayDriver : Display
         {
             promptSelectionModel.PromptTemplates = model.PromptTemplates;
             promptSelectionModel.AvailablePrompts = model.AvailablePrompts;
-        }).Location("Content:3#Settings;1");
+        }).Location("Content:3#Content;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
