@@ -39,11 +39,11 @@ public sealed class ThemesRecipeStep : IRecipeStep
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes").Description("Recipe step discriminator. Must be 'themes'.")),
                 ("site", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(themeIds)
+                    .Examples(RecipeStepSchemaBuilders.Suggestions(themeIds))
                     .Description("The theme ID to use for the front-end site.")),
                 ("admin", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(themeIds)
+                    .Examples(RecipeStepSchemaBuilders.Suggestions(themeIds))
                     .Description("The theme ID to use for the admin dashboard.")))
             .Required("name")
             .AdditionalProperties(true)

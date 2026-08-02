@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.Recipes.Services;
@@ -166,7 +167,7 @@ public sealed class RecipeSchemaService
                 .Properties(
                     ("name", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
-                        .Enum(stepNames)))
+                        .WithSuggestions(stepNames)))
                 .Required("name")
                 .AdditionalProperties(true);
 
@@ -179,7 +180,7 @@ public sealed class RecipeSchemaService
                 .Properties(
                     ("name", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
-                        .Enum(GetStepNames())))
+                        .WithSuggestions(GetStepNames())))
                 .Required("name")
                 .AdditionalProperties(true);
         }

@@ -71,11 +71,11 @@ public sealed class WorkflowActivitySchemaServiceTests
     }
 
     [Fact]
-    public async Task GetActivitySchemaAsync_RejectsATaskAsTheStartActivity()
+    public async Task GetActivitySchemaAsync_AllowsATaskAsTheStartActivity()
     {
         var schema = await CreateService().GetActivitySchemaAsync(TestContext.Current.CancellationToken);
 
-        Assert.False(Evaluate(
+        Assert.True(Evaluate(
             schema,
             """
             {
@@ -175,11 +175,11 @@ public sealed class WorkflowActivitySchemaServiceTests
     }
 
     [Fact]
-    public async Task GetActivitySchemaAsync_RejectsUnknownActivityNames()
+    public async Task GetActivitySchemaAsync_AllowsUnknownActivityNames()
     {
         var schema = await CreateService().GetActivitySchemaAsync(TestContext.Current.CancellationToken);
 
-        Assert.False(Evaluate(
+        Assert.True(Evaluate(
             schema,
             """
             {

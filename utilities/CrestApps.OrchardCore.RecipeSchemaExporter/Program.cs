@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Caching.Memory;
@@ -14,7 +16,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Services;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Services;
 
@@ -23,7 +27,16 @@ namespace CrestApps.OrchardCore.RecipeSchemaExporter;
 internal sealed class Program
 {
     private const string _agentSkillsRepositoryName = "CrestApps.AgentSkills";
-    private const string _agentSkillsRelativePath = @"CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
+
+    private static readonly string[] _recipeSchemasRelativeSegments =
+    [
+        "src",
+        "CrestApps.AgentSkills",
+        "orchardcore",
+        "orchardcore-recipes",
+        "references",
+        "recipe-schemas",
+    ];
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -32,6 +45,20 @@ internal sealed class Program
 
     private static string[] _featureIds = [];
     private static string[] _themeIds = [];
+    private static string[] _eventActivityNames = [];
+    private static string[] _taskActivityNames = [];
+    private static string[] _permissionNames = [];
+
+    private static readonly string[] _roleNames =
+    [
+        "Administrator",
+        "Anonymous",
+        "Author",
+        "Authenticated",
+        "Contributor",
+        "Editor",
+        "Moderator",
+    ];
 
     private static readonly string[] _fieldTypeNames =
     [
@@ -59,8 +86,11 @@ internal sealed class Program
         var repositoryRoot = FindRepositoryRoot();
         _featureIds = ManifestScanner.DiscoverFeatureIds(repositoryRoot);
         _themeIds = ManifestScanner.DiscoverThemeIds(repositoryRoot);
+        (_eventActivityNames, _taskActivityNames) = ManifestScanner.DiscoverWorkflowActivities(repositoryRoot);
+        _permissionNames = ManifestScanner.DiscoverPermissionNames(repositoryRoot);
 
         Console.WriteLine($"Discovered {_featureIds.Length} feature IDs and {_themeIds.Length} theme IDs.");
+        Console.WriteLine($"Discovered {_eventActivityNames.Length} workflow events, {_taskActivityNames.Length} workflow tasks, and {_permissionNames.Length} permissions.");
 
         var outputPath = ResolveOutputPath(args, repositoryRoot);
         var recipeSteps = CreateRecipeSteps()
@@ -138,7 +168,7 @@ internal sealed class Program
             return fallbackPath;
         }
 
-        return Path.Combine(parentDirectory.FullName, _agentSkillsRelativePath);
+        return Path.Combine([agentSkillsRoot, .._recipeSchemasRelativeSegments]);
     }
 
     private static string FindRepositoryRoot()
@@ -259,9 +289,13 @@ internal sealed class Program
         services.AddSingleton<IContentSchemaProvider>(contentSchemaProvider);
         services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
         services.AddSingleton<IOptions<AIOptions>>(Options.Create(new AIOptions()));
+        services.AddSingleton<IOptions<AIDataSourceSourceOptions>>(Options.Create(new AIDataSourceSourceOptions()));
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
+        services.AddSingleton(CreateRoleService());
         services.AddSingleton(CreateActivityLibrary());
+        services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
+        RegisterWorkflowActivitySchemaDefinitions(services);
 
         foreach (var schemaDefinition in schemaDefinitions)
         {
@@ -297,29 +331,83 @@ internal sealed class Program
         return manager.Object;
     }
 
+    private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
     private static IActivityLibrary CreateActivityLibrary()
     {
-        var startActivity = new Mock<IEvent>();
-        startActivity.SetupGet(activity => activity.Name).Returns("HttpRequestEvent");
+        var eventNames = new SortedSet<string>(_eventActivityNames, StringComparer.Ordinal);
+        var taskNames = new SortedSet<string>(_taskActivityNames, StringComparer.Ordinal);
 
-        var taskActivity = new Mock<ITask>();
-        taskActivity.SetupGet(activity => activity.Name).Returns("NotifyTask");
+        // Ensure every registered activity schema definition is represented, even when the source
+        // scan did not surface its activity name, so no property schema is silently dropped.
+        foreach (var definitionName in GetWorkflowActivityDefinitionNames())
+        {
+            if (eventNames.Contains(definitionName) || taskNames.Contains(definitionName))
+            {
+                continue;
+            }
+
+            if (definitionName.EndsWith("Event", StringComparison.Ordinal))
+            {
+                eventNames.Add(definitionName);
+            }
+            else
+            {
+                taskNames.Add(definitionName);
+            }
+        }
+
+        var activities = new List<IActivity>();
+
+        foreach (var eventName in eventNames)
+        {
+            var activity = new Mock<IEvent>();
+            activity.SetupGet(item => item.Name).Returns(eventName);
+            activities.Add(activity.Object);
+        }
+
+        foreach (var taskName in taskNames)
+        {
+            var activity = new Mock<ITask>();
+            activity.SetupGet(item => item.Name).Returns(taskName);
+            activities.Add(activity.Object);
+        }
 
         var library = new Mock<IActivityLibrary>();
         library.Setup(service => service.ListActivities())
-            .Returns([startActivity.Object, taskActivity.Object]);
+            .Returns(activities);
 
         return library.Object;
     }
 
+    private static IEnumerable<string> GetWorkflowActivityDefinitionNames()
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IWorkflowActivitySchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
+    }
+
     private static IPermissionService CreatePermissionService()
     {
-        var permissions = new[]
-        {
-            new Permission("EditContent", "Edit content"),
-            new Permission("ViewContent", "View content"),
-            new Permission("ViewMediaContent", "View media content"),
-        };
+        var permissions = _permissionNames
+            .Select(name => new Permission(name, name))
+            .ToArray();
 
         var permissionService = new Mock<IPermissionService>();
         permissionService.Setup(service => service.GetPermissionsAsync())
@@ -328,6 +416,25 @@ internal sealed class Program
             .ReturnsAsync((Permission)null);
 
         return permissionService.Object;
+    }
+
+    private static IRoleService CreateRoleService()
+    {
+        var roles = _roleNames
+            .Select(name =>
+            {
+                var role = new Mock<IRole>();
+                role.SetupGet(instance => instance.RoleName).Returns(name);
+
+                return role.Object;
+            })
+            .ToArray();
+
+        var roleService = new Mock<IRoleService>();
+        roleService.Setup(service => service.GetRolesAsync())
+            .ReturnsAsync(roles);
+
+        return roleService.Object;
     }
 
     private static IEnumerable<IRecipeHarvester> CreateRecipeHarvesters()

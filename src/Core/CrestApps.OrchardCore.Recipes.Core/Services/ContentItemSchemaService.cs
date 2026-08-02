@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -31,7 +32,7 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
     {
         var typeList = NormalizeContentTypes(contentTypes);
 
-        return ValueTask.FromResult(CreateContentItemSchema(typeList));
+        return ValueTask.FromResult(CreateContentItemSchema(typeList, restrictToKnownTypes: false));
     }
 
     /// <inheritdoc />
@@ -76,6 +77,7 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
             partSchemaDefinitions,
             fieldSchemaDefinitions,
             new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            restrictToKnownTypes: false,
             cancellationToken);
     }
 
@@ -85,10 +87,11 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
         ILookup<string, IContentPartSchemaDefinition> partSchemaDefinitions,
         ILookup<string, IContentFieldSchemaDefinition> fieldSchemaDefinitions,
         HashSet<string> activeContentTypes,
+        bool restrictToKnownTypes,
         CancellationToken cancellationToken)
     {
         var contentTypes = selectedDefinitions.Select(definition => definition.Name).ToArray();
-        var schema = CreateContentItemSchema(contentTypes);
+        var schema = CreateContentItemSchema(contentTypes, restrictToKnownTypes);
 
         if (selectedDefinitions.Length == 0)
         {
@@ -350,7 +353,7 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
 
             if (nestedDefinitions.Length == 0)
             {
-                itemSchema = CreateContentItemSchema(allowedNames);
+                itemSchema = CreateContentItemSchema(allowedNames, restrictToKnownTypes: true);
             }
             else
             {
@@ -360,11 +363,12 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
                     partSchemaDefinitions,
                     fieldSchemaDefinitions,
                     activeContentTypes,
+                    restrictToKnownTypes: true,
                     cancellationToken);
 
                 if (allowedNames.Length > nestedDefinitions.Length)
                 {
-                    itemSchema = CreateContentItemSchema(allowedNames).AllOf(itemSchema);
+                    itemSchema = CreateContentItemSchema(allowedNames, restrictToKnownTypes: true).AllOf(itemSchema);
                 }
             }
         }
@@ -382,9 +386,9 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
             .OrderBy(definition => definition.Name, StringComparer.Ordinal)
             .ToArray() ?? [];
 
-    private static JsonSchemaBuilder CreateContentItemSchema(IReadOnlyList<string> contentTypes)
+    private static JsonSchemaBuilder CreateContentItemSchema(IReadOnlyList<string> contentTypes, bool restrictToKnownTypes)
     {
-        var contentTypeSchema = CreateContentTypeValueSchema(contentTypes);
+        var contentTypeSchema = CreateContentTypeValueSchema(contentTypes, restrictToKnownTypes);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -432,7 +436,7 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
             .OrderBy(type => type, StringComparer.Ordinal)
             .ToArray() ?? [];
 
-    private static JsonSchemaBuilder CreateContentTypeValueSchema(IReadOnlyList<string> contentTypes)
+    private static JsonSchemaBuilder CreateContentTypeValueSchema(IReadOnlyList<string> contentTypes, bool restrictToKnownTypes)
     {
         var schema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
@@ -440,7 +444,9 @@ public sealed class ContentItemSchemaService : IContentItemSchemaService
 
         if (contentTypes.Count > 0)
         {
-            schema = schema.Enum(contentTypes);
+            schema = restrictToKnownTypes
+                ? schema.Enum(contentTypes)
+                : schema.WithSuggestions(contentTypes);
         }
 
         return schema;

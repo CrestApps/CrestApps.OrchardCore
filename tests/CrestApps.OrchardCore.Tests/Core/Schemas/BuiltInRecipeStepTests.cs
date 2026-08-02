@@ -16,7 +16,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -69,6 +71,26 @@ public sealed class BuiltInRecipeStepTests
             .ReturnsAsync((Permission)null);
 
         return permissionService.Object;
+    }
+
+    private static IRoleService CreateRoleService()
+    {
+        var roleNames = new[] { "Administrator", "Anonymous", "Authenticated" };
+        var roles = roleNames
+            .Select(name =>
+            {
+                var role = new Mock<IRole>();
+                role.SetupGet(instance => instance.RoleName).Returns(name);
+
+                return role.Object;
+            })
+            .ToArray();
+
+        var roleService = new Mock<IRoleService>();
+        roleService.Setup(service => service.GetRolesAsync())
+            .ReturnsAsync(roles);
+
+        return roleService.Object;
     }
 
     private static IOptions<AIDataSourceSourceOptions> CreateAIDataSourceSourceOptions()
@@ -209,7 +231,7 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(RolesRecipeStep))
         {
-            return new RolesRecipeStep(CreatePermissionService());
+            return new RolesRecipeStep(CreatePermissionService(), CreateRoleService());
         }
 
         if (stepType == typeof(AIDataSourceRecipeStep))
@@ -626,7 +648,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task RolesRecipeStep_SchemaContainsPermissionBehavior()
     {
-        var step = new RolesRecipeStep(CreatePermissionService());
+        var step = new RolesRecipeStep(CreatePermissionService(), CreateRoleService());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"PermissionBehavior\"", json);
         Assert.Contains("\"Add\"", json);
@@ -639,7 +661,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task RolesRecipeStep_SchemaValidatesPermissionItems()
     {
-        var step = new RolesRecipeStep(CreatePermissionService());
+        var step = new RolesRecipeStep(CreatePermissionService(), CreateRoleService());
         var schema = await step.GetSchemaAsync(TestContext.Current.CancellationToken);
 
         using var document = JsonDocument.Parse("""
@@ -916,7 +938,7 @@ public sealed class BuiltInRecipeStepTests
     }
 
     [Fact]
-    public async Task ContentItemSchemaService_GetSchemaAsync_ContentTypeEnumContainsAllKnownTypes()
+    public async Task ContentItemSchemaService_GetSchemaAsync_ContentTypeSuggestsAllKnownTypes()
     {
         // Arrange
         var service = new ContentItemSchemaService(
@@ -930,7 +952,8 @@ public sealed class BuiltInRecipeStepTests
         var schema = await service.GetSchemaAsync(TestContext.Current.CancellationToken);
         var json = JsonSerializer.Serialize(schema.Build());
 
-        // Assert — ContentType enum should list all three content types.
+        // Assert — ContentType examples should suggest all three content types.
+        Assert.Contains("\"examples\"", json);
         Assert.Contains("\"Article\"", json);
         Assert.Contains("\"BlogPost\"", json);
         Assert.Contains("\"Page\"", json);
@@ -944,14 +967,14 @@ public sealed class BuiltInRecipeStepTests
         Assert.True(schema.Evaluate(validBlogPost.RootElement).IsValid);
         Assert.True(schema.Evaluate(validPage.RootElement).IsValid);
 
-        // Invalid: unknown content type.
-        using var invalidType = JsonDocument.Parse("""{ "ContentType": "UnknownType" }""");
+        // Also valid: an unknown/extended content type is allowed (suggestions do not restrict).
+        using var unknownType = JsonDocument.Parse("""{ "ContentType": "UnknownType" }""");
 
-        Assert.False(schema.Evaluate(invalidType.RootElement).IsValid);
+        Assert.True(schema.Evaluate(unknownType.RootElement).IsValid);
     }
 
     [Fact]
-    public async Task ContentItemSchemaService_GetSchemaByContentType_ContentTypeEnumContainsOnlyRequestedType()
+    public async Task ContentItemSchemaService_GetSchemaByContentType_SuggestsRequestedTypeButAllowsOthers()
     {
         // Arrange
         var service = new ContentItemSchemaService(
@@ -964,14 +987,14 @@ public sealed class BuiltInRecipeStepTests
         // Act
         var schema = await service.GetSchemaAsync("Article", TestContext.Current.CancellationToken);
 
-        // Assert — only "Article" is a valid content type.
+        // Assert — the requested type is valid, and other types are still allowed (suggestions do not restrict).
         using var validArticle = JsonDocument.Parse("""{ "ContentType": "Article" }""");
-        using var invalidBlogPost = JsonDocument.Parse("""{ "ContentType": "BlogPost" }""");
-        using var invalidPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
+        using var otherBlogPost = JsonDocument.Parse("""{ "ContentType": "BlogPost" }""");
+        using var otherPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
 
         Assert.True(schema.Evaluate(validArticle.RootElement).IsValid);
-        Assert.False(schema.Evaluate(invalidBlogPost.RootElement).IsValid);
-        Assert.False(schema.Evaluate(invalidPage.RootElement).IsValid);
+        Assert.True(schema.Evaluate(otherBlogPost.RootElement).IsValid);
+        Assert.True(schema.Evaluate(otherPage.RootElement).IsValid);
     }
 
     [Fact]
@@ -991,7 +1014,7 @@ public sealed class BuiltInRecipeStepTests
     }
 
     [Fact]
-    public async Task ContentItemSchemaService_GetGenericSchemaAsync_ConstrainsContentTypeEnum()
+    public async Task ContentItemSchemaService_GetGenericSchemaAsync_SuggestsContentTypesButAllowsOthers()
     {
         // Arrange
         var service = new ContentItemSchemaService(
@@ -1001,14 +1024,14 @@ public sealed class BuiltInRecipeStepTests
         // Act
         var schema = await service.GetGenericSchemaAsync(["Article", "Page"], TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert — suggested types are valid, and other types are still allowed (suggestions do not restrict).
         using var validArticle = JsonDocument.Parse("""{ "ContentType": "Article" }""");
         using var validPage = JsonDocument.Parse("""{ "ContentType": "Page" }""");
-        using var invalidType = JsonDocument.Parse("""{ "ContentType": "Widget" }""");
+        using var otherType = JsonDocument.Parse("""{ "ContentType": "Widget" }""");
 
         Assert.True(schema.Evaluate(validArticle.RootElement).IsValid);
         Assert.True(schema.Evaluate(validPage.RootElement).IsValid);
-        Assert.False(schema.Evaluate(invalidType.RootElement).IsValid);
+        Assert.True(schema.Evaluate(otherType.RootElement).IsValid);
     }
 
     [Fact]

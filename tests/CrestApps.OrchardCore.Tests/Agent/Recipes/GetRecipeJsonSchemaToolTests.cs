@@ -52,10 +52,10 @@ public sealed class GetRecipeJsonSchemaToolTests
         var text = Assert.IsType<string>(result);
         using var document = JsonDocument.Parse(text);
         var stepItems = document.RootElement.GetProperty("properties").GetProperty("steps").GetProperty("items");
-        var stepNameEnum = stepItems.GetProperty("properties").GetProperty("name").GetProperty("enum");
+        var stepNameExamples = stepItems.GetProperty("properties").GetProperty("name").GetProperty("examples");
         var allOf = stepItems.GetProperty("allOf");
 
-        Assert.Equal(["content", "feature"], stepNameEnum.EnumerateArray().Select(element => element.GetString()).Order().ToArray());
+        Assert.Equal(["content", "feature"], stepNameExamples.EnumerateArray().Select(element => element.GetString()).Order().ToArray());
         Assert.Equal(2, allOf.GetArrayLength());
         Assert.Contains(allOf.EnumerateArray(), element => element.GetProperty("then").GetProperty("properties").TryGetProperty("enable", out _));
         Assert.Contains(allOf.EnumerateArray(), element => element.GetProperty("then").GetProperty("properties").TryGetProperty("data", out _));
@@ -102,12 +102,12 @@ public sealed class GetRecipeJsonSchemaToolTests
         var text = Assert.IsType<string>(result);
         using var document = JsonDocument.Parse(text);
         var stepItems = document.RootElement.GetProperty("properties").GetProperty("steps").GetProperty("items");
-        var stepNameEnum = stepItems.GetProperty("properties").GetProperty("name").GetProperty("enum");
+        var stepNameExamples = stepItems.GetProperty("properties").GetProperty("name").GetProperty("examples");
         var allOf = stepItems.GetProperty("allOf");
         var allOfEntries = allOf.EnumerateArray().ToArray();
         var selectedStep = allOfEntries[0].GetProperty("then");
 
-        Assert.Equal(["content", "feature"], stepNameEnum.EnumerateArray().Select(element => element.GetString()).Order().ToArray());
+        Assert.Equal(["content", "feature"], stepNameExamples.EnumerateArray().Select(element => element.GetString()).Order().ToArray());
         Assert.Single(allOfEntries);
         Assert.Equal("feature", selectedStep.GetProperty("properties").GetProperty("name").GetProperty("const").GetString());
         Assert.True(selectedStep.GetProperty("properties").TryGetProperty("enable", out _));
