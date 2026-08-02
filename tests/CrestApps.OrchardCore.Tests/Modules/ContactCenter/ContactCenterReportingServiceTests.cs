@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -86,7 +86,7 @@ public sealed class ContactCenterReportingServiceTests
         };
 
         // Act
-        var metrics = EnterpriseInteractionReportProvider.Aggregate(interactions);
+        var metrics = InteractionMetricsCalculator.Aggregate(interactions);
 
         // Assert
         Assert.Equal(4, metrics.Total);
@@ -118,7 +118,7 @@ public sealed class ContactCenterReportingServiceTests
         };
 
         // Act
-        var metrics = EnterpriseInteractionReportProvider.CalculateQueueServiceLevel(interactions, thresholdSeconds: 20);
+        var metrics = InteractionMetricsCalculator.CalculateQueueServiceLevel(interactions, thresholdSeconds: 20);
 
         // Assert
         Assert.True(metrics.HasServiceLevel);
@@ -160,7 +160,7 @@ public sealed class ContactCenterReportingServiceTests
             },
         };
 
-        var metrics = EnterpriseInteractionReportProvider.CalculateCombinedQueueServiceLevel(
+        var metrics = InteractionMetricsCalculator.CalculateCombinedQueueServiceLevel(
             [thresholdQueueInteraction, thresholdlessQueueInteraction],
             queues);
 

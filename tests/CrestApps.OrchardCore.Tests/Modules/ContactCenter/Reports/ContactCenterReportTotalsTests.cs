@@ -56,7 +56,7 @@ public sealed class ContactCenterReportTotalsTests
         // Act
         var total = EnterpriseInteractionReportProvider.CreatePerformanceRow(
             "Grand total",
-            EnterpriseInteractionReportProvider.Aggregate(interactions),
+            InteractionMetricsCalculator.Aggregate(interactions),
             ReportRowKind.GrandTotal);
 
         // Assert
