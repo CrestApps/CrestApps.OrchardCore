@@ -2,11 +2,9 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Core.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -16,7 +14,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using QueryContext = CrestApps.Core.Models.QueryContext;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
@@ -25,19 +23,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 [Admin]
 [Feature(ContactCenterConstants.Feature.QueuesAdmin)]
-public sealed class QueueGroupsController : Controller
+public sealed class QueueGroupsController : ContactCenterCatalogController<ActivityQueueGroup>
 {
-    private const string _optionsSearch = "Options.Search";
-
-    private readonly IActivityQueueGroupManager _manager;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<ActivityQueueGroup> _displayManager;
-    private readonly INotifier _notifier;
-
-    internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueGroupsController"/> class.
     /// </summary>
@@ -56,15 +43,33 @@ public sealed class QueueGroupsController : Controller
         INotifier notifier,
         IHtmlLocalizer<QueueGroupsController> htmlLocalizer,
         IStringLocalizer<QueueGroupsController> stringLocalizer)
+        : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
-        _manager = manager;
-        _authorizationService = authorizationService;
-        _updateModelAccessor = updateModelAccessor;
-        _displayManager = displayManager;
-        _notifier = notifier;
-        H = htmlLocalizer;
-        S = stringLocalizer;
     }
+
+    /// <inheritdoc/>
+    protected override Permission ManagePermission
+        => ContactCenterPermissions.ManageQueueGroups;
+
+    /// <inheritdoc/>
+    protected override LocalizedString CreateDisplayName
+        => S["Queue group"];
+
+    /// <inheritdoc/>
+    protected override LocalizedString NewDisplayName
+        => S["New queue group"];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString CreatedNotification
+        => H["A new queue group has been created successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString UpdatedNotification
+        => H["The queue group has been updated successfully."];
+
+    /// <inheritdoc/>
+    protected override LocalizedHtmlString DeletedNotification
+        => H["The queue group has been deleted successfully."];
 
     /// <summary>
     /// Lists the queue groups.
@@ -73,53 +78,17 @@ public sealed class QueueGroupsController : Controller
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
-    /// <returns>The queue-group list view.</returns>
+    /// <returns>The queue groups list view.</returns>
     [Admin("contact-center/queue-groups", "ContactCenterQueueGroupsIndex")]
-    public async Task<IActionResult> Index(
+    public Task<IActionResult> Index(
         CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Name = options.Search,
-        });
-
-        var routeData = new RouteData();
-
-        if (!string.IsNullOrEmpty(options.Search))
-        {
-            routeData.Values.TryAdd(_optionsSearch, options.Search);
-        }
-
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ActivityQueueGroup>>
-        {
-            Models = [],
-            Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-        };
-
-        foreach (var model in result.Entries)
-        {
-            viewModel.Models.Add(new CatalogEntryViewModel<ActivityQueueGroup>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
-
-        return View(viewModel);
-    }
+        => IndexAsync(options, pagerParameters, pagerOptions, shapeFactory);
 
     /// <summary>
-    /// Applies the queue-group list filter.
+    /// Applies the queue groups list filter.
     /// </summary>
     /// <param name="model">The submitted list model.</param>
     /// <returns>A redirect to the filtered list.</returns>
@@ -127,40 +96,16 @@ public sealed class QueueGroupsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("contact-center/queue-groups", "ContactCenterQueueGroupsIndex")]
-    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        return RedirectToAction(nameof(Index), new RouteValueDictionary
-        {
-            { _optionsSearch, model.Options?.Search },
-        });
-    }
+    public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
+        => IndexFilterPostAsync(model);
 
     /// <summary>
-    /// Displays the queue-group create form.
+    /// Displays the queue group create form.
     /// </summary>
     /// <returns>The create view.</returns>
     [Admin("contact-center/queue-groups/create", "ContactCenterQueueGroupsCreate")]
-    public async Task<IActionResult> Create()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["Queue group"],
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Create()
+        => CreateAsync();
 
     /// <summary>
     /// Persists a new queue group.
@@ -169,125 +114,36 @@ public sealed class QueueGroupsController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("contact-center/queue-groups/create", "ContactCenterQueueGroupsCreate")]
-    public async Task<IActionResult> CreatePost()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.NewAsync();
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["New queue group"],
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ActivityQueueGroup));
-
-        if (isValid && ModelState.IsValid)
-        {
-            await _manager.CreateAsync(model);
-            await _notifier.SuccessAsync(H["A new queue group has been created successfully."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> CreatePost()
+        => CreatePostAsync();
 
     /// <summary>
-    /// Displays the queue-group edit form.
+    /// Displays the queue group edit form.
     /// </summary>
-    /// <param name="id">The queue-group identifier.</param>
+    /// <param name="id">The queue group identifier.</param>
     /// <returns>The edit view.</returns>
     [Admin("contact-center/queue-groups/edit/{id}", "ContactCenterQueueGroupsEdit")]
-    public async Task<IActionResult> Edit(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model is null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> Edit(string id)
+        => EditAsync(id);
 
     /// <summary>
     /// Persists changes to a queue group.
     /// </summary>
-    /// <param name="id">The queue-group identifier.</param>
+    /// <param name="id">The queue group identifier.</param>
     /// <returns>A redirect to the list or the form when invalid.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("contact-center/queue-groups/edit/{id}", "ContactCenterQueueGroupsEdit")]
-    public async Task<IActionResult> EditPost(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var model = await _manager.FindByIdAsync(id);
-
-        if (model is null)
-        {
-            return NotFound();
-        }
-
-        var viewModel = new EditCatalogEntryViewModel
-        {
-            DisplayName = model.Name,
-            Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
-        };
-
-        var isValid = await CatalogEntryValidation.ValidateAsync(_manager, model, _updateModelAccessor.ModelUpdater, nameof(ActivityQueueGroup));
-
-        if (isValid && ModelState.IsValid)
-        {
-            await _manager.UpdateAsync(model);
-            await _notifier.SuccessAsync(H["The queue group has been updated successfully."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(viewModel);
-    }
+    public Task<IActionResult> EditPost(string id)
+        => EditPostAsync(id);
 
     /// <summary>
     /// Deletes a queue group.
     /// </summary>
-    /// <param name="id">The queue-group identifier.</param>
+    /// <param name="id">The queue group identifier.</param>
     /// <returns>A redirect to the list.</returns>
     [HttpPost]
     [Admin("contact-center/queue-groups/delete/{id}", "ContactCenterQueueGroupsDelete")]
-    public async Task<IActionResult> Delete(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.ManageQueueGroups))
-        {
-            return Forbid();
-        }
-
-        var group = await _manager.FindByIdAsync(id);
-
-        if (group is not null)
-        {
-            await _manager.DeleteAsync(group);
-            await _notifier.SuccessAsync(H["The queue group has been deleted successfully."]);
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
+    public Task<IActionResult> Delete(string id)
+        => DeleteAsync(id);
 }

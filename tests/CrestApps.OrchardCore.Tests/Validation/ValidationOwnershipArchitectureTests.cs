@@ -67,6 +67,14 @@ public class ValidationOwnershipArchitectureTests
         @"IDisplayManager<\s*(?<entity>\w+)\s*>",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex _controllerBaseRegex = new(
+        @"class\s+\w+\s*:\s*(?<base>\w+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex _typeNameRegex = new(
+        @"(?:class|record)\s+(?<name>\w+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     [Fact]
     public void ConfigurationCatalogEntries_AreDiscovered()
     {
@@ -184,11 +192,29 @@ public class ValidationOwnershipArchitectureTests
         var violations = new List<string>();
         var inspected = 0;
 
-        // Act
-        foreach (var controller in EnumerateSourceFiles("Controllers"))
-        {
-            var text = File.ReadAllText(controller.FullPath);
+        var controllers = EnumerateSourceFiles("Controllers")
+            .Select(controller => (controller, Text: File.ReadAllText(controller.FullPath)))
+            .ToList();
 
+        // A thin admin controller can forward its writes to a shared base controller, so the validation call may live
+        // in the base file rather than the derived one. This lookup lets the gate follow that inheritance and inspect
+        // the base's members on the derived controller's behalf, instead of passing vacuously because the derived file
+        // now holds only routing shells.
+        var textByTypeName = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (_, text) in controllers)
+        {
+            var typeMatch = _typeNameRegex.Match(text);
+
+            if (typeMatch.Success)
+            {
+                textByTypeName[typeMatch.Groups["name"].Value] = text;
+            }
+        }
+
+        // Act
+        foreach (var (controller, text) in controllers)
+        {
             var editsAConfigurationEntry = _displayManagerRegex
                 .Matches(text)
                 .Any(match => entities.Contains(match.Groups["entity"].Value));
@@ -200,9 +226,18 @@ public class ValidationOwnershipArchitectureTests
 
             inspected++;
 
+            var members = EnumerateMembers(text);
+
+            var baseMatch = _controllerBaseRegex.Match(text);
+
+            if (baseMatch.Success && textByTypeName.TryGetValue(baseMatch.Groups["base"].Value, out var baseText))
+            {
+                members = members.Concat(EnumerateMembers(baseText)).ToList();
+            }
+
             // The unit is the action, not the file: one action can create or update depending on what it was given,
             // and both branches are covered by the single validation that precedes them.
-            foreach (var (name, body) in EnumerateMembers(text))
+            foreach (var (name, body) in members)
             {
                 var writesThroughAManager = _managerWriteRegex.IsMatch(body);
                 var updatesAnEditor = body.Contains("UpdateEditorAsync(", StringComparison.Ordinal);
