@@ -23,4 +23,20 @@ public sealed class TelephonyCoordinationOptions
     /// another node has just written is not treated as orphaned before that write is visible.
     /// </summary>
     public TimeSpan NewInteractionGracePeriod { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// Gets or sets how long a caller waits to acquire the per-user OAuth token-refresh lock before giving up.
+    /// While one request refreshes a user's tokens, its peers wait here for that refresh to land rather than
+    /// starting a competing refresh that would rotate the replacement token out from under it.
+    /// </summary>
+    public TimeSpan TokenRefreshLockTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Gets or sets how long the per-user OAuth token-refresh lock is held before it expires on its own, which
+    /// bounds how long a crashed holder blocks its peers. It must comfortably exceed a full refresh critical
+    /// section: a provider token-exchange round trip (a provider HTTP client may itself allow up to 30 seconds)
+    /// plus settings resolution, token protection, and the durable user commit. The lease does not auto-renew,
+    /// so if it expires mid-refresh a peer may acquire it and refresh concurrently.
+    /// </summary>
+    public TimeSpan TokenRefreshLockExpiration { get; set; } = TimeSpan.FromSeconds(60);
 }

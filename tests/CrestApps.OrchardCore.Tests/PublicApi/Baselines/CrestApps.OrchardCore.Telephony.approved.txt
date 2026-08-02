@@ -134,6 +134,8 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.TimeSpan InteractionLockExpiration { get; set; }
         public System.TimeSpan InteractionLockTimeout { get; set; }
         public System.TimeSpan NewInteractionGracePeriod { get; set; }
+        public System.TimeSpan TokenRefreshLockExpiration { get; set; }
+        public System.TimeSpan TokenRefreshLockTimeout { get; set; }
     }
     public sealed class TelephonyUserConnections
     {
@@ -163,7 +165,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class DefaultTelephonyAuthenticationService : CrestApps.OrchardCore.Telephony.ITelephonyAuthenticationService
     {
-        public DefaultTelephonyAuthenticationService(OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver providerResolver, CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore tokenStore, OrchardCore.Modules.IClock clock) { }
+        public DefaultTelephonyAuthenticationService(OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver providerResolver, CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore tokenStore, CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor userAccessor, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.Models.TelephonyCoordinationOptions> coordinationOptions) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task DisconnectAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyAuthorizationRequest> GetAuthorizationUrlAsync(string redirectUri, string state, System.Threading.CancellationToken cancellationToken = default) { }
@@ -217,8 +219,10 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class DefaultTelephonyUserAccessor : CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor
     {
-        public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor> logger) { }
+        public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor> logger) { }
         public System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync() { }
+        public System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync() { }
+        public System.Threading.Tasks.Task SaveChangesAsync() { }
         public System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user) { }
     }
     public sealed class DefaultTelephonyUserTokenStore : CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore
@@ -231,6 +235,8 @@ namespace CrestApps.OrchardCore.Telephony.Services
     public interface ITelephonyUserAccessor
     {
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync();
+        System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync();
+        System.Threading.Tasks.Task SaveChangesAsync();
         System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user);
     }
     public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge

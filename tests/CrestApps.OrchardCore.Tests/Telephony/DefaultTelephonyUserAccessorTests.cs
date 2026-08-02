@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Users;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -23,6 +24,7 @@ public sealed class DefaultTelephonyUserAccessorTests
         var accessor = new DefaultTelephonyUserAccessor(
             userManager.Object,
             new HttpContextAccessor(),
+            new Mock<ISession>().Object,
             NullLogger<DefaultTelephonyUserAccessor>.Instance);
 
         // Act & Assert
@@ -42,6 +44,7 @@ public sealed class DefaultTelephonyUserAccessorTests
         var accessor = new DefaultTelephonyUserAccessor(
             userManager.Object,
             new HttpContextAccessor(),
+            new Mock<ISession>().Object,
             NullLogger<DefaultTelephonyUserAccessor>.Instance);
 
         // Act

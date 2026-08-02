@@ -74,6 +74,12 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.NewInteractionGracePeriod > TimeSpan.Zero,
                 "'CrestApps_Telephony:Coordination:NewInteractionGracePeriod' must be greater than zero, otherwise reconciliation can terminate an interaction another node has only just written.")
+            .Validate(
+                options => options.TokenRefreshLockTimeout > TimeSpan.Zero,
+                "'CrestApps_Telephony:Coordination:TokenRefreshLockTimeout' must be greater than zero.")
+            .Validate(
+                options => options.TokenRefreshLockExpiration > options.TokenRefreshLockTimeout,
+                "'CrestApps_Telephony:Coordination:TokenRefreshLockExpiration' must exceed 'TokenRefreshLockTimeout', otherwise the refresh lease expires while a peer is still waiting for it and two refreshes run at once.")
             .ValidateOnStart();
 
         services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();

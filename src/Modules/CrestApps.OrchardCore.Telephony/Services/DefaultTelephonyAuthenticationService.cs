@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -13,7 +15,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ISiteService _siteService;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly ITelephonyUserTokenStore _tokenStore;
+    private readonly ITelephonyUserAccessor _userAccessor;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly TimeSpan _tokenRefreshLockTimeout;
+    private readonly TimeSpan _tokenRefreshLockExpiration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyAuthenticationService"/> class.
@@ -21,17 +27,27 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="siteService">The site service used to read the default provider name.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
     /// <param name="tokenStore">The user token store.</param>
+    /// <param name="userAccessor">The accessor used to identify the current user when serializing token refreshes.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize concurrent token refreshes per user and provider.</param>
     /// <param name="clock">The clock used to evaluate token expiration.</param>
+    /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
     public DefaultTelephonyAuthenticationService(
         ISiteService siteService,
         ITelephonyProviderResolver providerResolver,
         ITelephonyUserTokenStore tokenStore,
-        IClock clock)
+        ITelephonyUserAccessor userAccessor,
+        IDistributedLock distributedLock,
+        IClock clock,
+        IOptions<TelephonyCoordinationOptions> coordinationOptions)
     {
         _siteService = siteService;
         _providerResolver = providerResolver;
         _tokenStore = tokenStore;
+        _userAccessor = userAccessor;
+        _distributedLock = distributedLock;
         _clock = clock;
+        _tokenRefreshLockTimeout = coordinationOptions.Value.TokenRefreshLockTimeout;
+        _tokenRefreshLockExpiration = coordinationOptions.Value.TokenRefreshLockExpiration;
     }
 
     /// <inheritdoc/>
@@ -233,7 +249,59 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return null;
         }
 
-        var refreshed = await authenticationProvider.RefreshTokensAsync(tokens, cancellationToken);
+        return await RefreshTokensUnderLockAsync(providerName, authenticationProvider, tokens, cancellationToken);
+    }
+
+    private async Task<TelephonyUserTokens> RefreshTokensUnderLockAsync(
+        string providerName,
+        ITelephonyAuthenticationProvider authenticationProvider,
+        TelephonyUserTokens expiredTokens,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userAccessor.GetCurrentUserAsync();
+        var lockKey = $"Telephony:TokenRefresh:{providerName}:{user?.UserName ?? providerName}";
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            lockKey,
+            _tokenRefreshLockTimeout,
+            _tokenRefreshLockExpiration);
+
+        if (!locked)
+        {
+            // A peer holds the refresh lock and did not release it within the wait window. Reload the user from
+            // the database (bypassing this scope's cached copy) in case the peer just committed a refresh;
+            // otherwise give up rather than starting a competing refresh that would rotate the peer's
+            // replacement refresh token out from under it.
+            await _userAccessor.ReloadCurrentUserAsync();
+            var contended = await _tokenStore.GetAsync(providerName, cancellationToken);
+
+            return IsUsable(contended) ? contended : null;
+        }
+
+        await using var acquiredLock = locker;
+
+        // Reload the user from the database before the re-read so a peer's committed refresh is observed rather
+        // than the stale tokens this request loaded before waiting for the lock. Without this the identity map
+        // would keep serving the pre-refresh copy and the double-check below could rotate the token again.
+        await _userAccessor.ReloadCurrentUserAsync();
+
+        var current = await _tokenStore.GetAsync(providerName, cancellationToken);
+
+        if (IsUsable(current))
+        {
+            return current;
+        }
+
+        // Refresh from the newest stored refresh token when one exists, falling back to the tokens the caller
+        // already read, so a concurrent partial update is never ignored.
+        var source = current is not null && !string.IsNullOrEmpty(current.RefreshToken) ? current : expiredTokens;
+
+        if (string.IsNullOrEmpty(source.RefreshToken))
+        {
+            return null;
+        }
+
+        var refreshed = await authenticationProvider.RefreshTokensAsync(source, cancellationToken);
 
         if (refreshed is null || string.IsNullOrEmpty(refreshed.AccessToken))
         {
@@ -244,8 +312,16 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         await _tokenStore.StoreAsync(providerName, refreshed, cancellationToken);
 
+        // Commit the refreshed tokens durably before releasing the lock so a waiting peer that reloads the user
+        // observes them and reuses them instead of rotating the refresh token a second time. Without this the
+        // write would only commit at the end of the request scope, after the lock has already been released.
+        await _userAccessor.SaveChangesAsync();
+
         return refreshed;
     }
+
+    private bool IsUsable(TelephonyUserTokens tokens)
+        => tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken) && !IsExpired(tokens);
 
     private bool IsExpired(TelephonyUserTokens tokens)
     {

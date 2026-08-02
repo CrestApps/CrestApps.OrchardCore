@@ -495,13 +495,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-031 — Concurrent OAuth refreshes are not serialized
 
-- **Priority:** High · **Status:** Not Started · **Category:** Correctness/security · **Effort:** M · **Risk:** Medium · **Dependencies:** Distributed lock
+- **Priority:** High · **Status:** Completed · **Category:** Correctness/security · **Effort:** M · **Risk:** Medium · **Dependencies:** Distributed lock
 
 **Problem.** `DefaultTelephonyAuthenticationService.cs:183-223` lets multiple requests read the same expiring token, refresh concurrently, and overwrite stored credentials with no lock or compare-and-swap.
 
 **Why it matters.** Providers using refresh-token rotation invalidate the old token on first use, so concurrent refreshes fail intermittently or lose the only valid replacement token.
 
 **Recommended solution.** Distributed tenant/user/provider lock; re-read inside the lock; refresh once; persist with concurrency checking.
+
+**Resolution.** Added `TokenRefreshLockTimeout` (10s) / `TokenRefreshLockExpiration` (60s) to `TelephonyCoordinationOptions`, validated at startup so the lease must exceed the wait window, and a per-user+provider distributed lock (`Telephony:TokenRefresh:{provider}:{user}`) using the same `IDistributedLock` idiom as `TelephonyInteractionSynchronizationService` (the tenant is already an implicit lock scope). Inside the lock the service now reloads the current user through `ITelephonyUserAccessor.ReloadCurrentUserAsync` — which evicts the user from the YesSQL identity map (`ISession.Detach`) so the re-read observes a peer's committed refresh rather than this request's stale copy — and, after refreshing, commits durably via `SaveChangesAsync` before releasing the lock so a waiting peer actually sees the new tokens instead of rotating a second time. A caller that cannot acquire the lock within the wait window reloads and reuses valid stored tokens rather than starting a competing refresh. Covered by a hardened concurrency test (a gate parks the first refresh inside the critical section while the second provably contends) proving two racing calls trigger exactly one provider refresh. Independent gpt-5.6-sol review: APPROVE.
 
 ---
 

@@ -14,4 +14,16 @@ internal sealed class TelephonyUserPersistenceException : Exception
         : base(message)
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TelephonyUserPersistenceException"/> class.
+    /// </summary>
+    /// <param name="message">A redacted message describing why persistence failed.</param>
+    /// <param name="innerException">The underlying persistence failure.</param>
+    public TelephonyUserPersistenceException(
+        string message,
+        Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
