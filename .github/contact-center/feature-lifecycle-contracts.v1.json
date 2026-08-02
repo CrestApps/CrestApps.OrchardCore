@@ -115,11 +115,11 @@
     },
     {
       "featureId": "CrestApps.OrchardCore.ContactCenter.Voice",
-      "component": "ContactCenterVoiceTenantEvents",
+      "component": "ContactCenterVoiceLifecycleParticipant",
       "kind": "lifecycle-participant",
       "quiesce": "The pre-disable coordinator invokes the Voice participant and atomically rejects new tenant-shell Voice work before the feature descriptor changes.",
       "drain": "The participant waits for admitted Voice work up to the validated tenant timeout and fails feature disable closed on timeout.",
-      "reEnable": "A fresh shell reopens admission and schedules provider-truth reconciliation in a normal scope.",
+      "reEnable": "Tenant activation reopens Voice work admission through the lifecycle activation handler; the scheduled reconciliation background task performs provider-truth reconciliation under the work-admission gate, so activation stays free of provider and database work.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "implemented-r3"
     },

@@ -43,7 +43,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             "ProviderCallStateReconciliationBackgroundTask",
             "ProviderCommandRecoveryBackgroundTask",
             "ReservationExpiryBackgroundTask",
-            "ContactCenterVoiceTenantEvents",
+            "ContactCenterVoiceLifecycleParticipant",
             "ContactCenterHub",
             "AsteriskContactCenterVoiceProvider",
             "AsteriskContactCenterVoiceMediaProvider",
@@ -411,6 +411,111 @@ public sealed class ContactCenterFeatureLifecycleTests
     }
 
     [Fact]
+    public async Task ReconcileAsync_AllParticipants_ReconcilesEveryRegisteredParticipant()
+    {
+        // Arrange
+        var operations = new List<string>();
+        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
+        [
+            new TestFeatureLifecycleParticipant("feature-a", "first", operations),
+            new TestFeatureLifecycleParticipant("feature-b", "second", operations),
+        ],
+            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
+
+        // Act
+        await coordinator.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+        [
+            "reconcile:first",
+            "reconcile:second",
+        ],
+            operations);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_AllParticipants_ParticipantFails_ContinuesReconcilingPeers()
+    {
+        // Arrange
+        var operations = new List<string>();
+        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
+        [
+            new ThrowingFeatureLifecycleParticipant("feature-a", "failing", operations, throwOnReconcile: true),
+            new TestFeatureLifecycleParticipant("feature-b", "healthy", operations),
+        ],
+            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
+
+        // Act
+        await coordinator.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+        [
+            "reconcile:failing",
+            "reconcile:healthy",
+        ],
+            operations);
+    }
+
+    [Fact]
+    public async Task ActivationHandler_ActivatedAsync_SchedulesReconciliationAfterCommit()
+    {
+        // Arrange
+        var operations = new List<string>();
+        var services = new ServiceCollection()
+            .AddSingleton(new ContactCenterFeatureLifecycleCoordinator(
+            [
+                new TestFeatureLifecycleParticipant("feature-a", "first", operations),
+                new TestFeatureLifecycleParticipant("feature-b", "second", operations),
+            ],
+                NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance))
+            .BuildServiceProvider();
+        var scopeExecutor = new TestContactCenterScopeExecutor(services)
+        {
+            ScheduleAfterCommitResult = true,
+        };
+        var handler = new ContactCenterFeatureLifecycleActivationHandler(scopeExecutor);
+
+        // Act
+        await handler.ActivatedAsync();
+
+        // Assert
+        Assert.NotNull(scopeExecutor.ScheduledOperation);
+        Assert.Empty(operations);
+
+        // Act
+        await scopeExecutor.ScheduledOperation();
+
+        // Assert
+        Assert.Equal(
+        [
+            "reconcile:first",
+            "reconcile:second",
+        ],
+            operations);
+    }
+
+    [Fact]
+    public void Startup_RegistersActivationLifecycleHook()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var startup = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Modules",
+            "CrestApps.OrchardCore.ContactCenter",
+            "Startup.cs"));
+
+        // Act & Assert
+        Assert.Contains(
+            ".AddScoped<IModularTenantEvents, ContactCenterFeatureLifecycleActivationHandler>()",
+            startup,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DisablingAsync_FeatureEvent_QuiescesMatchingFeature()
     {
         // Arrange
@@ -445,11 +550,11 @@ public sealed class ContactCenterFeatureLifecycleTests
         // Arrange
         var synchronizationService = new Mock<IProviderCallStateSynchronizationService>();
         var workManager = new TestContactCenterFeatureWorkManager();
-        var tenantEvents = new ContactCenterVoiceTenantEvents(
+        var tenantEvents = new ContactCenterVoiceLifecycleParticipant(
             synchronizationService.Object,
             workManager,
             Options.Create(new ContactCenterFeatureLifecycleOptions()),
-            NullLogger<ContactCenterVoiceTenantEvents>.Instance);
+            NullLogger<ContactCenterVoiceLifecycleParticipant>.Instance);
         var services = new ServiceCollection()
             .AddLogging()
             .AddSingleton<IContactCenterFeatureWorkManager>(workManager)

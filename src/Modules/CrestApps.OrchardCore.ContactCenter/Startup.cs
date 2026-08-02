@@ -177,6 +177,7 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
             .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
+            .AddScoped<IModularTenantEvents, ContactCenterFeatureLifecycleActivationHandler>()
             .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
@@ -1027,9 +1028,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
-            .AddScoped<ContactCenterVoiceTenantEvents>()
+            .AddScoped<ContactCenterVoiceLifecycleParticipant>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
-                serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>());
+                serviceProvider.GetRequiredService<ContactCenterVoiceLifecycleParticipant>());
 
         services
             .AddIndexProvider<ProviderCommandIndexProvider>()

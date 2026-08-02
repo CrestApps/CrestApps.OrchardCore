@@ -247,21 +247,44 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     }
 
     [Fact]
-    public async Task TenantActivation_PerformsImmediateProviderReconciliation()
+    public async Task Activation_ReopensWorkAdmission_WithoutProviderWork()
+    {
+        // Arrange
+        var synchronizationService = new Mock<IProviderCallStateSynchronizationService>();
+        var workManager = new TestContactCenterFeatureWorkManager();
+        workManager.Quiesce(ContactCenterConstants.Feature.Voice);
+        var participant = new ContactCenterVoiceLifecycleParticipant(
+            synchronizationService.Object,
+            workManager,
+            Options.Create(new ContactCenterFeatureLifecycleOptions()),
+            NullLogger<ContactCenterVoiceLifecycleParticipant>.Instance);
+
+        // Act
+        await participant.ReconcileAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(workManager.IsQuiescing(ContactCenterConstants.Feature.Voice));
+        synchronizationService.Verify(
+            service => service.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ReconcileProviderStateAsync_PerformsProviderReconciliation()
     {
         // Arrange
         var synchronizationService = new Mock<IProviderCallStateSynchronizationService>();
         synchronizationService
             .Setup(service => service.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
-        var tenantEvents = new ContactCenterVoiceTenantEvents(
+        var participant = new ContactCenterVoiceLifecycleParticipant(
             synchronizationService.Object,
             new TestContactCenterFeatureWorkManager(),
             Options.Create(new ContactCenterFeatureLifecycleOptions()),
-            NullLogger<ContactCenterVoiceTenantEvents>.Instance);
+            NullLogger<ContactCenterVoiceLifecycleParticipant>.Instance);
 
         // Act
-        await tenantEvents.ReconcileAsync(TestContext.Current.CancellationToken);
+        await participant.ReconcileProviderStateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         synchronizationService.Verify(

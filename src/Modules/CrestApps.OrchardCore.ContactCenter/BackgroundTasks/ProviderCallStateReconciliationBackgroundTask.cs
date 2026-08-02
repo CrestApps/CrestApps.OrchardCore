@@ -28,7 +28,7 @@ public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundT
             return;
         }
 
-        var participant = serviceProvider.GetRequiredService<ContactCenterVoiceTenantEvents>();
+        var participant = serviceProvider.GetRequiredService<ContactCenterVoiceLifecycleParticipant>();
         var logger = serviceProvider.GetRequiredService<ILogger<ProviderCallStateReconciliationBackgroundTask>>();
 
         try

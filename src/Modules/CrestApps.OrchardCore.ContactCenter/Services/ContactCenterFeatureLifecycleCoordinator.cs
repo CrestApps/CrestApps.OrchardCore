@@ -51,6 +51,18 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         }
     }
 
+    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var participant in _participants)
+        {
+            await ExecuteBestEffortAsync(
+                participant,
+                "reconciling",
+                () => participant.ReconcileAsync(cancellationToken),
+                cancellationToken);
+        }
+    }
+
     private async Task ExecuteRequiredAsync(
         IReadOnlyCollection<IContactCenterFeatureLifecycleParticipant> participants,
         string operation,
