@@ -114,6 +114,17 @@ public static class ContactCenterConstants
         public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
 
         /// <summary>
+        /// The registration name of the shared aggregate health endpoint hazard check.
+        /// </summary>
+        /// <remarks>
+        /// This is an alerting-only dependency check, never a readiness check. It surfaces the case where the
+        /// <c>OrchardCore.HealthChecks</c> aggregate endpoint is named as a liveness probe while Contact Center is
+        /// enabled. Failing readiness here would drain the node, which is the very restart behavior the hazard
+        /// warns against, so it reports degraded at most.
+        /// </remarks>
+        public const string SharedEndpointCheckName = "contactcenter-shared-endpoint";
+
+        /// <summary>
         /// The registration name of the deployment topology check.
         /// </summary>
         /// <remarks>

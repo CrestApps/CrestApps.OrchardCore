@@ -304,4 +304,39 @@ public sealed class ContactCenterHealthProbeActivationTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Tenant_BootsAndSurfacesTheSharedEndpointHazard_WhenHealthChecksUsesTheDefaultLivenessRoute()
+    {
+        // The regression for OC-001: enabling Contact Center alongside OrchardCore.HealthChecks at its shipped
+        // default route (/health/live) must not throw during shell construction. Throwing there bricked the
+        // tenant with no way to reach /admin to correct it. The hazard must instead be reported as a degraded
+        // dependency check while the tenant stays reachable.
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var profile = new ContactCenterTenantProfile
+        {
+            Id = "shared-endpoint-hazard",
+            ProviderProfile = "asterisk-ga-core",
+            Features = ["CrestApps.OrchardCore.ContactCenter", "OrchardCore.HealthChecks"],
+        };
+
+        // The tenant boots. Under the previous throwing guard this call failed.
+        var tenant = await host.CreateTenantAsync(profile);
+
+        var report = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => services
+                .GetRequiredService<HealthCheckService>()
+                .CheckHealthAsync(
+                    registration => registration.Tags.Contains(ContactCenterConstants.HealthChecks.DependencyTag),
+                    TestContext.Current.CancellationToken));
+
+        Assert.Contains(ContactCenterConstants.HealthChecks.SharedEndpointCheckName, report.Entries.Keys);
+
+        var sharedEndpointEntry = report.Entries[ContactCenterConstants.HealthChecks.SharedEndpointCheckName];
+
+        Assert.Null(sharedEndpointEntry.Exception);
+        Assert.Equal(HealthStatus.Degraded, sharedEndpointEntry.Status);
+    }
 }

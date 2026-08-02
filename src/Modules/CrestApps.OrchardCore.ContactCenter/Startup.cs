@@ -288,25 +288,11 @@ public sealed class Startup : StartupBase
 [RequireFeatures("OrchardCore.HealthChecks")]
 public sealed class ContactCenterSharedHealthEndpointStartup : StartupBase
 {
-    private readonly IShellConfiguration _shellConfiguration;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContactCenterSharedHealthEndpointStartup"/> class.
-    /// </summary>
-    /// <param name="shellConfiguration">The shell configuration used to read both modules' health settings.</param>
-    public ContactCenterSharedHealthEndpointStartup(IShellConfiguration shellConfiguration)
-    {
-        _shellConfiguration = shellConfiguration;
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        SharedHealthCheckEndpointGuard.Validate(
-            _shellConfiguration["OrchardCore_HealthChecks:Url"],
-            string.Equals(
-                _shellConfiguration["CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
-                bool.TrueString,
-                StringComparison.OrdinalIgnoreCase));
+        services.AddSingleton<SharedHealthEndpointHazardState>();
+        services.AddScoped<IModularTenantEvents, SharedHealthCheckEndpointValidator>();
+        services.AddContactCenterSharedEndpointHealthCheck();
     }
 }
 

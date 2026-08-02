@@ -74,6 +74,29 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers the shared aggregate health endpoint hazard check.
+    /// </summary>
+    /// <param name="services">The service collection to register the check with.</param>
+    /// <returns>The same <paramref name="services"/> so calls can be chained.</returns>
+    /// <remarks>
+    /// This is registered only alongside <c>OrchardCore.HealthChecks</c>, because the shared aggregate endpoint
+    /// exists only then. It is an alerting-only dependency check and never a readiness check: failing readiness
+    /// here would drain the node, which is the very restart behavior the hazard warns against.
+    /// </remarks>
+    public static IServiceCollection AddContactCenterSharedEndpointHealthCheck(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services
+            .AddHealthChecks()
+            .AddCheck<ContactCenterSharedEndpointHealthCheck>(
+                ContactCenterConstants.HealthChecks.SharedEndpointCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers the health checks owned by the Contact Center Queues feature.
     /// </summary>
     /// <param name="services">The service collection to register the checks with.</param>

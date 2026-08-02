@@ -45,30 +45,38 @@ public static class SharedHealthCheckEndpointGuard
     }
 
     /// <summary>
-    /// Throws when the shared aggregate endpoint is named as a liveness probe and the operator has not
-    /// acknowledged the risk.
+    /// Builds an actionable hazard message when the shared aggregate endpoint is named as a liveness probe and
+    /// the operator has not acknowledged the risk.
     /// </summary>
+    /// <remarks>
+    /// This never throws. Reporting the hazard by throwing during shell construction would brick the tenant with
+    /// no diagnostic surface — the admin, the one place an operator would read the error, becomes unreachable, and
+    /// a shipped-default liveness route on the <c>OrchardCore.HealthChecks</c> module is enough to trigger it.
+    /// The caller records the returned message on a per-tenant state holder, logs it at
+    /// <see cref="Microsoft.Extensions.Logging.LogLevel.Critical"/>, and surfaces it through a health check so the
+    /// tenant stays reachable and the route can be corrected.
+    /// </remarks>
     /// <param name="configuredRoute">The configured route, or <see langword="null"/> when unset.</param>
     /// <param name="acknowledged">Whether the operator accepted the shared endpoint's route.</param>
-    /// <exception cref="InvalidOperationException">The route claims liveness and was not acknowledged.</exception>
-    public static void Validate(string configuredRoute, bool acknowledged)
+    /// <returns>The hazard message when the route is unsafe and unacknowledged; otherwise <see langword="null"/>.</returns>
+    public static string BuildHazardMessage(string configuredRoute, bool acknowledged)
     {
         if (acknowledged || !IsUnsafeRoute(configuredRoute))
         {
-            return;
+            return null;
         }
 
         var effectiveRoute = string.IsNullOrWhiteSpace(configuredRoute)
             ? DefaultSharedEndpointRoute
             : configuredRoute.Trim();
 
-        throw new InvalidOperationException(
+        return
             $"The OrchardCore.HealthChecks module is enabled and maps its aggregate endpoint at '{effectiveRoute}'. " +
             "That endpoint applies no registration filter, so it reports the Contact Center dependency checks as " +
             "well. Using it as a liveness probe restarts healthy nodes whenever a dependency degrades, and a " +
             "restart cannot drain an event outbox. Set 'OrchardCore_HealthChecks:Url' to a route that does not " +
             "claim liveness, such as '/health/aggregate', and probe '/health/process' for liveness and " +
             "'api/contact-center/health/ready' for readiness. To keep the current route anyway, set " +
-            "'CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute' to true.");
+            "'CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute' to true.";
     }
 }

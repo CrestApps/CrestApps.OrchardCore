@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -34,27 +35,62 @@ public sealed class SharedHealthCheckEndpointGuardTests
     }
 
     [Fact]
-    public void Validate_Throws_WhenTheRouteIsLeftAtTheUnsafeDefault()
+    public void BuildHazardMessage_ReturnsActionableMessage_WhenTheRouteIsLeftAtTheUnsafeDefault()
     {
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => SharedHealthCheckEndpointGuard.Validate(configuredRoute: null, acknowledged: false));
+        var message = SharedHealthCheckEndpointGuard.BuildHazardMessage(configuredRoute: null, acknowledged: false);
 
-        // The message has to be actionable on its own, because it surfaces during shell startup where the
+        Assert.NotNull(message);
+
+        // The message has to be actionable on its own, because it surfaces in logs and health data where the
         // operator has no other context.
-        Assert.Contains(SharedHealthCheckEndpointGuard.DefaultSharedEndpointRoute, exception.Message, StringComparison.Ordinal);
-        Assert.Contains("OrchardCore_HealthChecks:Url", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("AllowUnsafeSharedEndpointRoute", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(SharedHealthCheckEndpointGuard.DefaultSharedEndpointRoute, message, StringComparison.Ordinal);
+        Assert.Contains("OrchardCore_HealthChecks:Url", message, StringComparison.Ordinal);
+        Assert.Contains("AllowUnsafeSharedEndpointRoute", message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Validate_DoesNotThrow_WhenTheOperatorAcknowledgedTheRoute()
+    public void BuildHazardMessage_ReturnsNull_WhenTheOperatorAcknowledgedTheRoute()
     {
-        SharedHealthCheckEndpointGuard.Validate(configuredRoute: null, acknowledged: true);
+        Assert.Null(SharedHealthCheckEndpointGuard.BuildHazardMessage(configuredRoute: null, acknowledged: true));
     }
 
     [Fact]
-    public void Validate_DoesNotThrow_WhenTheRouteWasMovedOffALivenessName()
+    public void BuildHazardMessage_ReturnsNull_WhenTheRouteWasMovedOffALivenessName()
     {
-        SharedHealthCheckEndpointGuard.Validate("/health/aggregate", acknowledged: false);
+        Assert.Null(SharedHealthCheckEndpointGuard.BuildHazardMessage("/health/aggregate", acknowledged: false));
+    }
+
+    [Fact]
+    public void SharedEndpointHealthCheck_ReportsDegraded_WhenTheHazardWasRecorded()
+    {
+        var state = new SharedHealthEndpointHazardState();
+        state.Record(SharedHealthCheckEndpointGuard.BuildHazardMessage(configuredRoute: null, acknowledged: false));
+
+        var result = ContactCenterSharedEndpointHealthCheck.Evaluate(state);
+
+        Assert.Equal(HealthStatus.Degraded, result.Status);
+        Assert.Contains("AllowUnsafeSharedEndpointRoute", result.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SharedEndpointHealthCheck_ReportsHealthy_WhenNoHazardWasRecorded()
+    {
+        var state = new SharedHealthEndpointHazardState();
+        state.Record(SharedHealthCheckEndpointGuard.BuildHazardMessage("/health/aggregate", acknowledged: false));
+
+        var result = ContactCenterSharedEndpointHealthCheck.Evaluate(state);
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+    }
+
+    [Fact]
+    public void SharedEndpointHealthCheck_ReportsHealthy_BeforeTheRouteIsEvaluated()
+    {
+        var state = new SharedHealthEndpointHazardState();
+
+        var result = ContactCenterSharedEndpointHealthCheck.Evaluate(state);
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.False(state.HasBeenEvaluated);
     }
 }

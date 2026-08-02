@@ -77,6 +77,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
         public ContactCenterQueueBacklogHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemStore queueItemStore) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterSharedEndpointHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public ContactCenterSharedEndpointHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.HealthChecks.SharedHealthEndpointHazardState state) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public static Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult Evaluate(CrestApps.OrchardCore.ContactCenter.Core.HealthChecks.SharedHealthEndpointHazardState state) { }
+    }
     public sealed class ContactCenterStorageHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
         public ContactCenterStorageHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutboxStore outboxStore) { }
@@ -97,8 +103,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
     public static class SharedHealthCheckEndpointGuard
     {
         public const string DefaultSharedEndpointRoute = "/health/live";
+        public static string BuildHazardMessage(string configuredRoute, bool acknowledged) { }
         public static bool IsUnsafeRoute(string configuredRoute) { }
-        public static void Validate(string configuredRoute, bool acknowledged) { }
+    }
+    public sealed class SharedHealthEndpointHazardState
+    {
+        public SharedHealthEndpointHazardState() { }
+        public bool HasBeenEvaluated { get; }
+        public string HazardMessage { get; }
+        public bool IsHazardous { get; }
+        public void Record(string hazardMessage) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes

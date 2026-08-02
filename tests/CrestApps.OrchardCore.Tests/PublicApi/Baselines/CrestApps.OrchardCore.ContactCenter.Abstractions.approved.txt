@@ -134,6 +134,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string ReadinessRoute = "api/contact-center/health/ready";
             public const string ReadyTag = "contactcenter-ready";
             public const string RedisConnectivityCheckName = "contactcenter-redis";
+            public const string SharedEndpointCheckName = "contactcenter-shared-endpoint";
             public const string StorageCheckName = "contactcenter-storage";
             public const string TopologyCheckName = "contactcenter-topology";
         }
