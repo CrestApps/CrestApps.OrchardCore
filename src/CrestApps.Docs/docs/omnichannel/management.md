@@ -410,3 +410,11 @@ On import, entries are matched by their identifier: an entry that already exists
 When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, and finally subject actions.
 
 Subject flow configuration is stored on the `OmnichannelSubjectPart` content-type part settings, so it travels with the content type definition through the standard **Content Definition** deployment step rather than a dedicated omnichannel step.
+
+## Data at rest and privacy
+
+The omnichannel/CRM layer stores customer communication content and contact addresses as **plaintext** in the tenant SQL database. `OmnichannelMessage.Content` (the message body), `OmnichannelMessage.CustomerAddress`, and `OmnichannelMessage.ServiceAddress` are persisted unencrypted in the YesSql document, and the two addresses are additionally projected — still in plaintext — into the `OmnichannelMessageIndex` table so they can be queried. No application-level encryption is applied to this data.
+
+This is a deliberate contrast with telephony **recording media**, which the media-execution layer encrypts at rest through the data protection provider. That asymmetry matters operationally: encrypting the recording bytes does not encrypt the message bodies or the phone numbers/addresses that the CRM stores alongside them. Protecting this content at rest is therefore a **deployment responsibility** — enable database- or disk-level encryption (for example, transparent data encryption) and restrict access to the database and its backups accordingly. Treat message content and contact addresses as personal data.
+
+There is currently **no automated per-contact subject erasure** (right-to-be-forgotten) across the CRM. The activity **Purge** action marks an activity as `Purged` and removes it from the work queue, but it does **not** delete the underlying message content, the customer/service addresses, or the contact record — that data remains in the database and its index. Comprehensive per-contact erasure across omnichannel activities, messages, and contacts is a known limitation and a general-availability blocker; until it ships, satisfy erasure requests through direct, audited database operations against the tenant store.

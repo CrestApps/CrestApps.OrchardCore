@@ -50,7 +50,7 @@ The support matrix above is not advisory. Each tenant declares the topology it i
 }
 ```
 
-- When the declared profile is `single-node-distributed`, activation verifies the tenant is on the `Postgres` database provider and that the `OrchardCore.Redis`, `OrchardCore.Redis.Lock`, and `CrestApps.OrchardCore.SignalR.Redis` features are enabled. It also verifies that the distributed lock the container actually resolves is not the process-local implementation, because a feature can be enabled while the container still hands out the local lock, and the lock that is injected is the one that decides whether two overlapping processes can enter the same critical section.
+- When the declared profile is `single-node-distributed`, activation verifies the tenant is on the `Postgres` database provider and that the `OrchardCore.Redis`, `OrchardCore.Redis.Lock`, and `CrestApps.OrchardCore.SignalR.Redis` features are enabled. It also verifies that the distributed lock the container actually resolves is not the process-local implementation, because a feature can be enabled while the container still hands out the local lock, and the lock that is injected is the one that decides whether two overlapping processes can enter the same critical section. The **number of running application nodes itself is not verified at runtime** — nothing performs a node census — so the single-active-process constraint is only *mitigated* by the distributed lock serializing the critical sections that take it (it does not make multi-node operation safe, which remains uncertified above), and running exactly one active background-processing node remains an operator responsibility.
 - Every unmet requirement is reported at once. Fixing one requirement per deployment would make each intermediate deployment another unsupported production release.
 - An unrecognized profile identifier is a validation failure rather than a fallback to the development profile, so a typo cannot silently downgrade a production deployment to the profile that requires nothing.
 - Omitting `ProfileId` is normal for development, tests, and demonstrations and imposes no requirements. It is a validation failure when the host environment is `Production`, because otherwise the entire check could be bypassed by setting nothing.
@@ -451,6 +451,7 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 
 - **Access audit** — recording playback and download must be brokered by, and audited in, the system that holds the media. Contact Center exposes the reference under the same permission and content-access-control checks as the owning interaction; every access decision is logged through the operational log with the identifier taxonomy (recordings are treated as sensitive personal data). Wiring a specific media store's access log is a deployment integration.
 - **Recording erasure** — recording/media erasure is a first-class, durable operation (it is a component of a GDPR Art. 17 / CCPA response, not a general cross-entity subject-erasure feature). See [Recording media erasure](#recording-media-erasure) below.
+- **Omnichannel/CRM data is out of scope for this catalog** — this classification and its erasure strategies cover Contact Center entities only. The omnichannel/CRM layer stores message content and contact addresses **plaintext** and has **no automated per-contact subject erasure** (a general-availability blocker): a Contact Center `Interaction` is deleted outright when its retention window elapses, but an `OmnichannelMessage` has no retention window at all and is retained plaintext until the operator removes it directly. See [Data at rest and privacy](../omnichannel/management.md#data-at-rest-and-privacy).
 
 ### Recording media erasure
 
@@ -467,6 +468,22 @@ Recording media erasure clears every pointer to a recording, records a durable t
 
 **Backup and restore.** All durable Contact Center state lives in the tenant SQL database (see the [failure runbooks](runbooks.md)); back it up with the engine's native, point-in-time-capable mechanism. Because the interaction event log is the projection-rebuild source, keep `ProjectionReplayHorizonDays` and `LegalHoldMinimumDays` set so a point-in-time restore retains enough history to rebuild projections — after a restore, run the metrics projection rebuild to reconcile any drift. Provider-held recordings are backed up by their owning store, not by the Contact Center database backup, so a full restore must coordinate the database restore with the media store's own retention and restore policy.
 
+## Data residency
+
+The platform does **not** constrain where customer data is physically located; residency is an operator responsibility. Customer content and personal data are held or processed by several distinct systems, and an operator with a jurisdictional obligation must site **every** one of them in the required region — placing only the primary database does not satisfy a residency requirement.
+
+| System | What it holds | Notes |
+| --- | --- | --- |
+| Tenant SQL database (PostgreSQL in the `single-node-distributed` profile) | Interactions, call sessions, routing/queue state, and the omnichannel message content and contact addresses | The omnichannel message body and addresses are stored **plaintext** (see [Data at rest and privacy](../omnichannel/management.md#data-at-rest-and-privacy)); protect them with database- or disk-level encryption. |
+| Recording media store | Completed call recordings | The default `LocalEncryptedRecordingMediaStore` writes to a tenant-scoped application-data folder, encrypted at rest. A cloud-backed store places media wherever that store is configured. |
+| Asterisk telephony host | The **unencrypted** source recording file, transiently | Ingest best-effort deletes it after upload; if that delete keeps failing, plaintext media can linger on the telephony host, so the host is in residency scope. |
+| Redis backplane | Call-state payloads in transit on the SignalR backplane, plus distributed-lock keys | Mandatory for the `single-node-distributed` profile; site the Redis instance in-region. It carries messages in transit and lock keys rather than persisted state. |
+| Third-party SMS / email provider (Twilio, Azure Communication Services) | Message content that transits and is retained by the third party | ACS supplies email and SMS providers; there is no ACS voice module. Governed by the provider's own residency and retention terms, outside the operator's encryption controls. |
+| Third-party voice provider (DialPad) | **All** call audio and any provider-side recordings | DialPad uses the agent-device-native model, so Contact Center never bridges its media — the audio never enters Orchard and lives entirely in DialPad's cloud. |
+| AI completion provider (OpenAI, Azure OpenAI, Claude, Ollama, or the configured provider) | Inbound SMS message bodies | When a subject flow uses an AI profile, the inbound customer SMS content is sent to the configured AI provider for completion, outside the tenant database and the operator's encryption controls. |
+
+Because the SMS/email, voice, and AI providers process and may retain customer content outside the tenant's infrastructure entirely, a residency or data-processing obligation covering those flows must be satisfied through each provider's own regional configuration and contractual terms, not by the CrestApps modules.
+
 ## Configuration portability and preview data
 
 Contact Center configuration — queues, queue groups, skills, routing entry points, dialer profiles, business-hours calendars, and agent state reason codes — is exported and imported through the standard Orchard Core **Deployment** and **Recipes** mechanisms, exactly like every other tenant setting. Each operator-authored data set has a dedicated deployment step (for example the queue, skill, entry point, dialer profile, business-hours calendar, queue-group, and reason-code steps), so an operator builds a deployment plan, exports it, and replays it as a recipe on another tenant. There is no bespoke Contact Center export format to learn or maintain, and no parallel import path: the sanctioned Orchard pipeline is the single source of truth for configuration portability.
@@ -474,7 +491,7 @@ Contact Center configuration — queues, queue groups, skills, routing entry poi
 Operational data — interactions, activities, assignments, agent sessions, dialer records, and the event/metric ledgers — is **not** configuration and is deliberately excluded from Deployment/Recipes. Its lifecycle is governed two ways:
 
 - **Ongoing minimization** by the retention windows and per-entity governance categories described above, which age records out automatically.
-- **Backup and restore** by the tenant SQL database's own point-in-time mechanism (see [Backup and restore](#backup-and-restore) above), which is the only mechanism that captures operational content faithfully.
+- **Backup and restore** by the tenant SQL database's own point-in-time mechanism (see the **Backup and restore** guidance above), which is the only mechanism that captures operational content faithfully.
 
 Contact Center intentionally ships **no destructive "reset all operational data" admin action**. Clearing a preview tenant is a database-lifecycle operation (drop or restore the tenant database), not an in-app button, because an in-app bulk delete cannot offer the atomicity or point-in-time recoverability that the database engine already provides, and a count-based "receipt" is not a real backup. This keeps the destructive surface out of the running application entirely rather than gating it behind flags.
 

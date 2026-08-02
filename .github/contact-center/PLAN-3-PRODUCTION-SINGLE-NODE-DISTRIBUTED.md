@@ -720,8 +720,8 @@ which requires live Asterisk and TURN infrastructure. Counting it as coverage is
 
 ### Wave 8 — Release
 - [ ] W7.2 Destination policy consolidated `gate:`
-- [ ] W7.3 Emergency-calling scope published `gate:`
-- [ ] W7.5 Data-residency contract `gate:`
+- [ ] W7.3 Emergency-calling scope published `gate:` — **Documentation portion delivered by PRODUCTION-READINESS item E2** (independent claude-opus-5 GO): `contact-center/voice-routing.md` now carries a `:::danger Not an emergency-calling service` admonition that states there is no PSAP/location/origination path, discloses that `ExternalDestinationPolicy` denial is server-side only and the agent soft-phone bypasses it entirely (`AsteriskTelephonyProviderBase.DialAsync` validates only non-empty `To`), and instructs operators to block emergency/premium ranges at the Asterisk dialplan / SIP trunk and rely on their MLTS/carrier for emergency service. **Remaining for W7.3 (not E2 scope): the in-`Telephony settings` operator warning is a UI/code change and is still open.** Box stays unchecked until that ships.
+- [ ] W7.5 Data-residency contract `gate:` — **Delivered by PRODUCTION-READINESS item E2** (independent claude-opus-5 GO): `contact-center/production-support.md` now has a `## Data residency` table enumerating tenant SQL DB (plaintext `OmnichannelMessage` content/addresses), recording media store, the Asterisk host's transient unencrypted source file, the Redis backplane (in-transit call-state payloads + lock keys), third-party SMS/email providers (Twilio, ACS), the third-party voice provider (DialPad, agent-device-native — holds all its own call media), and the AI completion provider (receives inbound SMS bodies), plus `omnichannel/management.md#data-at-rest-and-privacy` disclosing the plaintext-at-rest reality and the per-contact-subject-erasure GA blocker. Box stays unchecked pending the broader Wave-8 release sign-off (backups/telemetry-export/support-access residency and the §9 exit checklist).
 - [ ] W8.1–W8.7 Docs, diagrams, runbooks, reference deployment `gate:`
 - [ ] §9 Release exit checklist fully green `gate:`
 
