@@ -106,26 +106,27 @@ Work items are independent unless a `Dependencies` field says otherwise, so they
 ### OC-003 — A never-released module ships live-upgrade migration chains, including a destructive rebuild
 
 - **Priority:** High
-- **Status:** Not Started
+- **Status:** Won't Fix — premise disproven (see Resolution)
 - **Category:** Data migrations
 - **Effort:** M
 - **Risk:** Low
-- **Dependencies:** Should land before OC-020
+- **Dependencies:** None
 
-**Problem.** The ContactCenter module does not exist on `origin/main` (verified: `git cat-file -e origin/main:.../ContactCenter/Manifest.cs` fails). Yet **14 of 25** migration classes carry `UpdateFromN` chains. `CallSessionIndexMigrations.UpdateFrom3Async` performs a full destructive rebuild: schema-qualified raw `drop index if exists`, a tolerant `SchemaBuilder(throwOnError: false)` pass, two `IndexStringColumnRebuild.WidenAsync` calls, index recreation, a `GROUP BY ... HAVING COUNT(*) > 1` duplicate scan that throws on collision, and a raw `CREATE UNIQUE INDEX`.
+**Problem (as originally stated).** The ContactCenter module does not exist on `origin/main`. Yet **14 of 25** migration classes carry `UpdateFromN` chains. `CallSessionIndexMigrations.UpdateFrom3Async` performs a destructive rebuild: schema-qualified raw `drop index if exists`, a tolerant `SchemaBuilder(throwOnError: false)` pass, two `IndexStringColumnRebuild.WidenAsync` calls, index recreation, a `GROUP BY ... HAVING COUNT(*) > 1` duplicate scan that throws on collision, and a raw `CREATE UNIQUE INDEX`. The item asserted that *every brand-new tenant* executes this rebuild against an empty table for zero benefit, and recommended collapsing every ContactCenter migration into a single `CreateAsync`.
 
-**Root cause.** Pre-release schema iteration was recorded as versioned migrations instead of being folded into `CreateAsync`.
+**Resolution — Won't Fix (premise disproven; validated by independent gpt-5.6 review).**
 
-**Why it matters.** Every brand-new tenant executes a multi-statement destructive rebuild against an **empty table**, for data that cannot exist. The code's own comments describe MySQL per-statement autocommit, a window where the unique constraint is genuinely absent, and a failure mode where "the tenant could never activate." That risk is being taken for zero benefit. It also forces the `CreateAsync` schema and the `CreateAsync + UpdateFromN` schema to be kept manually equivalent forever.
+Deeper investigation showed the central premise is factually wrong and the recommended collapse would be net-harmful:
 
-**Orchard Core pattern violated.** `IDataMigration` versioning exists to move *released* schemas forward. `UpdateFrom3Async` is also not additive-only, which is what makes rolling upgrades safe.
+1. **Fresh installs run no destructive rebuild.** Orchard Core's migration manager invokes `CreateAsync`, records its returned version `V`, then runs `UpdateFrom{V}Async`, `UpdateFrom{next}Async`, … until no method matches. `CallSessionIndexMigrations.CreateAsync` already builds the final schema (ProviderCallId length 256, claim key 385, all indexes and the unique constraint) and **returns 4** (`CallSessionIndexMigrations.cs:60,110`). The manager then looks for `UpdateFrom4Async` — none exists — so it runs nothing. The destructive `UpdateFrom3Async` (`:176`) runs **only** for a tenant already recorded at version 3 (a real earlier-preview adopter), as a genuine upgrade — never on a fresh tenant.
+2. **The chains are an intentional, documented, tested rolling-upgrade capability, not pre-release debt.** They are exercised by `ContactCenterRollingUpgradeTests` (synthesizes the previous-version schema, applies the real upgrade steps to a live DB, then asserts both previous- and current-version writers succeed against the upgraded database; hard-floors `MinimumUpgradeStepCount = 8`), governed by `MigrationAdditiveOnlyGuardTests` (a formal contract register that detects every destructive step, requires explicit authorization, and verifies in-place rebuilds restore each object they drop), enforced by `ContactCenterRetentionCoverageTests` (`covered >= 8` upgrade steps that add a settlement column must backfill it), and validated on real PostgreSQL by the `*PostgresMigrationTests` distributed suite.
+3. **Collapsing would remove a real capability and invalidate ~5,000+ lines of deliberate safety tests** to save fresh installs only a handful of harmless additive `ALTER` statements on empty tables.
 
-**Recommended solution.** Collapse every **ContactCenter** migration into a single `CreateAsync` returning the final version, creating final column widths, indexes and unique constraints once. Keep the raw-SQL helpers (YesSql 5.4.7's `ISchemaBuilder` has no unique-index API) but drop preflight/backfill/rebuild logic that exists only for legacy rows. **Telephony migrations must keep their chains** — Telephony already exists on `main`.
+**Scope carve-outs recorded during review (not part of OC-003; see OC-049).**
+- A narrower change — having the additive migrations whose `CreateAsync` returns an old version (e.g. `InteractionIndexMigrations` returns 1) build the final schema and return the final version *while retaining* their `UpdateFromN` for existing tenants — is contract-legal and rolling-test compatible, but is a **measured fresh-activation optimization**, not a correctness fix. Tracked separately as OC-049.
+- The rolling-upgrade guarantee should be described as **preserved upgrade + post-upgrade write compatibility**, not unconditional zero-downtime for the in-place rebuild step itself: `UpdateFrom3Async` drops indexes, widens columns and rewrites the table, and acknowledges a MySQL uniqueness window (PostgreSQL can also take disruptive DDL locks). Deployments applying that specific step should drain/maintenance-window it unless concurrent-load testing proves otherwise. Documentation follow-up tracked under OC-049.
 
-**Acceptance criteria.**
-- ContactCenter migrations expose `CreateAsync` only; no `UpdateFromN` remains.
-- Schema produced by the collapsed `CreateAsync` is byte-for-byte equivalent to the previous end state.
-- The feature-activation test project provisions a fresh tenant successfully.
+**Verification.** Independent gpt-5.6 review returned verdict **WITHDRAW**, confirmed the migration-manager interpretation against the code, and ran the migration-safety suite (**90 tests, 0 failures**). No code changed.
 
 ---
 
@@ -684,13 +685,32 @@ Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep e
 
 ---
 
+### OC-049 — Optional fresh-activation fold + strengthen migration equivalence docs/tests
+
+- **Priority:** Low (Enhancement) · **Status:** Not Started · **Category:** Data migrations / performance · **Effort:** M · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Two low-value refinements surfaced while disproving OC-003 (see OC-003 Resolution): (1) migrations whose `CreateAsync` returns an old version (e.g. `InteractionIndexMigrations` returns 1) run a few additive `ALTER`/`CreateIndex` statements against an empty table on every fresh activation; (2) the deployment documentation's rolling-upgrade wording and the equivalence tests could be sharpened.
+
+**Recommended solution.**
+- *(Optional, evidence-gated)* Have such migrations build the final schema in `CreateAsync` and return the final version, **retaining** their `UpdateFromN` methods for already-versioned tenants (contract-legal; rolling-upgrade harness already supports this shape). Only pursue if fresh-activation startup profiling shows measurable benefit — the change duplicates final-schema declarations between `CreateAsync` and the update methods, which several migrations deliberately avoid.
+- Reword the deployment docs so the guarantee reads as **preserved upgrade + post-upgrade write compatibility**, and require draining/maintenance when the `CallSessionIndexMigrations` in-place rebuild step (`UpdateFrom3Async`) is deployed, unless concurrent-load testing proves the DDL is non-blocking on the target engine.
+- Optionally extend `ContactCenterRollingUpgradeTests` to assert full fresh-vs-upgrade equivalence for *all* ordinary indexes (not only columns and unique constraints) and to follow each update method's returned version exactly as Orchard's manager does.
+
+**Acceptance criteria.**
+- Any `CreateAsync` change keeps every `MigrationAdditiveOnlyGuardTests`, `ContactCenterRollingUpgradeTests`, and `ContactCenterRetentionCoverageTests` assertion green.
+- Deployment docs no longer imply unconditional zero-downtime for the in-place rebuild step.
+
+**Notes.** Recorded from the independent gpt-5.6 review of the OC-003 disposition. Not a correctness blocker.
+
+---
+
 ## Production Readiness Checklist
 
 Pre-merge blockers:
 
 - [x] **OC-001** — tenant no longer bricked by default-configured `OrchardCore.HealthChecks`
 - [x] **OC-002** — soft-phone compliance bypass closed or formally policy-gated and documented
-- [ ] **OC-003** — ContactCenter migrations collapsed to `CreateAsync`
+- [x] **OC-003** — Won't Fix (premise disproven): fresh installs run no destructive rebuild; `UpdateFromN` chains are an intentional, tested rolling-upgrade capability. See OC-003 Resolution + OC-049.
 - [ ] Full `dotnet build -c Release -warnaserror` verified clean on a machine with feed access (see review caveat)
 - [ ] `dotnet test` green, including the feature-activation and distributed test projects
 - [ ] `npm run rebuild` run and `git status` clean (currently cannot cover ContactCenter — see **OC-019**)
@@ -712,6 +732,7 @@ Post-merge follow-ups:
 - [ ] OC-040 → OC-045 — technical debt
 - [ ] OC-046 — agent profile split
 - [ ] OC-048 — attribute manual-dial suppression audits to the initiating agent
+- [ ] OC-049 — optional fresh-activation fold + sharpen rolling-upgrade docs/tests (non-blocking)
 
 ---
 
