@@ -214,7 +214,6 @@ namespace CrestApps.OrchardCore.ContactCenter
         string FeatureId { get; }
         System.Threading.Tasks.Task DrainAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task QuiesceAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task ReconcileAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterFeatureWorkLease : System.IDisposable { }
     public interface IContactCenterFeatureWorkManager

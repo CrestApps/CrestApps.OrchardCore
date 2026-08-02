@@ -32,12 +32,4 @@ internal sealed class ContactCenterRealTimeLifecycleParticipant : IContactCenter
     {
         return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
     }
-
-    public Task ReconcileAsync(CancellationToken cancellationToken = default)
-    {
-        _connectionRegistry.Activate();
-        _workManager.Activate(FeatureId);
-
-        return Task.CompletedTask;
-    }
 }

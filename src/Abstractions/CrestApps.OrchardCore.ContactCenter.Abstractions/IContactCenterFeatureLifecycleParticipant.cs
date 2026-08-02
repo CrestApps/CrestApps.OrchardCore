@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Defines feature-owned work that must stop accepting new operations, drain, and reconcile across Orchard feature reloads.
+/// Defines feature-owned work that must stop accepting new operations and drain across Orchard feature reloads.
 /// </summary>
 public interface IContactCenterFeatureLifecycleParticipant
 {
@@ -21,10 +21,4 @@ public interface IContactCenterFeatureLifecycleParticipant
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task DrainAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Reconciles feature-owned state when a fresh tenant shell activates.
-    /// </summary>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task ReconcileAsync(CancellationToken cancellationToken = default);
 }

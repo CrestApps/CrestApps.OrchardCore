@@ -29,11 +29,4 @@ internal sealed class DialPadContactCenterFeatureLifecycleParticipant : IContact
     {
         return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
     }
-
-    public Task ReconcileAsync(CancellationToken cancellationToken = default)
-    {
-        _workManager.Activate(FeatureId);
-
-        return Task.CompletedTask;
-    }
 }

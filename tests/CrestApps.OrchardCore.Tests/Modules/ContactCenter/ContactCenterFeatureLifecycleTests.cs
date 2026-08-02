@@ -211,29 +211,6 @@ public sealed class ContactCenterFeatureLifecycleTests
     }
 
     [Fact]
-    public async Task ReconcileAsync_TargetFeature_ReconcilesMatchingParticipants()
-    {
-        // Arrange
-        var operations = new List<string>();
-        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
-        [
-            new TestFeatureLifecycleParticipant("feature-a", "first", operations),
-            new TestFeatureLifecycleParticipant("feature-b", "second", operations),
-        ],
-            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
-
-        // Act
-        await coordinator.ReconcileAsync("feature-a", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(
-        [
-            "reconcile:first",
-        ],
-            operations);
-    }
-
-    [Fact]
     public async Task QuiesceAsync_ParticipantFails_ContinuesQuiescingAndDrainingPeers()
     {
         // Arrange
@@ -380,139 +357,23 @@ public sealed class ContactCenterFeatureLifecycleTests
         Assert.Null(manager.TryEnter(ContactCenterConstants.Feature.RealTime));
         activeConnection.Verify(context => context.Abort(), Times.Once);
         rejectedConnection.Verify(context => context.Abort(), Times.Once);
-
-        await participant.ReconcileAsync(TestContext.Current.CancellationToken);
-
-        Assert.NotNull(manager.TryEnter(ContactCenterConstants.Feature.RealTime));
     }
 
     [Fact]
-    public async Task ReconcileAsync_ParticipantFails_ContinuesReconcilingPeers()
+    public async Task ContactCenterHubConnectionRegistry_ActivateReopensRegistrationAfterQuiesce()
     {
         // Arrange
-        var operations = new List<string>();
-        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
-        [
-            new ThrowingFeatureLifecycleParticipant("feature-a", "failing", operations, throwOnReconcile: true),
-            new TestFeatureLifecycleParticipant("feature-a", "healthy", operations),
-        ],
-            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
+        var registry = new ContactCenterHubConnectionRegistry();
+        var connection = new Mock<HubCallerContext>();
+        connection.SetupGet(context => context.ConnectionId).Returns("connection-1");
+        registry.Quiesce();
 
         // Act
-        await coordinator.ReconcileAsync("feature-a", TestContext.Current.CancellationToken);
+        registry.Activate();
+        var registered = registry.Register(connection.Object);
 
         // Assert
-        Assert.Equal(
-        [
-            "reconcile:failing",
-            "reconcile:healthy",
-        ],
-            operations);
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_AllParticipants_ReconcilesEveryRegisteredParticipant()
-    {
-        // Arrange
-        var operations = new List<string>();
-        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
-        [
-            new TestFeatureLifecycleParticipant("feature-a", "first", operations),
-            new TestFeatureLifecycleParticipant("feature-b", "second", operations),
-        ],
-            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
-
-        // Act
-        await coordinator.ReconcileAsync(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(
-        [
-            "reconcile:first",
-            "reconcile:second",
-        ],
-            operations);
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_AllParticipants_ParticipantFails_ContinuesReconcilingPeers()
-    {
-        // Arrange
-        var operations = new List<string>();
-        var coordinator = new ContactCenterFeatureLifecycleCoordinator(
-        [
-            new ThrowingFeatureLifecycleParticipant("feature-a", "failing", operations, throwOnReconcile: true),
-            new TestFeatureLifecycleParticipant("feature-b", "healthy", operations),
-        ],
-            NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
-
-        // Act
-        await coordinator.ReconcileAsync(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(
-        [
-            "reconcile:failing",
-            "reconcile:healthy",
-        ],
-            operations);
-    }
-
-    [Fact]
-    public async Task ActivationHandler_ActivatedAsync_SchedulesReconciliationAfterCommit()
-    {
-        // Arrange
-        var operations = new List<string>();
-        var services = new ServiceCollection()
-            .AddSingleton(new ContactCenterFeatureLifecycleCoordinator(
-            [
-                new TestFeatureLifecycleParticipant("feature-a", "first", operations),
-                new TestFeatureLifecycleParticipant("feature-b", "second", operations),
-            ],
-                NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance))
-            .BuildServiceProvider();
-        var scopeExecutor = new TestContactCenterScopeExecutor(services)
-        {
-            ScheduleAfterCommitResult = true,
-        };
-        var handler = new ContactCenterFeatureLifecycleActivationHandler(scopeExecutor);
-
-        // Act
-        await handler.ActivatedAsync();
-
-        // Assert
-        Assert.NotNull(scopeExecutor.ScheduledOperation);
-        Assert.Empty(operations);
-
-        // Act
-        await scopeExecutor.ScheduledOperation();
-
-        // Assert
-        Assert.Equal(
-        [
-            "reconcile:first",
-            "reconcile:second",
-        ],
-            operations);
-    }
-
-    [Fact]
-    public void Startup_RegistersActivationLifecycleHook()
-    {
-        // Arrange
-        var repositoryRoot = FindRepositoryRoot();
-        var startup = File.ReadAllText(Path.Combine(
-            repositoryRoot,
-            "src",
-            "Modules",
-            "CrestApps.OrchardCore.ContactCenter",
-            "Startup.cs"));
-
-        // Act & Assert
-        Assert.Contains(
-            ".AddScoped<IModularTenantEvents, ContactCenterFeatureLifecycleActivationHandler>()",
-            startup,
-            StringComparison.Ordinal);
+        Assert.True(registered);
     }
 
     [Fact]
@@ -651,13 +512,6 @@ public sealed class ContactCenterFeatureLifecycleTests
 
             return Task.CompletedTask;
         }
-
-        public Task ReconcileAsync(CancellationToken cancellationToken = default)
-        {
-            _operations.Add($"reconcile:{_name}");
-
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class ThrowingFeatureLifecycleParticipant : IContactCenterFeatureLifecycleParticipant
@@ -665,20 +519,17 @@ public sealed class ContactCenterFeatureLifecycleTests
         private readonly string _name;
         private readonly List<string> _operations;
         private readonly bool _throwOnQuiesce;
-        private readonly bool _throwOnReconcile;
 
         public ThrowingFeatureLifecycleParticipant(
             string featureId,
             string name,
             List<string> operations,
-            bool throwOnQuiesce = false,
-            bool throwOnReconcile = false)
+            bool throwOnQuiesce = false)
         {
             FeatureId = featureId;
             _name = name;
             _operations = operations;
             _throwOnQuiesce = throwOnQuiesce;
-            _throwOnReconcile = throwOnReconcile;
         }
 
         public string FeatureId { get; }
@@ -697,15 +548,6 @@ public sealed class ContactCenterFeatureLifecycleTests
             _operations.Add($"drain:{_name}");
 
             return Task.CompletedTask;
-        }
-
-        public Task ReconcileAsync(CancellationToken cancellationToken = default)
-        {
-            _operations.Add($"reconcile:{_name}");
-
-            return _throwOnReconcile
-                ? Task.FromException(new InvalidOperationException("Expected test failure."))
-                : Task.CompletedTask;
         }
     }
 

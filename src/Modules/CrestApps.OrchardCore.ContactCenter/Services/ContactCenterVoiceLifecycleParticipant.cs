@@ -6,10 +6,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 
 /// <summary>
 /// Participates in the Contact Center feature lifecycle for the Voice feature. On feature disable it
-/// quiesces and drains feature-owned voice work; on tenant activation it reopens work admission. The
-/// provider-truth reconciliation pass itself is owned by <c>ProviderCallStateReconciliationBackgroundTask</c>,
-/// which invokes <see cref="ReconcileProviderStateAsync"/> under the work-admission gate, so tenant
-/// activation stays free of provider and database work.
+/// quiesces and drains feature-owned voice work. The provider-truth reconciliation pass is owned by
+/// <c>ProviderCallStateReconciliationBackgroundTask</c>, which invokes <see cref="ReconcileProviderStateAsync"/>
+/// under the work-admission gate, so provider and database work never runs during shell activation.
 /// </summary>
 internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFeatureLifecycleParticipant
 {
@@ -52,19 +51,6 @@ internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFea
     public Task DrainAsync(CancellationToken cancellationToken = default)
     {
         return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
-    }
-
-    /// <summary>
-    /// Reopens voice work admission when a fresh tenant shell activates. Provider-truth reconciliation is
-    /// intentionally not performed here: it runs under the work-admission gate from the scheduled
-    /// reconciliation background task, so tenant activation stays free of provider and database work.
-    /// </summary>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    public Task ReconcileAsync(CancellationToken cancellationToken = default)
-    {
-        _workManager.Activate(FeatureId);
-
-        return Task.CompletedTask;
     }
 
     /// <summary>

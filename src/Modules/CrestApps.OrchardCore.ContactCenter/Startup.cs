@@ -177,7 +177,6 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
             .AddScoped<IFeatureEventHandler, ContactCenterFeatureLifecycleHandler>()
-            .AddScoped<IModularTenantEvents, ContactCenterFeatureLifecycleActivationHandler>()
             .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(

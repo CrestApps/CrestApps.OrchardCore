@@ -247,29 +247,6 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     }
 
     [Fact]
-    public async Task Activation_ReopensWorkAdmission_WithoutProviderWork()
-    {
-        // Arrange
-        var synchronizationService = new Mock<IProviderCallStateSynchronizationService>();
-        var workManager = new TestContactCenterFeatureWorkManager();
-        workManager.Quiesce(ContactCenterConstants.Feature.Voice);
-        var participant = new ContactCenterVoiceLifecycleParticipant(
-            synchronizationService.Object,
-            workManager,
-            Options.Create(new ContactCenterFeatureLifecycleOptions()),
-            NullLogger<ContactCenterVoiceLifecycleParticipant>.Instance);
-
-        // Act
-        await participant.ReconcileAsync(TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(workManager.IsQuiescing(ContactCenterConstants.Feature.Voice));
-        synchronizationService.Verify(
-            service => service.ReconcileActiveInteractionsAsync(It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task ReconcileProviderStateAsync_PerformsProviderReconciliation()
     {
         // Arrange

@@ -36,33 +36,6 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
             cancellationToken);
     }
 
-    public async Task ReconcileAsync(string featureId, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
-
-        foreach (var participant in _participants.Where(participant =>
-            string.Equals(participant.FeatureId, featureId, StringComparison.Ordinal)))
-        {
-            await ExecuteBestEffortAsync(
-                participant,
-                "reconciling",
-                () => participant.ReconcileAsync(cancellationToken),
-                cancellationToken);
-        }
-    }
-
-    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
-    {
-        foreach (var participant in _participants)
-        {
-            await ExecuteBestEffortAsync(
-                participant,
-                "reconciling",
-                () => participant.ReconcileAsync(cancellationToken),
-                cancellationToken);
-        }
-    }
-
     private async Task ExecuteRequiredAsync(
         IReadOnlyCollection<IContactCenterFeatureLifecycleParticipant> participants,
         string operation,
@@ -93,26 +66,6 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
             throw new AggregateException(
                 $"Unable to finish {operation} Contact Center feature work.",
                 failures);
-        }
-    }
-
-    private async Task ExecuteBestEffortAsync(
-        IContactCenterFeatureLifecycleParticipant participant,
-        string operation,
-        Func<Task> action,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await action();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogFailure(participant, operation, ex);
         }
     }
 
