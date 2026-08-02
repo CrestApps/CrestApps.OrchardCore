@@ -134,7 +134,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-004 — Provider registry is case-sensitive and swallows name collisions
 
-- **Priority:** High · **Status:** Not Started · **Category:** Extensibility/DI · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** High · **Status:** Completed · **Category:** Extensibility/DI · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** `TelephonyProviderOptions` (`Telephony.Abstractions/TelephonyProviderOptions.cs:10,34-38`) backs its registry with `private readonly Dictionary<string, TelephonyProviderTypeOptions> _providers = [];` — a default **case-sensitive** ordinal dictionary. `TryAddProvider` returns `this` silently when the key already exists.
 
@@ -143,6 +143,8 @@ Deeper investigation showed the central premise is factually wrong and the recom
 **Recommended solution.** Initialize with `StringComparer.OrdinalIgnoreCase`; make collision observable (return `bool`, or throw at startup since registration happens during container build). Normalize/trim names and validate non-whitespace.
 
 **Acceptance criteria.** Tests cover case-insensitive resolution and an observable collision outcome.
+
+**Resolution (commit `b4aa374f`).** Backed `_providers` with `StringComparer.OrdinalIgnoreCase` and rebuilt the exposed `Providers` frozen dictionary with the same comparer (it was ordinal — a second latent bug affecting `DefaultTelephonyProviderResolver` lookups). Names are trimmed and validated via `ArgumentException.ThrowIfNullOrWhiteSpace`. Collisions are now observable: re-registering the identical provider `Type` is an idempotent no-op, while registering a **different** `Type` under an existing (case-insensitive) name throws `InvalidOperationException` at container/options build. `TryAddProvider` keeps its fluent `TelephonyProviderOptions` return type to avoid a breaking public-API change (Telephony.Abstractions is released on `main`); `ReplaceProvider` remains the intentional override path. Added tests for case-insensitive resolution, idempotent/collision semantics, whitespace trimming, and null-vs-whitespace argument validation (17/17 pass, 0 warnings). Documented in `telephony/custom-providers.md` and the `v2.0.0` changelog. Independently reviewed by gpt-5.6 (code-review agent): one Medium finding (null name should throw `ArgumentNullException` per repo convention) was applied and the change was then APPROVED.
 
 ---
 
@@ -717,7 +719,7 @@ Pre-merge blockers:
 
 Strongly recommended before first release:
 
-- [ ] OC-004, OC-011, OC-012 — provider extensibility and versioning seams
+- [ ] OC-011, OC-012 — provider extensibility and versioning seams (OC-004 done — provider registry now case-insensitive with observable collisions)
 - [ ] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [ ] OC-019 — ContactCenter asset pipeline
 - [ ] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
