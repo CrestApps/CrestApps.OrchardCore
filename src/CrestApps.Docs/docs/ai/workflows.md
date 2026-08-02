@@ -32,12 +32,14 @@ The generated response will be saved in this property.
 This task exposes the same parameters available in the **Chat Interactions** experience, and its editor is organized into the same tabs. Each enabled feature contributes its own fields through dedicated display drivers, so the options you see depend on which features are turned on:
 
 - **Content** — result property name, prompt template, orchestrator, chat deployment, utility deployment, system instructions, prompt template selectors, max response tokens, temperature, top P, frequency penalty, and presence penalty.
-- **Knowledge** — data source, restrict answers to retrieved data only, strictness, retrieved documents, and the OData filter (contributed by the **AI Data Sources** feature).
+- **Knowledge** — data source, restrict answers to retrieved data only, strictness, retrieved documents, and the OData filter (contributed by the **AI Data Sources** feature); document retrieval mode and uploaded knowledgebase files (contributed by the **AI Documents** feature).
 - **Capabilities** — tools, tool instances (contributed by the **AI Tool Instances** feature), MCP connections (contributed by the **AI MCP** feature), and A2A connections (contributed by the **AI A2A** feature).
 
 :::note
 This task requires the **AI Chat Interactions** feature (`CrestApps.OrchardCore.AI.Chat.Interactions`) to be enabled, because it reuses the same configuration model and completion flow used by Chat Interactions.
 :::
+
+When the **AI Documents** feature is enabled, the **Knowledge** tab also lets you upload text-based documents that act as a knowledgebase for the activity. Uploaded files are chunked, embedded, and indexed against the configured document index profile, keyed by the activity's embedded interaction identifier, so their content is retrieved to provide context whenever the activity invokes the model.
 
 For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
 
