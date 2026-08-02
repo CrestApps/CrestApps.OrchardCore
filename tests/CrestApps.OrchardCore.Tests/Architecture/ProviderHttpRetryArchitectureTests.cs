@@ -51,7 +51,7 @@ public sealed class ProviderHttpRetryArchitectureTests
 
             var source = StripComments(File.ReadAllText(fullPath));
 
-            var handlerCount = _standardHandlerRegex.Matches(source).Count;
+            var handlerCount = _standardHandlerRegex.Count(source);
 
             if (handlerCount == 0)
             {
@@ -63,7 +63,7 @@ public sealed class ProviderHttpRetryArchitectureTests
             // Require at least one disable call per handler invocation in the same file. Removing the exclusion
             // from any single handler drops the disable count below the handler count and fails the guard, so a
             // protected sibling handler in the same file can no longer mask an unprotected one.
-            var disableCount = _disableUnsafeRetriesRegex.Matches(source).Count;
+            var disableCount = _disableUnsafeRetriesRegex.Count(source);
 
             if (disableCount < handlerCount)
             {

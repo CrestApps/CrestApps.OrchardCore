@@ -455,13 +455,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-028 — Scheduler leases can expire while work continues
 
-- **Priority:** High · **Status:** Not Started · **Category:** Distributed correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+- **Priority:** High · **Status:** Completed · **Category:** Distributed correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** `DialerPacingBackgroundTask` holds a 60-second lock while profiles and outbound attempts execute sequentially with no matching run deadline or lease renewal (`DialerPacingBackgroundTask.cs:10-15,24-43`, `DialerStrategyBase.cs:43-64`). `AgentAvailabilityRecoveryBackgroundTask` has the same shape with a one-minute lock.
 
 **Why it matters.** A second node can begin an overlapping pacing cycle while the first still runs, so per-invocation pacing no longer constrains aggregate call rate — producing over-reservation or a call burst, and racing agent state transitions.
 
 **Recommended solution.** Renewable per-profile leases or a strict execution deadline shorter than lock expiry; stop immediately when the budget expires.
+
+**Resolution.** Both tasks now adopt the same bounded-run pattern already proven in `ReservationExpiryBackgroundTask`: the distributed-lock expiration was raised from 60s to `LockExpiration = 120_000` (twice the one-minute schedule) and each run is bounded to a `MaxRunDurationMilliseconds = 90_000` wall-clock budget that is strictly below the lock expiration, so a run always finishes before its lock can expire and a second node can therefore never start an overlapping run. `DialerPacingBackgroundTask` enforces the budget both with a hard `CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)` + `CancelAfter` that cancels in-flight `RunCycleAsync` work and with a between-profile `IClock.UtcNow` deadline check that defers the remaining profiles to the next tick; `AgentAvailabilityRecoveryBackgroundTask` (a single recovery pass) enforces it with the linked `CancelAfter` token. Both distinguish shutdown cancellation (rethrown so the lease is released promptly) from budget cancellation (logged at Debug and deferred). Covered by new/updated unit tests: reflection-based metadata ordering guards (`schedule < 2× ≤ lock-expiration`, `run-budget < lock-expiration`, `lock-expiration > lock-timeout`), a clock-advance budget-defer test for the pacing task, quiescence and shutdown-propagation tests, and an assertion that the recovery pass runs under the budgeted (linked, cancelable) token rather than the raw shutdown token. Independent gpt-5.6-sol review: APPROVE.
 
 ---
 
@@ -747,7 +749,7 @@ Strongly recommended before first release:
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
 - [ ] OC-022, OC-023, OC-024 — load-bearing performance items
-- [ ] OC-028 — scheduler lease correctness
+- [x] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs
 
 Post-merge follow-ups:
