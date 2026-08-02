@@ -87,6 +87,10 @@ At minimum, your provider should:
 
 Use `TelephonyCall.Metadata` only for contextual data that should travel with the call without polluting the shared contract with provider-specific fields.
 
+:::note Technical names are unique and case-insensitive
+Provider technical names registered with `TelephonyProviderOptions` are compared case-insensitively and trimmed of surrounding whitespace, so `"Asterisk"` and `"asterisk"` resolve to the same provider. Re-registering the identical provider type under an existing name is a harmless no-op, but registering a **different** provider type under a name another module already claimed throws at startup instead of being silently discarded — pick a distinct technical name, or use `ReplaceProvider` when an override is intentional.
+:::
+
 ### Capabilities and contracts are checked together
 
 `TelephonyCapabilityContracts` records the contract each capability flag requires, and the shared telephony service refuses an operation unless the resolved provider **both** advertises the flag **and** implements the contract. Advertising a capability you did not implement fails closed, and implementing a contract you did not advertise fails closed too, so neither half alone can make an operation reachable.
