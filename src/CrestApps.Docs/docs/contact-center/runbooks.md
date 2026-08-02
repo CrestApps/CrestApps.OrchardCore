@@ -5,7 +5,7 @@ title: Contact Center failure and deployment runbooks
 description: Operational runbooks for SQL, Redis/backplane, provider, node, and network failures plus rolling and blue-green deployment and the voice listener handover and rollback.
 ---
 
-These runbooks cover the dependency and node failures an operator must handle for a Contact Center deployment, plus the two supported deployment strategies. They assume the health, telemetry, retention, and upgrade contracts described in [Production support](production-support.md) and the gates in [Service objectives](service-objectives.md).
+These runbooks cover the dependency and node failures an operator must handle for a Contact Center deployment, plus the two supported deployment strategies. They assume the health, telemetry, retention, and upgrade contracts described in [Production support](production-support.md).
 
 Every runbook uses the same signals so responders do not have to learn per-incident tooling:
 

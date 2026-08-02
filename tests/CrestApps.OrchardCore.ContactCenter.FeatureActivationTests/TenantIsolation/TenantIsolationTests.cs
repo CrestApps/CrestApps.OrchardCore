@@ -65,7 +65,7 @@ public sealed class TenantIsolationTests
         Assert.Null(tenantAViewOfTenantBState.ProviderCommandByCommandId);
     }
 
-    [Fact(Skip = "Enabled by cc1-asterisk; see PLAN-2 Part 0 and Part 3 tenant-scoped ARI attribution.")]
+    [Fact(Skip = "Enabled by the cc1-asterisk feature; requires tenant-scoped ARI attribution (persisted ARI channel-to-tenant ownership binding), which is not available in this harness.")]
     public void AsteriskAriAttribution_TwoTenants_UsesDistinctTenantNamespacesAndScopedSubscription()
     {
         // Arrange
@@ -90,7 +90,7 @@ public sealed class TenantIsolationTests
         Assert.StartsWith("tenant-b-", tenantB.EndpointNamespace, StringComparison.Ordinal);
     }
 
-    [Fact(Skip = "Enabled by cc1-asterisk; see PLAN-2 Part 3 persisted ARI channel-to-tenant ownership binding.")]
+    [Fact(Skip = "Enabled by the cc1-asterisk feature; requires the persisted ARI channel-to-tenant ownership binding, which is not available in this harness.")]
     public void AsteriskAriEvent_TenantAReceivesTenantBIdentifiers_RejectsEventBeforeRoutingOrMediaActions()
     {
         // Arrange

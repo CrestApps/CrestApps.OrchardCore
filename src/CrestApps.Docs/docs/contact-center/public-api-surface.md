@@ -62,5 +62,4 @@ A recorded surface is still only text, and text is easy to accept in bulk. Two c
 
 ## Related
 
-- [PR-to-test control matrix](pr-test-control-matrix.md) - gate `C010` tracks this control.
 - [Supply chain security](../supply-chain.md) - the equivalent controls for dependencies.

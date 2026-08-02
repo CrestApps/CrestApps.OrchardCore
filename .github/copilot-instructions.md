@@ -12,18 +12,14 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 
 ## Contact Center module (active, multi-phase project)
 
-The **Contact Center** module set is a large, multi-phase orchestration layer being built between the CRM (Omnichannel) and Telephony modules. Before doing any Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`), **ALWAYS read the durable plan first**:
-
-- **Release plan & progress (read first):** [`.github/contact-center/PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md`](contact-center/PLAN-3-PRODUCTION-SINGLE-NODE-DISTRIBUTED.md)
-- **Architecture reference:** [`.github/contact-center/PLAN.md`](contact-center/PLAN.md)
-
-Those documents are the source of truth for the Contact Center architecture, phased scope, MVP definition, conceptual data model, event catalog, and current progress. Always start with the **release plan**: read its **Progress status** section to see what is done and what is next, start at the lowest incomplete wave, and update that section after each meaningful change. A progress checkbox may be marked complete **only** when a named CI gate proves it.
+The **Contact Center** module set is a large, multi-phase orchestration layer built between the CRM (Omnichannel) and Telephony modules. The planning scaffolding (the multi-phase plan documents and their release-tracking ledgers) has been retired now that the work has landed; the short retained record of what shipped and what remains as an operator step is [`.github/contact-center/PRODUCTION-READINESS.md`](contact-center/PRODUCTION-READINESS.md). Consult it for the shipped scope, the MVP boundary, and any outstanding deployment-acceptance steps before doing Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`).
 
 Key rules for this module set:
 
 - Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item; `Interaction` is communication history for one attempt and never owns workflow or disposition.
-- **Never** write competitor product names in code, comments, identifiers, or public docs. Adopt only the generic, industry-standard terminology defined in the plan's terminology/metrics section.
-- Group related capabilities into separate, feature-gated Orchard modules/features (the plan's module breakdown), the way commercial platforms separate licensed capabilities.
+- **Never** write competitor product names in code, comments, identifiers, or public docs. Adopt only generic, industry-standard terminology.
+- Group related capabilities into separate, feature-gated Orchard modules/features, the way commercial platforms separate licensed capabilities.
+- The runtime/architecture-contract ledgers under `.github/contact-center/` (`support-matrix.v1.json`, `feature-dependency-violations.v1.json`, `feature-lifecycle-contracts.v1.json`) are consumed by ordinary tests and must stay in sync with the code they describe.
 
 ## Working Effectively
 

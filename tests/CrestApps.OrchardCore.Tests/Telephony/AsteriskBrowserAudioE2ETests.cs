@@ -5,6 +5,6 @@ public sealed class AsteriskBrowserAudioE2ETests
     [Fact(Skip = "Requires real Asterisk, coturn, browser WebRTC, trusted WSS/DTLS certificates, direct-ICE and forced-TURN tone verification; unavailable in unit-test infrastructure.")]
     public void BrowserToAsteriskWebRtcAudio_WithDirectIceAndForcedTurn_VerifiesReceivedToneFrequencies()
     {
-        // This release-blocking proof runs on the dedicated media runner described by PLAN-2 CC-3.
+        // This release-blocking proof runs on a dedicated media runner with a real Asterisk, coturn, and browser WebRTC topology.
     }
 }

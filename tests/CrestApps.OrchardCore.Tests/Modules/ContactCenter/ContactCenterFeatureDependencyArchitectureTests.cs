@@ -823,29 +823,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void EveryKnownViolation_OwnsAControlMatrixGate()
-    {
-        // Arrange
-        var repositoryRoot = FindRepositoryRoot();
-        var ledger = LoadLedger(repositoryRoot);
-        var controlMatrix = LoadControlMatrix(repositoryRoot);
-        var gateIds = controlMatrix["gates"]!.AsArray()
-            .Select(gate => gate!["id"]!.GetValue<string>())
-            .ToHashSet(StringComparer.Ordinal);
-
-        // Act & Assert
-        foreach (var violation in ledger["knownViolations"]!.AsArray())
-        {
-            var violationId = violation!["id"]!.GetValue<string>();
-            var gateId = violation["gateId"]!.GetValue<string>();
-
-            Assert.True(
-                gateIds.Contains(gateId),
-                $"Ledger violation '{violationId}' references control-matrix gate '{gateId}', which does not exist.");
-        }
-    }
-
-    [Fact]
     public void FeatureDependencyClosures_AreLegalAndMatchTheExpectedLedger()
     {
         // Arrange
@@ -1329,14 +1306,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         return JsonNode.Parse(File.ReadAllText(ledgerPath))?.AsObject() ??
             throw new InvalidOperationException("The Contact Center R0a feature-dependency ledger is invalid.");
-    }
-
-    private static JsonObject LoadControlMatrix(string repositoryRoot)
-    {
-        var matrixPath = Path.Combine(repositoryRoot, ".github", "contact-center", "pr-test-control-matrix.v1.json");
-
-        return JsonNode.Parse(File.ReadAllText(matrixPath))?.AsObject() ??
-            throw new InvalidOperationException("The Contact Center PR-to-test control matrix is invalid.");
     }
 
     private static string FindRepositoryRoot()
