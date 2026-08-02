@@ -27,7 +27,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAIProfileManager _profileManager;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -43,7 +43,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     /// <param name="promptStore">The prompt store.</param>
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="campaignCatalog">The campaign catalog.</param>
-    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="channelEndpointCatalog">The channel endpoint catalog.</param>
     /// <param name="smsService">The sms service.</param>
     /// <param name="liquidTemplateManager">The liquid template manager.</param>
@@ -55,7 +55,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         IAIChatSessionPromptStore promptStore,
         IAIProfileManager profileManager,
         ICatalog<OmnichannelCampaign> campaignCatalog,
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
@@ -67,7 +67,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _promptStore = promptStore;
         _profileManager = profileManager;
         _campaignCatalog = campaignCatalog;
-        _flowSettingsCatalog = flowSettingsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _channelEndpointCatalog = channelEndpointCatalog;
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
@@ -220,9 +220,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             return null;
         }
 
-        var flowSettings = await _flowSettingsCatalog.GetAllAsync(cancellationToken);
-
-        return flowSettings.FirstOrDefault(settings =>
-            string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+        return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType, cancellationToken);
     }
 }

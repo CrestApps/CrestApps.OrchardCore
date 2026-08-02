@@ -209,18 +209,26 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         // drops are tolerant because MySQL commits each schema change on its own and writes this drop without
         // IF EXISTS, so an attempt that stopped part-way would otherwise fail every activation from here on. A
         // drop that genuinely fails is still reported, because the recreation below runs on the strict builder.
+        // Each index is dropped in its own alter so a swallowed failure of one — a re-run meeting an index a
+        // previous attempt already dropped — cannot suppress the drop of the next: the data layer runs every
+        // statement of a single alter under one try, so batching the drops would let the first failure strand
+        // the rest, and a surviving index would then make its own recreation below fail every activation.
         var tolerantSchemaBuilder = new SchemaBuilder(
             _store.Configuration,
             SchemaBuilder.Transaction,
             throwOnError: false);
 
-        await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
-        {
-            table.DropIndex("IDX_OmnichannelActivityMyActivities_DocumentId");
-            table.DropIndex("IDX_OmnichannelActivityMyActivities_BatchLoading");
-            table.DropIndex("IDX_OmnichannelActivity_Assignment");
-        },
-        collection: OmnichannelConstants.CollectionName);
+        await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
+            table => table.DropIndex("IDX_OmnichannelActivityMyActivities_DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
+            table => table.DropIndex("IDX_OmnichannelActivityMyActivities_BatchLoading"),
+            collection: OmnichannelConstants.CollectionName);
+
+        await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
+            table => table.DropIndex("IDX_OmnichannelActivity_Assignment"),
+            collection: OmnichannelConstants.CollectionName);
 
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityKind>(
             SchemaBuilder,

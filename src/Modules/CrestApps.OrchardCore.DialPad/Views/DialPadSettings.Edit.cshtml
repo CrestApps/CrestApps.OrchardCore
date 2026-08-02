@@ -83,6 +83,15 @@
                 <span class="hint">@T["The phone number presented to the recipient on outbound calls. Include a country code, for example +1 for the United States."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
+            <label asp-for="WebhookSigningSecret" class="ocat-label">@T["Webhook signing secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="WebhookSigningSecret" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookSigningSecret ? T["A secret is already saved. Enter a new value to replace it."] : T["Enter the DialPad webhook signing secret."])" />
+                <span asp-validation-for="WebhookSigningSecret"></span>
+                <span class="hint">@T["Used to validate inbound DialPad call-event webhooks posted to /api/dialpad/webhook/call. Configure a DialPad webhook with this secret so inbound calls create Contact Center activities and route to agents."]</span>
+            </div>
+        </div>
     </div>
 
     <div data-dialpad-authentication-section="@DialPadAuthenticationType.OAuth2" hidden="@(Model.AuthenticationType != DialPadAuthenticationType.OAuth2)">

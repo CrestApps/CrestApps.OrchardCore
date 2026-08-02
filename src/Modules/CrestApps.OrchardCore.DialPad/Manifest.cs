@@ -9,14 +9,14 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Integrates the DialPad telephony platform with the Telephony soft phone.",
-    Category = "Communications"
+    Category = "Telephony"
 )]
 
 [assembly: Feature(
     Id = DialPadConstants.Feature.Area,
     Name = "DialPad",
     Description = "Provides the DialPad telephony provider and its settings.",
-    Category = "Communications",
+    Category = "Telephony",
     Dependencies =
     [
         TelephonyConstants.Feature.Area,

@@ -9,6 +9,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _responseBody;
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;
 
     public StubHttpMessageHandler(HttpStatusCode statusCode, string responseBody = "")
     {
@@ -16,20 +17,35 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
         _responseBody = responseBody;
     }
 
+    public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+    {
+        _responseFactory = responseFactory;
+    }
+
     public HttpRequestMessage LastRequest { get; private set; }
 
     public string LastRequestBody { get; private set; }
 
+    public IList<HttpRequestMessage> Requests { get; } = [];
+
+    public IList<string> RequestBodies { get; } = [];
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;
+        Requests.Add(request);
 
         if (request.Content is not null)
         {
             LastRequestBody = await request.Content.ReadAsStringAsync(cancellationToken);
+            RequestBodies.Add(LastRequestBody);
+        }
+        else
+        {
+            RequestBodies.Add(null);
         }
 
-        return new HttpResponseMessage(_statusCode)
+        return _responseFactory?.Invoke(request) ?? new HttpResponseMessage(_statusCode)
         {
             Content = new StringContent(_responseBody),
         };
