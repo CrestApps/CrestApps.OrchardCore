@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -57,6 +58,12 @@ public sealed class Startup : StartupBase
                 options.Retry.Delay = TimeSpan.FromSeconds(2);
                 options.Retry.BackoffType = DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
+
+                // Never auto-replay non-idempotent requests. This client carries ARI call-origination POSTs and
+                // PJSIP credential mutations; a retried POST after a lost response could place a second outbound
+                // call. Safe methods (status GETs) still retry. The provider exposes no idempotency key, so
+                // retrying unsafe methods is unsound.
+                options.Retry.DisableForUnsafeHttpMethods();
 
                 options.CircuitBreaker.FailureRatio = 0.1;
                 options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);

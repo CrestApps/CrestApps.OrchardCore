@@ -469,13 +469,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-029 — Unsafe HTTP retries on non-idempotent operations
 
-- **Priority:** High · **Status:** Not Started · **Category:** Resilience/correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** Provider idempotency contracts
+- **Priority:** High · **Status:** Completed · **Category:** Resilience/correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** Provider idempotency contracts
 
 **Problem.** Both providers install standard resilience retry pipelines without excluding unsafe methods (`Asterisk/Startup.cs:51-56`, `DialPad/Startup.cs:22-27`), and those clients carry call-origination POSTs and OAuth authorization-code/refresh-token POSTs.
 
 **Why it matters.** A lost response can place a **second outbound call**. Retrying a one-time authorization code or a rotating refresh token yields `invalid_grant` after the first request actually succeeded.
 
 **Recommended solution.** Separate clients/pipelines by operation type; disable retries for unsafe methods unless the provider guarantees idempotency via a deterministic key; never auto-replay ambiguous OAuth grant requests.
+
+**Resolution.** Both provider resilience pipelines now call the framework-provided `options.Retry.DisableForUnsafeHttpMethods()` (from `Microsoft.Extensions.Http.Resilience`) inside their `AddStandardResilienceHandler` retry configuration. This excludes POST/PATCH/PUT/DELETE/CONNECT from automatic replay while preserving retries for idempotent safe methods (status GETs). Neither provider exposes a deterministic idempotency key, so retrying unsafe methods (ARI call-origination, PJSIP credential mutations, DialPad call-origination, and OAuth authorization-code/refresh-token POSTs) is unsound; disabling replay is the correct fail-closed behavior. A source-scanning architecture guard test (`ProviderHttpRetryArchitectureTests`) dynamically discovers **every** source file under `src` that installs the standard resilience handler and asserts each also disables unsafe-method retries — the guard is not limited to a hardcoded provider list, so a future client cannot regress the rule. That dynamic guard surfaced three additional clients (the AbstractAPI, Veriphone, and Twilio Lookup phone-number-verification providers); although those are GET-only lookups today, the same disable call was applied so a future POST cannot silently gain unsafe-retry behavior. Independent gpt-5.6-sol review: initial REQUEST-CHANGES (guard was hardcoded to two files) applied by making the guard dynamic; re-review APPROVE.
 
 ---
 
@@ -743,7 +745,7 @@ Strongly recommended before first release:
 - [ ] OC-011, OC-012 — provider extensibility and versioning seams (OC-004 done — provider registry now case-insensitive with observable collisions)
 - [ ] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
-- [ ] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
+- [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
 - [ ] OC-022, OC-023, OC-024 — load-bearing performance items
 - [ ] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -28,6 +29,13 @@ public sealed class Startup : StartupBase
                 options.Retry.Delay = TimeSpan.FromSeconds(2);
                 options.Retry.BackoffType = DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
+
+                // Never auto-replay non-idempotent requests. This client carries call-origination POSTs and
+                // OAuth authorization-code/refresh-token POSTs; retrying a POST after a lost response could
+                // place a second outbound call, and replaying a one-time authorization code or a rotated
+                // refresh token yields invalid_grant after the first request already succeeded. Safe methods
+                // (status GETs) still retry.
+                options.Retry.DisableForUnsafeHttpMethods();
 
                 options.CircuitBreaker.FailureRatio = 0.1;
                 options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
