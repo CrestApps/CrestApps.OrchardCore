@@ -65,6 +65,31 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
             .AddCheck<ContactCenterOutboxHealthCheck>(
                 ContactCenterConstants.HealthChecks.OutboxCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag])
+            .AddCheck<ContactCenterActiveCallsHealthCheck>(
+                ContactCenterConstants.HealthChecks.ActiveCallsCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the health checks owned by the Contact Center Queues feature.
+    /// </summary>
+    /// <param name="services">The service collection to register the checks with.</param>
+    /// <returns>The same <paramref name="services"/> so calls can be chained.</returns>
+    /// <remarks>
+    /// The queue-backlog gauge reads the queue item store, which only the Queues feature registers, so it must be
+    /// registered by that feature and never by the base feature.
+    /// </remarks>
+    public static IServiceCollection AddContactCenterQueuesHealthChecks(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services
+            .AddHealthChecks()
+            .AddCheck<ContactCenterQueueBacklogHealthCheck>(
+                ContactCenterConstants.HealthChecks.QueueBacklogCheckName,
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
 
         return services;

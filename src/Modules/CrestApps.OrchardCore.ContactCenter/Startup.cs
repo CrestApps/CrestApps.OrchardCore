@@ -777,6 +777,7 @@ public sealed class QueuesStartup : StartupBase
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
+        services.AddContactCenterQueuesHealthChecks();
     }
 }
 

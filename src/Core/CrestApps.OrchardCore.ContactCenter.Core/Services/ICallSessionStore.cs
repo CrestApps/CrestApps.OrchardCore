@@ -32,4 +32,13 @@ public interface ICallSessionStore : ICatalog<CallSession>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching call session, or <see langword="null"/> when none is found.</returns>
     Task<CallSession> FindByInteractionIdAsync(string interactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the call sessions that have not yet ended, using an aggregate query without materializing the
+    /// rows. A session is active while it has no recorded end time, so this is the number of live calls the
+    /// tenant is currently handling.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of active call sessions.</returns>
+    Task<int> CountActiveAsync(CancellationToken cancellationToken = default);
 }

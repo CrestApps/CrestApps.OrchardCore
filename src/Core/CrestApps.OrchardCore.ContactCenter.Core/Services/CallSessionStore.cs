@@ -76,6 +76,15 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<CallSession, CallSessionIndex>(
+            index => index.EndedUtc == null,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
     private static void ValidateTopology(CallSession record)
     {
         if (!string.IsNullOrEmpty(record.AgentSessionId) &&

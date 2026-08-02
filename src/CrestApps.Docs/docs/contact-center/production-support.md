@@ -7,7 +7,7 @@ description: Finite production support matrix, initial capacity tier, and prohib
 
 The Contact Center commercial release remains blocked until remediation phases R0 through R8 and their release evidence pass. The versioned machine-readable contract is `.github/contact-center/support-matrix.v1.json`; unlisted combinations are unsupported.
 
-The measurable availability, latency, dependency, recovery, and ownership gates are defined in [Service objectives](service-objectives.md). Every P0/P1 production-readiness finding is tracked to a DRI, approver, test id, CI job, and retained evidence in the [PR-to-test control matrix](pr-test-control-matrix.md). Step-by-step responses for dependency and node failures and the supported deployment strategies are in the [Failure runbooks](runbooks.md).
+The measurable availability, latency, dependency, recovery, and ownership gates are defined in [Service objectives](service-objectives.md). Every P0/P1 production-readiness finding is tracked to a DRI, approver, test id, CI job, and retained evidence in the [PR-to-test control matrix](pr-test-control-matrix.md). Step-by-step responses for dependency and node failures, the supported deployment strategies, and the [Voice listener handover and rollback](runbooks.md#voice-listener-handover-and-rollback) procedure are in the [Failure runbooks](runbooks.md).
 
 ## Initial GA-Core profiles
 
@@ -99,6 +99,14 @@ Current instruments:
 | --- | --- | --- |
 | `contactcenter.outbox.redelivered` | Counter | Domain events successfully redelivered from the durable outbox. |
 | `contactcenter.outbox.dead_lettered` | Counter | Domain events dead-lettered after exhausting their retry budget, tagged by `reason`. |
+
+On tenants that enable Voice, the Asterisk provider publishes a second `Meter` named `CrestApps.OrchardCore.Asterisk`, whose instruments are all tagged by `provider`. The `provider` tag is the provider technology name (a compile-time constant), not a per-tenant or per-shell dimension, so on a node that hosts more than one Asterisk tenant these counters aggregate per node/process and cannot be split by tenant.
+
+| Instrument | Kind | Meaning |
+| --- | --- | --- |
+| `asterisk.realtime.ingestion.saturated` | Counter | Real-time ingestion buffer saturation episodes on the listener (see [Ingestion backpressure and its limits](#ingestion-backpressure-and-its-limits)). |
+| `asterisk.realtime.connected` | Counter | Successful ARI event-stream connections. Counts both the first connection and every reconnection, so it is the connectivity signal for the listener. |
+| `asterisk.realtime.reconnect_attempted` | Counter | Times the listener re-entered its loop to re-establish the ARI event-stream connection after a connection ended or a connect attempt failed. A sustained non-zero rate means connection churn — the listener is repeatedly losing and reacquiring the stream — and each reconnection triggers a reconciliation sweep. Because the stream is not lossless across a reconnect, a rising rate here is an early warning that events may be being missed between sweeps. |
 
 ### Health checks
 
@@ -210,6 +218,8 @@ The dependency report contains only what the tenant's enabled features registere
 | `contactcenter-node-serving` | Readiness | Contact Center | Opt-in node serving gate (see above). Disabled by default, in which case it performs no I/O and is always healthy. | — | Enabled, and this node failed `ConsecutiveFailuresBeforeUnready` consecutive store probes. |
 | `contactcenter-storage` | Dependency | Contact Center | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
 | `contactcenter-outbox` | Dependency | Contact Center | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
+| `contactcenter-active-calls` | Dependency | Contact Center | A live gauge, not a verdict: reports `active_calls`, the number of call sessions that have not ended, in the check's `Data`. This is the count of live calls a node drain would interrupt. Stays healthy at any count because the acceptable ceiling is deployment specific. | — | The store is unreadable. |
+| `contactcenter-queue-backlog` | Dependency | Contact Center Queues | A live gauge, not a verdict: reports `queued_interactions`, the number of interactions waiting for an agent across every queue, in the check's `Data`. Registered by the Queues feature, which owns the queue item store, so it is absent on tenants without Queues. Stays healthy at any count. | — | The store is unreadable. |
 | `contactcenter-provider-ingress` | Dependency | Contact Center Voice | Provider webhook inbox dead-letter and overdue backlog. A stuck provider stream or an expired listener lease surfaces here as a growing ingress backlog. | Same thresholds as the outbox. | Same thresholds as the outbox. |
 | `contactcenter-distributed-lock` | Dependency | Contact Center | Acquires and releases a dedicated probe lock within a bounded time. In a production topology this exercises the Redis-backed lock end to end; in a development topology it exercises the process-local lock and is trivially satisfied. | — | The probe lock cannot be acquired within the timeout, or the lock backend throws. |
 | `contactcenter-redis` | Dependency | Contact Center | Pings the Redis connection shared by the distributed lock and the SignalR backplane. Reports healthy with nothing probed when Redis is not enabled. | — | The ping fails or times out while Redis is enabled. |

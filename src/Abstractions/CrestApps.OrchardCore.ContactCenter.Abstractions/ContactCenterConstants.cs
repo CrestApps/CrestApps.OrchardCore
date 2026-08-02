@@ -86,6 +86,21 @@ public static class ContactCenterConstants
         public const string OutboxCheckName = "contactcenter-outbox";
 
         /// <summary>
+        /// The registration name of the live active-call gauge check that surfaces the count of call sessions
+        /// that have not yet ended as health data. It reports the number of live calls an operator would
+        /// interrupt by draining a node rather than gating a probe, so it is healthy whenever the count can be
+        /// read.
+        /// </summary>
+        public const string ActiveCallsCheckName = "contactcenter-active-calls";
+
+        /// <summary>
+        /// The registration name of the queued-interaction backlog gauge check that surfaces the count of
+        /// interactions waiting for an agent across every queue as health data. It reports the routed work still
+        /// waiting rather than gating a probe, so it is healthy whenever the count can be read.
+        /// </summary>
+        public const string QueueBacklogCheckName = "contactcenter-queue-backlog";
+
+        /// <summary>
         /// The registration name of the provider ingress inbox backlog check.
         /// </summary>
         public const string ProviderIngressCheckName = "contactcenter-provider-ingress";

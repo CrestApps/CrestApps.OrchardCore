@@ -34,6 +34,14 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     Task<int> CountWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts the items currently waiting across every queue using an aggregate query, without materializing the
+    /// waiting rows. This is the tenant-wide queued-interaction backlog an operator weighs before draining a node.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The total number of waiting items across all queues.</returns>
+    Task<int> CountAllWaitingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Counts the items currently waiting in each of the specified queues using a single aggregate query.
     /// Queues with no waiting items are absent from the result rather than present with a zero.
     /// </summary>

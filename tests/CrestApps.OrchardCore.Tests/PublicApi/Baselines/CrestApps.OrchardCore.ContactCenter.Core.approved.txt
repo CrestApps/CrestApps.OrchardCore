@@ -35,6 +35,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
     {
         public static Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult Evaluate(string subsystem, int deadLetterCount, int overdueCount, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterHealthCheckOptions options) { }
     }
+    public sealed class ContactCenterActiveCallsHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public ContactCenterActiveCallsHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionStore callSessionStore) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterDistributedLockHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
         public ContactCenterDistributedLockHealthCheck(OrchardCore.Locking.Distributed.IDistributedLock distributedLock) { }
@@ -59,6 +64,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
     public sealed class ContactCenterProviderIngressHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
         public ContactCenterProviderIngressHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderWebhookInboxStore inboxStore, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterHealthCheckOptions> options, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterQueueBacklogHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public ContactCenterQueueBacklogHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemStore queueItemStore) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterStorageHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
@@ -1940,6 +1950,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public CallSessionStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountActiveAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -2497,6 +2508,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface ICallSessionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>
     {
+        System.Threading.Tasks.Task<int> CountActiveAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
@@ -2866,6 +2878,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IQueueItemStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>
     {
+        System.Threading.Tasks.Task<int> CountAllWaitingAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountWaitingOlderThanAsync(string queueId, System.DateTime thresholdUtc, System.Threading.CancellationToken cancellationToken = default);
@@ -3150,6 +3163,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public QueueItemStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountAllWaitingAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountWaitingOlderThanAsync(string queueId, System.DateTime thresholdUtc, System.Threading.CancellationToken cancellationToken = default) { }

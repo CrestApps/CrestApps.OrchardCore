@@ -66,6 +66,15 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     }
 
     /// <inheritdoc/>
+    public async Task<int> CountAllWaitingAsync(CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterConstants.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(
         IReadOnlyCollection<string> queueIds,
         CancellationToken cancellationToken = default)

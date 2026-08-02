@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Channels;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Asterisk.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -150,6 +151,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
             if (!cancellationToken.IsCancellationRequested)
             {
+                AsteriskDiagnostics.RecordRealtimeReconnectAttempted(settings.ProviderName);
+
                 await Task.Delay(GetReconnectDelay(failureCount), cancellationToken);
             }
         }
@@ -169,6 +172,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         }
 
         await socket.ConnectAsync(eventsUri, cancellationToken);
+
+        AsteriskDiagnostics.RecordRealtimeConnected(settings.ProviderName);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

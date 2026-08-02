@@ -117,6 +117,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class HealthChecks
         {
+            public const string ActiveCallsCheckName = "contactcenter-active-calls";
             public const string AreaTag = "contactcenter";
             public const string BackplaneCheckName = "contactcenter-backplane";
             public const string DependenciesRoute = "api/contact-center/health/dependencies";
@@ -127,6 +128,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string OutboxCheckName = "contactcenter-outbox";
             public const string ProcessLivenessPath = "/health/process";
             public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
+            public const string QueueBacklogCheckName = "contactcenter-queue-backlog";
             public const string ReadinessRoute = "api/contact-center/health/ready";
             public const string ReadyTag = "contactcenter-ready";
             public const string RedisConnectivityCheckName = "contactcenter-redis";

@@ -99,6 +99,7 @@ public sealed class ContactCenterHealthEndpointsTests
         // Assert
         Assert.Equal(
             [
+                ContactCenterConstants.HealthChecks.ActiveCallsCheckName,
                 ContactCenterConstants.HealthChecks.OutboxCheckName,
                 ContactCenterConstants.HealthChecks.StorageCheckName,
             ],
@@ -127,6 +128,33 @@ public sealed class ContactCenterHealthEndpointsTests
                 ContactCenterConstants.HealthChecks.BackplaneCheckName,
                 ContactCenterConstants.HealthChecks.DistributedLockCheckName,
                 ContactCenterConstants.HealthChecks.RedisConnectivityCheckName,
+            ],
+            selected);
+
+        Assert.All(registrations, registration =>
+        {
+            Assert.Contains(ContactCenterConstants.HealthChecks.AreaTag, registration.Tags);
+            Assert.Contains(ContactCenterConstants.HealthChecks.DependencyTag, registration.Tags);
+            Assert.DoesNotContain(ContactCenterConstants.HealthChecks.ReadyTag, registration.Tags);
+        });
+    }
+
+    [Fact]
+    public void QueuesHealthChecks_RegisterTheQueueBacklogProbe_TaggedDependency()
+    {
+        // Arrange
+        var registrations = GetRegisteredHealthChecks(services => services.AddContactCenterQueuesHealthChecks());
+
+        // Act
+        var selected = SelectNames(registrations, ContactCenterHealthEndpoints.IsDependencyCheck);
+
+        // Assert
+        // The queue-backlog gauge reads the queue item store only the Queues feature registers, so it is owned by
+        // that feature and never appears in the base-feature set. It carries the dependency tag so it surfaces as
+        // an alerting gauge and never gates readiness.
+        Assert.Equal(
+            [
+                ContactCenterConstants.HealthChecks.QueueBacklogCheckName,
             ],
             selected);
 
@@ -189,6 +217,7 @@ public sealed class ContactCenterHealthEndpointsTests
         // Assert
         Assert.Equal(
             [
+                ContactCenterConstants.HealthChecks.ActiveCallsCheckName,
                 ContactCenterConstants.HealthChecks.OutboxCheckName,
                 ContactCenterConstants.HealthChecks.ProviderIngressCheckName,
                 ContactCenterConstants.HealthChecks.StorageCheckName,
@@ -255,7 +284,7 @@ public sealed class ContactCenterHealthEndpointsTests
             .AddContactCenterVoiceHealthChecks());
 
         // Act & Assert
-        Assert.Equal(6, registrations.Length);
+        Assert.Equal(7, registrations.Length);
 
         Assert.All(registrations, registration =>
         {
