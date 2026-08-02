@@ -150,13 +150,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-005 — `ReconcileAsync` is a published contract that nothing ever invokes
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Lifecycle · **Effort:** S · **Risk:** Medium · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** Lifecycle · **Effort:** S · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** `IContactCenterFeatureLifecycleParticipant.ReconcileAsync` is documented as reconciling feature state on shell activation, and `ContactCenterFeatureLifecycleCoordinator.ReconcileAsync` implements the fan-out — but `ContactCenterFeatureLifecycleHandler` overrides only `DisablingAsync`. No caller of the coordinator's `ReconcileAsync` exists in the repository. Four types implement it and none is reached. Relatedly `ContactCenterVoiceTenantEvents` is named for tenant events but is never registered as `IModularTenantEvents`.
 
 **Why it matters.** This ships in the **Abstractions package**. A third-party voice provider will implement `ReconcileAsync` per the XML doc and silently receive no post-restart reconciliation. Internally the gap is masked by `ProviderCallStateReconciliationBackgroundTask`, so it will not surface in testing — it will surface as a provider that never recovers after a shell reload.
 
 **Recommended solution.** Either wire it (`IModularTenantEvents.ActivatedAsync` or `FeatureEventHandler.EnabledAsync` resolving the coordinator), or delete `ReconcileAsync` from the interface and all four implementations. Do not ship a contract that lies.
+
+**Resolution (chose deletion).** Deleted `ReconcileAsync` from the interface and all five implementations. Investigation showed every implementation only flipped an in-memory admission flag (`_workManager.Activate` / `_connectionRegistry.Activate`), which is redundant on a fresh shell — a re-enabled feature rebuilds the tenant shell, so the per-instance `ConcurrentDictionary` defaults to not-quiescing and the hub connection registry defaults active. The contract could not be safely wired at activation either: both a synchronous fan-out and a `ShellScope.AddDeferredTask` execute inside the nested activation scope whose `finally` awaits `BeforeDisposeAsync` **before** `IsActivated` is set (verified against Orchard `ShellScope.ActivateShellInternalAsync`), so a hung participant would block tenant startup. The genuine post-restart provider reconciliation is owned by `ProviderCallStateReconciliationBackgroundTask` → `ContactCenterVoiceLifecycleParticipant.ReconcileProviderStateAsync` (a real `IBackgroundTask`, gated on the work-admission gate, fully decoupled from activation) — which is retained. The interface is new on this unreleased branch, so removal is zero-breakage. Also deleted `ContactCenterFeatureLifecycleActivationHandler` and its `IModularTenantEvents` registration, and dropped both `ReconcileAsync` overloads plus the orphaned `ExecuteBestEffortAsync` from the coordinator (now quiesce + drain only). Updated the PublicApi baseline, tests, changelog, `production-support.md`, and the `feature-lifecycle-contracts.v1.json` ledger. Independently reviewed (gpt-5.6-sol): **APPROVE**. Commit `ea3225a1`.
 
 ---
 
@@ -713,6 +715,7 @@ Pre-merge blockers:
 - [x] **OC-001** — tenant no longer bricked by default-configured `OrchardCore.HealthChecks`
 - [x] **OC-002** — soft-phone compliance bypass closed or formally policy-gated and documented
 - [x] **OC-003** — Won't Fix (premise disproven): fresh installs run no destructive rebuild; `UpdateFromN` chains are an intentional, tested rolling-upgrade capability. See OC-003 Resolution + OC-049.
+- [x] **OC-005** — the lying `ReconcileAsync` lifecycle contract removed; genuine post-restart provider reconcile owned by the background task. See OC-005 Resolution.
 - [ ] Full `dotnet build -c Release -warnaserror` verified clean on a machine with feed access (see review caveat)
 - [ ] `dotnet test` green, including the feature-activation and distributed test projects
 - [ ] `npm run rebuild` run and `git status` clean (currently cannot cover ContactCenter — see **OC-019**)
