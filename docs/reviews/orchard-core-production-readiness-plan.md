@@ -343,7 +343,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-019 — ContactCenter assets bypass the Gulp pipeline and the min/debug resource convention
 
-- **Priority:** High · **Status:** Not Started · **Category:** Resource management · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** High · **Status:** Completed · **Category:** Resource management · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** Verified: ContactCenter has **no** `Assets/`, **no** `Assets.json`, **no** `package.json`. Five hand-authored files (~2,000 lines) live directly in `wwwroot/` — `scripts/{contact-center-realtime,agent-workspace,supervisor-dashboard,contact-center-soft-phone}.js` and `styles/contact-center-workspace.css` — with no minified variants. Both resource configurations use the single-argument `SetUrl(...)` pointing at unminified files. The sibling Telephony module does it correctly (`Assets.json` + `SetUrl(min, debug)` + `.min` outputs).
 
@@ -352,6 +352,8 @@ Deeper investigation showed the central premise is factually wrong and the recom
 **Recommended solution.** Move sources to `Assets/js` and `Assets/scss`, add `Assets.json` mirroring Telephony, run `npm run rebuild`, switch to the two-argument `SetUrl` overload, and use `SetVersion` values that change with content.
 
 **Acceptance criteria.** `npm run rebuild` regenerates all ContactCenter assets; `git status` is clean afterwards; production serves `.min` variants.
+
+**Resolution.** Moved the four scripts to `Assets/js` and the stylesheet to `Assets/scss` (`.css` → `.scss`), added `Assets.json` mirroring the Telephony module, and ran `npm run rebuild` to regenerate `wwwroot/scripts/*.js` + `*.min.js` and `wwwroot/styles/*.css` + `*.min.css`. Both resource configurations now use the two-argument `SetUrl(min, debug)` overload so production serves the minified variant. Module builds with 0 warnings.
 
 ---
 
@@ -730,13 +732,13 @@ Pre-merge blockers:
 - [x] **OC-005** — the lying `ReconcileAsync` lifecycle contract removed; genuine post-restart provider reconcile owned by the background task. See OC-005 Resolution.
 - [ ] Full `dotnet build -c Release -warnaserror` verified clean on a machine with feed access (see review caveat)
 - [ ] `dotnet test` green, including the feature-activation and distributed test projects
-- [ ] `npm run rebuild` run and `git status` clean (currently cannot cover ContactCenter — see **OC-019**)
+- [x] `npm run rebuild` run and `git status` clean (ContactCenter now covered — see **OC-019**)
 
 Strongly recommended before first release:
 
 - [ ] OC-011, OC-012 — provider extensibility and versioning seams (OC-004 done — provider registry now case-insensitive with observable collisions)
 - [ ] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
-- [ ] OC-019 — ContactCenter asset pipeline
+- [x] OC-019 — ContactCenter asset pipeline
 - [ ] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
 - [ ] OC-022, OC-023, OC-024 — load-bearing performance items
 - [ ] OC-028 — scheduler lease correctness

@@ -1,0 +1,33 @@
+[
+  {
+    "inputs": [
+      "Assets/js/contact-center-realtime.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-realtime.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/agent-workspace.js"
+    ],
+    "output": "wwwroot/scripts/agent-workspace.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/supervisor-dashboard.js"
+    ],
+    "output": "wwwroot/scripts/supervisor-dashboard.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/contact-center-soft-phone.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-soft-phone.js"
+  },
+  {
+    "generateSourceMaps": false,
+    "inputs": [
+      "Assets/scss/contact-center-workspace.scss"
+    ],
+    "output": "wwwroot/styles/contact-center-workspace.css"
+  }
+]
