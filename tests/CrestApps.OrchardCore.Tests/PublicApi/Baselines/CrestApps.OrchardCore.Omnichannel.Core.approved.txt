@@ -431,6 +431,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityKind Kind { get; set; }
         public string Notes { get; set; }
         public string PreferredDestination { get; set; }
+        public int ProcessingAttempts { get; set; }
         public System.DateTime? PurgedAtUtc { get; set; }
         public string PurgedById { get; set; }
         public string PurgedByUsername { get; set; }

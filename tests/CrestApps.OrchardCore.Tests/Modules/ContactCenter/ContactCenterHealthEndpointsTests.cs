@@ -37,7 +37,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class ContactCenterHealthEndpointsTests
 {
     [Fact]
-    public void ReadinessPredicate_SelectsOnlyNodeLocalChecksAndTheStaticSupportVerdict()
+    public void ReadinessPredicate_SelectsOnlyNodeLocalChecksAndTheStaticSupportVerdicts()
     {
         // Arrange
         var registrations = GetRegisteredHealthChecks(services => services
@@ -51,14 +51,16 @@ public sealed class ContactCenterHealthEndpointsTests
         // Two are node-local: one reflects this node's lifetime, the other this node's own ability to reach the
         // store. Neither reports a verdict that every node would share.
         //
-        // The topology check is the one deliberate exception, and the distinction is between a live dependency
-        // and a static verdict. A dependency probe is transient and self-healing, so draining every node on it
-        // turns a recoverable blip into a total outage. A topology violation is fixed configuration that no
-        // amount of waiting repairs, and continuing to serve on an uncertified deployment is the exact failure
-        // being prevented, so draining is the intended outcome rather than collateral damage. The narrower
-        // invariant that survives is asserted below: readiness never selects a dependency check.
+        // The topology and base-voice verification checks are the two deliberate exceptions, and the distinction
+        // is between a live dependency and a static verdict. A dependency probe is transient and self-healing, so
+        // draining every node on it turns a recoverable blip into a total outage. A topology violation, or an
+        // unverified base-voice media path, is fixed configuration that no amount of waiting repairs, and
+        // continuing to serve on such a deployment is the exact failure being prevented, so draining is the
+        // intended outcome rather than collateral damage. The narrower invariant that survives is asserted below:
+        // readiness never selects a dependency check.
         Assert.Equal(
             [
+                ContactCenterConstants.HealthChecks.BaseVoiceVerificationCheckName,
                 ContactCenterConstants.HealthChecks.NodeCheckName,
                 ContactCenterConstants.HealthChecks.NodeServingCheckName,
                 ContactCenterConstants.HealthChecks.TopologyCheckName,
@@ -284,7 +286,7 @@ public sealed class ContactCenterHealthEndpointsTests
             .AddContactCenterVoiceHealthChecks());
 
         // Act & Assert
-        Assert.Equal(7, registrations.Length);
+        Assert.Equal(8, registrations.Length);
 
         Assert.All(registrations, registration =>
         {

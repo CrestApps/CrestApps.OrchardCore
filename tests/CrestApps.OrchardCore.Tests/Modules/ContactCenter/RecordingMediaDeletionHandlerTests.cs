@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -108,10 +109,15 @@ public sealed class RecordingMediaDeletionHandlerTests
     private static RecordingMediaDeletionHandler CreateHandler(
         IRecordingMediaStore mediaStore,
         IContactCenterEventPublisher publisher)
-        => new(
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(publisher);
+
+        return new RecordingMediaDeletionHandler(
             mediaStore,
-            publisher,
+            services.BuildServiceProvider(),
             NullLogger<RecordingMediaDeletionHandler>.Instance);
+    }
 
     private static InteractionEvent CreateErasedEvent(string recordingReference)
     {

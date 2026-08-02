@@ -16,7 +16,13 @@ public sealed class ContactCenterRecordingSettings
     /// Gets or sets a value indicating whether recording is permitted for this tenant. When disabled the
     /// governance policy fails closed and no interaction may start recording regardless of provider capability.
     /// </summary>
-    public bool RecordingEnabled { get; set; } = true;
+    /// <remarks>
+    /// Ships <see langword="false"/> by default. Recording is a compliance-sensitive capability whose end-to-end
+    /// media path is only proven for a deployment by the base-voice audio verification step (see the base-voice
+    /// deployment acceptance gate), so an operator must consciously enable it after that proof passes rather than
+    /// have it on the moment the feature is enabled.
+    /// </remarks>
+    public bool RecordingEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the consent model that governs whether a call may be recorded for this tenant.

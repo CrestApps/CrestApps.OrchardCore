@@ -163,7 +163,7 @@ A third, the [node serving gate](#optional-the-node-serving-gate), is available 
 
 Dependency health is still observed — that is what the dependency probe and the metrics are for — but it is an **alerting** signal that pages a human, never a **routing** signal that drains capacity.
 
-The topology check is the one deliberate exception to the "readiness must differ between nodes" rule, and the distinction is between a *live dependency* and a *static verdict*. A dependency probe is transient and self-healing, so draining every node on it turns a recoverable blip into a total outage. A topology violation is fixed configuration that no amount of waiting repairs, there is no degraded-but-serviceable state to preserve, and continuing to serve on an uncertified deployment is precisely the failure being prevented. Draining is the intended outcome, not collateral damage. The narrower invariant still holds without exception: readiness never consults a dependency check.
+The topology check and the base-voice verification check are the two deliberate exceptions to the "readiness must differ between nodes" rule, and the distinction is between a *live dependency* and a *static verdict*. A dependency probe is transient and self-healing, so draining every node on it turns a recoverable blip into a total outage. A topology violation — or an unverified base-voice media path — is fixed configuration that no amount of waiting repairs, there is no degraded-but-serviceable state to preserve, and continuing to serve on such a deployment is precisely the failure being prevented. Draining is the intended outcome, not collateral damage. The narrower invariant still holds without exception: readiness never consults a dependency check.
 
 :::tip
 The rule generalizes: an orchestrator probe may only consult state that differs between instances, or a static support verdict that cannot self-heal. If two healthy instances would always answer identically *and* the condition can recover on its own, the check belongs on the dependency probe.
@@ -216,6 +216,7 @@ The dependency report contains only what the tenant's enabled features registere
 | `contactcenter-topology` | Readiness | Contact Center | Whether this deployment satisfies the [topology it declared](#the-declared-topology-is-enforced-at-startup). A static verdict established once per shell activation; performs no I/O. | — | Validation has not run yet, or a declared requirement is unmet. |
 | `contactcenter-node` | Readiness | Contact Center | Node-local lifetime: startup complete and not shutting down. Consults no dependency and performs no I/O. | — | Startup incomplete, or shutdown in progress. |
 | `contactcenter-node-serving` | Readiness | Contact Center | Opt-in node serving gate (see above). Disabled by default, in which case it performs no I/O and is always healthy. | — | Enabled, and this node failed `ConsecutiveFailuresBeforeUnready` consecutive store probes. |
+| `contactcenter-base-voice-verification` | Readiness | Contact Center Voice | Whether the operator has acknowledged the [base-voice deployment acceptance](#base-voice-deployment-acceptance) for this deployment. A static verdict read from configuration; performs no I/O. Registered by the Voice feature, so it is absent on tenants without Voice. Always healthy outside a production host. | — | Running in a production host with `AudioVerificationAcknowledged` unset or `false`. |
 | `contactcenter-storage` | Dependency | Contact Center | A cheap store query proving the tenant database and Contact Center collection are reachable. | — | Query throws. |
 | `contactcenter-outbox` | Dependency | Contact Center | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
 | `contactcenter-active-calls` | Dependency | Contact Center | A live gauge, not a verdict: reports `active_calls`, the number of call sessions that have not ended, in the check's `Data`. This is the count of live calls a node drain would interrupt. Stays healthy at any count because the acceptable ceiling is deployment specific. | — | The store is unreadable. |
@@ -278,6 +279,61 @@ Never tag a Redis, database, provider, or backplane connectivity check `contactc
 
 On a single node the in-memory backplane needs no separate check.
 
+## Base-voice deployment acceptance
+
+The Asterisk voice provider advertises `Recording | Monitor | Whisper | Barge` and the snoop/bridge implementations are unit- and cassette-tested, but whether the **end-to-end WebRTC audio path** works — trusted WSS/DTLS certificates, TURN relay, direct-ICE media, restart drain, and a measured capacity floor — is a property of a *deployment* and its infrastructure, not of the capability code. It cannot be proven in the application build, so it is proven once against the reference topology and then declared. Inbound, outbound, transfer, and conference calls all ride the same conversation-bridge audio path, so proving it once covers them all. Supervisor **monitor, whisper, and barge** ride a *separate* snoop bridge that this acceptance run does not exercise; they stay advertised and enabled, but do not read the acknowledgment as evidence that supervision audio was verified — add a monitor/whisper/barge tone check to the run if your deployment relies on them.
+
+Until an operator declares the base-voice path verified, a production host **withholds readiness for the tenant** — the base-voice check is tagged `contactcenter-ready`, so an unhealthy verdict fails the aggregate `/api/contact-center/health/ready` probe and the orchestrator drains the node for *all* Contact Center traffic on that tenant, not voice alone. This is the same fail-closed rule as the topology check: an unverified media path is fixed infrastructure that no amount of waiting repairs, so serving traffic from it is the failure being prevented. Outside a production host environment the deployment is only warned, so development and test hosts are not blocked. Note the gate has readiness teeth only: unlike the topology check it does not also refuse work admission, so a deployment whose orchestrator never probes readiness would still serve unverified voice — probe readiness, or gate rollout on it.
+
+The verdict is surfaced by the `contactcenter-base-voice-verification` readiness check (registered by the Contact Center Voice feature and tagged `contactcenter-ready`). In a production host it reports:
+
+- **Unhealthy** — `CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged` is unset or `false`. Readiness is withheld.
+- **Healthy** — the flag is `true`. Acknowledging requires a non-empty `AudioVerificationEvidenceReference` — every host rejects an acknowledgment that cites no retained evidence at startup, regardless of environment — and that reference is echoed in the verdict so an operator can trace the acknowledgment to its evidence.
+
+Outside a production host the check is always `Healthy`; the accompanying startup log entry warns (`Warning` outside production, `Critical` in production) whenever the path is unverified.
+
+### The acceptance procedure
+
+Perform this against the reference topology before declaring a deployment production-supported, and retain the captured evidence:
+
+1. **Direct-ICE media** — place a WebRTC call agent-to-Asterisk with TURN disabled and confirm two-way audio, so the browser and Asterisk establish media directly over ICE. No automated test exercises this browser↔Asterisk WebRTC signaling or media path in CI — the scaffolded proof `AsteriskBrowserAudioE2ETests.BrowserToAsteriskWebRtcAudio_WithDirectIceAndForcedTurn_VerifiesReceivedToneFrequencies` is skipped because it requires a real Asterisk, coturn, browser WebRTC, trusted WSS/DTLS certificates, and direct-ICE/forced-TURN tone verification, so the path is proven only by this deployment acceptance step (or by unskipping that test on the dedicated media runner). CI covers *adjacent* surfaces: the Asterisk ARI control plane via recorded-cassette provider-contract tests (`AsteriskAriRestContractTests`, `AsteriskAriEventContractTests`, `AsteriskCallStateReconciliationContractTests`), and the soft-phone UI/adapter contract via the Playwright suite (`contact_center_browser_gates.yml`) running against a *stubbed* media adapter. Neither reaches live WebRTC signaling or media.
+2. **Forced-TURN relay** — repeat with direct ICE blocked so all media is relayed through coturn, confirming the relay path and its credentials work.
+3. **Restart drain and dependency failure** — trigger a rolling restart / `SIGTERM` during a live call and confirm the node reports unready before it stops accepting connections (see [Voice listener handover and rollback](runbooks.md#voice-listener-handover-and-rollback)); confirm a transient dependency failure degrades rather than crashes.
+4. **Capacity floor** — establish the deployment's measured concurrent-call floor against the [Tier-1 capacity target](#tier-1-capacity-target).
+
+### Evidence template
+
+Retain a record of the run and reference it from the acknowledgment. A minimal template:
+
+| Field | Value |
+| --- | --- |
+| Deployment / environment | *e.g. `prod-eu-west`* |
+| Reference topology profile | `single-node-distributed` |
+| Date and operator | *date, who ran it* |
+| Direct-ICE two-way audio | *pass/fail, notes* |
+| Forced-TURN relay audio | *pass/fail, notes* |
+| Restart-drain unready-before-stop | *pass/fail, notes* |
+| Dependency-failure degradation | *pass/fail, notes* |
+| Measured concurrent-call floor | *number* |
+| Evidence artifact | *link / identifier* |
+
+Declare the result once the run passes:
+
+```json
+{
+  "CrestApps_ContactCenter": {
+    "BaseVoiceVerification": {
+      "AudioVerificationAcknowledged": true,
+      "AudioVerificationEvidenceReference": "https://…/base-voice-proof/prod-eu-west-2026-07"
+    }
+  }
+}
+```
+
+### Recording ships off by default
+
+Because the unverified-audio risk compounds with the recording media-lifecycle and erasure risk, **recording is disabled by default** (`ContactCenterRecordingSettings.RecordingEnabled` defaults to `false`). A fresh tenant records nothing until an operator enables it in the Recording governance section of the Contact Center settings screen (which requires the separate **Contact Center Recording – Administration** feature to be enabled), which should happen only after the base-voice acceptance run passes for the deployment. The `Recording` provider capability stays advertised — the media path is implemented — and `Monitor`, `Whisper`, and `Barge` remain advertised and enabled; only the recording *policy* defaults off.
+
 ## Multi-node real-time backplane
 
 The Contact Center real-time hub is backplane-agnostic. It is hosted through `HubRouteManager.MapHub<ContactCenterHub>` and addresses connections through tenant-qualified `TenantSignalRGroupName` groups, so the same code path serves both single-node and multi-node deployments without change. What makes it correct across nodes is the shared backplane, not the hub.
@@ -303,6 +359,7 @@ Validated settings:
 | `CrestApps_ContactCenter:Retention` | Every window and floor is non-negative, and so are the purge batch size and the per-entity batch budget, where zero means "use the default". |
 | `CrestApps_ContactCenter:HealthChecks` | Every threshold is at least one, and each unhealthy bound is at or above its degraded bound. |
 | `CrestApps_ContactCenter:Topology` | A declared profile identifier resolves to a known topology profile, so a typo is refused rather than silently falling back to a weaker topology. |
+| `CrestApps_ContactCenter:BaseVoiceVerification` | An acknowledgment (`AudioVerificationAcknowledged`) must be accompanied by a non-empty `AudioVerificationEvidenceReference`, so the base-voice path can never be declared verified without citing the retained evidence. |
 | `CrestApps_ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
 | `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
 | `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |

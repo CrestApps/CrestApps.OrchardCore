@@ -10,7 +10,7 @@ public class ContactCenterRecordingSettingsViewModel
     /// <summary>
     /// Gets or sets a value indicating whether recording is permitted for this tenant.
     /// </summary>
-    public bool RecordingEnabled { get; set; } = true;
+    public bool RecordingEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the consent model that governs whether a call may be recorded.

@@ -40,6 +40,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
         public ContactCenterActiveCallsHealthCheck(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionStore callSessionStore) { }
         public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterBaseVoiceVerificationHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public ContactCenterBaseVoiceVerificationHealthCheck(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.BaseVoiceVerificationOptions> options, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public static Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult Evaluate(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, bool acknowledged, bool isProductionEnvironment, string evidenceReference) { }
+    }
     public sealed class ContactCenterDistributedLockHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
     {
         public ContactCenterDistributedLockHealthCheck(OrchardCore.Locking.Distributed.IDistributedLock distributedLock) { }
@@ -535,6 +541,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string Notes { get; set; }
         public string SubjectContentType { get; set; }
         public string Transcript { get; set; }
+    }
+    public sealed class BaseVoiceVerificationOptions
+    {
+        public BaseVoiceVerificationOptions() { }
+        public bool AudioVerificationAcknowledged { get; set; }
+        public string AudioVerificationEvidenceReference { get; set; }
     }
     public sealed class Bridge
     {

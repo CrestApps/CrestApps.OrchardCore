@@ -68,8 +68,8 @@ Target capability set for this release, each bound to its proving gate:
 | `manual-dial`, `preview-dial` | `gate-voice-e2e` | Yes |
 | `call-transfer` (blind + attended) | `gate-transfer-e2e` | Yes |
 | `conference` | `gate-conference-e2e` | Yes |
-| `recording` | `gate-recording-audio-proof` **and** `gate-recording-dual-channel` **and** `gate-erasure-proof` | Yes — conditional on all three passing unskipped (W12.1, W17). Recorded audio that can never be deleted (§14 finding 7) cannot ship. |
-| `monitor`, `whisper`, `barge` | `gate-supervision-audio-proof` | Yes — conditional on the audio proof passing unskipped |
+| `recording` | `gate-recording-audio-proof` **and** `gate-recording-dual-channel` **and** `gate-erasure-proof` | Advertised, but the recording **policy ships disabled by default** (G1 base-voice gate). `gate-erasure-proof` is implemented; the live `gate-recording-audio-proof` / `gate-recording-dual-channel` proofs are the deferred operator acceptance step (base-voice deployment acceptance + W5.5), not yet passing unskipped in CI. Recorded audio that can never be deleted (§14 finding 7) cannot ship, so capture stays off until the audio proofs are run on the deployment. |
+| `monitor`, `whisper`, `barge` | `gate-supervision-audio-proof` | Advertised **and enabled** at the provider level. Supervision rides a separate snoop bridge that the base-voice acceptance run does not exercise; the live `gate-supervision-audio-proof` is the deferred operator acceptance step (base-voice deployment acceptance + W5.5), not yet passing unskipped in CI. |
 | `take-over` | — | **No** — no implementation exists (telephony 7.3); remains prohibited until W12.2 lands |
 | `automated-dial` (power/progressive) | `gate-dialer-compliance` | **No** — remains prohibited |
 | `predictive-dial` | — | **No** — remains prohibited |

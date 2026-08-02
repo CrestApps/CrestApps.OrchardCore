@@ -10,6 +10,16 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class RecordingGovernancePolicyTests
 {
     [Fact]
+    public void RecordingSettings_ShipRecordingDisabledByDefault()
+    {
+        // Recording is a compliance-sensitive capability whose media path is only proven for a deployment by the
+        // base-voice audio verification step, so a fresh tenant must not have it on before that proof passes.
+        var settings = new ContactCenterRecordingSettings();
+
+        Assert.False(settings.RecordingEnabled);
+    }
+
+    [Fact]
     public async Task EvaluateStartAsync_WhenRecordingDisabled_DeniesClosed()
     {
         // Arrange

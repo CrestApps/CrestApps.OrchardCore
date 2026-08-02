@@ -99,7 +99,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
 {
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Processes omnichannel activities.", LockExpiration=90000, LockTimeout=5000, Schedule="*/5 * * * *", Title="Omnichannel Automated Activities Processor")]
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Processes omnichannel activities.", LockExpiration=600000, LockTimeout=5000, Schedule="*/5 * * * *", Title="Omnichannel Automated Activities Processor")]
     public sealed class AutomatedActivitiesProcessorBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
     {
         public AutomatedActivitiesProcessorBackgroundTask() { }

@@ -982,7 +982,17 @@ public sealed class VoiceStartup : StartupBase
                 "Webhook ingress rate, concurrency, period, delivery-age, or future-skew values are outside their supported ranges.")
             .ValidateOnStart();
 
+        services
+            .AddOptions<BaseVoiceVerificationOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:BaseVoiceVerification"))
+            .Validate(
+                options => !options.AudioVerificationAcknowledged
+                    || !string.IsNullOrWhiteSpace(options.AudioVerificationEvidenceReference),
+                "'CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' cannot be set without also supplying 'AudioVerificationEvidenceReference', which must point at the retained base-voice acceptance evidence.")
+            .ValidateOnStart();
+
         services.AddContactCenterVoiceHealthChecks();
+        services.AddScoped<IModularTenantEvents, BaseVoiceVerificationStartupCheck>();
 
         services
             .AddScoped<IInboundContactLookup, InboundContactLookup>()

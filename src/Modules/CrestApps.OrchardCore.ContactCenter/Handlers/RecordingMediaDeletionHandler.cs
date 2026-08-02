@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -14,22 +15,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 public sealed class RecordingMediaDeletionHandler : IContactCenterEventHandler
 {
     private readonly IRecordingMediaStore _mediaStore;
-    private readonly IContactCenterEventPublisher _publisher;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordingMediaDeletionHandler"/> class.
     /// </summary>
     /// <param name="mediaStore">The media store that owns recording bytes.</param>
-    /// <param name="publisher">The Contact Center event publisher used to record the confirmed-deletion receipt.</param>
+    /// <param name="serviceProvider">The service provider used to resolve the event publisher lazily, breaking the construction-time cycle between the publisher, its outbox, and this handler.</param>
     /// <param name="logger">The logger instance.</param>
     public RecordingMediaDeletionHandler(
         IRecordingMediaStore mediaStore,
-        IContactCenterEventPublisher publisher,
+        IServiceProvider serviceProvider,
         ILogger<RecordingMediaDeletionHandler> logger)
     {
         _mediaStore = mediaStore;
-        _publisher = publisher;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -89,6 +90,8 @@ public sealed class RecordingMediaDeletionHandler : IContactCenterEventHandler
             RecordingReference = data.RecordingReference,
         });
 
-        await _publisher.PublishAsync(confirmedEvent, cancellationToken);
+        var publisher = _serviceProvider.GetRequiredService<IContactCenterEventPublisher>();
+
+        await publisher.PublishAsync(confirmedEvent, cancellationToken);
     }
 }

@@ -184,6 +184,44 @@ public sealed class ContactCenterOptionsValidationTests
     }
 
     [Fact]
+    public void BaseVoiceVerificationOptions_WhenAcknowledgedWithoutEvidence_AreRejected()
+    {
+        // Acknowledging the base-voice path is the operator asserting a proof run happened, so it cannot be a
+        // bare boolean flip: without a retained-evidence reference there is nothing to trace the claim to.
+        var exception = Assert.Throws<OptionsValidationException>(() => ResolveContactCenterOptions<BaseVoiceVerificationOptions>(
+            "CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged",
+            "true"));
+
+        Assert.Contains(
+            exception.Failures,
+            failure => failure.Contains("AudioVerificationEvidenceReference", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BaseVoiceVerificationOptions_WhenAcknowledgedWithEvidence_AreAccepted()
+    {
+        var options = ResolveContactCenterOptions<BaseVoiceVerificationOptions>(new Dictionary<string, string>
+        {
+            ["CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged"] = "true",
+            ["CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationEvidenceReference"] = "https://evidence/base-voice-proof",
+        });
+
+        Assert.True(options.AudioVerificationAcknowledged);
+        Assert.Equal("https://evidence/base-voice-proof", options.AudioVerificationEvidenceReference);
+    }
+
+    [Fact]
+    public void BaseVoiceVerificationOptions_WhenNotAcknowledged_AreAcceptedWithoutEvidence()
+    {
+        // The unacknowledged default must never require evidence, or a development host that has declared
+        // nothing would fail to start.
+        var options = ResolveContactCenterOptions<BaseVoiceVerificationOptions>([]);
+
+        Assert.False(options.AudioVerificationAcknowledged);
+        Assert.Null(options.AudioVerificationEvidenceReference);
+    }
+
+    [Fact]
     public void ValidateOnStart_DoesNotValidateWhenTheContainerIsBuilt()
     {
         // Pins the reason TenantOptionsStartupValidator exists. ValidateOnStart records its rules against

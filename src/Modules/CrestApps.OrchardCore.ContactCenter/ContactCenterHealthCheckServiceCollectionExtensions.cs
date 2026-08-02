@@ -140,6 +140,13 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
     /// <remarks>
     /// The provider ingress check reads the provider webhook inbox store, which only the Voice feature
     /// registers, so it must be registered by that feature and never by the base feature.
+    /// <para>
+    /// The base-voice verification check carries <c>ReadyTag</c> even though it observes a deployment-wide
+    /// condition rather than node-local state. This is the same deliberate exception as the topology check: an
+    /// unverified base-voice media path cannot self-heal, so a production host that has not acknowledged the
+    /// verification must withhold readiness rather than serve an unproven voice path. It belongs to the Voice
+    /// feature because a Contact Center tenant without Voice has no base-voice path to verify.
+    /// </para>
     /// </remarks>
     public static IServiceCollection AddContactCenterVoiceHealthChecks(this IServiceCollection services)
     {
@@ -147,6 +154,9 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
 
         services
             .AddHealthChecks()
+            .AddCheck<ContactCenterBaseVoiceVerificationHealthCheck>(
+                ContactCenterConstants.HealthChecks.BaseVoiceVerificationCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.ReadyTag])
             .AddCheck<ContactCenterProviderIngressHealthCheck>(
                 ContactCenterConstants.HealthChecks.ProviderIngressCheckName,
                 tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);

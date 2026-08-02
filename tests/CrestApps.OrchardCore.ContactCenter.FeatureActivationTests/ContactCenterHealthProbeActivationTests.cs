@@ -85,6 +85,38 @@ public sealed class ContactCenterHealthProbeActivationTests
     }
 
     [Fact]
+    public async Task Readiness_IncludesTheBaseVoiceCheck_OnATenantWithVoice()
+    {
+        // The base-voice check is registered by the Voice feature and tagged for readiness, so it participates
+        // only on a tenant that enables Voice. Selecting it in a unit test cannot prove it constructs, because
+        // it resolves IHostEnvironment and its options from the tenant container; this runs the real readiness
+        // aggregate on a real Voice shell. The default host reports the development environment, so an
+        // unacknowledged deployment is tolerated and the verdict is healthy here rather than fail-closed.
+        var matrix = await ContactCenterSupportMatrix.LoadAsync();
+        var profile = matrix.TenantProfiles.Single(profile => profile.Id == "ga-core-asterisk");
+
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var tenant = await host.CreateTenantAsync(profile);
+
+        var readiness = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => services
+                .GetRequiredService<HealthCheckService>()
+                .CheckHealthAsync(
+                    registration => registration.Tags.Contains(ContactCenterConstants.HealthChecks.ReadyTag),
+                    TestContext.Current.CancellationToken));
+
+        Assert.Contains(ContactCenterConstants.HealthChecks.BaseVoiceVerificationCheckName, readiness.Entries.Keys);
+
+        var baseVoiceEntry = readiness.Entries[ContactCenterConstants.HealthChecks.BaseVoiceVerificationCheckName];
+
+        Assert.Null(baseVoiceEntry.Exception);
+        Assert.Equal(HealthStatus.Healthy, baseVoiceEntry.Status);
+        Assert.Equal(HealthStatus.Healthy, readiness.Status);
+    }
+
+    [Fact]
     public async Task Readiness_StaysHealthy_WhenADependencyCheckIsUnhealthy()
     {
         // The fleet-wide-drain regression, asserted on a real shell. Every node observes the same shared

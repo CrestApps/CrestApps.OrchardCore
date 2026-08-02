@@ -109,12 +109,24 @@ public static class ContactCenterConstants
         /// The registration name of the deployment topology check.
         /// </summary>
         /// <remarks>
-        /// This is the only readiness check that observes a condition every node shares. The exception is
-        /// deliberate: a topology violation cannot self-heal, and serving traffic from a deployment that does
-        /// not satisfy its declared support contract is the failure being prevented rather than collateral
-        /// damage from preventing it.
+        /// This is one of two readiness checks that observe a condition every node shares (the other is
+        /// <see cref="BaseVoiceVerificationCheckName"/>). The exception is deliberate: a topology violation
+        /// cannot self-heal, and serving traffic from a deployment that does not satisfy its declared support
+        /// contract is the failure being prevented rather than collateral damage from preventing it.
         /// </remarks>
         public const string TopologyCheckName = "contactcenter-topology";
+
+        /// <summary>
+        /// The registration name of the base-voice audio verification check.
+        /// </summary>
+        /// <remarks>
+        /// Like <see cref="TopologyCheckName"/>, this readiness check observes a deployment-wide condition rather
+        /// than node-local state, and the exception is deliberate for the same reason: whether the base-voice
+        /// media path was proven is fixed infrastructure that no amount of waiting repairs, so a production host
+        /// that has not acknowledged the verification withholds readiness rather than serve an unproven voice
+        /// path.
+        /// </remarks>
+        public const string BaseVoiceVerificationCheckName = "contactcenter-base-voice-verification";
 
         /// <summary>
         /// The registration name of the distributed-lock acquire/release probe.

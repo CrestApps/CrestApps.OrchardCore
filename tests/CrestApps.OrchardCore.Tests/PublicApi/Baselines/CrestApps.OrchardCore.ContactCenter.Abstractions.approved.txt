@@ -120,6 +120,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string ActiveCallsCheckName = "contactcenter-active-calls";
             public const string AreaTag = "contactcenter";
             public const string BackplaneCheckName = "contactcenter-backplane";
+            public const string BaseVoiceVerificationCheckName = "contactcenter-base-voice-verification";
             public const string DependenciesRoute = "api/contact-center/health/dependencies";
             public const string DependencyTag = "contactcenter-dependency";
             public const string DistributedLockCheckName = "contactcenter-distributed-lock";
