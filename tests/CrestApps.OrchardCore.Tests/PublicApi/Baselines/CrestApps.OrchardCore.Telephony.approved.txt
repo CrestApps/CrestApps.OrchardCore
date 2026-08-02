@@ -217,7 +217,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class DefaultTelephonyUserAccessor : CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor
     {
-        public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor) { }
+        public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor> logger) { }
         public System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync() { }
         public System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user) { }
     }

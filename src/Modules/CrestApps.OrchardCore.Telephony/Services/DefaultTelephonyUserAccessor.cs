@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
@@ -12,18 +13,22 @@ public sealed class DefaultTelephonyUserAccessor : ITelephonyUserAccessor
 {
     private readonly UserManager<IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyUserAccessor"/> class.
     /// </summary>
     /// <param name="userManager">The user manager.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="logger">The logger.</param>
     public DefaultTelephonyUserAccessor(
         UserManager<IUser> userManager,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<DefaultTelephonyUserAccessor> logger)
     {
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -42,6 +47,21 @@ public sealed class DefaultTelephonyUserAccessor : ITelephonyUserAccessor
     /// <inheritdoc/>
     public async Task UpdateUserAsync(IUser user)
     {
-        await _userManager.UpdateAsync(user);
+        ArgumentNullException.ThrowIfNull(user);
+
+        var result = await _userManager.UpdateAsync(user);
+
+        if (!result.Succeeded)
+        {
+            var codes = string.Join(", ", result.Errors.Select(error => error.Code));
+
+            _logger.LogError(
+                "Failed to persist telephony token changes for the current user. Identity error codes: {ErrorCodes}",
+                codes);
+
+            throw new TelephonyUserPersistenceException(
+                $"Telephony token changes could not be persisted (identity error codes: {codes}).");
+        }
     }
 }
+

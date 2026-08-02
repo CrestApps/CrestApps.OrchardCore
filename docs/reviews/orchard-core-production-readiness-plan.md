@@ -481,13 +481,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-030 — OAuth token persistence failures reported as success
 
-- **Priority:** High · **Status:** Not Started · **Category:** Correctness/security · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** High · **Status:** Completed · **Category:** Correctness/security · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** `UserManager.UpdateAsync()` returns an `IdentityResult` that is discarded (`DefaultTelephonyUserAccessor.cs:43-46`, `DefaultTelephonyUserTokenStore.cs:72,94`).
 
 **Why it matters.** Validation/concurrency/storage failures do not necessarily throw, so OAuth connect or refresh can report success while replacement tokens were never persisted.
 
 **Recommended solution.** Inspect the result, propagate a typed failure with redacted errors, and report success only after persistence succeeds.
+
+**Resolution.** `DefaultTelephonyUserAccessor.UpdateUserAsync` now inspects the `IdentityResult`, logs only the identity error **codes** (descriptions can carry usernames/emails, so they are never logged), and throws an internal `TelephonyUserPersistenceException` whose message carries codes only. `DefaultTelephonyUserTokenStore.StoreAsync` now throws the same exception when there is no persistable current user rather than silently no-op-ing. `CompleteAuthorizationAsync` converts the exception into `TelephonyResult.Failed(...)` so connect reports success only after persistence succeeds; `GetStatusAsync` degrades to `IsConnected = false` on a refresh-persist failure so the status probe cannot fault; disconnect/refresh surface the failure loudly. Covered by `DefaultTelephonyUserAccessorTests`. Independent gpt-5.6-sol review: two follow-up findings (token-store silent skip, PII in logs) applied and re-confirmed.
 
 ---
 

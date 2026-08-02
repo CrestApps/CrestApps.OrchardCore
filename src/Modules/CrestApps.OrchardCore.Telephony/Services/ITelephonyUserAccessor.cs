@@ -19,5 +19,6 @@ public interface ITelephonyUserAccessor
     /// </summary>
     /// <param name="user">The user to persist.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="Exception">Thrown when the changes could not be persisted, so callers never report success after a failed save.</exception>
     Task UpdateUserAsync(IUser user);
 }

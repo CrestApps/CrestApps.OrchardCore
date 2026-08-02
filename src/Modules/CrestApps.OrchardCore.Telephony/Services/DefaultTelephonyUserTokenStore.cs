@@ -60,7 +60,7 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
 
         if (user is not IEntity entity)
         {
-            return;
+            throw new TelephonyUserPersistenceException("There is no current user to persist telephony tokens for.");
         }
 
         var connections = entity.GetOrCreate<TelephonyUserConnections>();

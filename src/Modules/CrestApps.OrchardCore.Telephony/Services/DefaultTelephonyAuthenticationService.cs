@@ -69,8 +69,23 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         status.AuthenticationScheme = authenticationProvider.AuthenticationScheme;
 
         // Attempt to obtain valid tokens, refreshing them automatically when possible, so the user is
-        // only asked to authenticate when there are no usable tokens.
-        var tokens = string.IsNullOrEmpty(name) ? null : await GetValidTokensAsync(name, cancellationToken);
+        // only asked to authenticate when there are no usable tokens. A persistence failure while
+        // refreshing must not fault the status probe; it degrades to "not connected" and is logged by
+        // the user accessor.
+        TelephonyUserTokens tokens = null;
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            try
+            {
+                tokens = await GetValidTokensAsync(name, cancellationToken);
+            }
+            catch (TelephonyUserPersistenceException)
+            {
+                tokens = null;
+            }
+        }
+
         status.IsConnected = tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken);
 
         return status;
@@ -147,7 +162,14 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         tokens.ProviderName = name;
 
-        await _tokenStore.StoreAsync(name, tokens, cancellationToken);
+        try
+        {
+            await _tokenStore.StoreAsync(name, tokens, cancellationToken);
+        }
+        catch (TelephonyUserPersistenceException)
+        {
+            return TelephonyResult.Failed("The telephony connection could not be saved. Please try connecting again.");
+        }
 
         return TelephonyResult.Success();
     }
