@@ -1277,6 +1277,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public object From { get; }
         public object To { get; }
     }
+    public sealed class ManualDialSuppressionEventData
+    {
+        public ManualDialSuppressionEventData() { }
+        public string Description { get; set; }
+        public string Destination { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.DialerSuppressionReason Reason { get; set; }
+    }
+    public sealed class ManualDialingComplianceOptions
+    {
+        public ManualDialingComplianceOptions() { }
+        public string CallingCalendarId { get; set; }
+        public string DefaultRegionCode { get; set; }
+        public bool EnforceCallingWindow { get; set; }
+        public bool RespectDoNotCall { get; set; }
+    }
     public sealed class MonitorSession
     {
         public MonitorSession() { }

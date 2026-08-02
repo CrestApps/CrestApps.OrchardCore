@@ -34,6 +34,12 @@ public static class ContactCenterConstants
     public const string SystemActor = "system";
 
     /// <summary>
+    /// The event aggregate type used for a manual, agent-initiated soft-phone call, which is not part of a
+    /// campaign and therefore has no dialer profile or CRM activity to anchor the event to.
+    /// </summary>
+    public const string ManualCallAggregateType = "ManualCall";
+
+    /// <summary>
     /// The maximum stored length, in characters, of a canonicalized telephony provider name. The same canonical
     /// value is persisted across several Contact Center index tables, so every migration that stores it must pin
     /// this width to keep the column definitions consistent and avoid a value that fits in one table but truncates
@@ -691,6 +697,11 @@ public static class ContactCenterConstants
         /// Raised when the outbound compliance gate suppresses a dialing attempt.
         /// </summary>
         public const string DialSuppressed = "DialSuppressed";
+
+        /// <summary>
+        /// Raised when the outbound compliance gate suppresses a manual, agent-initiated soft-phone call.
+        /// </summary>
+        public const string ManualDialSuppressed = "ManualDialSuppressed";
 
         /// <summary>
         /// Raised when a callback is scheduled.

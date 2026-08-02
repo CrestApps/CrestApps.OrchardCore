@@ -18,6 +18,14 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task DispatchAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IOutboundCallScreener
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult> ScreenAsync(CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOutboundCallScreeningService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult> ScreenAsync(CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IProviderIdentityProvider
     {
         System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Models.ProviderIdentity> GetIdentities();
@@ -363,6 +371,25 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.Collections.Generic.IReadOnlyList<string> CallIds { get; set; }
         public string ConferenceName { get; set; }
         public System.Collections.Generic.IReadOnlyList<string> GetCallIds() { }
+    }
+    public enum OutboundCallOrigin
+    {
+        SoftPhone = 0,
+    }
+    public sealed class OutboundCallScreeningContext
+    {
+        public OutboundCallScreeningContext() { }
+        public CrestApps.OrchardCore.Telephony.Models.OutboundCallOrigin Origin { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.DialRequest Request { get; set; }
+    }
+    public sealed class OutboundCallScreeningResult
+    {
+        public OutboundCallScreeningResult() { }
+        public string Description { get; init; }
+        public bool IsAllowed { get; init; }
+        public string Reason { get; init; }
+        public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Allow() { }
+        public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Deny(string reason, string description) { }
     }
     public sealed class ProviderIdentity
     {

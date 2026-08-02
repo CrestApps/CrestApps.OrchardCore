@@ -82,6 +82,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
+        services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
         services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();

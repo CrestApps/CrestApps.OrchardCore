@@ -74,7 +74,7 @@ Work items are independent unless a `Dependencies` field says otherwise, so they
 ### OC-002 — Soft-phone dialing bypasses the outbound compliance gate
 
 - **Priority:** Critical (legal/regulatory exposure)
-- **Status:** Not Started
+- **Status:** Completed
 - **Category:** Compliance / security
 - **Effort:** M
 - **Risk:** Medium
@@ -98,6 +98,8 @@ Work items are independent unless a `Dependencies` field says otherwise, so they
 - Every origination path is covered by an audit record.
 
 **Notes.** Manual agent-initiated calls are treated differently from automated campaign dialing under TCPA, so "gate everything identically" may be the wrong answer — but the current *silent* bypass is not defensible. This needs an explicit, documented policy decision.
+
+**Resolution (Solution 1).** Added a provider-agnostic screening extension point in Telephony (`IOutboundCallScreener` / `IOutboundCallScreeningService`, with `OutboundCallScreeningContext`/`OutboundCallScreeningResult`/`OutboundCallOrigin`). `DefaultTelephonyService.DialAsync` now runs the aggregated screeners before dispatching any origination and fails closed on the first denial (and on a null verdict from a registered screener); standalone Telephony with no screener registered still dials, preserving backward compatibility. The layer boundary is respected — Telephony does not depend on ContactCenter. The **Contact Center Outbound Compliance** feature registers `ContactCenterManualCallScreener`, which applies contact opt-out, national do-not-call registries, and (opt-in) calling-window enforcement to soft-phone dials, resolving the destination to E.164 and failing closed on an unparseable number while do-not-call is enforced. Every suppression publishes a `ManualDialSuppressed` audit event. Configured under `CrestApps_ContactCenter:Compliance:ManualDialing` (`ManualDialingComplianceOptions`, bound + validated on start — calling-window enforcement requires a calling calendar id). Tests: `OutboundCallScreeningTests`, `ManualCallScreenerTests` (including an end-to-end composition test that drives the real screener through the real `DefaultTelephonyService` and asserts the provider is untouched and the audit is recorded). Docs: `contact-center/agents-queues-dialer.md` (Manual soft-phone screening) and changelog `v2.0.0.md`. Independently reviewed by gpt-5.6. Follow-up recorded as **OC-048** (audit actor attribution).
 
 ---
 
@@ -662,12 +664,32 @@ Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep e
 
 ---
 
+### OC-048 — Attribute manual-dial suppression audits to the initiating agent
+
+- **Priority:** Low · **Status:** Not Started · **Category:** Auditability · **Effort:** M · **Risk:** Low · **Dependencies:** None
+
+**Problem.** `ManualDialSuppressed` events published by `ContactCenterManualCallScreener` (OC-002) carry no `ActorId`, so `DefaultContactCenterEventPublisher` stamps them with `ContactCenterConstants.SystemActor`. The suppression is therefore attributed to the system rather than to the agent who attempted the call, which weakens the compliance trail for repeat-offender analysis.
+
+**Root cause.** The screener runs inside the fresh `ShellScope.UsingChildScopeAsync` child scope created by `TelephonyHub.ExecuteAsync`, which does not carry the SignalR `Context.UserIdentifier` into the scope, and the manual soft-phone path has no domain object (reservation/interaction) to source an agent id from — unlike every other agent-attributed event in the codebase.
+
+**Recommended solution.** Add an optional, provider-agnostic `InitiatorUserId` to `OutboundCallScreeningContext` (the generic "who initiated this origination" concept), populate it from `TelephonyHub` (which knows `Context.UserIdentifier`) via a scoped call-context accessor set inside the child scope, and have `ContactCenterManualCallScreener` set it as the suppression event's `ActorId`. Keep the fallback to `SystemActor` when the initiator is genuinely unknown (e.g. non-hub callers).
+
+**Files affected.** `Telephony.Abstractions/Models/OutboundCallScreeningContext.cs` · `Telephony/Hubs/TelephonyHub.cs` · `Telephony/Services/DefaultTelephonyService.cs` · `ContactCenter/Services/ContactCenterManualCallScreener.cs`
+
+**Acceptance criteria.**
+- A manual soft-phone suppression records the initiating agent's user id as the audit `ActorId`.
+- A non-hub origination with no known initiator still audits cleanly (falls back to `SystemActor`).
+
+**Notes.** Discovered during the independent review of OC-002. Deferred out of OC-002 because actor fidelity is not among that item's acceptance criteria and the fix touches the public Telephony abstraction.
+
+---
+
 ## Production Readiness Checklist
 
 Pre-merge blockers:
 
 - [x] **OC-001** — tenant no longer bricked by default-configured `OrchardCore.HealthChecks`
-- [ ] **OC-002** — soft-phone compliance bypass closed or formally policy-gated and documented
+- [x] **OC-002** — soft-phone compliance bypass closed or formally policy-gated and documented
 - [ ] **OC-003** — ContactCenter migrations collapsed to `CreateAsync`
 - [ ] Full `dotnet build -c Release -warnaserror` verified clean on a machine with feed access (see review caveat)
 - [ ] `dotnet test` green, including the feature-activation and distributed test projects
@@ -689,6 +711,7 @@ Post-merge follow-ups:
 - [ ] OC-035 — antiforgery integration test
 - [ ] OC-040 → OC-045 — technical debt
 - [ ] OC-046 — agent profile split
+- [ ] OC-048 — attribute manual-dial suppression audits to the initiating agent
 
 ---
 

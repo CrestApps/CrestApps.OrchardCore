@@ -307,6 +307,7 @@ public sealed class TelephonyProviderCapabilityContractTests
     private static DefaultTelephonyService CreateService(ITelephonyProvider provider)
         => new(
             new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
     private static Task<TelephonyResult> InvokeAsync(DefaultTelephonyService service, string operation)

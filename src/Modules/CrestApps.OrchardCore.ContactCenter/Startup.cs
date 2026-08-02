@@ -884,11 +884,20 @@ public sealed class ComplianceStartup : StartupBase
             .ValidateOnStart();
 
         services
+            .AddOptions<ManualDialingComplianceOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Compliance:ManualDialing"))
+            .Validate(
+                options => !options.EnforceCallingWindow || !string.IsNullOrWhiteSpace(options.CallingCalendarId),
+                "Manual dialing calling-window enforcement requires a calling calendar id.")
+            .ValidateOnStart();
+
+        services
             .AddScoped<IDialerAbandonmentPolicyService, DefaultDialerAbandonmentPolicyService>()
             .AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()
             .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
             .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()
-            .AddScoped<IDialerAttemptService, DialerAttemptService>();
+            .AddScoped<IDialerAttemptService, DialerAttemptService>()
+            .AddScoped<IOutboundCallScreener, ContactCenterManualCallScreener>();
     }
 }
 

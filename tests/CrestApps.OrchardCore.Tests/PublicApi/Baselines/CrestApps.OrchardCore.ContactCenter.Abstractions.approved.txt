@@ -4,6 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         public const string CollectionName = "ContactCenter";
         public const int CurrentEventSchemaVersion = 1;
+        public const string ManualCallAggregateType = "ManualCall";
         public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
         public const int MetricsProjectionVersion = 1;
         public const int ProviderNameLength = 128;
@@ -68,6 +69,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string InteractionTransferDenied = "InteractionTransferDenied";
             public const string InteractionTransferred = "InteractionTransferred";
             public const string InteractionUpdated = "InteractionUpdated";
+            public const string ManualDialSuppressed = "ManualDialSuppressed";
             public const string OfferAccepted = "OfferAccepted";
             public const string OfferDeclined = "OfferDeclined";
             public const string OfferRequeued = "OfferRequeued";
