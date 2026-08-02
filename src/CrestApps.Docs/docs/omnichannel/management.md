@@ -110,7 +110,7 @@ An **Activity** is a task to be completed for a contact.
 - **Manual activity**: A user completes the activity in the UI, adds notes, and selects a disposition.
 - **Automated activity**: An AI agent completes the activity through the configured channel.
 
-When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
+When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date and, optionally, enter **Preparation notes** for each result. A preparation note becomes the follow-up activity's instructions, giving the next agent context before they start the work.
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
@@ -210,7 +210,7 @@ Campaign groups let reporting users combine multiple related campaigns without c
 Subject flow configuration lives on the `OmnichannelSubjectPart` content-type part settings, so you edit it from the content type editor. The `Interaction Center` → `Management` → `Subject Flows` list gives you a read-only overview and shortcuts.
 
 1. Go to `Interaction Center` → `Management` → `Subject Flows` and review the content types that attach `OmnichannelSubjectPart`. Each subject shows a badge for its configured direction (**Outbound** or **Inbound**). Automated subjects additionally show an **Automated** badge and the channel being used.
-2. To change the configuration, click **Edit content type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject.
+2. To change the configuration, click **Edit Content Type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject. Alternatively, click **Edit Settings** to jump straight to the `OmnichannelSubjectPart` settings editor. On that part settings screen the Azure AI Search and Elasticsearch index settings that Orchard Core injects into every part editor are hidden, because indexing for omnichannel subjects is managed automatically.
 3. In the `OmnichannelSubjectPart` settings, select the direction. New subjects default to **Outbound**.
 4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when inventory is loaded.
 5. Optionally set the default campaign, which is applied to activities created outside an activity batch and used as the batch fallback. Leave **Require a disposition** enabled unless the subject is a fire-and-forget notification with no outcome to record.
@@ -281,7 +281,7 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 2. Review the contact and subject details.
 3. Select a disposition from the dropdown.
 4. A preview appears showing what actions will execute (for example, `Try Again` with a schedule date or `New Activity` targeting another subject).
-5. Adjust the schedule dates if needed.
+5. Adjust the schedule dates if needed, and optionally add **Preparation notes** for any result. A note is stored as the instructions of the follow-up activity it generates.
 6. Click **Complete** to save and execute the subject actions.
 
 ### Scheduled activities list

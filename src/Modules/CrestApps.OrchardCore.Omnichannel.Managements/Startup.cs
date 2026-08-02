@@ -89,6 +89,7 @@ public sealed class Startup : StartupBase
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
 
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
+        services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();
     }
 
 }
