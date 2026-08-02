@@ -985,7 +985,7 @@ public sealed class ActivitiesController : Controller
             activity.AssignedToUtc = now;
             activity.AssignmentStatus = ActivityAssignmentStatus.Assigned;
             ClearReservationState(activity);
-            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: true);
+            ApplyInitialStatus(activity, hasAssignedUser: true);
 
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
@@ -1117,9 +1117,7 @@ public sealed class ActivitiesController : Controller
                 activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
             }
 
-            activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(
-                activity.InteractionType,
-                hasAssignedUser: !string.IsNullOrEmpty(activity.AssignedToId));
+            ApplyInitialStatus(activity, hasAssignedUser: !string.IsNullOrEmpty(activity.AssignedToId));
 
             await _omnichannelActivityManager.UpdateAsync(activity);
             processedCount++;
@@ -1176,7 +1174,7 @@ public sealed class ActivitiesController : Controller
             else if (string.IsNullOrEmpty(activity.AssignedToId))
             {
                 activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+                ApplyInitialStatus(activity, hasAssignedUser: false);
             }
 
             await _omnichannelActivityManager.UpdateAsync(activity);
@@ -1226,7 +1224,7 @@ public sealed class ActivitiesController : Controller
             else if (string.IsNullOrEmpty(activity.AssignedToId))
             {
                 activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-                activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+                ApplyInitialStatus(activity, hasAssignedUser: false);
             }
 
             await _omnichannelActivityManager.UpdateAsync(activity);
@@ -1256,8 +1254,17 @@ public sealed class ActivitiesController : Controller
         activity.AssignedToUsername = null;
         activity.AssignedToUtc = null;
         activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser: false);
+        ApplyInitialStatus(activity, hasAssignedUser: false);
         ClearReservationState(activity);
+    }
+
+    private static void ApplyInitialStatus(OmnichannelActivity activity, bool hasAssignedUser)
+    {
+        activity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(activity.InteractionType, hasAssignedUser);
+
+        // Re-arming an existing activity to a due status starts a fresh automated-processing budget so a previously
+        // exhausted activity is not immediately re-failed by the background processor on its first transient error.
+        activity.ProcessingAttempts = 0;
     }
 
     private static void ClearReservationState(OmnichannelActivity activity)

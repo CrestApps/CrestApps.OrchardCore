@@ -55,29 +55,24 @@ internal static class TwilioWebhookEndpoint
 
         var request = context.Request;
 
-        var requestUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
+        var form = request.HasFormContentType
+            ? await request.ReadFormAsync(context.RequestAborted)
+            : null;
 
-        Dictionary<string, string> parameters = null;
-        IFormCollection form = null;
+        var site = await siteService.GetSiteSettingsAsync();
 
-        if (request.HasFormContentType)
-        {
-            form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
-
-            parameters = form.ToDictionary(p => p.Key, p => p.Value.ToString());
-        }
-
-        var validator = new TwillioRequestValidator(authToken);
-
-        if (!request.Headers.TryGetValue("X-Twilio-Signature", out var signature) ||
-            !validator.Validate(requestUrl, parameters, signature.First()))
+        // Reuse the Event Grid endpoint's tested signature validator so both inbound paths honour the operator's
+        // configured public base URL and path base. Building the signed URL from the raw request scheme/host/path
+        // (as this endpoint previously did) omits the path base and rejects genuine deliveries behind a
+        // TLS-terminating proxy.
+        if (!TwilioEventGridEndpoint.IsRequestValid(context, authToken, site.BaseUrl, logger))
         {
             logger.LogWarning("Unauthorized Twilio request.");
 
             return TypedResults.Forbid();
         }
 
-        form ??= await context.Request.ReadFormAsync(context.RequestAborted);
+        form ??= await request.ReadFormAsync(context.RequestAborted);
 
         var from = form["From"].ToString();
         var to = form["To"].ToString();
