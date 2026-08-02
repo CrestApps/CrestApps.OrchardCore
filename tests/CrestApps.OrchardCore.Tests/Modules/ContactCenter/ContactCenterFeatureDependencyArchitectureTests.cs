@@ -718,7 +718,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/ContactCenterRealTimeEventHandler.cs",
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/OfferQueuedVoiceWorkOnAvailabilityHandler.cs",
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Hubs/ContactCenterHub.cs",
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Services/VoiceContactCenterCallRouter.cs",
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Services/InboundVoiceCallProcessor.cs",
         };
 
         // Act

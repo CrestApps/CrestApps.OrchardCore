@@ -161,7 +161,7 @@ public sealed class AggregateLifecycleArchitectureTests
         Assert.Contains(files, file => file.RelativePath.EndsWith("Services/ProviderVoiceEventService.cs", StringComparison.Ordinal));
         Assert.Contains(files, file => file.RelativePath.EndsWith("Services/ActivityReservationService.cs", StringComparison.Ordinal));
         Assert.Contains(files, file => file.RelativePath.EndsWith("Services/AgentWorkStateHealingService.cs", StringComparison.Ordinal));
-        Assert.Contains(files, file => file.RelativePath.EndsWith("Services/VoiceContactCenterCallRouter.cs", StringComparison.Ordinal));
+        Assert.Contains(files, file => file.RelativePath.EndsWith("Services/InboundVoiceCallProcessor.cs", StringComparison.Ordinal));
         Assert.Contains(files, file => file.RelativePath.EndsWith("Services/ContactCenterWorkStateProjector.cs", StringComparison.Ordinal));
     }
 

@@ -1026,6 +1026,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>()
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
+            .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
+            .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())

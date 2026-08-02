@@ -1223,7 +1223,18 @@ public sealed class InboundVoiceServiceTests
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-            return new VoiceContactCenterCallRouter(
+            var workManager = new TestContactCenterFeatureWorkManager();
+
+            var offerService = new VoiceQueueOfferService(
+                AssignmentService.Object,
+                ReservationService.Object,
+                AgentManager.Object,
+                InteractionManager.Object,
+                ActivityManager.Object,
+                OfferSynchronizationService.Object,
+                workManager);
+
+            var inboundProcessor = new InboundVoiceCallProcessor(
                 ChannelEndpointManager.Object,
                 SubjectFlowSettingsService.Object,
                 ActivityManager.Object,
@@ -1234,19 +1245,21 @@ public sealed class InboundVoiceServiceTests
                 QueueManager.Object,
                 QueueItemManager.Object,
                 QueueService.Object,
-                AssignmentService.Object,
-                ReservationService.Object,
-                AgentManager.Object,
                 ContactLookup.Object,
-                VoiceProviderResolver.Object,
                 [EntryPointResolver.Object],
-                OfferSynchronizationService.Object,
                 ProviderCommandStateService.Object,
+                offerService,
                 DistributedLock.Object,
                 ScopeExecutor,
-                new TestContactCenterFeatureWorkManager(),
+                workManager,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()));
+
+            return new VoiceContactCenterCallRouter(
+                VoiceProviderResolver.Object,
+                inboundProcessor,
+                offerService,
+                workManager);
         }
     }
 }

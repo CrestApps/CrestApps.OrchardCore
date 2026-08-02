@@ -113,7 +113,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["Interaction"] =
         [
             ("src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/ContactCenterSoftPhoneEventHandler.cs", "ApplyTerminalState", "interaction.EndedUtc = "),
-            ("src/Modules/CrestApps.OrchardCore.ContactCenter/Services/VoiceContactCenterCallRouter.cs", "TerminalizeInboundAsync", "interaction.EndedUtc = "),
+            ("src/Modules/CrestApps.OrchardCore.ContactCenter/Services/InboundVoiceCallProcessor.cs", "TerminalizeInboundAsync", "interaction.EndedUtc = "),
         ],
         ["InteractionEvent"] =
         [
