@@ -40,8 +40,10 @@
   <ItemGroup>
     <!--
       Ensure this module directly depends on the Telephony module so that when someone installs it,
-      they won't need to manually include the Telephony package. This resolves the feature dependency
-      while the Asterisk code itself depends only on the provider-agnostic Telephony abstractions.
+      they won't need to manually include the Telephony package. This resolves the feature dependency.
+      The base Asterisk telephony feature depends only on the provider-agnostic Telephony abstractions;
+      the optional Asterisk Contact Center features additionally implement the Contact Center voice
+      extension contract, which is why this assembly also references ContactCenter.Abstractions below.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
   </ItemGroup>

@@ -226,9 +226,9 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-011 — `IContactCenterVoice*Provider` contracts sit in the orchestration layer, inverting the dependency
 
-- **Priority:** High · **Status:** Not Started · **Category:** Module boundaries · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+- **Priority:** High · **Status:** Won't Fix (premise misclassified) · **Category:** Module boundaries · **Effort:** L · **Risk:** Medium · **Dependencies:** None
 
-**Problem.** Thirteen `IContactCenterVoice*` interfaces are defined in `ContactCenter.Abstractions`. `Asterisk.csproj` and `DialPad.csproj` therefore both take a `ProjectReference` on `ContactCenter.Abstractions` to implement them (`AsteriskContactCenterVoiceProvider.cs:18-22`).
+**Problem.** Thirteen `IContactCenterVoice*` interfaces are defined in `ContactCenter.Abstractions`. `Asterisk.csproj` and `DialPad.csproj` therefore both take a `ProjectReference` on `ContactCenter.Abstractions` to implement them (`AsteriskContactCenterVoiceProvider.cs:18-25`).
 
 **Why it matters.** The stated contract is *"Telephony contains provider-agnostic abstractions; provider modules implement those abstractions."* Today every telephony provider that wants Contact Center participation must compile against the orchestration layer, so orchestration changes can break provider builds and a third-party provider inherits an unwanted dependency.
 
@@ -241,17 +241,29 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 **Acceptance criteria.** A pure telephony provider can be authored with a reference to `Telephony.Abstractions` only, and the public-API baseline is regenerated.
 
+**Resolution (Won't Fix — architectural inversion not substantiated; independently reviewed, gpt-5.6-sol).** The finding is *misclassified* rather than a genuine defect. Evidence:
+- The interfaces live in `ContactCenter.Abstractions` — the shared **contract/abstractions package**, which itself depends *downward* on `Telephony.Abstractions` (not vice-versa). A provider module implementing a host-defined extension port by referencing that contract package is **textbook dependency inversion** (the higher-level Contact Center policy owns the port; provider adapters implement it), identical to a module referencing `OrchardCore.*.Abstractions` to implement `IDisplayDriver`/`IPermissionProvider`. It is *not* an inversion of the intended layering. The repository already enforces this with `ContactCenterFeatureDependencyArchitectureTests` (providers may reference `ContactCenter.Abstractions` but never `ContactCenter.Core`/runtime).
+- A **pure** telephony provider can already be authored against `Telephony.Abstractions` only — the base `Asterisk` (Area) feature's manifest depends solely on `TelephonyConstants.Feature.Area`, with zero Contact Center dependency, and `ITelephonyProvider` + ~30 sibling capability contracts live in `Telephony.Abstractions` with no project references. The acceptance criterion (new telephony-only provider needs only `Telephony.Abstractions`) is therefore already met.
+- Contact Center integration is already isolated by feature: `AsteriskContactCenterVoiceStartup`/`AsteriskContactCenterMediaStartup` and `DialPadContactCenterStartup`/`DialerStartup` are `[Feature(...ContactCenterVoice/Media)]`-gated, and the manifest CC features declare the `ContactCenterConstants.Feature.Voice`/`VoiceMedia` dependency. Enabling only the base telephony feature activates no CC voice provider.
+- Option 1 is infeasible: an exhaustive map shows every operational interface references `ContactCenter.Abstractions` domain types (`ContactCenterDialRequest`, `ContactCenterVoiceProviderResult`, `ContactCenterVoiceTransferRequest`, `ContactCenterVoiceMediaFrame`, …) and the implementers additionally use `IContactCenterFeatureWorkManager`/`IContactCenterFeatureWorkLease` and `ContactCenterConstants` metadata keys. Moving the interfaces down would drag CC orchestration concepts into the provider-agnostic layer — making the layering *worse*. Option 3 cannot synthesize the advanced CC semantics (recording/monitoring/attended-transfer/conference/media-session). Option 2 (separate assemblies) is a pure packaging change whose substantial refactoring cost is not justified for an unreleased module.
+- **Residual (conceded):** the combined `Asterisk.dll`/`DialPad.dll` assemblies do retain a *compile-time* `ProjectReference` to `ContactCenter.Abstractions` (a lightweight contract package) because the CC-integration features share the assembly, and the manifests reference `ContactCenterConstants`. `[Feature]` gating removes runtime activation, not the assembly-level dependency. This co-installation of a contract package is intentional and acceptable; physical package separation may be revisited later as a packaging enhancement, not a High-severity layering defect. Fixed two `.csproj` comments (`Asterisk.csproj`, `DialPad.csproj`) that had falsely claimed the provider code depends *only* on Telephony abstractions.
+
 ---
 
 ### OC-012 — No abstract base classes for the provider contracts (versioning hazard)
 
-- **Priority:** High · **Status:** Not Started · **Category:** Public API · **Effort:** S · **Risk:** Low · **Dependencies:** OC-011
+- **Priority:** High · **Status:** Won't Fix (premise disproven) · **Category:** Public API · **Effort:** S · **Risk:** Low · **Dependencies:** OC-011
 
 **Problem.** `ITelephonyProvider` and `IContactCenterVoiceProvider` are exposed only as raw interfaces with no `TelephonyProviderBase` / `ContactCenterVoiceProviderBase` to inherit from.
 
 **Why it matters.** Adding a single member in a minor release is a hard compile break for every third-party provider. Orchard's own pattern uses abstract base classes (e.g. `ContentPartDisplayDriver`) as expansion joints.
 
 **Recommended solution.** Introduce abstract bases implementing the interfaces with virtual members; document them as the supported extension point.
+
+**Resolution (Won't Fix — premise disproven; corroborated by the independent OC-011 review, gpt-5.6-sol).** The design already provides a *better* expansion joint than base classes: capabilities are intentionally **interface-segregated (ISP)**. `ITelephonyProvider`/`IContactCenterVoiceProvider` are minimal *identity* contracts (`Name`, `Capabilities`, and for voice `TechnicalName`/`DeliveryModel`) whose XML docs explicitly state *"Executable operations live on the separate capability contracts a provider chooses to implement, so a provider is never obliged to answer for an operation it cannot perform."* New capabilities are therefore added as **new** small interfaces (`IContactCenterVoice*Provider`, `ITelephony*Provider`) — inherently non-breaking to existing implementers — rather than as new members on an existing interface. Consequently:
+- The identity interfaces have no optional/defaultable members a base class could usefully virtualize (`Name`/`TechnicalName`/`Capabilities`/`DeliveryModel` are all provider-specific with no sensible default).
+- A monolithic base implementing all thirteen capability interfaces would **break capability detection**: the runtime resolves optional capabilities via `provider is IContactCenterVoiceCallControlProvider` (e.g. `AnswerProviderCommandTypeExecutor.cs:171`, `VoiceContactCenterCallRouter.cs:44`) and `provider.Capabilities.HasFlag(...)`. A base that makes every provider satisfy every `is`-check would make providers advertise operations they cannot perform — the exact failure the documented contract prevents.
+- An identity-only base (`IContactCenterVoiceProvider`/`ITelephonyProvider` alone) is possible but adds no value today, since those interfaces are already minimal and stable, and evolving through new ISP capability interfaces remains a valid, non-breaking versioning strategy. Not warranted for an unreleased module.
 
 ---
 
