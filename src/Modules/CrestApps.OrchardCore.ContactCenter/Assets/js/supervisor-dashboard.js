@@ -70,17 +70,60 @@
         var config = parseConfig(root);
         var strings = config.strings;
         var watched = {};
+        var lastHtml = {};
+        var connectionStatusKey = null;
 
         var refs = {
             summary: root.querySelector('[data-cc-summary]'),
             tiles: root.querySelector('[data-cc-tiles]'),
-            board: root.querySelector('[data-cc-board]')
+            board: root.querySelector('[data-cc-board]'),
+            connection: root.querySelector('[data-cc-connection]'),
+            error: root.querySelector('[data-cc-error]')
         };
 
         var realtime = null;
 
         function label(key, fallback) {
             return strings[key] || fallback;
+        }
+
+        function showError(message) {
+            if (!refs.error) {
+                return;
+            }
+
+            refs.error.textContent = message;
+            refs.error.hidden = false;
+        }
+
+        function clearError() {
+            if (!refs.error) {
+                return;
+            }
+
+            refs.error.textContent = '';
+            refs.error.hidden = true;
+        }
+
+        function setConnectionStatus(key, fallback, modifier) {
+            if (!refs.connection || connectionStatusKey === key) {
+                return;
+            }
+
+            connectionStatusKey = key;
+            refs.connection.textContent = label(key, fallback);
+            refs.connection.className = 'cc-connection' + (modifier ? ' ' + modifier : '');
+        }
+
+        function setRegionHtml(el, cacheKey, html) {
+            if (!el || lastHtml[cacheKey] === html) {
+                return false;
+            }
+
+            lastHtml[cacheKey] = html;
+            el.innerHTML = html;
+
+            return true;
         }
 
         function metric(value, text) {
@@ -92,11 +135,11 @@
                 return;
             }
 
-            refs.summary.innerHTML =
+            setRegionHtml(refs.summary, 'summary',
                 metric(state.totalWaiting, label('waiting', 'Waiting')) +
                 metric(state.availableAgents, label('available', 'Available agents')) +
                 metric((state.agents || []).length, label('agents', 'Agents')) +
-                metric((state.queues || []).length, label('queues', 'Queues'));
+                metric((state.queues || []).length, label('queues', 'Queues')));
         }
 
         function renderTiles(state) {
@@ -107,12 +150,12 @@
             var queues = state.queues || [];
 
             if (!queues.length) {
-                refs.tiles.innerHTML = '<div class="cc-empty">' + escapeHtml(label('noQueues', 'No queues are configured.')) + '</div>';
+                setRegionHtml(refs.tiles, 'tiles', '<div class="cc-empty">' + escapeHtml(label('noQueues', 'No queues are configured.')) + '</div>');
 
                 return;
             }
 
-            refs.tiles.innerHTML = queues.map(function (queue) {
+            var tilesHtml = queues.map(function (queue) {
                 var cls = 'cc-tile';
 
                 if (queue.slaBreachCount > 0) {
@@ -132,6 +175,8 @@
                     '<div class="cc-tile__row"><span>' + escapeHtml(label('slaBreaches', 'SLA breaches')) + '</span><span class="cc-strong">' + queue.slaBreachCount + '</span></div>' +
                 '</div>';
             }).join('');
+
+            setRegionHtml(refs.tiles, 'tiles', tilesHtml);
         }
 
         function renderBoard(state) {
@@ -142,12 +187,12 @@
             var agents = state.agents || [];
 
             if (!agents.length) {
-                refs.board.innerHTML = '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>';
+                setRegionHtml(refs.board, 'board', '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>');
 
                 return;
             }
 
-            refs.board.innerHTML = agents.map(function (agent) {
+            var boardHtml = agents.map(function (agent) {
                 var status = agent.presenceStatus || 'Offline';
                 var detail = agent.presenceReason || status;
                 var availableModes = agent.availableMonitoringModes || [];
@@ -182,6 +227,10 @@
                     actions +
                 '</div>';
             }).join('');
+
+            if (!setRegionHtml(refs.board, 'board', boardHtml)) {
+                return;
+            }
 
             refs.board.querySelectorAll('[data-cc-engage]').forEach(function (button) {
                 button.addEventListener('click', function () {
@@ -235,7 +284,9 @@
                 .then(function (response) { return response.ok ? response.json() : { succeeded: false }; })
                 .then(function (result) {
                     if (!result || !result.succeeded) {
-                        window.alert((result && result.errorMessage) || label('engagementFailed', 'The supervisor action could not be started.'));
+                        showError((result && result.errorMessage) || label('engagementFailed', 'The supervisor action could not be started.'));
+                    } else {
+                        clearError();
                     }
                 })
                 .finally(function () {
@@ -246,6 +297,18 @@
         if (window.contactCenterRealTime && config.hubUrl) {
             realtime = window.contactCenterRealTime.connect({
                 hubUrl: config.hubUrl,
+                onConnected: function () {
+                    setConnectionStatus('connected', 'Connected', 'is-connected');
+                },
+                onReconnecting: function () {
+                    setConnectionStatus('reconnecting', 'Connection lost. Reconnecting...', 'is-reconnecting');
+                },
+                onDisconnected: function () {
+                    setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+                },
+                onError: function () {
+                    setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+                },
                 onSnapshot: refresh,
                 onPresenceChanged: refresh,
                 onOfferReceived: refresh,

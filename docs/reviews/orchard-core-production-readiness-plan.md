@@ -307,7 +307,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-016 — Agent workspace and supervisor dashboard are inaccessible
 
-- **Priority:** High · **Status:** Not Started · **Category:** Accessibility · **Effort:** M · **Risk:** Low · **Dependencies:** None
+- **Priority:** High · **Status:** Completed · **Category:** Accessibility · **Effort:** M · **Risk:** Low · **Dependencies:** None
 
 **Problem.** Verified counts: `Views/AgentWorkspace/Index.cshtml` and `Views/SupervisorDashboard/Index.cshtml` contain **0** `aria-*`/`role` attributes, and there are **0** `aria-live`/`role="status"`/`role="alert"` occurrences across all four ContactCenter scripts. Offers, presence, queue depth and the active-call panel are injected via `innerHTML` into containers with no live-region semantics. The presence menu is a `div`+`button` with no `role="menu"`, `aria-expanded`, Escape handling, or focus management. Error feedback uses `window.alert()`.
 
@@ -319,7 +319,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 **Acceptance criteria.** Keyboard-only operation of accept/decline/presence; automated axe scan clean on both views.
 
----
+**Resolution.** Both real-time surfaces are now accessible. **Agent workspace** (`AgentWorkspace/Index.cshtml` + `agent-workspace.js`): the incoming-offer container is `role="alert" aria-live="assertive" aria-atomic="true"` and moves keyboard focus to the **Accept** button when a new offer renders; the active-interaction, queue-chip regions are `aria-live="polite"` with `aria-label`/`aria-labelledby`; the per-second countdown and talk-time nodes are `aria-hidden="true"` so live regions announce state changes once rather than ticking every second; the presence control is a real ARIA menu — the trigger carries `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`, the menu is `role="menu"` with `role="menuitem"` children, and JS wires open-on-click with focus to the first item, Arrow/Home/End roving focus, Escape-to-close with focus return, and click-away close. **Supervisor dashboard** (`SupervisorDashboard/Index.cshtml` + `supervisor-dashboard.js`): summary/tiles/board regions are `aria-live="polite"` with labels. **Both surfaces** replace `window.alert()` with a non-blocking inline `role="alert"` error region and add a `role="status" aria-live="polite"` connection indicator driven by new lifecycle callbacks (`onConnected`/`onReconnecting`/`onReconnected`/`onDisconnected`) surfaced from the shared `contact-center-realtime.js` helper (which now hooks `connection.onreconnecting` and reports connect/close transitions), so agents are told when live updates pause. New localized `strings` (connected/reconnecting/disconnected, presence-menu label) flow through the existing config dictionaries. SCSS adds `.cc-connection`/`.cc-error`/`.cc-dashboard__topbar` styling; `npm run rebuild` regenerated the minified assets. The false "completed" claim in `.github/contact-center/PRODUCTION-READINESS.md` was corrected to describe the actually-delivered agent-and-supervisor accessibility work. Module builds with 0 warnings.
 
 ### OC-017 — Seven near-identical catalog list views
 
@@ -584,11 +584,13 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-038 — Correct the accessibility claim in the readiness record
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Documentation accuracy · **Effort:** S · **Risk:** Low · **Dependencies:** OC-016
+- **Priority:** Medium · **Status:** Completed · **Category:** Documentation accuracy · **Effort:** S · **Risk:** Low · **Dependencies:** OC-016
 
 **Problem.** `.github/contact-center/PRODUCTION-READINESS.md` lists W6 agent-desktop accessibility as completed. Verified code state contradicts this (0 ARIA attributes on both real-time views, 0 live regions in scripts).
 
 **Recommended solution.** Either complete OC-016 and keep the claim, or restate the claim honestly. Per the project's own "honest capability advertising" principle, do not advertise unverified capability.
+
+**Resolution.** Resolved together with OC-016 by choosing the "complete and keep the claim" path: the ARIA/live-region/keyboard/degraded-state work was actually implemented on both the agent workspace and the supervisor dashboard, and the readiness record's W6 bullet was rewritten to describe the delivered scope precisely (offer/active/queue/summary/tiles/board live regions, keyboard-operable presence menu, focus management, inline error regions, connection-state announcements) across **both** surfaces rather than the agent workspace alone. The claim is now backed by shipped code.
 
 ---
 
@@ -745,7 +747,7 @@ Pre-merge blockers:
 Strongly recommended before first release:
 
 - [ ] OC-011, OC-012 — provider extensibility and versioning seams (OC-004 done — provider registry now case-insensitive with observable collisions)
-- [ ] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
+- [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
 - [ ] OC-022, OC-023, OC-024 — load-bearing performance items

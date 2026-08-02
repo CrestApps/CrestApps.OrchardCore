@@ -95,6 +95,52 @@
     background: var(--cc-away);
 }
 
+/* Connection status indicator. */
+.cc-connection {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.cc-connection:empty {
+    display: none;
+}
+
+.cc-connection.is-connected {
+    background: rgba(25, 135, 84, 0.12);
+    color: var(--cc-available, #198754);
+}
+
+.cc-connection.is-reconnecting {
+    background: rgba(255, 193, 7, 0.16);
+    color: #997404;
+}
+
+.cc-connection.is-disconnected {
+    background: rgba(220, 53, 69, 0.12);
+    color: var(--cc-busy, #dc3545);
+}
+
+/* Inline error / status region. */
+.cc-error {
+    padding: 0.65rem 0.9rem;
+    margin-bottom: var(--cc-gap);
+    border-radius: var(--cc-radius);
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    color: var(--cc-busy, #dc3545);
+    font-size: 0.9rem;
+}
+
+.cc-error[hidden] {
+    display: none;
+}
+
 /* Presence control. */
 .cc-presence {
     position: relative;
@@ -393,6 +439,16 @@
 }
 
 /* Supervisor dashboard. */
+.cc-dashboard__topbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--cc-gap);
+}
+
+.cc-dashboard__topbar:empty {
+    display: none;
+}
+
 .cc-dashboard__summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));

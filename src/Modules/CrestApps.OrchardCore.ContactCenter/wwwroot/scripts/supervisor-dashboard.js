@@ -66,14 +66,48 @@
     var config = parseConfig(root);
     var strings = config.strings;
     var watched = {};
+    var lastHtml = {};
+    var connectionStatusKey = null;
     var refs = {
       summary: root.querySelector('[data-cc-summary]'),
       tiles: root.querySelector('[data-cc-tiles]'),
-      board: root.querySelector('[data-cc-board]')
+      board: root.querySelector('[data-cc-board]'),
+      connection: root.querySelector('[data-cc-connection]'),
+      error: root.querySelector('[data-cc-error]')
     };
     var realtime = null;
     function label(key, fallback) {
       return strings[key] || fallback;
+    }
+    function showError(message) {
+      if (!refs.error) {
+        return;
+      }
+      refs.error.textContent = message;
+      refs.error.hidden = false;
+    }
+    function clearError() {
+      if (!refs.error) {
+        return;
+      }
+      refs.error.textContent = '';
+      refs.error.hidden = true;
+    }
+    function setConnectionStatus(key, fallback, modifier) {
+      if (!refs.connection || connectionStatusKey === key) {
+        return;
+      }
+      connectionStatusKey = key;
+      refs.connection.textContent = label(key, fallback);
+      refs.connection.className = 'cc-connection' + (modifier ? ' ' + modifier : '');
+    }
+    function setRegionHtml(el, cacheKey, html) {
+      if (!el || lastHtml[cacheKey] === html) {
+        return false;
+      }
+      lastHtml[cacheKey] = html;
+      el.innerHTML = html;
+      return true;
     }
     function metric(value, text) {
       return '<div class="cc-metric"><div class="cc-metric__value">' + value + '</div><div class="cc-metric__label">' + escapeHtml(text) + '</div></div>';
@@ -82,7 +116,7 @@
       if (!refs.summary) {
         return;
       }
-      refs.summary.innerHTML = metric(state.totalWaiting, label('waiting', 'Waiting')) + metric(state.availableAgents, label('available', 'Available agents')) + metric((state.agents || []).length, label('agents', 'Agents')) + metric((state.queues || []).length, label('queues', 'Queues'));
+      setRegionHtml(refs.summary, 'summary', metric(state.totalWaiting, label('waiting', 'Waiting')) + metric(state.availableAgents, label('available', 'Available agents')) + metric((state.agents || []).length, label('agents', 'Agents')) + metric((state.queues || []).length, label('queues', 'Queues')));
     }
     function renderTiles(state) {
       if (!refs.tiles) {
@@ -90,10 +124,10 @@
       }
       var queues = state.queues || [];
       if (!queues.length) {
-        refs.tiles.innerHTML = '<div class="cc-empty">' + escapeHtml(label('noQueues', 'No queues are configured.')) + '</div>';
+        setRegionHtml(refs.tiles, 'tiles', '<div class="cc-empty">' + escapeHtml(label('noQueues', 'No queues are configured.')) + '</div>');
         return;
       }
-      refs.tiles.innerHTML = queues.map(function (queue) {
+      var tilesHtml = queues.map(function (queue) {
         var cls = 'cc-tile';
         if (queue.slaBreachCount > 0) {
           cls += ' is-breach';
@@ -102,6 +136,7 @@
         }
         return '<div class="' + cls + '">' + '<div class="cc-tile__name">' + escapeHtml(queue.name) + '</div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('waiting', 'Waiting')) + '</span><span class="cc-strong">' + queue.waitingCount + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('signedIn', 'Signed-in agents')) + '</span><span class="cc-strong">' + queue.signedInAgentCount + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('available', 'Available agents')) + '</span><span class="cc-strong">' + queue.availableAgentCount + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('busy', 'Busy agents')) + '</span><span class="cc-strong">' + queue.busyAgentCount + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('notReady', 'Not-ready agents')) + '</span><span class="cc-strong">' + queue.notReadyAgentCount + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('longestWait', 'Longest wait')) + '</span><span class="cc-strong">' + formatWait(queue.longestWaitSeconds) + '</span></div>' + '<div class="cc-tile__row"><span>' + escapeHtml(label('slaBreaches', 'SLA breaches')) + '</span><span class="cc-strong">' + queue.slaBreachCount + '</span></div>' + '</div>';
       }).join('');
+      setRegionHtml(refs.tiles, 'tiles', tilesHtml);
     }
     function renderBoard(state) {
       if (!refs.board) {
@@ -109,10 +144,10 @@
       }
       var agents = state.agents || [];
       if (!agents.length) {
-        refs.board.innerHTML = '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>';
+        setRegionHtml(refs.board, 'board', '<div class="cc-empty">' + escapeHtml(label('noAgents', 'No agents are configured.')) + '</div>');
         return;
       }
-      refs.board.innerHTML = agents.map(function (agent) {
+      var boardHtml = agents.map(function (agent) {
         var status = agent.presenceStatus || 'Offline';
         var detail = agent.presenceReason || status;
         var availableModes = agent.availableMonitoringModes || [];
@@ -133,6 +168,9 @@
         }
         return '<div class="cc-agent">' + '<span class="cc-presence__dot is-' + status.toLowerCase() + '"></span>' + '<span class="cc-agent__body">' + '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' + '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' + '</span>' + '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' + actions + '</div>';
       }).join('');
+      if (!setRegionHtml(refs.board, 'board', boardHtml)) {
+        return;
+      }
       refs.board.querySelectorAll('[data-cc-engage]').forEach(function (button) {
         button.addEventListener('click', function () {
           engage(button.getAttribute('data-cc-engage'), button.getAttribute('data-cc-mode'), button);
@@ -184,7 +222,9 @@
         };
       }).then(function (result) {
         if (!result || !result.succeeded) {
-          window.alert(result && result.errorMessage || label('engagementFailed', 'The supervisor action could not be started.'));
+          showError(result && result.errorMessage || label('engagementFailed', 'The supervisor action could not be started.'));
+        } else {
+          clearError();
         }
       })["finally"](function () {
         button.disabled = false;
@@ -193,6 +233,18 @@
     if (window.contactCenterRealTime && config.hubUrl) {
       realtime = window.contactCenterRealTime.connect({
         hubUrl: config.hubUrl,
+        onConnected: function onConnected() {
+          setConnectionStatus('connected', 'Connected', 'is-connected');
+        },
+        onReconnecting: function onReconnecting() {
+          setConnectionStatus('reconnecting', 'Connection lost. Reconnecting...', 'is-reconnecting');
+        },
+        onDisconnected: function onDisconnected() {
+          setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+        },
+        onError: function onError() {
+          setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+        },
         onSnapshot: refresh,
         onPresenceChanged: refresh,
         onOfferReceived: refresh,

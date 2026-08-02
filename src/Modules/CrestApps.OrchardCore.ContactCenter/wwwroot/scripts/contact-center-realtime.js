@@ -66,17 +66,32 @@
     }
     connection.onreconnected(function (connectionId) {
       startHeartbeat();
+      if (typeof options.onConnected === 'function') {
+        options.onConnected();
+      }
       loadSnapshot().then(function (snapshot) {
         if (typeof options.onReconnected === 'function') {
           options.onReconnected(connectionId, snapshot);
         }
       })["catch"](function () {});
     });
-    connection.onclose(function () {
+    connection.onreconnecting(function (error) {
       stopHeartbeat();
+      if (typeof options.onReconnecting === 'function') {
+        options.onReconnecting(error);
+      }
+    });
+    connection.onclose(function (error) {
+      stopHeartbeat();
+      if (typeof options.onDisconnected === 'function') {
+        options.onDisconnected(error);
+      }
     });
     var started = connection.start().then(function () {
       startHeartbeat();
+      if (typeof options.onConnected === 'function') {
+        options.onConnected();
+      }
       return loadSnapshot()["catch"](function () {});
     })["catch"](function (error) {
       if (typeof options.onError === 'function') {

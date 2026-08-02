@@ -29,6 +29,9 @@
             ["whisper"] = T["Whisper"].Value,
             ["barge"] = T["Barge"].Value,
             ["engagementFailed"] = T["The supervisor action could not be started."].Value,
+            ["connected"] = T["Connected"].Value,
+            ["reconnecting"] = T["Connection lost. Reconnecting..."].Value,
+            ["disconnected"] = T["Disconnected. Live updates are paused."].Value,
         },
     };
 }
@@ -39,19 +42,25 @@
 <zone Name="Title"><h1>@RenderTitleSegments(T["Live dashboard"])</h1></zone>
 
 <div class="cc-workspace cc-dashboard" data-cc-dashboard data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
-    <div class="cc-dashboard__summary" data-cc-summary></div>
+    <div class="cc-dashboard__topbar">
+        <span class="cc-connection" data-cc-connection role="status" aria-live="polite"></span>
+    </div>
+
+    <div class="cc-error" data-cc-error role="alert" aria-live="assertive" hidden></div>
+
+    <div class="cc-dashboard__summary" data-cc-summary role="status" aria-live="polite" aria-label="@T["Contact center summary"]"></div>
 
     <div class="cc-panel mb-3">
-        <div class="cc-panel__header">@T["Queues"]</div>
+        <div class="cc-panel__header" id="ccDashboardQueues">@T["Queues"]</div>
         <div class="cc-panel__body">
-            <div class="cc-tiles" data-cc-tiles></div>
+            <div class="cc-tiles" data-cc-tiles role="status" aria-live="polite" aria-labelledby="ccDashboardQueues"></div>
         </div>
     </div>
 
     <div class="cc-panel">
-        <div class="cc-panel__header">@T["Agents"]</div>
+        <div class="cc-panel__header" id="ccDashboardAgents">@T["Agents"]</div>
         <div class="cc-panel__body">
-            <div class="cc-board" data-cc-board></div>
+            <div class="cc-board" data-cc-board role="status" aria-live="polite" aria-labelledby="ccDashboardAgents"></div>
         </div>
     </div>
 </div>

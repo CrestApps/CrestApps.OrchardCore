@@ -87,20 +87,53 @@
         var serverOffsetMs = 0;
         var activeSignature = null;
         var offerSignature = null;
+        var queuesSignature = null;
+        var connectionStatusKey = null;
 
         var refs = {
             presence: root.querySelector('[data-cc-presence]'),
+            presenceButton: root.querySelector('[data-cc-presence-button]'),
             presenceDot: root.querySelector('[data-cc-presence-dot]'),
             presenceLabel: root.querySelector('[data-cc-presence-label]'),
             presenceMenu: root.querySelector('[data-cc-presence-menu]'),
             queues: root.querySelector('[data-cc-queues]'),
             offer: root.querySelector('[data-cc-offer]'),
             active: root.querySelector('[data-cc-active]'),
-            history: root.querySelector('[data-cc-history]')
+            history: root.querySelector('[data-cc-history]'),
+            connection: root.querySelector('[data-cc-connection]'),
+            error: root.querySelector('[data-cc-error]')
         };
 
         function label(key, fallback) {
             return strings[key] || fallback;
+        }
+
+        function showError(message) {
+            if (!refs.error) {
+                return;
+            }
+
+            refs.error.textContent = message;
+            refs.error.hidden = false;
+        }
+
+        function clearError() {
+            if (!refs.error) {
+                return;
+            }
+
+            refs.error.textContent = '';
+            refs.error.hidden = true;
+        }
+
+        function setConnectionStatus(key, fallback, modifier) {
+            if (!refs.connection || connectionStatusKey === key) {
+                return;
+            }
+
+            connectionStatusKey = key;
+            refs.connection.textContent = label(key, fallback);
+            refs.connection.className = 'cc-connection' + (modifier ? ' ' + modifier : '');
         }
 
         function computeOffset(serverTimeUtc) {
@@ -157,19 +190,25 @@
             }
 
             var queues = state.queues || [];
+            var queuesHtml;
 
             if (!queues.length) {
-                refs.queues.innerHTML = '<span class="cc-queue-chip">' + escapeHtml(label('noQueues', 'Not signed in to any queue')) + '</span>';
+                queuesHtml = '<span class="cc-queue-chip">' + escapeHtml(label('noQueues', 'Not signed in to any queue')) + '</span>';
+            } else {
+                queuesHtml = queues.map(function (queue) {
+                    var empty = queue.waitingCount > 0 ? '' : ' is-empty';
 
+                    return '<span class="cc-queue-chip">' + escapeHtml(queue.name) +
+                        '<span class="cc-queue-chip__count' + empty + '">' + queue.waitingCount + '</span></span>';
+                }).join('');
+            }
+
+            if (queuesHtml === queuesSignature) {
                 return;
             }
 
-            refs.queues.innerHTML = queues.map(function (queue) {
-                var empty = queue.waitingCount > 0 ? '' : ' is-empty';
-
-                return '<span class="cc-queue-chip">' + escapeHtml(queue.name) +
-                    '<span class="cc-queue-chip__count' + empty + '">' + queue.waitingCount + '</span></span>';
-            }).join('');
+            queuesSignature = queuesHtml;
+            refs.queues.innerHTML = queuesHtml;
         }
 
         function renderOffer() {
@@ -199,7 +238,7 @@
                     '<div class="cc-offer__label">' + escapeHtml(label('incomingOffer', 'Incoming')) + '</div>' +
                     '<div class="cc-offer__customer">' + escapeHtml(offer.customerLabel || offer.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' +
                     (offer.queueName ? '<div class="cc-offer__meta">' + escapeHtml(offer.queueName) + '</div>' : '') +
-                    '<div class="cc-offer__countdown" data-cc-offer-countdown></div>' +
+                    '<div class="cc-offer__countdown" data-cc-offer-countdown aria-hidden="true"></div>' +
                     '<div class="cc-offer__actions">' +
                         '<button type="button" class="btn btn-success" data-cc-accept><i class="fa-solid fa-phone"></i> ' + escapeHtml(label('accept', 'Accept')) + '</button>' +
                         '<button type="button" class="btn btn-outline-danger" data-cc-decline><i class="fa-solid fa-phone-slash"></i> ' + escapeHtml(label('decline', 'Decline')) + '</button>' +
@@ -211,6 +250,7 @@
 
             if (acceptButton) {
                 acceptButton.addEventListener('click', function () { accept(offer.reservationId); });
+                acceptButton.focus();
             }
 
             if (declineButton) {
@@ -258,7 +298,7 @@
                     '</div>' +
                     '<div class="cc-active__stats">' +
                         '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' +
-                        '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time>0:00</div></div>' +
+                        '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' +
                     '</div>' +
                     '<div class="cc-active__actions">' +
                         (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') +
@@ -338,13 +378,15 @@
             post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
                 .then(function (response) {
                     if (!response.ok) {
-                        window.alert(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                        showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                    } else {
+                        clearError();
                     }
 
                     return refresh();
                 })
                 .catch(function () {
-                    window.alert(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                    showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
                 })
                 .finally(function () {
                     setOfferButtonsDisabled(false);
@@ -361,13 +403,15 @@
             post(config.declineOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
                 .then(function (response) {
                     if (!response.ok) {
-                        window.alert(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
+                        showError(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
+                    } else {
+                        clearError();
                     }
 
                     return refresh();
                 })
                 .catch(function () {
-                    window.alert(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
+                    showError(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
                 })
                 .finally(function () {
                     setOfferButtonsDisabled(false);
@@ -391,28 +435,77 @@
         }
 
         function bindPresenceMenu() {
-            if (refs.presence) {
-                var button = refs.presence.querySelector('[data-cc-presence-button]');
+            var button = refs.presenceButton;
+            var menu = refs.presenceMenu;
 
-                if (button && refs.presenceMenu) {
-                    button.addEventListener('click', function () {
-                        refs.presenceMenu.classList.toggle('is-open');
-                    });
+            if (!refs.presence || !button || !menu) {
+                return;
+            }
 
-                    document.addEventListener('click', function (event) {
-                        if (!refs.presence.contains(event.target)) {
-                            refs.presenceMenu.classList.remove('is-open');
-                        }
-                    });
+            var items = Array.prototype.slice.call(menu.querySelectorAll('[data-cc-set-presence]'));
+
+            function isOpen() {
+                return menu.classList.contains('is-open');
+            }
+
+            function openMenu() {
+                menu.classList.add('is-open');
+                button.setAttribute('aria-expanded', 'true');
+
+                if (items.length) {
+                    items[0].focus();
                 }
             }
 
-            root.querySelectorAll('[data-cc-set-presence]').forEach(function (item) {
+            function closeMenu(returnFocus) {
+                menu.classList.remove('is-open');
+                button.setAttribute('aria-expanded', 'false');
+
+                if (returnFocus) {
+                    button.focus();
+                }
+            }
+
+            button.addEventListener('click', function () {
+                if (isOpen()) {
+                    closeMenu(false);
+                } else {
+                    openMenu();
+                }
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!refs.presence.contains(event.target)) {
+                    closeMenu(false);
+                }
+            });
+
+            refs.presence.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && isOpen()) {
+                    event.preventDefault();
+                    closeMenu(true);
+                }
+            });
+
+            items.forEach(function (item, index) {
                 item.addEventListener('click', function () {
                     setPresence(item.getAttribute('data-cc-set-presence'), item.getAttribute('data-cc-reason'));
+                    closeMenu(true);
+                });
 
-                    if (refs.presenceMenu) {
-                        refs.presenceMenu.classList.remove('is-open');
+                item.addEventListener('keydown', function (event) {
+                    if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        (items[index + 1] || items[0]).focus();
+                    } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        (items[index - 1] || items[items.length - 1]).focus();
+                    } else if (event.key === 'Home') {
+                        event.preventDefault();
+                        items[0].focus();
+                    } else if (event.key === 'End') {
+                        event.preventDefault();
+                        items[items.length - 1].focus();
                     }
                 });
             });
@@ -423,6 +516,18 @@
         if (window.contactCenterRealTime && config.hubUrl) {
             window.contactCenterRealTime.connect({
                 hubUrl: config.hubUrl,
+                onConnected: function () {
+                    setConnectionStatus('connected', 'Connected', 'is-connected');
+                },
+                onReconnecting: function () {
+                    setConnectionStatus('reconnecting', 'Connection lost. Reconnecting...', 'is-reconnecting');
+                },
+                onDisconnected: function () {
+                    setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+                },
+                onError: function () {
+                    setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
+                },
                 onSnapshot: refresh,
                 onPresenceChanged: refresh,
                 onOfferReceived: function (notification) {
