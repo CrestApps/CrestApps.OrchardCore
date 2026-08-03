@@ -462,7 +462,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     }
                 });
 
-                await _session.SaveAsync(chatSession);
+                await _session.SaveAsync(chatSession, cancellationToken: cancellationToken);
             }
         }
 
@@ -471,7 +471,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", _addressRedactor.Redact(activity.PreferredDestination), activity.ItemId.SanitizeLogValue());
         }
 
-        await _session.SaveAsync(chatSession);
+        await _session.SaveAsync(chatSession, cancellationToken: cancellationToken);
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsAsync(

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="System.Memory.Data" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.ContentFields" />
