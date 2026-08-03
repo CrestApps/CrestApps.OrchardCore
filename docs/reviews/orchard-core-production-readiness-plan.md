@@ -600,11 +600,13 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-037 — No `README.md` in any of the four modules
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** Verified: none of ContactCenter, Telephony, Asterisk or DialPad has a `README.md`, which the repository conventions require for every module.
 
 **Recommended solution.** Add a `README.md` per module covering purpose, features, installation, configuration, usage and dependencies.
+
+**Resolution.** Added a `README.md` to each of the four modules — `CrestApps.OrchardCore.Telephony`, `CrestApps.OrchardCore.Asterisk`, `CrestApps.OrchardCore.DialPad`, and `CrestApps.OrchardCore.ContactCenter`. Each README documents the module purpose, a feature table with verified feature IDs (cross-checked against the module manifests and `*Constants` classes), a recipe-based installation snippet, configuration, usage, dependencies, and a link to the corresponding page on the documentation site. The Telephony README also covers provider authoring; the Asterisk README surfaces the single-active-process deployment constraint.
 
 ---
 
