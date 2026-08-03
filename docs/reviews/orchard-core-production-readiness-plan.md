@@ -587,11 +587,13 @@ The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManag
 
 ### OC-034 — Webhook rate limiting is process-local
 
-- **Priority:** Low (Enhancement) · **Status:** Not Started · **Category:** DoS · **Effort:** M · **Risk:** Low · **Dependencies:** Ingress gateway or Redis
+- **Priority:** Low (Enhancement) · **Status:** Completed · **Category:** DoS · **Effort:** M · **Risk:** Low · **Dependencies:** Ingress gateway or Redis
 
 **Problem.** Rate and concurrency limiters are in-memory singletons (`ProviderWebhookIngressLimiter.cs:11-16,40-64`), so each node accepts its own configured limit.
 
 **Recommended solution.** Enforce an edge/WAF rate limit and consider a Redis-backed global quota. Document the per-node semantics.
+
+**Resolution.** Documented the per-node semantics, which was the actionable core of the recommendation, and framed it against the topology this release actually certifies. A new **"Rate and concurrency limits are per node"** subsection under *Provider webhook ingress* in `docs/contact-center/production-support.md` states that the rate and concurrency limiters are held in-process via `System.Threading.RateLimiting` and therefore enforced per application node; that on the only production-certified topology (a single application node) per-node equals fleet-wide, so the configured value *is* the effective global limit; and that the app-level limiter is a defense-in-depth backstop rather than the primary DoS control, which belongs at the edge. For any (uncertified) multi-node deployment the doc directs operators to enforce a fleet-wide ceiling at a WAF, reverse proxy, or API gateway and to size per-node values so `node count × per-node limit` stays within provider/store capacity. `<remarks>` blocks were added to `ProviderWebhookIngressLimiter` and `ProviderWebhookIngressOptions` mirroring the semantics and pointing to the operator guidance. The **Redis-backed global quota was a "consider," not a "must,"** and is explicitly recorded as a tracked option for a future certified multi-node topology — building it now would be premature (single-node is the only certified topology, and multi-node coordination is the same class of work as OC-033), so it is deliberately deferred rather than implemented. No behavior changed.
 
 ---
 

@@ -3,6 +3,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// <summary>
 /// Configures tenant-local provider webhook rate and concurrency limits.
 /// </summary>
+/// <remarks>
+/// These limits are enforced in-process, so they apply per application node. On a multi-node deployment
+/// the effective accepted rate is the per-node limit multiplied by the number of nodes; enforce any
+/// fleet-wide ceiling at the edge.
+/// </remarks>
 public sealed class ProviderWebhookIngressOptions
 {
     /// <summary>

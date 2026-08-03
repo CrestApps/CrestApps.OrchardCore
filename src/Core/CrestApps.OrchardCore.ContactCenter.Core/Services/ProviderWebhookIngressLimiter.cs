@@ -10,6 +10,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides tenant-local provider webhook concurrency and authenticated rate limiting.
 /// </summary>
+/// <remarks>
+/// The rate and concurrency limits are held in-process using <see cref="System.Threading.RateLimiting"/>,
+/// so each limit is enforced per application node rather than fleet-wide. On the production-certified
+/// single-node topology this is the effective global limit; a multi-node deployment must enforce any
+/// fleet-wide ceiling at the edge (WAF, reverse proxy, or API gateway). See the "Provider webhook ingress"
+/// section of <c>docs/contact-center/production-support.md</c> for operator guidance.
+/// </remarks>
 public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimiter, IDisposable
 {
     private readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _providerRateLimiters = new(StringComparer.OrdinalIgnoreCase);

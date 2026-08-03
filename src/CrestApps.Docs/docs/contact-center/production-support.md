@@ -740,6 +740,12 @@ Inbound provider webhooks are split by channel by design.
 
 Bringing the non-voice webhooks to full parity is a tracked R9 item. Because the durable inbox is intentionally coupled to Contact Center orchestration (its scope executor, provider-identity canonicalization, and persisted inbox index), parity is delivered by first promoting the reusable ingress primitives to a channel-neutral shared home at or below Omnichannel, then migrating both voice and non-voice consumers onto it — an expand-migrate-contract refactor sequenced only when a second (non-voice) channel is actually built.
 
+### Rate and concurrency limits are per node
+
+The voice ingress rate limiter (`RatePermitLimit` per `RatePeriodSeconds`, per provider) and the concurrency limiter (`ConcurrencyPermitLimit`) are held in-process using `System.Threading.RateLimiting`, so each limit is enforced **per application node**, not fleet-wide. On the only production-certified topology — a single application node — per-node and fleet-wide are the same thing, so the configured value *is* the effective global limit and no *distributed* (Redis or gateway-side) quota is required to make it fleet-wide. That does not remove the need for edge protection: the app-level limiter is a defense-in-depth backstop against a misbehaving or compromised provider stream, and the primary denial-of-service control still belongs at the edge — put a rate limit at the WAF, reverse proxy, or API gateway in front of the provider webhook endpoint on every topology, single-node included.
+
+If you ever run more than one node (not certified for production in this release), the effective accepted rate becomes the per-node limit multiplied by the number of nodes. In that case the edge is also where any fleet-wide *ceiling* must be enforced — the in-process limiter cannot coordinate one — so size the per-node values so that `node count × per-node limit` stays within what your provider and downstream stores can absorb, and set the fleet-wide cap at the edge. A Redis-backed global quota is a tracked option for a future certified multi-node topology; until then, treat the edge as the authoritative fleet-wide limit.
+
 ## Prohibited capabilities and combinations
 
 - Power, Progressive, and Predictive dialing.
