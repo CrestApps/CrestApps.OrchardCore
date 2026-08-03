@@ -381,13 +381,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-021 — Duplicated JS helpers and a duplicated call-state enum
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** DRY · **Effort:** M · **Risk:** Low · **Dependencies:** OC-019
+- **Priority:** Medium · **Status:** Completed · **Category:** DRY · **Effort:** M · **Risk:** Low · **Dependencies:** OC-019
 
 **Problem.** `escapeHtml` is copy-pasted across four files; the array `['Idle','Connecting','Ringing','Connected','OnHold','Disconnected','Failed']` — which must stay in sync with the C# `CallState` enum — is duplicated between `contact-center-soft-phone.js` and `Telephony/soft-phone.js`.
 
 **Why it matters.** State-enum drift between JS and C# is a live bug risk.
 
 **Recommended solution.** Export `escapeHtml`, `formatDuration` and `STATE_NAMES` once from the shared telephony/realtime module; ideally emit the state names from the server so the C# enum stays authoritative.
+
+**Resolution.** Added a single shared browser helper resource, `telephony-client` (`Assets/js/telephony-client.js` in the Telephony base module, wired through `Assets.json` and the two-argument `SetUrl(min, debug)` overload), exposing `escapeHtml`, `formatDuration`, `normalizeCallState`, and `callStateNames` on `window.telephonyClient`. Because ContactCenter already depends on Telephony, both resource graphs reach it: `telephony-soft-phone` and `contact-center-realtime` now declare `telephony-client` as a dependency, so all four consumers (`soft-phone.js`, `contact-center-soft-phone.js`, `agent-workspace.js`, `supervisor-dashboard.js`) load it before running. The four copied `escapeHtml` bodies, the duplicated `formatDuration`/`pad`, and both hard-coded call-state arrays (the `STATE_NAMES` var and the inline literal in `isBlockingActiveCall`) were replaced with references to the shared helper, leaving one definition of each. To keep the C# enum authoritative for the wire ordinals — the drift the review called out — a build-time guard test, `CallStateNamesJsSyncTests`, extracts `CALL_STATE_NAMES` from the shared script and asserts it equals `Enum.GetValues<CallState>()` in ordinal order, so any future divergence fails the build rather than surfacing as a runtime mismatch. `npm run rebuild` regenerates the minified variants; ContactCenter and the test project build with 0 warnings and the guard plus soft-phone resource tests pass.
 
 ---
 

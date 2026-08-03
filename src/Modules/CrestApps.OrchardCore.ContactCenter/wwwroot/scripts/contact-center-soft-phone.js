@@ -14,10 +14,7 @@
     if (!call) {
       return false;
     }
-    var state = call.state;
-    if (typeof state === 'number') {
-      state = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'][state] || 'Idle';
-    }
+    var state = window.telephonyClient.normalizeCallState(call.state);
     var inbound = call.direction === 1 || call.direction === 'Inbound';
     return !inbound && (state === 'Connecting' || state === 'Ringing' || state === 'Connected' || state === 'OnHold');
   }
@@ -31,11 +28,7 @@
       return option.value;
     });
   }
-  function escapeHtml(value) {
-    var node = document.createElement('div');
-    node.textContent = value == null ? '' : String(value);
-    return node.innerHTML;
-  }
+  var escapeHtml = window.telephonyClient.escapeHtml;
   function applySelectedValues(select, values) {
     if (!select) {
       return;

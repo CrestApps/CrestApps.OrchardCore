@@ -20,7 +20,7 @@ internal sealed class ContactCenterRealTimeResourceConfiguration : IConfigureOpt
             .SetUrl(
                 "~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-realtime.min.js",
                 "~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-realtime.js")
-            .SetDependencies("signalr")
+            .SetDependencies("signalr", "telephony-client")
             .SetVersion("1.0.0");
 
         _manifest

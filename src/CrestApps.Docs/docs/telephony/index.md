@@ -274,7 +274,10 @@ There are two ways to add the soft phone to your site:
   ```
 
 The `telephony-soft-phone` script depends on the `signalr` script, which the SignalR module adds
-automatically.
+automatically, and on the shared `telephony-client` helper script, which exposes `escapeHtml`,
+`formatDuration`, `normalizeCallState`, and the call-state names on `window.telephonyClient` for the
+soft phone and the contact-center clients. ResourceManager resolves both dependencies for you, so you
+only reference `telephony-soft-phone`.
 
 ## Authenticating users with a provider
 

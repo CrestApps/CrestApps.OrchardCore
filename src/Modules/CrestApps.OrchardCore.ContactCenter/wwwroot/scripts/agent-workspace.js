@@ -32,23 +32,8 @@
       };
     }
   }
-  function escapeHtml(value) {
-    var node = document.createElement('div');
-    node.textContent = value == null ? '' : String(value);
-    return node.innerHTML;
-  }
-  function pad(value) {
-    return value < 10 ? '0' + value : String(value);
-  }
-  function formatDuration(totalSeconds) {
-    if (!isFinite(totalSeconds) || totalSeconds < 0) {
-      totalSeconds = 0;
-    }
-    var seconds = Math.floor(totalSeconds % 60);
-    var minutes = Math.floor(totalSeconds / 60 % 60);
-    var hours = Math.floor(totalSeconds / 3600);
-    return (hours > 0 ? hours + ':' + pad(minutes) : minutes) + ':' + pad(seconds);
-  }
+  var escapeHtml = window.telephonyClient.escapeHtml;
+  var formatDuration = window.telephonyClient.formatDuration;
   function parseUtc(value) {
     if (!value) {
       return null;

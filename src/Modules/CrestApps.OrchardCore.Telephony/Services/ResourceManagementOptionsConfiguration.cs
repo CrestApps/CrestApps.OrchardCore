@@ -15,11 +15,18 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest = new ResourceManifest();
 
         _manifest
+            .DefineScript("telephony-client")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Telephony/scripts/telephony-client.min.js",
+                "~/CrestApps.OrchardCore.Telephony/scripts/telephony-client.js")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("telephony-soft-phone")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Telephony/scripts/soft-phone.min.js",
                 "~/CrestApps.OrchardCore.Telephony/scripts/soft-phone.js")
-            .SetDependencies("signalr")
+            .SetDependencies("signalr", "telephony-client")
             .SetVersion("1.0.0");
 
         _manifest

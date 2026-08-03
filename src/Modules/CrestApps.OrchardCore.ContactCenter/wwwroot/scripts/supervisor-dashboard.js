@@ -32,11 +32,7 @@
       };
     }
   }
-  function escapeHtml(value) {
-    var node = document.createElement('div');
-    node.textContent = value == null ? '' : String(value);
-    return node.innerHTML;
-  }
+  var escapeHtml = window.telephonyClient.escapeHtml;
   function formatWait(totalSeconds) {
     if (!isFinite(totalSeconds) || totalSeconds <= 0) {
       return '0s';

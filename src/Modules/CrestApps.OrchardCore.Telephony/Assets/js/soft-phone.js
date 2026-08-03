@@ -30,19 +30,7 @@
         ExternalDevice: 2
     };
 
-    var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
-
-    function normalizeState(state) {
-        if (typeof state === 'number') {
-            return STATE_NAMES[state] || 'Idle';
-        }
-
-        if (typeof state === 'string' && state.length) {
-            return state;
-        }
-
-        return 'Idle';
-    }
+    var normalizeState = window.telephonyClient.normalizeCallState;
 
     function isActive(stateName) {
         return stateName === 'Connecting' || stateName === 'Ringing' || stateName === 'Connected' || stateName === 'OnHold';
@@ -62,12 +50,7 @@
         }
     }
 
-    function escapeHtml(value) {
-        var element = document.createElement('div');
-        element.textContent = value == null ? '' : String(value);
-
-        return element.innerHTML;
-    }
+    var escapeHtml = window.telephonyClient.escapeHtml;
 
     function buildRegistrationConfigUrl(config) {
         if (config.registrationConfigUrl) {
