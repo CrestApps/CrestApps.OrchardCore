@@ -24,6 +24,7 @@
   <ItemGroup>
     <!-- Serve the real soft phone client and the SignalR client locally so the test is hermetic. -->
     <Content Include="../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js" Link="assets/soft-phone.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js" Link="assets/telephony-client.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../src/Modules/CrestApps.OrchardCore.SignalR/wwwroot/scripts/signalr.js" Link="assets/signalr.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
