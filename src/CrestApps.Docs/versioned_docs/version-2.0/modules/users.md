@@ -27,6 +27,10 @@ Provides a way to display a user's display name.
 
 To set the display name format, navigate to **Settings** → **User Display Name**.
 
+The screencast below enables **User Display Name**, selects the *First Middle Last name* format with required first and last names, and shows the matching name fields appearing on the user editor.
+
+![Screen cast of enabling User Display Name, choosing a format, and editing a user](/img/docs/users.gif)
+
 If you want to display the user display name in your project via code, you may do so by using the `IDisplayNameProvider` interface.
 
 ### Liquid Support
