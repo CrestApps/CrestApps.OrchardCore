@@ -563,11 +563,13 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-035 — Confirm antiforgery coverage on admin catalog POSTs
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Security verification · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** Security verification · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** Catalog and entitlement POST actions have no explicit antiforgery attribute; they rely on Orchard's global admin antiforgery filter.
 
 **Recommended solution.** Add an integration test proving admin catalog POSTs reject absent/invalid antiforgery tokens, so the reliance is asserted rather than assumed.
+
+**Resolution.** The four modules have no web-host integration harness, so a full HTTP round-trip test was not feasible without introducing one (out of scope for an S item). Instead the reliance was asserted at the layer under our control with a reflection-based architecture test, `AdminPostAntiforgeryArchitectureTests`. It enumerates every concrete MVC controller in the ContactCenter, Telephony, Asterisk, and DialPad module assemblies, finds each action that responds to an unsafe HTTP verb (POST/PUT/PATCH/DELETE via any `IActionHttpMethodProvider`), and asserts none opts out of antiforgery through `[IgnoreAntiforgeryToken]` on the action or its controller. Because Orchard Core registers `AutoValidateAntiforgeryTokenAttribute` globally, the *only* way one of these POSTs could bypass antiforgery is an explicit opt-out — so proving no opt-out exists proves the coverage holds. A second test pins the known catalog controllers (`Skills`, `Queues`, `AgentEntitlements`) as discovered so the scan can never silently degrade to zero actions. Confirmed no controller in any of the four modules declares `[IgnoreAntiforgeryToken]`; provider webhook receivers are minimal-API endpoints and never surface as controllers. Both tests pass.
 
 ---
 
