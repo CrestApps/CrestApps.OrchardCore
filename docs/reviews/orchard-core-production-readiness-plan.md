@@ -413,13 +413,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-024 — Recording ingestion buffers whole files multiple times
 
-- **Priority:** High · **Status:** Not Started · **Category:** Memory · **Effort:** L · **Risk:** High · **Dependencies:** Recording storage format + migration
+- **Priority:** High · **Status:** Completed · **Category:** Memory · **Effort:** L · **Risk:** High · **Dependencies:** Recording storage format + migration
 
 **Problem.** Verified: `LocalEncryptedRecordingMediaStore.StoreAsync` calls `_protector.Protect(request.Content)` on a full `byte[]` then wraps it in a `MemoryStream`; `OpenReadAsync` copies the file into a `MemoryStream`, calls `.ToArray()`, `Unprotect`s the whole array, and returns another `MemoryStream`. `AsteriskAriClient.cs:491` downloads as a byte array.
 
 **Why it matters.** A single long recording consumes several times its size in managed memory, causing LOH pressure or OOM under concurrent ingestion.
 
 **Recommended solution.** Streaming download plus chunked authenticated encryption, or storage-native encryption; expose streaming read/write APIs instead of `byte[]`.
+
+**Resolution.** Introduced a streaming chunked-AEAD container (`RecordingMediaCryptoFormat` + `ChunkedAeadEncryptingReadStream`/`ChunkedAeadDecryptingReadStream`) using envelope encryption: a per-recording random AES-256-GCM data key encrypts the media as a sequence of independently authenticated 64 KiB frames, and that data key is wrapped by the data-protection provider (so key management — tenant isolation, rotation — stays with data protection while bulk media streams a fixed chunk at a time). Every frame binds its ordinal counter, length, and an end-of-stream marker into the AES-GCM associated data, so tampering, reordering, and truncation are rejected on read (surfaced as `CryptographicException`). `RecordingMediaWriteRequest.Content` changed from `byte[]` to `Stream`; `LocalEncryptedRecordingMediaStore` now streams straight through `IFileStore.CreateFileFromStreamAsync`/`GetFileStreamAsync`, so a recording is never buffered whole in memory in either direction. On the Asterisk side, `DownloadStoredRecordingAsync` now uses `HttpCompletionOption.ResponseHeadersRead` and returns an owning `AsteriskAriStoredRecordingContent` (holds the open response) whose stream is `await using`-scoped across the store call in `AsteriskRecordingIngestService`. Because recording is off by default and the branch is unmerged there is no on-disk migration burden. Added multi-chunk round-trip, empty-recording, tamper, and truncation tests; updated the public API baseline. Independently reviewed (gpt-5.6) and approved.
 
 ---
 
@@ -754,7 +756,7 @@ Strongly recommended before first release:
 - [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
-- [x] OC-022 (done), OC-023 (done), OC-024 — load-bearing performance items
+- [x] OC-022 (done), OC-023 (done), OC-024 (done) — load-bearing performance items
 - [x] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs
 

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -124,6 +125,143 @@ public sealed class LocalEncryptedRecordingMediaStoreTests : IDisposable
         Assert.Empty(Directory.GetFiles(_rootPath, "*", SearchOption.AllDirectories));
     }
 
+    [Fact]
+    public async Task StoreAsync_ThenOpenReadAsync_RoundTripsRecordingsSpanningManyChunks()
+    {
+        // Arrange
+        // A recording larger than several 64 KiB frames exercises the multi-frame streaming path in both
+        // directions, proving the chunked container reassembles byte-for-byte across frame boundaries.
+        var content = new byte[(64 * 1024 * 3) + 517];
+        new Random(12345).NextBytes(content);
+        var request = CreateRequest("crestapps-recording-large", content);
+
+        // Act
+        var reference = await _store.StoreAsync(request, TestContext.Current.CancellationToken);
+
+        byte[] readBack;
+
+        await using (var stream = await _store.OpenReadAsync(reference, TestContext.Current.CancellationToken))
+        {
+            Assert.NotNull(stream);
+
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, TestContext.Current.CancellationToken);
+            readBack = buffer.ToArray();
+        }
+
+        // Assert
+        Assert.Equal(content, readBack);
+    }
+
+    [Fact]
+    public async Task StoreAsync_ThenOpenReadAsync_RoundTripsEmptyRecording()
+    {
+        // Arrange
+        var request = CreateRequest("crestapps-recording-empty", []);
+
+        // Act
+        var reference = await _store.StoreAsync(request, TestContext.Current.CancellationToken);
+
+        byte[] readBack;
+
+        await using (var stream = await _store.OpenReadAsync(reference, TestContext.Current.CancellationToken))
+        {
+            Assert.NotNull(stream);
+
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, TestContext.Current.CancellationToken);
+            readBack = buffer.ToArray();
+        }
+
+        // Assert
+        Assert.Empty(readBack);
+    }
+
+    [Fact]
+    public async Task OpenReadAsync_WhenCiphertextTampered_ThrowsOnRead()
+    {
+        // Arrange
+        var content = new byte[4096];
+        new Random(777).NextBytes(content);
+        var reference = await _store.StoreAsync(
+            CreateRequest("crestapps-recording-tampered", content),
+            TestContext.Current.CancellationToken);
+
+        var storedFile = Assert.Single(Directory.GetFiles(_rootPath, "*", SearchOption.AllDirectories));
+        var onDisk = await File.ReadAllBytesAsync(storedFile, TestContext.Current.CancellationToken);
+
+        // Flip a byte deep in the ciphertext body so the authentication tag no longer matches.
+        onDisk[^1] ^= 0xFF;
+        await File.WriteAllBytesAsync(storedFile, onDisk, TestContext.Current.CancellationToken);
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<CryptographicException>(async () =>
+        {
+            await using var stream = await _store.OpenReadAsync(reference, TestContext.Current.CancellationToken);
+
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, TestContext.Current.CancellationToken);
+        });
+    }
+
+    [Fact]
+    public async Task OpenReadAsync_WhenCiphertextTruncated_ThrowsOnRead()
+    {
+        // Arrange
+        // Two full frames plus a partial one guarantees at least one non-final frame precedes the truncation,
+        // so dropping the tail removes the final-frame marker and the reader must reject the clean EOF.
+        var content = new byte[(64 * 1024 * 2) + 128];
+        new Random(999).NextBytes(content);
+        var reference = await _store.StoreAsync(
+            CreateRequest("crestapps-recording-truncated", content),
+            TestContext.Current.CancellationToken);
+
+        var storedFile = Assert.Single(Directory.GetFiles(_rootPath, "*", SearchOption.AllDirectories));
+        var onDisk = await File.ReadAllBytesAsync(storedFile, TestContext.Current.CancellationToken);
+
+        // Drop the final frame so the container ends without its authenticated end-of-stream marker.
+        var truncated = onDisk.AsSpan(0, onDisk.Length - (64 * 1024)).ToArray();
+        await File.WriteAllBytesAsync(storedFile, truncated, TestContext.Current.CancellationToken);
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<CryptographicException>(async () =>
+        {
+            await using var stream = await _store.OpenReadAsync(reference, TestContext.Current.CancellationToken);
+
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, TestContext.Current.CancellationToken);
+        });
+    }
+
+    [Fact]
+    public async Task OpenReadAsync_WhenDataAppendedAfterFinalFrame_ThrowsOnRead()
+    {
+        // Arrange
+        var content = new byte[2048];
+        new Random(555).NextBytes(content);
+        var reference = await _store.StoreAsync(
+            CreateRequest("crestapps-recording-appended", content),
+            TestContext.Current.CancellationToken);
+
+        var storedFile = Assert.Single(Directory.GetFiles(_rootPath, "*", SearchOption.AllDirectories));
+        var onDisk = await File.ReadAllBytesAsync(storedFile, TestContext.Current.CancellationToken);
+
+        // Append stray bytes after the authenticated final frame; a faithful reader must reject them rather than
+        // return a clean end-of-stream.
+        var tampered = new byte[onDisk.Length + 4];
+        onDisk.CopyTo(tampered, 0);
+        await File.WriteAllBytesAsync(storedFile, tampered, TestContext.Current.CancellationToken);
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<CryptographicException>(async () =>
+        {
+            await using var stream = await _store.OpenReadAsync(reference, TestContext.Current.CancellationToken);
+
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, TestContext.Current.CancellationToken);
+        });
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_rootPath))
@@ -139,7 +277,7 @@ public sealed class LocalEncryptedRecordingMediaStoreTests : IDisposable
             StorageKey = storageKey,
             InteractionId = storageKey,
             Format = "wav",
-            Content = content,
+            Content = new MemoryStream(content, writable: false),
         };
     }
 

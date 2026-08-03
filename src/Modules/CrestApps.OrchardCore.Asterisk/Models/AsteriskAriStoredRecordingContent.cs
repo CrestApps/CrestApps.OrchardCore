@@ -1,18 +1,57 @@
 namespace CrestApps.OrchardCore.Asterisk.Models;
 
 /// <summary>
-/// Represents the raw bytes of an Asterisk ARI stored recording downloaded through the stored-file endpoint,
-/// together with the reported media content type.
+/// Represents an Asterisk ARI stored recording downloaded through the stored-file endpoint as a still-open,
+/// readable stream together with the reported media content type. The recording body is streamed rather than
+/// buffered, so the resource that owns the underlying network stream is held open until this content is
+/// disposed; disposal releases that owning resource (and therefore the stream).
 /// </summary>
-internal sealed class AsteriskAriStoredRecordingContent
+internal sealed class AsteriskAriStoredRecordingContent : IAsyncDisposable, IDisposable
 {
-    /// <summary>
-    /// Gets or sets the raw, unencrypted recording bytes as returned by Asterisk.
-    /// </summary>
-    public byte[] Content { get; set; }
+    private readonly IDisposable _owner;
 
     /// <summary>
-    /// Gets or sets the media content type Asterisk reported for the downloaded recording, when present.
+    /// Initializes a new instance of the <see cref="AsteriskAriStoredRecordingContent"/> class.
     /// </summary>
-    public string ContentType { get; set; }
+    /// <param name="content">The readable recording stream to persist.</param>
+    /// <param name="contentType">The media content type Asterisk reported for the recording, when present.</param>
+    /// <param name="owner">The resource that owns the underlying stream and is disposed with this content.</param>
+    public AsteriskAriStoredRecordingContent(
+        Stream content,
+        string contentType,
+        IDisposable owner)
+    {
+        Content = content;
+        ContentType = contentType;
+        _owner = owner;
+    }
+
+    /// <summary>
+    /// Gets the readable stream of raw, unencrypted recording bytes as returned by Asterisk.
+    /// </summary>
+    public Stream Content { get; }
+
+    /// <summary>
+    /// Gets the media content type Asterisk reported for the downloaded recording, when present.
+    /// </summary>
+    public string ContentType { get; }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _owner.Dispose();
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        if (_owner is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync();
+
+            return;
+        }
+
+        _owner.Dispose();
+    }
 }

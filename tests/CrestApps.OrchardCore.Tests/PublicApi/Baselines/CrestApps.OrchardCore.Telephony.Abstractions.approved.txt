@@ -421,7 +421,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class RecordingMediaWriteRequest
     {
         public RecordingMediaWriteRequest() { }
-        public byte[] Content { get; set; }
+        public System.IO.Stream Content { get; set; }
         public string Format { get; set; }
         public string InteractionId { get; set; }
         public string StorageKey { get; set; }

@@ -28,7 +28,7 @@ public sealed class AsteriskRecordingIngestServiceTests
         var ariClient = new Mock<IAsteriskAriClient>();
         ariClient
             .Setup(client => client.DownloadStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AsteriskAriStoredRecordingContent { Content = recordingBytes, ContentType = "audio/wav" });
+            .ReturnsAsync(CreateRecordingContent(recordingBytes));
 
         var mediaStore = new RecordingMediaStoreSpy();
         var service = CreateService(jobStore, ariClient.Object, mediaStore);
@@ -49,7 +49,7 @@ public sealed class AsteriskRecordingIngestServiceTests
 
         Assert.Equal(_recordingName, stored.StorageKey);
         Assert.Equal(_interactionId, stored.InteractionId);
-        Assert.Equal(recordingBytes, stored.Content);
+        Assert.Equal(recordingBytes, Assert.Single(mediaStore.StoredContent));
 
         ariClient.Verify(
             client => client.DeleteStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()),
@@ -66,7 +66,7 @@ public sealed class AsteriskRecordingIngestServiceTests
         var ariClient = new Mock<IAsteriskAriClient>();
         ariClient
             .Setup(client => client.DownloadStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AsteriskAriStoredRecordingContent { Content = [1, 2, 3] });
+            .ReturnsAsync(CreateRecordingContent([1, 2, 3]));
         ariClient
             .SetupSequence(client => client.DeleteStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AsteriskAriException("The source could not be deleted."))
@@ -200,7 +200,7 @@ public sealed class AsteriskRecordingIngestServiceTests
             .ThrowsAsync(new InvalidOperationException("Boom."));
         ariClient
             .Setup(client => client.DownloadStoredRecordingAsync(healthyRecording, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AsteriskAriStoredRecordingContent { Content = new byte[] { 9, 9 } });
+            .ReturnsAsync(CreateRecordingContent(new byte[] { 9, 9 }));
 
         var mediaStore = new RecordingMediaStoreSpy();
         var service = CreateService(jobStore, ariClient.Object, mediaStore);
@@ -270,7 +270,7 @@ public sealed class AsteriskRecordingIngestServiceTests
         var ariClient = new Mock<IAsteriskAriClient>();
         ariClient
             .Setup(client => client.DownloadStoredRecordingAsync(_recordingName, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AsteriskAriStoredRecordingContent { Content = recordingBytes, ContentType = "audio/wav" });
+            .ReturnsAsync(CreateRecordingContent(recordingBytes));
 
         var mediaStore = new RecordingMediaStoreSpy();
         var erasureGuard = new Mock<IRecordingErasureGuard>();
@@ -330,13 +330,19 @@ public sealed class AsteriskRecordingIngestServiceTests
     {
         public List<RecordingMediaWriteRequest> Stored { get; } = [];
 
+        public List<byte[]> StoredContent { get; } = [];
+
         public List<string> Deleted { get; } = [];
 
-        public Task<string> StoreAsync(RecordingMediaWriteRequest request, CancellationToken cancellationToken = default)
+        public async Task<string> StoreAsync(RecordingMediaWriteRequest request, CancellationToken cancellationToken = default)
         {
-            Stored.Add(request);
+            using var buffer = new MemoryStream();
+            await request.Content.CopyToAsync(buffer, cancellationToken);
 
-            return Task.FromResult("media-ref-" + request.StorageKey);
+            Stored.Add(request);
+            StoredContent.Add(buffer.ToArray());
+
+            return "media-ref-" + request.StorageKey;
         }
 
         public Task<Stream> OpenReadAsync(string storageReference, CancellationToken cancellationToken = default)
@@ -350,5 +356,12 @@ public sealed class AsteriskRecordingIngestServiceTests
 
             return Task.FromResult(true);
         }
+    }
+
+    private static AsteriskAriStoredRecordingContent CreateRecordingContent(byte[] content, string contentType = "audio/wav")
+    {
+        var stream = new MemoryStream(content, writable: false);
+
+        return new AsteriskAriStoredRecordingContent(stream, contentType, stream);
     }
 }

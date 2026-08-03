@@ -11,7 +11,8 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// tenant-scoped file store, encrypting every recording at rest with the data protection provider. Recordings
 /// are addressed by a deterministic storage key so a read or a right-to-erasure delete never needs any state
 /// beyond the key the orchestration layer already holds. The bytes on disk are always the protected
-/// ciphertext; the plaintext recording only ever exists in memory while it is being ingested or read back.
+/// ciphertext, and both writes and reads stream the recording through a chunked authenticated-encryption
+/// container (<see cref="RecordingMediaCryptoFormat"/>) so a whole recording is never buffered in memory.
 /// </summary>
 public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, ISupportsTenantMediaPurge
 {
@@ -41,10 +42,11 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
         ArgumentNullException.ThrowIfNull(request.Content);
 
         var path = ResolvePath(request.StorageKey);
-        var protectedBytes = _protector.Protect(request.Content);
 
-        using var stream = new MemoryStream(protectedBytes, writable: false);
-        await _fileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+        // The plaintext recording is encrypted a fixed chunk at a time as the file store reads the wrapping
+        // stream, so a large recording is never materialized in memory as a whole plaintext or ciphertext copy.
+        await using var encryptingStream = RecordingMediaCryptoFormat.CreateEncryptingReadStream(request.Content, _protector, cancellationToken);
+        await _fileStore.CreateFileFromStreamAsync(path, encryptingStream, overwrite: true);
 
         return request.StorageKey;
     }
@@ -64,18 +66,20 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
             return null;
         }
 
-        byte[] protectedBytes;
+        // The returned stream decrypts a fixed chunk at a time and takes ownership of the underlying file
+        // stream, so reading back a recording never buffers the whole plaintext in memory.
+        var fileStream = await _fileStore.GetFileStreamAsync(path);
 
-        await using (var stream = await _fileStore.GetFileStreamAsync(path))
+        try
         {
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer, cancellationToken);
-            protectedBytes = buffer.ToArray();
+            return await RecordingMediaCryptoFormat.OpenDecryptingReadStreamAsync(fileStream, _protector, cancellationToken);
         }
+        catch
+        {
+            await fileStream.DisposeAsync();
 
-        var content = _protector.Unprotect(protectedBytes);
-
-        return new MemoryStream(content, writable: false);
+            throw;
+        }
     }
 
     /// <inheritdoc/>

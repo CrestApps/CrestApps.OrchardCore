@@ -469,37 +469,75 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         ArgumentException.ThrowIfNullOrEmpty(recordingName);
 
         var settings = ResolveSettings(nameof(DownloadStoredRecordingAsync));
-        using var response = await SendAsync(
+
+        // Stream the response headers-first and hand the still-open response body to the caller so the recording
+        // media flows straight into the encrypting store without ever being buffered whole in memory here.
+        var response = await SendAsync(
             settings,
             HttpMethod.Get,
             $"recordings/stored/{Uri.EscapeDataString(recordingName)}/file",
             null,
             null,
             nameof(DownloadStoredRecordingAsync),
-            cancellationToken);
+            cancellationToken,
+            HttpCompletionOption.ResponseHeadersRead);
 
-        // The stored file may not be readable yet (still flushing to disk) or may already have been removed by
-        // retention, so a missing file is a soft null rather than a failure. The durable ingest loop decides
-        // whether to retry (not-ready) or dead-letter (never appears).
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        try
         {
-            return null;
+            // The stored file may not be readable yet (still flushing to disk) or may already have been removed by
+            // retention, so a missing file is a soft null rather than a failure. The durable ingest loop decides
+            // whether to retry (not-ready) or dead-letter (never appears).
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                response.Dispose();
+
+                return null;
+            }
+
+            await EnsureSuccessAsync(response, nameof(DownloadStoredRecordingAsync), cancellationToken);
+
+            // An empty body is treated the same as a missing file: there is nothing to persist yet. A declared
+            // zero content length is caught here without touching the body.
+            if (response.Content.Headers.ContentLength == 0)
+            {
+                response.Dispose();
+
+                return null;
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var effectiveStream = stream;
+
+            // Content length is optional, so a not-yet-flushed recording can arrive as an empty chunked body with
+            // no declared length. Peek a single byte to tell an empty body apart from a real recording; on an
+            // empty body this is a soft null (retry), otherwise the peeked byte is replayed so no media is lost.
+            if (response.Content.Headers.ContentLength is null)
+            {
+                var probe = new byte[1];
+                var read = await stream.ReadAsync(probe.AsMemory(0, 1), cancellationToken);
+
+                if (read == 0)
+                {
+                    response.Dispose();
+
+                    return null;
+                }
+
+                effectiveStream = new LeadingByteStream(probe[0], stream);
+            }
+
+            // Ownership of the response (and therefore the network stream) transfers to the returned content, which
+            // disposes it once the recording has been streamed into storage.
+            var recordingContent = new AsteriskAriStoredRecordingContent(effectiveStream, contentType, response);
+            response = null;
+
+            return recordingContent;
         }
-
-        await EnsureSuccessAsync(response, nameof(DownloadStoredRecordingAsync), cancellationToken);
-
-        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-
-        if (content is null || content.Length == 0)
+        finally
         {
-            return null;
+            response?.Dispose();
         }
-
-        return new AsteriskAriStoredRecordingContent
-        {
-            Content = content,
-            ContentType = response.Content.Headers.ContentType?.MediaType,
-        };
     }
 
     /// <inheritdoc/>
@@ -672,7 +710,8 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
         IDictionary<string, string> query,
         HttpContent content,
         string operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
     {
         try
         {
@@ -685,7 +724,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
                 Content = content,
             };
 
-            return await client.SendAsync(request, cancellationToken);
+            return await client.SendAsync(request, completionOption, cancellationToken);
         }
         catch (TimeoutRejectedException ex)
         {

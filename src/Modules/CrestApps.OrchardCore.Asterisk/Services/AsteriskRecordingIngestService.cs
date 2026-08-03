@@ -126,20 +126,26 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
             // A null download means the stored file is not readable yet (still flushing) or was already removed by
             // retention. Either way the job is retried with back-off; a file that never appears is eventually
             // dead-lettered rather than retried forever.
-            if (content?.Content is null || content.Content.Length == 0)
+            if (content is null)
             {
                 await RecordFailureAsync(job, nowUtc, "The stored recording was not yet available to download.", cancellationToken);
 
                 return false;
             }
 
-            job.MediaReference = await _mediaStore.StoreAsync(new RecordingMediaWriteRequest
+            // The download response is held open only for the duration of the store so the recording streams
+            // straight from Asterisk into the encrypting media store without being buffered whole in memory.
+            await using (content)
             {
-                StorageKey = job.RecordingName,
-                InteractionId = job.InteractionId,
-                Format = job.Format,
-                Content = content.Content,
-            }, cancellationToken);
+                job.MediaReference = await _mediaStore.StoreAsync(new RecordingMediaWriteRequest
+                {
+                    StorageKey = job.RecordingName,
+                    InteractionId = job.InteractionId,
+                    Format = job.Format,
+                    Content = content.Content,
+                }, cancellationToken);
+            }
+
             job.MediaStored = true;
 
             // Durably record that the encrypted copy exists before attempting the plaintext source cleanup. If the
