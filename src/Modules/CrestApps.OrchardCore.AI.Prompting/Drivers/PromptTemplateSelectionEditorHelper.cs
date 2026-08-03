@@ -8,9 +8,9 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 
-internal static class PromptTemplateSelectionEditorHelper
+public static class PromptTemplateSelectionEditorHelper
 {
-    internal static async Task PopulateViewModelAsync(
+    public static async Task PopulateViewModelAsync(
         AITemplateSelectionViewModel model,
         PromptTemplateMetadata promptMetadata,
         PromptTemplateSelectionService promptTemplateSelectionService)
@@ -39,7 +39,7 @@ internal static class PromptTemplateSelectionEditorHelper
         .ToList();
     }
 
-    internal static async Task<PromptTemplateMetadata> BuildMetadataAsync(
+    public static async Task<PromptTemplateMetadata> BuildMetadataAsync(
         AITemplateSelectionViewModel model,
         PromptTemplateSelectionService promptTemplateSelectionService,
         ModelStateDictionary modelState,

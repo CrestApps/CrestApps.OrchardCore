@@ -1,19 +1,6 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
-@using CrestApps.Core.AI
-@using CrestApps.OrchardCore.AI.Core.Models
 
 @model AICompletionWithConfigTaskViewModel
-
-<div class="ocat-wrapper" asp-validation-class-for="DeploymentName">
-    <label asp-for="DeploymentName" class="ocat-label">@T["Deployment"]</label>
-    <div class="ocat-end">
-        <select asp-for="DeploymentName" class="form-select" asp-items="Model.DeploymentNames">
-            <option value="">@T["Select a deployment"]</option>
-        </select>
-        <span asp-validation-for="DeploymentName"></span>
-        <span class="hint">@T["Select the chat deployment that should run this workflow task."]</span>
-    </div>
-</div>
 
 <div class="ocat-wrapper" asp-validation-class-for="ResultPropertyName">
     <label asp-for="ResultPropertyName" class="ocat-label">@T["Result property name"]</label>
@@ -32,97 +19,6 @@
         <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax."]</span>
     </div>
 </div>
-
-<div class="ocat-wrapper">
-    <label asp-for="SystemMessage" class="ocat-label">@T["System instructions"]</label>
-    <div class="ocat-end">
-        <div class="hint mb-1">@T["The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
-        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="MaxTokens" class="ocat-label">@T["Max response"]</label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4">
-        <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="Temperature" class="ocat-label">@T["Temperature"]</label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="1">
-        <span class="hint">@T["Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="TopP" class="ocat-label">@T["Top P"]</label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
-        <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="FrequencyPenalty" class="ocat-label">@T["Frequency penalty"]</label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="1">
-        <span class="hint">@T["Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="PresencePenalty" class="ocat-label">@T["Presence penalty"]</label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
-        <span class="hint">@T["Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response."]</span>
-    </div>
-</div>
-
-<style asp-name="codemirror"></style>
-<style asp-name="easymde"></style>
-<style at="Head">
-    .cm-editor-readonly {
-        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
-    }
-</style>
-
-<script asp-name="easymde" at="Foot"></script>
-<script at="Foot" depends-on="easymde">
-    document.addEventListener('DOMContentLoaded', function () {
-        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
-
-        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
-        var mde = new EasyMDE({
-            element: systemMessageElement,
-            forceSync: true,
-            autoDownloadFontAwesome: false
-        });
-
-        mde.codemirror.on('change', function () {
-            document.dispatchEvent(new Event('contentpreview:render'));
-        });
-
-        if (isRtl) {
-            var toolbarEditors = document.querySelectorAll('.editor-toolbar');
-
-            for (var i = 0; i < toolbarEditors.length; i++)
-            {
-                toolbarEditors[i].style.direction = 'rtl';
-                toolbarEditors[i].style.textAlign = 'right';
-            }
-
-            var mirrorContainers = document.querySelectorAll('.CodeMirror');
-
-            for (var i = 0; i < mirrorContainers.length; i++)
-            {
-                mirrorContainers[i].style.textAlign = 'right';
-            }
-        }
-    });
-</script>
 
 <style asp-name="codemirror"></style>
 <script asp-name="codemirror" at="Foot"></script>
@@ -150,7 +46,6 @@
 
             editor.on('change', function (cmEditor) {
                 cmEditor.save();
-                document.dispatchEvent(new Event('contentpreview:render'));
             });
         }
 

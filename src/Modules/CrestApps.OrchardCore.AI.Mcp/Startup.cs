@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Migrations;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -27,6 +28,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -386,5 +388,17 @@ public sealed class McpMediaResourceStartup : StartupBase
                 new McpResourceVariable("path") { Description = S["The media path to read."] },
             ];
         });
+    }
+}
+
+/// <summary>
+/// Contributes the MCP connections field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures(McpPermissions.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigMcpConnectionsDisplayDriver>();
     }
 }

@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.AI.A2A.Handlers;
 using CrestApps.OrchardCore.AI.A2A.Migrations;
 using CrestApps.OrchardCore.AI.A2A.Recipes;
 using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -22,6 +23,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.A2A;
 
@@ -101,5 +103,17 @@ public sealed class A2AHostStartup : StartupBase
         // to pass through without credentials.
         routes.MapA2A(taskManager, "a2a")
             .RequireAuthorization(A2AHostPolicyName);
+    }
+}
+
+/// <summary>
+/// Contributes the A2A connections field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures(A2AConstants.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigA2AConnectionsDisplayDriver>();
     }
 }

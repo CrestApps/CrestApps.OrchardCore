@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -25,6 +26,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 
@@ -119,5 +121,18 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
         routes
             .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
             .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+    }
+}
+
+/// <summary>
+/// Registers the document knowledgebase display driver for the AI Completion using Direct Config
+/// workflow activity so uploaded documents contribute retrieval context during completion.
+/// </summary>
+[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigDocumentsDisplayDriver>();
     }
 }

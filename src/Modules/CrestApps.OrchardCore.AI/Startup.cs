@@ -23,6 +23,7 @@ using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
 using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Migrations;
+using CrestApps.OrchardCore.AI.Prompting;
 using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
@@ -179,11 +180,51 @@ public sealed class WorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
-        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
         services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the AI completion with config workflow activity and its feature-contributed display drivers.
+/// The activity relies on the Chat Interactions completion context builder to translate its configuration
+/// into an AI completion, so it is only available when that feature is enabled.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigConnectionDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigParametersDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigToolsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Contributes the prompt template selection field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIPromptingConstants.Feature.Area, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsPromptingWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigPromptSelectionDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Contributes the AI tool instances field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.ToolInstances, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsToolInstancesWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigToolInstancesDisplayDriver>();
     }
 }
 

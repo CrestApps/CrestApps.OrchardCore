@@ -31,6 +31,12 @@ public sealed class ActivityDispositionRequest
     public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
 
     /// <summary>
+    /// Gets or sets optional preparation notes supplied for disposition-driven subject actions. Each note becomes the
+    /// instructions of the follow-up activity created by the matching subject action.
+    /// </summary>
+    public IDictionary<string, string> ActionPreparationNotes { get; set; }
+
+    /// <summary>
     /// Gets or sets the actor identifier applying the disposition.
     /// </summary>
     public string ActorId { get; set; }
