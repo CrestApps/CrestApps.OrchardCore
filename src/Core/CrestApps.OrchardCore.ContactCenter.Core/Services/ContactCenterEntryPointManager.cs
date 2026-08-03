@@ -10,20 +10,24 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterEntryPointManager : CatalogManager<ContactCenterEntryPoint>, IContactCenterEntryPointManager
 {
     private readonly IContactCenterEntryPointStore _store;
+    private readonly IContactCenterConfigurationCache _cache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointManager"/> class.
     /// </summary>
     /// <param name="store">The underlying entry point store.</param>
     /// <param name="handlers">The catalog entry handlers for entry points.</param>
+    /// <param name="cache">The routing configuration cache used to serve enabled entry points without re-querying the store.</param>
     /// <param name="logger">The logger instance.</param>
     public ContactCenterEntryPointManager(
         IContactCenterEntryPointStore store,
         IEnumerable<ICatalogEntryHandler<ContactCenterEntryPoint>> handlers,
+        IContactCenterConfigurationCache cache,
         ILogger<CatalogManager<ContactCenterEntryPoint>> logger)
         : base(store, handlers, logger)
     {
         _store = store;
+        _cache = cache;
     }
 
     /// <inheritdoc/>
@@ -42,13 +46,16 @@ public sealed class ContactCenterEntryPointManager : CatalogManager<ContactCente
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<ContactCenterEntryPoint>> ListEnabledAsync(CancellationToken cancellationToken = default)
     {
-        var entryPoints = await _store.ListEnabledAsync(cancellationToken);
-
-        foreach (var entryPoint in entryPoints)
+        return await _cache.GetEnabledAsync(async token =>
         {
-            await LoadAsync(entryPoint, cancellationToken);
-        }
+            var entryPoints = await _store.ListEnabledAsync(token);
 
-        return entryPoints;
+            foreach (var entryPoint in entryPoints)
+            {
+                await LoadAsync(entryPoint, token);
+            }
+
+            return entryPoints;
+        }, cancellationToken);
     }
 }

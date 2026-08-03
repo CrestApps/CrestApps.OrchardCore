@@ -663,10 +663,14 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
         services
+            .AddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>()
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
+            .AddScoped<ICatalogEntryHandler<ActivityQueue>, ContactCenterConfigurationCacheInvalidationHandler<ActivityQueue>>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterConfigurationCacheInvalidationHandler<ContactCenterSkill>>()
             .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, BusinessHoursCalendarHandler>()
+            .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, ContactCenterConfigurationCacheInvalidationHandler<BusinessHoursCalendar>>()
             .AddIndexProvider<ActivityQueueGroupIndexProvider>()
             .AddDataMigration<ActivityQueueGroupIndexMigrations>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
@@ -1033,6 +1037,7 @@ public sealed class EntryPointsStartup : StartupBase
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()
             .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterEntryPointHandler>()
+            .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterConfigurationCacheInvalidationHandler<ContactCenterEntryPoint>>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
 

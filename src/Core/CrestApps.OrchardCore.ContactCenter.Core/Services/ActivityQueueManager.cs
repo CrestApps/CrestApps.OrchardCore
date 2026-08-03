@@ -10,20 +10,24 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ActivityQueueManager : CatalogManager<ActivityQueue>, IActivityQueueManager
 {
     private readonly IActivityQueueStore _store;
+    private readonly IContactCenterConfigurationCache _cache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueManager"/> class.
     /// </summary>
     /// <param name="store">The underlying queue store.</param>
     /// <param name="handlers">The catalog entry handlers for queues.</param>
+    /// <param name="cache">The routing configuration cache used to serve enabled queues without re-querying the store.</param>
     /// <param name="logger">The logger instance.</param>
     public ActivityQueueManager(
         IActivityQueueStore store,
         IEnumerable<ICatalogEntryHandler<ActivityQueue>> handlers,
+        IContactCenterConfigurationCache cache,
         ILogger<CatalogManager<ActivityQueue>> logger)
         : base(store, handlers, logger)
     {
         _store = store;
+        _cache = cache;
     }
 
     /// <inheritdoc/>
@@ -42,13 +46,16 @@ public sealed class ActivityQueueManager : CatalogManager<ActivityQueue>, IActiv
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<ActivityQueue>> ListEnabledAsync(CancellationToken cancellationToken = default)
     {
-        var queues = await _store.ListEnabledAsync(cancellationToken);
-
-        foreach (var queue in queues)
+        return await _cache.GetEnabledAsync(async token =>
         {
-            await LoadAsync(queue, cancellationToken);
-        }
+            var queues = await _store.ListEnabledAsync(token);
 
-        return queues;
+            foreach (var queue in queues)
+            {
+                await LoadAsync(queue, token);
+            }
+
+            return queues;
+        }, cancellationToken);
     }
 }

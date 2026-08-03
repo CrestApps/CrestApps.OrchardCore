@@ -10,20 +10,24 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class BusinessHoursCalendarManager : CatalogManager<BusinessHoursCalendar>, IBusinessHoursCalendarManager
 {
     private readonly IBusinessHoursCalendarStore _store;
+    private readonly IContactCenterConfigurationCache _cache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BusinessHoursCalendarManager"/> class.
     /// </summary>
     /// <param name="store">The underlying calendar store.</param>
     /// <param name="handlers">The catalog entry handlers for calendars.</param>
+    /// <param name="cache">The routing configuration cache used to serve enabled calendars without re-querying the store.</param>
     /// <param name="logger">The logger instance.</param>
     public BusinessHoursCalendarManager(
         IBusinessHoursCalendarStore store,
         IEnumerable<ICatalogEntryHandler<BusinessHoursCalendar>> handlers,
+        IContactCenterConfigurationCache cache,
         ILogger<CatalogManager<BusinessHoursCalendar>> logger)
         : base(store, handlers, logger)
     {
         _store = store;
+        _cache = cache;
     }
 
     /// <inheritdoc/>
@@ -42,13 +46,16 @@ public sealed class BusinessHoursCalendarManager : CatalogManager<BusinessHoursC
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<BusinessHoursCalendar>> ListEnabledAsync(CancellationToken cancellationToken = default)
     {
-        var calendars = await _store.ListEnabledAsync(cancellationToken);
-
-        foreach (var calendar in calendars)
+        return await _cache.GetEnabledAsync(async token =>
         {
-            await LoadAsync(calendar, cancellationToken);
-        }
+            var calendars = await _store.ListEnabledAsync(token);
 
-        return calendars;
+            foreach (var calendar in calendars)
+            {
+                await LoadAsync(calendar, token);
+            }
+
+            return calendars;
+        }, cancellationToken);
     }
 }

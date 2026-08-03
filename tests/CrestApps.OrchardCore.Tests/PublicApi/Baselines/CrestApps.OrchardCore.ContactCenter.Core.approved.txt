@@ -1809,7 +1809,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ActivityQueueManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager
     {
-        public ActivityQueueManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> logger) { }
+        public ActivityQueueManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -1980,7 +1980,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class BusinessHoursCalendarManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager
     {
-        public BusinessHoursCalendarManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> logger) { }
+        public BusinessHoursCalendarManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -2085,6 +2085,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static string BuildProviderDomainEventIdempotencyKey(string providerEventKey, string eventType) { }
         public static string BuildProviderEventIdempotencyKey(string providerName, string idempotencyKey) { }
     }
+    public sealed class ContactCenterConfigurationCache : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache
+    {
+        public ContactCenterConfigurationCache(OrchardCore.Environment.Cache.ISignal signal) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>> GetEnabledAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>>> factory, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task InvalidateEnabledAsync<T>() { }
+    }
+    public sealed class ContactCenterConfigurationCacheInvalidationHandler<T> : CrestApps.Core.Handlers.CatalogEntryHandlerBase<T>
+        where T :  class
+    {
+        public ContactCenterConfigurationCacheInvalidationHandler() { }
+        public override System.Threading.Tasks.Task CreatedAsync(CrestApps.Core.Models.CreatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeletedAsync(CrestApps.Core.Models.DeletedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task UpdatedAsync(CrestApps.Core.Models.UpdatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class ContactCenterDataGovernanceCatalog
     {
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterDataCategory> Categories { get; }
@@ -2092,7 +2106,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterEntryPointManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointManager
     {
-        public ContactCenterEntryPointManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> logger) { }
+        public ContactCenterEntryPointManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -2232,7 +2246,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterSkillManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterSkillManager
     {
-        public ContactCenterSkillManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterSkillStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> logger) { }
+        public ContactCenterSkillManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterSkillStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -2605,6 +2619,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterConfigurationCache
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>> GetEnabledAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>>> factory, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task InvalidateEnabledAsync<T>();
     }
     public interface IContactCenterEntryPointManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>
     {

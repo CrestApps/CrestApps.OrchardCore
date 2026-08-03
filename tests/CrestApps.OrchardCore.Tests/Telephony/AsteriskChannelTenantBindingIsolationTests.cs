@@ -1070,7 +1070,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
                 // Act & Assert
                 var exception = await Assert.ThrowsAsync<AsteriskChannelBindingCreateTimeoutException>(
-                    () => bindingStore.TryClaimChannelForTerminationAsync(channelId));
+                    () => bindingStore.TryClaimChannelForTerminationAsync(channelId, TestContext.Current.CancellationToken));
 
                 Assert.Equal(channelId, exception.ChannelId);
             }
