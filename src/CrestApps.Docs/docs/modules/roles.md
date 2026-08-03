@@ -14,6 +14,10 @@ Provides a way to enhance the role management experience.
 
 ## RolePickerPart
 
+The screencast below enables **Enhanced Roles**, adds the **Role Picker** part to the *Page* content type, and then picks roles with the Role Picker while creating a page.
+
+![Screen cast of enabling Enhanced Roles, adding the Role Picker part, and selecting roles on a content item](/img/docs/roles.gif)
+
 This adds a role-picker to any content type. You can use the Orchard Core content types UI to add it to any content type, or you can do it via code using a migration. For example:
 
 ```csharp
