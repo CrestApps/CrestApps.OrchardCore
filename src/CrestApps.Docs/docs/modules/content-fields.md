@@ -16,6 +16,10 @@ Provides custom Orchard Core content fields maintained by CrestApps.
 
 This module adds custom content fields for Orchard Core that extend the built-in field library with additional functionality. Each field ships with its own display driver, settings, edit and display views.
 
+The screencast below enables the **Content Fields** feature, adds the Phone Field to the **Page** content type, and shows the country-aware phone input with its flag dropdown when editing a content item.
+
+![Screen cast of enabling Content Fields, adding the Phone Field, and using the country-aware phone input](/img/docs/content-fields.gif)
+
 ## Included fields
 
 ### PhoneField
