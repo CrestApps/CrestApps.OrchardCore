@@ -1,7 +1,9 @@
+using System.Reflection;
 using CrestApps.OrchardCore.Asterisk.Indexes;
 using CrestApps.OrchardCore.Asterisk.Migrations;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -40,8 +42,8 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
             // Act
             var tenantAOwned = await tenantAGuard.IsOwnedByCurrentTenantAsync("shared-channel-1");
             var tenantBOwned = await tenantBGuard.IsOwnedByCurrentTenantAsync("shared-channel-1");
-            var tenantABinding = await tenantABindingStore.FindByChannelIdAsync("shared-channel-1");
-            var tenantBBinding = await tenantBBindingStore.FindByChannelIdAsync("shared-channel-1");
+            var tenantABinding = await tenantABindingStore.FindByChannelIdAsync("shared-channel-1", TestContext.Current.CancellationToken);
+            var tenantBBinding = await tenantBBindingStore.FindByChannelIdAsync("shared-channel-1", TestContext.Current.CancellationToken);
             var tenantABindings = await tenantABindingStore.GetAllAsync(TestContext.Current.CancellationToken);
             var tenantBBindings = await tenantBBindingStore.GetAllAsync(TestContext.Current.CancellationToken);
 
@@ -148,7 +150,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
             // Act
             var marked = await bindingStore.MarkConnectedAsync("agent-channel-1");
             var missing = await bindingStore.MarkConnectedAsync("unknown-channel");
-            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1");
+            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(marked);
@@ -188,7 +190,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
             var firstClaim = await bindingStore.TryBeginTeardownAsync("agent-channel-1");
             var secondClaim = await bindingStore.TryBeginTeardownAsync("agent-channel-1");
             var missingClaim = await bindingStore.TryBeginTeardownAsync("unknown-channel");
-            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1");
+            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.NotNull(firstClaim);
@@ -230,7 +232,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
             // Act
             var claim = await bindingStore.TryBeginTeardownAsync("agent-channel-1");
             var connected = await bindingStore.MarkConnectedAsync("agent-channel-1");
-            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1");
+            var reloaded = await bindingStore.FindByChannelIdAsync("agent-channel-1", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.NotNull(claim);
@@ -278,8 +280,8 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
-            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
-            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1");
+            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1", TestContext.Current.CancellationToken);
+            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(swapped);
@@ -336,7 +338,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
-            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1");
+            var previous = await bindingStore.FindByChannelIdAsync("previous-agent-1", TestContext.Current.CancellationToken);
 
             // Assert
             // The swap must not commit, and the previous agent leg must remain the Connected owner so the customer
@@ -378,7 +380,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var swapped = await bindingStore.SwapConnectedOwnerAsync("transfer-agent-1", "previous-agent-1");
-            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
+            var destination = await bindingStore.FindByChannelIdAsync("transfer-agent-1", TestContext.Current.CancellationToken);
 
             // Assert
             // Promoting a destination whose previous owner is gone would create a SECOND Connected owner of the shared
@@ -498,8 +500,8 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var handedOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
-            var promoted = await bindingStore.FindByChannelIdAsync("participant-2");
-            var owner = await bindingStore.FindByChannelIdAsync("owner-1");
+            var promoted = await bindingStore.FindByChannelIdAsync("participant-2", TestContext.Current.CancellationToken);
+            var owner = await bindingStore.FindByChannelIdAsync("owner-1", TestContext.Current.CancellationToken);
 
             // Assert
             // The participant is promoted to the sole Connected owner AND the departing owner is atomically retired to a
@@ -610,7 +612,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var handedOff = await bindingStore.TryHandOffBridgeOwnershipAsync("mixing-1", "owner-1");
-            var owner = await bindingStore.FindByChannelIdAsync("owner-1");
+            var owner = await bindingStore.FindByChannelIdAsync("owner-1", TestContext.Current.CancellationToken);
 
             // Assert
             // With no successor, the departing owner must destroy the bridge and release the caller, so the hand-off
@@ -718,7 +720,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var promoted = await bindingStore.TryPromoteJoiningToParticipatingAsync("participant-2");
-            var binding = await bindingStore.FindByChannelIdAsync("participant-2");
+            var binding = await bindingStore.FindByChannelIdAsync("participant-2", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(promoted);
@@ -758,7 +760,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var promoted = await bindingStore.TryPromoteJoiningToParticipatingAsync("participant-2");
-            var binding = await bindingStore.FindByChannelIdAsync("participant-2");
+            var binding = await bindingStore.FindByChannelIdAsync("participant-2", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(promoted);
@@ -796,7 +798,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var claimed = await bindingStore.TryClaimProvisionalLegForTeardownAsync("consult-2");
-            var binding = await bindingStore.FindByChannelIdAsync("consult-2");
+            var binding = await bindingStore.FindByChannelIdAsync("consult-2", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(claimed);
@@ -837,7 +839,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
 
             // Act
             var claimed = await bindingStore.TryClaimProvisionalLegForTeardownAsync("consult-2");
-            var binding = await bindingStore.FindByChannelIdAsync("consult-2");
+            var binding = await bindingStore.FindByChannelIdAsync("consult-2", TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(claimed);
@@ -895,7 +897,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
             var claimed = await claim;
             var completed = await complete;
 
-            var consult = await bindingStore.FindByChannelIdAsync("consult-2");
+            var consult = await bindingStore.FindByChannelIdAsync("consult-2", TestContext.Current.CancellationToken);
             var bindings = await bindingStore.GetAllAsync(TestContext.Current.CancellationToken);
 
             // Assert
@@ -916,7 +918,7 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
                 Assert.True(claimed);
                 Assert.Equal(AsteriskChannelBindingState.Terminating, consult.State);
 
-                var initiating = await bindingStore.FindByChannelIdAsync("initiating-agent-1");
+                var initiating = await bindingStore.FindByChannelIdAsync("initiating-agent-1", TestContext.Current.CancellationToken);
                 Assert.NotNull(initiating);
                 Assert.Equal(AsteriskChannelBindingState.Connected, initiating.State);
             }
@@ -928,9 +930,232 @@ public sealed class AsteriskChannelTenantBindingIsolationTests
         }
     }
 
-    private static AsteriskChannelTenantBindingStore CreateBindingStore(IStore store, string tenantName = "Default")
+    [Fact]
+    public async Task CreateAsync_WhenCreateLockIsHeldBeyondTheBoundedWindow_ThrowsTimeoutAndDoesNotStrandTheChannel()
     {
-        return new AsteriskChannelTenantBindingStore(store, new ShellSettings { Name = tenantName });
+        // Arrange
+        var databasePath = DatabasePath("create-lock-timeout");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            const string tenantName = "Default";
+            const string channelId = "wedged-channel-1";
+
+            // Occupy the exact per-channel stripe the store hashes this channel to, simulating a create that has
+            // wedged on a stalled database operation while still holding the lock.
+            var stripeLock = GetCreateLockForTest(tenantName, channelId);
+            await stripeLock.WaitAsync(TestContext.Current.CancellationToken);
+
+            try
+            {
+                var bindingStore = CreateBindingStore(store, tenantName, TimeSpan.FromMilliseconds(150));
+
+                // Act
+                var exception = await Assert.ThrowsAsync<AsteriskChannelBindingCreateTimeoutException>(
+                    () => bindingStore.CreateAsync(CreateBinding(channelId)));
+
+                // Assert
+                // A timeout is a distinct, ambiguous outcome — not the false "lost the create race" flag — so the
+                // caller reconciles instead of being told another attempt owns the channel and stranding it.
+                Assert.Equal(channelId, exception.ChannelId);
+
+                var wedged = await bindingStore.FindByChannelIdAsync(channelId, TestContext.Current.CancellationToken);
+                Assert.Null(wedged);
+            }
+            finally
+            {
+                stripeLock.Release();
+            }
+
+            // Once the wedged holder releases the stripe, the channel can be claimed normally.
+            var recoveredStore = CreateBindingStore(store, tenantName);
+            var created = await recoveredStore.CreateAsync(CreateBinding(channelId));
+
+            Assert.True(created);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryClaimChannelForTerminationAsync_WhenNoBindingExists_ClaimsAndBlocksCreateUntilReleased()
+    {
+        // Arrange
+        var databasePath = DatabasePath("termination-claim");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            const string channelId = "stranded-channel-1";
+            var bindingStore = CreateBindingStore(store, "ClaimTenantA");
+
+            // Act
+            var claimed = await bindingStore.TryClaimChannelForTerminationAsync(channelId, TestContext.Current.CancellationToken);
+
+            // A create for a channel that is being terminated must lose, so no delivery can route the caller into a
+            // live call that the pending hang up would then tear down.
+            var createdWhileClaimed = await bindingStore.CreateAsync(CreateBinding(channelId));
+
+            bindingStore.ReleaseTerminationClaim(channelId);
+
+            // Once the claim is released the channel can be created normally again.
+            var createdAfterRelease = await bindingStore.CreateAsync(CreateBinding(channelId));
+
+            // Assert
+            Assert.True(claimed);
+            Assert.False(createdWhileClaimed);
+            Assert.True(createdAfterRelease);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryClaimChannelForTerminationAsync_WhenABindingAlreadyExists_RefusesTheClaimToProtectTheRecoveredCall()
+    {
+        // Arrange
+        var databasePath = DatabasePath("termination-claim-recovered");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            const string channelId = "recovered-channel-1";
+            var bindingStore = CreateBindingStore(store, "ClaimTenantB");
+
+            // A different delivery already claimed, answered, and routed this caller into a live, owned call.
+            await bindingStore.CreateAsync(CreateBinding(channelId));
+
+            // Act
+            var claimed = await bindingStore.TryClaimChannelForTerminationAsync(channelId, TestContext.Current.CancellationToken);
+
+            // Assert
+            // The claim is refused because a binding exists, so the live, recovered call is never selected for a hang up.
+            Assert.False(claimed);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TryClaimChannelForTerminationAsync_WhenTheStripeIsWedgedBeyondTheBoundedWindow_ThrowsTimeout()
+    {
+        // Arrange
+        var databasePath = DatabasePath("termination-claim-wedged");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            const string tenantName = "ClaimTenantC";
+            const string channelId = "wedged-claim-channel-1";
+
+            // Occupy the exact per-channel stripe so the claim cannot be planted within its bounded window; the
+            // termination path must surface the ambiguous timeout (which its caller defers to the reconciler) rather
+            // than block on the wedged stripe indefinitely.
+            var stripeLock = GetCreateLockForTest(tenantName, channelId);
+            await stripeLock.WaitAsync(TestContext.Current.CancellationToken);
+
+            try
+            {
+                var bindingStore = CreateBindingStore(store, tenantName, TimeSpan.FromMilliseconds(150));
+
+                // Act & Assert
+                var exception = await Assert.ThrowsAsync<AsteriskChannelBindingCreateTimeoutException>(
+                    () => bindingStore.TryClaimChannelForTerminationAsync(channelId));
+
+                Assert.Equal(channelId, exception.ChannelId);
+            }
+            finally
+            {
+                stripeLock.Release();
+            }
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task TerminationClaim_SurvivesAShellReload_AndKeepsANewGenerationFencedUntilTheTerminationCompletes()
+    {
+        // Arrange
+        var databasePath = DatabasePath("termination-claim-fence");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            const string tenantName = "ClaimTenantD";
+            const string channelId = "lifecycle-channel-1";
+
+            // The old shell generation claims the channel for termination. Its remote hang up may still be in flight
+            // when the shell reloads, so the fence MUST outlive the generation that planted it.
+            var oldGeneration = new AsteriskPendingCallerTerminationRegistry(new ShellSettings { Name = tenantName });
+            var claimingStore = CreateBindingStore(store, tenantName, terminationRegistry: oldGeneration);
+
+            var claimed = await claimingStore.TryClaimChannelForTerminationAsync(channelId, TestContext.Current.CancellationToken);
+
+            // A new shell generation resolves a fresh registry instance. Because the claim is process-wide it is still
+            // visible, so a create for the same channel remains fenced — the old generation's late hang up can never
+            // terminate a call this generation might otherwise route.
+            var newGeneration = new AsteriskPendingCallerTerminationRegistry(new ShellSettings { Name = tenantName });
+            var reloadedStore = CreateBindingStore(store, tenantName, terminationRegistry: newGeneration);
+
+            var createFencedAfterReload = await reloadedStore.CreateAsync(CreateBinding(channelId));
+
+            // The termination completes (the caller is confirmed gone) and the claim is released. Only now may the
+            // channel be created again — and because the release path is process-wide too, no claim is ever orphaned.
+            reloadedStore.ReleaseTerminationClaim(channelId);
+
+            var createPermittedAfterRelease = await reloadedStore.CreateAsync(CreateBinding(channelId));
+
+            // Assert
+            Assert.True(claimed);
+            Assert.False(createFencedAfterReload);
+            Assert.True(createPermittedAfterRelease);
+        }
+        finally
+        {
+            store.Dispose();
+            TryDelete(databasePath);
+        }
+    }
+
+    private static AsteriskChannelTenantBindingStore CreateBindingStore(
+        IStore store,
+        string tenantName = "Default",
+        TimeSpan? createLockTimeout = null,
+        IAsteriskPendingCallerTerminationRegistry terminationRegistry = null)
+    {
+        var options = Options.Create(new AsteriskCoordinationOptions
+        {
+            ChannelBindingCreateLockTimeout = createLockTimeout ?? TimeSpan.FromSeconds(10),
+        });
+
+        return new AsteriskChannelTenantBindingStore(
+            store,
+            new ShellSettings { Name = tenantName },
+            terminationRegistry ?? new AsteriskPendingCallerTerminationRegistry(new ShellSettings { Name = tenantName }),
+            options);
+    }
+
+    private static SemaphoreSlim GetCreateLockForTest(string tenantName, string channelId)
+    {
+        var method = typeof(AsteriskChannelTenantBindingStore).GetMethod(
+            "GetCreateLock",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        return (SemaphoreSlim)method.Invoke(null, [tenantName, channelId]);
     }
 
     private static AsteriskChannelTenantBinding CreateBinding(string channelId)

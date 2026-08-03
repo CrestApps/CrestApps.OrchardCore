@@ -13,9 +13,15 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// </summary>
 internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEventBridge
 {
+    // A create-lock timeout leaves no durable binding, so the binding-scoped reconciler cannot retry the caller's
+    // termination. Retry the hang up a small, bounded number of times so a single transient ARI failure does not
+    // strand the live caller; a persistent failure is escalated to an error for out-of-band reconciliation.
+    private const int StrandedCallerHangupAttempts = 3;
+
     private readonly IAsteriskChannelTenantBindingStore _bindingStore;
     private readonly IAsteriskAriClient _ariClient;
     private readonly IInboundVoiceEventSink _inboundVoiceEventSink;
+    private readonly IAsteriskPendingCallerTerminationRegistry _pendingCallerTerminationRegistry;
     private readonly IClock _clock;
     private readonly ILogger<AsteriskInboundCallOfferBridge> _logger;
 
@@ -25,18 +31,21 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
     /// <param name="bindingStore">The tenant-scoped channel binding store.</param>
     /// <param name="ariClient">The tenant-scoped Asterisk ARI client.</param>
     /// <param name="inboundVoiceEventSink">The Contact Center inbound voice event sink.</param>
+    /// <param name="pendingCallerTerminationRegistry">The registry that tracks callers awaiting a retried hang up.</param>
     /// <param name="clock">The clock used to stamp tenant-owned state.</param>
     /// <param name="logger">The logger instance.</param>
     public AsteriskInboundCallOfferBridge(
         IAsteriskChannelTenantBindingStore bindingStore,
         IAsteriskAriClient ariClient,
         IInboundVoiceEventSink inboundVoiceEventSink,
+        IAsteriskPendingCallerTerminationRegistry pendingCallerTerminationRegistry,
         IClock clock,
         ILogger<AsteriskInboundCallOfferBridge> logger)
     {
         _bindingStore = bindingStore;
         _ariClient = ariClient;
         _inboundVoiceEventSink = inboundVoiceEventSink;
+        _pendingCallerTerminationRegistry = pendingCallerTerminationRegistry;
         _clock = clock;
         _logger = logger;
     }
@@ -63,7 +72,7 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
             return false;
         }
 
-        var existing = await _bindingStore.FindByChannelIdAsync(voiceEvent.ChannelId);
+        var existing = await _bindingStore.FindByChannelIdAsync(voiceEvent.ChannelId, cancellationToken);
 
         if (existing is not null)
         {
@@ -84,22 +93,65 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
         // caller as a live connected call, and the reconciler does not treat a still-alive offering leg as healthy:
         // a crash before routing completes leaves a record the reconciler resolves (terminating an aged, never-routed
         // caller) instead of a caller stranded in silence. It is promoted to Connected only once routing succeeds.
-        var created = await _bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+        bool created;
+
+        try
         {
-            ChannelId = voiceEvent.ChannelId,
-            ProviderName = voiceEvent.ProviderName,
-            InteractionId = voiceEvent.InteractionCorrelationId,
-            ProviderCallId = voiceEvent.CallId,
-            State = AsteriskChannelBindingState.Offering,
-            CreatedUtc = _clock.UtcNow,
-        });
+            created = await _bindingStore.CreateAsync(new AsteriskChannelTenantBinding
+            {
+                ChannelId = voiceEvent.ChannelId,
+                ProviderName = voiceEvent.ProviderName,
+                InteractionId = voiceEvent.InteractionCorrelationId,
+                ProviderCallId = voiceEvent.CallId,
+                State = AsteriskChannelBindingState.Offering,
+                CreatedUtc = _clock.UtcNow,
+            });
+        }
+        catch (AsteriskChannelBindingCreateTimeoutException ex)
+        {
+            // The per-channel create-serialization lock could not be acquired within its bounded window: another
+            // create on this stripe — a wedged same-channel delivery, or an unrelated colliding channel — held it
+            // too long. No binding was persisted, and the reconciler sweeps only existing bindings, so this caller,
+            // already live in the Stasis application, would otherwise sit unanswered and untracked indefinitely.
+            // Fail safe by hanging the caller up deterministically rather than stranding it in silence. A duplicate
+            // same-channel delivery whose peer is legitimately mid-setup only reaches this path after the bounded
+            // window has already elapsed with the caller unanswered, and the wedged peer's own answer and bridge
+            // calls then compensate against a gone channel.
+            _logger.LogWarning(
+                ex,
+                "Timed out acquiring the create-serialization lock for inbound call {CallId}; terminating the caller to avoid stranding it.",
+                voiceEvent.CallId.SanitizeLogValue());
+
+            // Because no durable binding exists, the binding-scoped reconciler cannot retry this cleanup, so the
+            // termination cannot rely on a single best-effort call: a transient ARI failure would leave the live
+            // caller stranded with nothing tracking it. Track the channel in the process-wide pending-termination
+            // registry BEFORE attempting the hang up, so that even if this scope is torn down mid-attempt by a shell
+            // reload the reconciler still owns the channel and completes — or releases — the termination. Then retry
+            // the hang up a bounded number of times inline (a genuine transport failure is distinct from an
+            // already-gone channel, which the ARI client reports as success); on inline success the terminator
+            // resolves the channel back out. When every inline attempt fails — a transport error can persist across a
+            // brief circuit-breaker window while the WebSocket stays connected, so Asterisk's Stasis-disconnect
+            // disposition is not guaranteed to fire — the channel stays queued so the periodic reconciliation sweep
+            // keeps retrying the hang up over time, and an error naming the channel keeps the residual live caller
+            // operator-visible meanwhile.
+            _pendingCallerTerminationRegistry.Enqueue(voiceEvent.ChannelId);
+
+            if (!await TryTerminateStrandedCallerAsync(voiceEvent))
+            {
+                _logger.LogError(
+                    "Asterisk could not hang up inbound caller {CallId} inline after a create-lock timeout; it remains queued for retried termination by the reconciliation sweep.",
+                    voiceEvent.CallId.SanitizeLogValue());
+            }
+
+            return true;
+        }
 
         if (!created)
         {
-            // Another delivery of this StasisStart already claimed the channel and owns its offer flow. The racy
-            // fast-path check above can let two overlapping same-tenant listener generations both reach here, so the
-            // atomic create is the authoritative single-winner claim: the caller that loses it must not answer, create
-            // the holding bridge, park, or route the caller a second time.
+            // Another delivery of this StasisStart already claimed the channel and owns its offer flow, OR a
+            // stranded-caller fail-safe termination has claimed the channel and the caller is being hung up. Either
+            // way the caller that loses the create must not answer, create the holding bridge, park, or route the
+            // caller: the winning owner (or the termination) is authoritative.
             return true;
         }
 
@@ -298,5 +350,60 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
 
             return false;
         }
+    }
+
+    private async Task<bool> TryTerminateStrandedCallerAsync(AsteriskRealtimeVoiceEvent voiceEvent)
+    {
+        // Claim the channel for termination first. The claim is planted atomically with respect to a concurrent
+        // create — under the store's per-channel lock, but only across a fast in-memory decision, never across the
+        // remote hang up — so it can never starve an unrelated channel that hashes to the same stripe. Once claimed,
+        // CreateAsync refuses to create a binding for the channel, so no delivery can route the caller into a live
+        // call that this hang up would then tear down: the recover-versus-terminate decision is made once, here.
+        bool claimed;
+
+        try
+        {
+            claimed = await _bindingStore.TryClaimChannelForTerminationAsync(voiceEvent.ChannelId, CancellationToken.None);
+        }
+        catch (AsteriskChannelBindingCreateTimeoutException)
+        {
+            // The per-channel lock is still wedged by another create for this channel: do not spin inline. Enqueue so
+            // the reconciliation sweep re-attempts the claim-and-hang-up over time once the lock frees.
+            return false;
+        }
+
+        // A binding already exists: a different delivery legitimately recovered this caller into a live, owned call.
+        // It must not be hung up. Drop it from the pending set so the reconciler does not later re-affirm a claim for
+        // a channel that has been recovered.
+        if (!claimed)
+        {
+            _pendingCallerTerminationRegistry.Resolve(voiceEvent.ChannelId);
+
+            return true;
+        }
+
+        // The channel is claimed, so creates are now refused and the caller cannot be recovered concurrently: the hang
+        // up runs OUTSIDE any lock. The ARI client maps an already-gone channel to a successful hang up, so a returned
+        // failure is a genuine transient transport error; retry a bounded number of times before deferring to the
+        // reconciliation sweep. The claim is released, and the channel resolved out of the pending set, only once the
+        // caller is confirmed gone.
+        for (var attempt = 1; attempt <= StrandedCallerHangupAttempts; attempt++)
+        {
+            if (await TryCompensateAsync(
+                () => _ariClient.HangupAsync(voiceEvent.ChannelId, CancellationToken.None),
+                "hang up inbound caller after create-lock timeout",
+                voiceEvent.CallId))
+            {
+                _bindingStore.ReleaseTerminationClaim(voiceEvent.ChannelId);
+                _pendingCallerTerminationRegistry.Resolve(voiceEvent.ChannelId);
+
+                return true;
+            }
+        }
+
+        // Every inline attempt failed. Keep the claim (so no delivery routes the caller while it is still live) and
+        // leave the caller queued for the reconciliation sweep, which re-affirms the claim, retries the hang up, and
+        // releases the claim.
+        return false;
     }
 }

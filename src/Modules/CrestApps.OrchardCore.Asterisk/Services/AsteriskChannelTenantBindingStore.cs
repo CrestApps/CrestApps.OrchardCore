@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Asterisk.Indexes;
 using CrestApps.OrchardCore.Asterisk.Models;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using YesSql;
 
@@ -36,18 +37,26 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
 
     private readonly IStore _store;
     private readonly ShellSettings _shellSettings;
+    private readonly IAsteriskPendingCallerTerminationRegistry _terminationRegistry;
+    private readonly TimeSpan _createLockTimeout;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AsteriskChannelTenantBindingStore"/> class.
     /// </summary>
     /// <param name="store">The tenant YesSql store used to open isolated, immediately committed sessions.</param>
     /// <param name="shellSettings">The tenant shell settings used to scope the per-channel create serialization to this tenant.</param>
+    /// <param name="terminationRegistry">The per-tenant registry that owns the termination-claim set consulted while creating a binding.</param>
+    /// <param name="coordinationOptions">The Asterisk coordination options that bound how long a create waits for the per-channel serialization lock.</param>
     public AsteriskChannelTenantBindingStore(
         IStore store,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        IAsteriskPendingCallerTerminationRegistry terminationRegistry,
+        IOptions<AsteriskCoordinationOptions> coordinationOptions)
     {
         _store = store;
         _shellSettings = shellSettings;
+        _terminationRegistry = terminationRegistry;
+        _createLockTimeout = coordinationOptions.Value.ChannelBindingCreateLockTimeout;
     }
 
     private static SemaphoreSlim[] CreateCreateLocks()
@@ -83,29 +92,33 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
     }
 
     /// <inheritdoc/>
-    public async Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+    public async Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         await using var session = _store.CreateSession();
 
         return await session
             .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
                 index.ChannelId == channelId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+    public async Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(peerChannelId);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         await using var session = _store.CreateSession();
 
         var bindings = await session
             .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
                 index.PeerChannelId == peerChannelId)
-            .ListAsync();
+            .ListAsync(cancellationToken);
 
         return bindings is null ? [] : bindings.ToArray();
     }
@@ -134,10 +147,30 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
         // generations delivering the same StasisStart) claims it exactly once. The returned flag lets the caller
         // that loses the claim skip every inbound side effect it would otherwise repeat.
         var createLock = GetCreateLock(_shellSettings.Name, binding.ChannelId);
-        await createLock.WaitAsync();
+
+        // Acquire the stripe under a bounded window so a create that wedges on a stalled database operation can
+        // no longer block every other channel that hashes to the same stripe indefinitely. A timeout is a
+        // distinct, ambiguous outcome — NOT the false "lost the create race" flag — so the caller reconciles
+        // instead of being told another attempt owns the channel (which would strand a live caller). The
+        // durable write below still runs to completion once the lock is held.
+        if (!await createLock.WaitAsync(_createLockTimeout))
+        {
+            throw new AsteriskChannelBindingCreateTimeoutException(binding.ChannelId, _createLockTimeout);
+        }
 
         try
         {
+            // A stranded-caller fail-safe termination for this channel takes precedence: the caller is being hung up,
+            // so creating a binding (and routing it) would resurrect a call that is about to be torn down. Losing the
+            // create here is the correct, safe outcome — the duplicate delivery performs none of the inbound side
+            // effects. The claim is consulted UNDER the create lock so it is mutually exclusive with the claim being
+            // planted by TryClaimChannelForTerminationAsync, which runs under the same lock. The claim lives in the
+            // per-tenant termination registry alongside its retry entry, so it can never outlive its release path.
+            if (_terminationRegistry.HasTerminationClaim(binding.ChannelId))
+            {
+                return false;
+            }
+
             await using var session = _store.CreateSession();
 
             var existing = await session
@@ -159,6 +192,59 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
         {
             createLock.Release();
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Plant the termination claim UNDER the per-channel create lock — a fast, in-memory operation, never across
+        // remote ARI I/O — so it is mutually exclusive with a concurrent create for the same channel. Holding the
+        // stripe only across this in-memory decision (not the subsequent hang up) means an unrelated channel that
+        // hashes to the same stripe is never blocked by the remote hang up. The bounded acquisition means the claim
+        // attempt can never wedge indefinitely; a timeout surfaces as the ambiguous outcome the caller reconciles.
+        var createLock = GetCreateLock(_shellSettings.Name, channelId);
+
+        if (!await createLock.WaitAsync(_createLockTimeout, cancellationToken))
+        {
+            throw new AsteriskChannelBindingCreateTimeoutException(channelId, _createLockTimeout);
+        }
+
+        try
+        {
+            await using var session = _store.CreateSession();
+
+            var existing = await session
+                .Query<AsteriskChannelTenantBinding, AsteriskChannelTenantBindingIndex>(index =>
+                    index.ChannelId == channelId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            // A binding already exists: a different delivery legitimately claimed, answered, and routed this caller
+            // into a live, owned call. Do NOT claim it for termination — the caller was recovered and must survive.
+            if (existing is not null)
+            {
+                return false;
+            }
+
+            _terminationRegistry.PlantTerminationClaim(channelId);
+
+            return true;
+        }
+        finally
+        {
+            createLock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void ReleaseTerminationClaim(string channelId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+
+        _terminationRegistry.RemoveTerminationClaim(channelId);
     }
 
     /// <inheritdoc/>

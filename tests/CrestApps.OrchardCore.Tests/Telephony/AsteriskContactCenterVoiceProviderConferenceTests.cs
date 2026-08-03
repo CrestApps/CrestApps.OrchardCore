@@ -466,15 +466,24 @@ public sealed class AsteriskContactCenterVoiceProviderConferenceTests
             return Task.FromResult(_bindings.Count > 0);
         }
 
-        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_bindings.Find(binding => binding.ChannelId == channelId));
         }
 
-        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyCollection<AsteriskChannelTenantBinding>>(
                 _bindings.Where(binding => binding.PeerChannelId == peerChannelId).ToArray());
+        }
+
+        public Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public void ReleaseTerminationClaim(string channelId)
+        {
         }
 
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)

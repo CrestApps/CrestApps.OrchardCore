@@ -122,7 +122,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
             // reclaim. Reporting success for a stale claim would falsely confirm a transfer that has no live
             // destination leg while the previous agent still owns the call, so fail closed (confirmed, retryable)
             // instead and let the caller retry once the stale claim is retired.
-            var existingClaim = await _channelTenantBindingStore.FindByChannelIdAsync(newAgentChannelId);
+            var existingClaim = await _channelTenantBindingStore.FindByChannelIdAsync(newAgentChannelId, cancellationToken);
 
             if (existingClaim is not null && existingClaim.State == AsteriskChannelBindingState.Joining)
             {

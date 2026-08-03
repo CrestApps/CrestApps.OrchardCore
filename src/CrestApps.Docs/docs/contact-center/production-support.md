@@ -367,7 +367,7 @@ Validated settings:
 | `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
 | `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |
 | `CrestApps:Asterisk:Default` | Numeric settings are sane whenever the configuration-backed provider is enabled. |
-| `CrestApps:Asterisk:Coordination` | Lock and HTTP timings are positive, the lease expiry exceeds its acquisition timeout, the total request budget exceeds a single attempt, the real-time buffer capacity is positive and no larger than 100000, and the real-time backpressure timeout is positive. |
+| `CrestApps:Asterisk:Coordination` | Lock and HTTP timings are positive, the lease expiry exceeds its acquisition timeout, the per-channel binding create-lock timeout is positive, the total request budget exceeds a single attempt, the real-time buffer capacity is positive and no larger than 100000, and the real-time backpressure timeout is positive. |
 
 Each lease expiry must exceed its acquisition timeout because otherwise the lease can lapse while a peer is still waiting to take it, and two nodes then act on the same call, credential or reconciliation sweep at once.
 
@@ -383,7 +383,7 @@ Where a credential is only used to derive a client-visible artifact, the guard d
 
 ### Timings are configuration, not constants
 
-Distributed-lock waits, lease expiries, the inbound reclamation threshold and the Asterisk HTTP request budget are deployment characteristics: a node under heavier load, or one further from its database or from Asterisk, needs different values than a developer laptop. They are settable under the `Coordination` sections above and validated on the same terms as everything else.
+Distributed-lock waits, lease expiries, the inbound reclamation threshold, the per-channel binding create-lock timeout (`CrestApps:Asterisk:Coordination:ChannelBindingCreateLockTimeout`, default 10 seconds — the bounded window an inbound create waits for the single-node exactly-once claim before surfacing an ambiguous outcome the reconciler resolves) and the Asterisk HTTP request budget are deployment characteristics: a node under heavier load, or one further from its database or from Asterisk, needs different values than a developer laptop. They are settable under the `Coordination` sections above and validated on the same terms as everything else.
 
 ## Retention, legal holds, and replay horizon
 

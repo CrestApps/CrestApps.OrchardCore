@@ -29,8 +29,8 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.Contains("mixing-1", ariClient.DestroyedBridges);
         Assert.Contains(AsteriskConstants.HoldingBridgePrefix + "caller-1", ariClient.DestroyedBridges);
         Assert.Contains("caller-1", ariClient.HungupChannels);
-        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
-        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.Contains("mixing-1", ariClient.DestroyedBridges);
         Assert.Contains(AsteriskConstants.HoldingBridgePrefix + "caller-1", ariClient.DestroyedBridges);
         Assert.Contains("agent-1", ariClient.HungupChannels);
-        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
-        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class AsteriskCallTeardownServiceTests
         // Assert
         Assert.Contains(AsteriskConstants.HoldingBridgePrefix + "caller-1", ariClient.DestroyedBridges);
         Assert.Empty(ariClient.HungupChannels);
-        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class AsteriskCallTeardownServiceTests
         // Assert
         Assert.Empty(ariClient.DestroyedBridges);
         Assert.Empty(ariClient.HungupChannels);
-        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -205,11 +205,11 @@ public sealed class AsteriskCallTeardownServiceTests
         // durable record: a racing connect flow may still allocate or detach against it. The record is retained in the
         // Terminating state so the reconciler idempotently sweeps the deterministic agent resources and only retires
         // the claim once the provisioning lease has elapsed.
-        var retained = await bindingStore.FindByChannelIdAsync("agent-1");
+        var retained = await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken);
         Assert.NotNull(retained);
         Assert.Equal(AsteriskChannelBindingState.Terminating, retained.State);
         Assert.Equal(AsteriskChannelBindingState.Pending, retained.PreTeardownState);
-        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -265,13 +265,13 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
 
         // The previous Connected owner and the caller are both untouched.
-        var previousAgent = await bindingStore.FindByChannelIdAsync("agent-1");
+        var previousAgent = await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken);
         Assert.NotNull(previousAgent);
         Assert.Equal(AsteriskChannelBindingState.Connected, previousAgent.State);
-        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
 
         // The joining leg's durable record is retained (in Terminating) for the reconciler to age-retire.
-        var retained = await bindingStore.FindByChannelIdAsync("transfer-agent-1");
+        var retained = await bindingStore.FindByChannelIdAsync("transfer-agent-1", TestContext.Current.CancellationToken);
         Assert.NotNull(retained);
         Assert.Equal(AsteriskChannelBindingState.Terminating, retained.State);
         Assert.Equal(AsteriskChannelBindingState.Joining, retained.PreTeardownState);
@@ -302,11 +302,11 @@ public sealed class AsteriskCallTeardownServiceTests
         Assert.Empty(ariClient.DestroyedBridges);
         Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
 
-        var owner = await bindingStore.FindByChannelIdAsync("agent-1");
+        var owner = await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken);
         Assert.NotNull(owner);
         Assert.Equal(AsteriskChannelBindingState.Connected, owner.State);
-        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
-        Assert.Null(await bindingStore.FindByChannelIdAsync("participant-2"));
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("participant-2", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -333,15 +333,15 @@ public sealed class AsteriskCallTeardownServiceTests
         // survives: the shared bridge is NOT destroyed and the caller is NOT released.
         Assert.Empty(ariClient.DestroyedBridges);
         Assert.DoesNotContain("caller-1", ariClient.HungupChannels);
-        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.NotNull(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
 
         // The remaining participant is promoted to the sole Connected owner of the shared bridge.
-        var promoted = await bindingStore.FindByChannelIdAsync("participant-2");
+        var promoted = await bindingStore.FindByChannelIdAsync("participant-2", TestContext.Current.CancellationToken);
         Assert.NotNull(promoted);
         Assert.Equal(AsteriskChannelBindingState.Connected, promoted.State);
 
         // The departed owner's own record is retired.
-        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -367,8 +367,8 @@ public sealed class AsteriskCallTeardownServiceTests
         // caller released, exactly as the 2-party model always did.
         Assert.Contains("mixing-1", ariClient.DestroyedBridges);
         Assert.Contains("caller-1", ariClient.HungupChannels);
-        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1"));
-        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("agent-1", TestContext.Current.CancellationToken));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     private static AsteriskCallTeardownService CreateService(
@@ -429,15 +429,24 @@ public sealed class AsteriskCallTeardownServiceTests
             return Task.FromResult(_bindings.Count > 0);
         }
 
-        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_bindings.Find(binding => binding.ChannelId == channelId));
         }
 
-        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyCollection<AsteriskChannelTenantBinding>>(
                 _bindings.Where(binding => binding.PeerChannelId == peerChannelId).ToArray());
+        }
+
+        public Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public void ReleaseTerminationClaim(string channelId)
+        {
         }
 
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)

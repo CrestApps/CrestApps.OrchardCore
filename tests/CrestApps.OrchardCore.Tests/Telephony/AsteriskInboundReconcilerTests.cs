@@ -781,12 +781,12 @@ public sealed class AsteriskInboundReconcilerTests
             return Task.FromResult(_bindings.Count > 0);
         }
 
-        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
 
-        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
         {
             IReadOnlyCollection<AsteriskChannelTenantBinding> matches = _bindings
                 .Where(item => item.PeerChannelId == peerChannelId)
@@ -794,6 +794,15 @@ public sealed class AsteriskInboundReconcilerTests
                 .ToArray();
 
             return Task.FromResult(matches);
+        }
+
+        public Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public void ReleaseTerminationClaim(string channelId)
+        {
         }
 
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)

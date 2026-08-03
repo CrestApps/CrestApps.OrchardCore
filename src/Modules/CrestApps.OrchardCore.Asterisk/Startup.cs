@@ -84,6 +84,9 @@ public sealed class Startup : StartupBase
                 options => options.CredentialLockExpiration > options.CredentialLockTimeout,
                 "'CrestApps:Asterisk:Coordination:CredentialLockExpiration' must exceed 'CredentialLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes issue credentials for the same endpoint.")
             .Validate(
+                options => options.ChannelBindingCreateLockTimeout > TimeSpan.Zero,
+                "'CrestApps:Asterisk:Coordination:ChannelBindingCreateLockTimeout' must be greater than zero, otherwise a create can never acquire the per-channel serialization lock.")
+            .Validate(
                 options => options.PendingReclamationThreshold > TimeSpan.Zero,
                 "'CrestApps:Asterisk:Coordination:PendingReclamationThreshold' must be greater than zero, otherwise reconciliation reclaims a call that is still being answered.")
             .Validate(
@@ -164,7 +167,9 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskAgentChannelReadyBridge>()
             .AddScoped<IAsteriskCallTeardownService, AsteriskCallTeardownService>()
             .AddScoped<IAsteriskRealtimeVoiceEventBridge, AsteriskInboundCallOfferBridge>()
+            .AddSingleton<IAsteriskPendingCallerTerminationRegistry, AsteriskPendingCallerTerminationRegistry>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskInboundReconciler>()
+            .AddScoped<IAsteriskProviderStateReconciler, AsteriskPendingCallerTerminationReconciler>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskContactCenterProviderStateReconciler>()
             .AddScoped<IAsteriskAriClient, AsteriskAriClient>()
             .AddScoped<IAsteriskChannelTenantBindingStore, AsteriskChannelTenantBindingStore>()

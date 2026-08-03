@@ -107,6 +107,129 @@ public sealed class AsteriskInboundCallOfferBridgeTests
     }
 
     [Fact]
+    public async Task TryHandleAsync_WhenCreateLockTimesOut_HangsUpCallerAndAbsorbsEventWithoutStranding()
+    {
+        // Arrange
+        // The per-channel create-serialization lock could not be acquired within its bounded window, so CreateAsync
+        // throws and no binding is persisted. The reconciler sweeps only existing bindings, so a bare rethrow would
+        // strand the live inbound caller unanswered and untracked forever. The offer bridge must fail safe: hang the
+        // caller up deterministically and absorb the event so the dispatcher does not fall through to ingestion.
+        var calls = new List<string>();
+        var bindingStore = new TestBindingStore(calls)
+        {
+            ThrowCreateTimeout = true,
+        };
+        var ariClient = new TestAriClient(calls);
+        var sink = new TestInboundVoiceEventSink(calls);
+        var bridge = CreateBridge(bindingStore, ariClient, sink);
+
+        // Act
+        var handled = await bridge.TryHandleAsync(CreateInboundEvent(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(handled);
+        Assert.Equal(
+        [
+            "find:channel-1",
+            "create-binding-timeout:channel-1",
+            "claim:channel-1",
+            "hangup:channel-1",
+            "release:channel-1",
+        ], calls);
+        Assert.Null(bindingStore.CreatedBinding);
+        Assert.Null(sink.RoutedEvent);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_WhenCreateLockTimesOutButAnotherDeliveryRecoveredTheCaller_DoesNotHangUpTheLiveCall()
+    {
+        // Arrange
+        // A different delivery acquired the create lock after this one timed out and legitimately claimed, answered,
+        // and routed the same caller, so a binding now exists for the channel. The fail-safe must never hang up a
+        // recovered, live call: it checks for a binding before terminating and neither hangs the caller up nor
+        // enqueues it for the reconciliation sweep.
+        var calls = new List<string>();
+        var bindingStore = new TestBindingStore(calls)
+        {
+            ThrowCreateTimeout = true,
+            SimulateRecoveryAfterCreateTimeout = true,
+        };
+        var ariClient = new TestAriClient(calls);
+        var sink = new TestInboundVoiceEventSink(calls);
+        var registry = new TestPendingCallerTerminationRegistry();
+        var bridge = CreateBridge(bindingStore, ariClient, sink, registry);
+
+        // Act
+        var handled = await bridge.TryHandleAsync(CreateInboundEvent(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(handled);
+        Assert.DoesNotContain("hangup:channel-1", calls);
+        Assert.Empty(registry.EnqueuedChannelIds);
+        Assert.Null(sink.RoutedEvent);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_WhenCreateLockTimesOutAndHangupFailsTransiently_RetriesUntilTheCallerIsTerminated()
+    {
+        // Arrange
+        // No binding is persisted on a create-lock timeout, so the binding-scoped reconciler cannot retry the caller
+        // termination. A single transient ARI failure must therefore not strand the live caller: the offer bridge
+        // retries the hang up within a bounded budget, converting a momentary blip into a successful termination.
+        var calls = new List<string>();
+        var bindingStore = new TestBindingStore(calls)
+        {
+            ThrowCreateTimeout = true,
+        };
+        var ariClient = new TestAriClient(calls)
+        {
+            HangupFailuresBeforeSuccess = 2,
+        };
+        var sink = new TestInboundVoiceEventSink(calls);
+        var bridge = CreateBridge(bindingStore, ariClient, sink);
+
+        // Act
+        var handled = await bridge.TryHandleAsync(CreateInboundEvent(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(handled);
+        Assert.Equal(3, calls.Count(call => call == "hangup:channel-1"));
+        Assert.Null(bindingStore.CreatedBinding);
+        Assert.Null(sink.RoutedEvent);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_WhenCreateLockTimesOutAndHangupNeverSucceeds_AbsorbsEventWithoutOrphanAfterBoundedRetries()
+    {
+        // Arrange
+        // When every bounded hang-up attempt fails the event is still absorbed (the dispatcher must not fall through
+        // to ingestion) and nothing is orphaned; the persistent failure is escalated to an error elsewhere so the
+        // residual live caller is operator-visible for out-of-band reconciliation.
+        var calls = new List<string>();
+        var bindingStore = new TestBindingStore(calls)
+        {
+            ThrowCreateTimeout = true,
+        };
+        var ariClient = new TestAriClient(calls)
+        {
+            ThrowOnHangup = true,
+        };
+        var sink = new TestInboundVoiceEventSink(calls);
+        var registry = new TestPendingCallerTerminationRegistry();
+        var bridge = CreateBridge(bindingStore, ariClient, sink, registry);
+
+        // Act
+        var handled = await bridge.TryHandleAsync(CreateInboundEvent(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(handled);
+        Assert.Equal(3, calls.Count(call => call == "hangup:channel-1"));
+        Assert.Null(bindingStore.CreatedBinding);
+        Assert.Null(sink.RoutedEvent);
+        Assert.Contains("channel-1", registry.EnqueuedChannelIds);
+    }
+
+    [Fact]
     public async Task TryHandleAsync_WhenAnswerThrows_HangsUpPossiblyAnsweredCallerThenRemovesBinding()
     {
         // Arrange
@@ -271,7 +394,8 @@ public sealed class AsteriskInboundCallOfferBridgeTests
     private static AsteriskInboundCallOfferBridge CreateBridge(
         IAsteriskChannelTenantBindingStore bindingStore,
         IAsteriskAriClient ariClient,
-        IInboundVoiceEventSink sink)
+        IInboundVoiceEventSink sink,
+        IAsteriskPendingCallerTerminationRegistry pendingCallerTerminationRegistry = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(service => service.UtcNow).Returns(_now);
@@ -280,6 +404,7 @@ public sealed class AsteriskInboundCallOfferBridgeTests
             bindingStore,
             ariClient,
             sink,
+            pendingCallerTerminationRegistry ?? new TestPendingCallerTerminationRegistry(),
             clock.Object,
             NullLogger<AsteriskInboundCallOfferBridge>.Instance);
     }
@@ -317,6 +442,12 @@ public sealed class AsteriskInboundCallOfferBridgeTests
 
         public int FindCount { get; private set; }
 
+        public bool ThrowCreateTimeout { get; set; }
+
+        public bool SimulateRecoveryAfterCreateTimeout { get; set; }
+
+        private bool _createTimedOut;
+
         public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyCollection<AsteriskChannelTenantBinding>>([]);
@@ -327,7 +458,7 @@ public sealed class AsteriskInboundCallOfferBridgeTests
             return Task.FromResult(ExistingBinding is not null);
         }
 
-        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
         {
             FindCount++;
             _calls?.Add("find:" + channelId);
@@ -335,17 +466,45 @@ public sealed class AsteriskInboundCallOfferBridgeTests
             return Task.FromResult(ExistingBinding);
         }
 
-        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyCollection<AsteriskChannelTenantBinding>>([]);
         }
 
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)
         {
+            if (ThrowCreateTimeout)
+            {
+                _calls?.Add("create-binding-timeout:" + binding.ChannelId);
+                _createTimedOut = true;
+
+                throw new AsteriskChannelBindingCreateTimeoutException(binding.ChannelId, TimeSpan.FromSeconds(10));
+            }
+
             CreatedBinding = binding;
             _calls?.Add("create-binding:" + binding.ChannelId);
 
             return Task.FromResult(true);
+        }
+
+        public Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            _calls?.Add("claim:" + channelId);
+
+            if (SimulateRecoveryAfterCreateTimeout && _createTimedOut)
+            {
+                // Model a different delivery that acquired the freed create lock after this one timed out and
+                // legitimately claimed, answered, and routed the same caller: a binding now exists, so the claim is
+                // refused and the recovered, live call must not be hung up.
+                return Task.FromResult(false);
+            }
+
+            return Task.FromResult(true);
+        }
+
+        public void ReleaseTerminationClaim(string channelId)
+        {
+            _calls?.Add("release:" + channelId);
         }
 
         public Task RemoveByChannelIdAsync(string channelId)
@@ -439,6 +598,44 @@ public sealed class AsteriskInboundCallOfferBridgeTests
         }
     }
 
+    private sealed class TestPendingCallerTerminationRegistry : IAsteriskPendingCallerTerminationRegistry
+    {
+        private readonly HashSet<string> _claims = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _pending = new(StringComparer.Ordinal);
+
+        public IReadOnlyCollection<string> EnqueuedChannelIds => _pending.ToArray();
+
+        public bool HasTerminationClaim(string channelId)
+        {
+            return _claims.Contains(channelId);
+        }
+
+        public void PlantTerminationClaim(string channelId)
+        {
+            _claims.Add(channelId);
+        }
+
+        public void RemoveTerminationClaim(string channelId)
+        {
+            _claims.Remove(channelId);
+        }
+
+        public void Enqueue(string channelId)
+        {
+            _pending.Add(channelId);
+        }
+
+        public void Resolve(string channelId)
+        {
+            _pending.Remove(channelId);
+        }
+
+        public IReadOnlyCollection<string> GetPending()
+        {
+            return _pending.ToArray();
+        }
+    }
+
     private sealed class TestAriClient : IAsteriskAriClient
     {
         private readonly List<string> _calls;
@@ -453,6 +650,8 @@ public sealed class AsteriskInboundCallOfferBridgeTests
         public bool ThrowOnAnswer { get; set; }
 
         public bool ThrowOnHangup { get; set; }
+
+        public int HangupFailuresBeforeSuccess { get; set; }
 
         public Exception CreateBridgeException { get; set; }
 
@@ -503,6 +702,13 @@ public sealed class AsteriskInboundCallOfferBridgeTests
         public Task HangupAsync(string channelId, CancellationToken cancellationToken)
         {
             _calls.Add("hangup:" + channelId);
+
+            if (HangupFailuresBeforeSuccess > 0)
+            {
+                HangupFailuresBeforeSuccess--;
+
+                throw new InvalidOperationException("hangup failed transiently");
+            }
 
             if (ThrowOnHangup)
             {

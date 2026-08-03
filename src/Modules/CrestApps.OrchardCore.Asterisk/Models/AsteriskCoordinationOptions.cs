@@ -19,6 +19,15 @@ public sealed class AsteriskCoordinationOptions
     public TimeSpan CredentialLockExpiration { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Gets or sets how long a create waits to acquire the per-channel binding create-serialization lock
+    /// before giving up. The lock makes an inbound channel's ownership claim exactly-once on a single node;
+    /// this bound prevents a create that wedges on a stalled database operation from blocking every other
+    /// channel that hashes to the same stripe indefinitely. On timeout the create surfaces an ambiguous
+    /// outcome so the caller reconciles instead of assuming another attempt owns the channel.
+    /// </summary>
+    public TimeSpan ChannelBindingCreateLockTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
     /// Gets or sets how long an inbound call may remain pending before reconciliation reclaims it. Setting this
     /// below the longest expected routing delay causes a call to be reclaimed while it is still being answered.
     /// </summary>

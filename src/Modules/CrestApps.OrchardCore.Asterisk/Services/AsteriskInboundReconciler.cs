@@ -360,7 +360,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         // own terminal event was the one missed.
         await DestroyBridgeAsync(AsteriskConstants.HoldingBridgePrefix + binding.ChannelId, cancellationToken);
 
-        var peerBindings = await _bindingStore.FindAllByPeerChannelIdAsync(binding.ChannelId);
+        var peerBindings = await _bindingStore.FindAllByPeerChannelIdAsync(binding.ChannelId, cancellationToken);
 
         foreach (var peerBinding in peerBindings)
         {

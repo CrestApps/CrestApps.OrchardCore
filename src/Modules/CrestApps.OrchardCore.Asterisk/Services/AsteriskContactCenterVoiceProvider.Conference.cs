@@ -109,7 +109,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
         // exists as a live member (a stabilized Participating leg, or the Connected owner when the target agent is
         // already on the call), the add already completed, so re-originating would ring the agent a second time.
         // Confirm the completed add instead.
-        var existingMember = await _channelTenantBindingStore.FindByChannelIdAsync(participantChannelId);
+        var existingMember = await _channelTenantBindingStore.FindByChannelIdAsync(participantChannelId, cancellationToken);
 
         if (existingMember is not null &&
             (existingMember.State == AsteriskChannelBindingState.Participating ||
@@ -152,7 +152,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
             // left a Terminating recovery record for the reconciler to reclaim. Reporting success for a stale claim
             // would falsely confirm a participant that has no live leg, so fail closed (confirmed, retryable) instead
             // and let the caller retry once the stale claim is retired.
-            var existingClaim = await _channelTenantBindingStore.FindByChannelIdAsync(participantChannelId);
+            var existingClaim = await _channelTenantBindingStore.FindByChannelIdAsync(participantChannelId, cancellationToken);
 
             if (existingClaim is not null &&
                 (existingClaim.State == AsteriskChannelBindingState.Joining ||

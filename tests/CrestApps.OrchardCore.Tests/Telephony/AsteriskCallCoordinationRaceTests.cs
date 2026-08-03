@@ -111,7 +111,7 @@ public sealed class AsteriskCallCoordinationRaceTests
         // Terminating state instead of deleting it. The reconciler owns final retirement once the provisioning lease
         // elapses, which keeps the deterministic agent resources sweepable if the losing connect flow had crashed
         // mid-compensation.
-        var retained = await bindingStore.FindByChannelIdAsync(agentChannelId);
+        var retained = await bindingStore.FindByChannelIdAsync(agentChannelId, TestContext.Current.CancellationToken);
         Assert.NotNull(retained);
         Assert.Equal(AsteriskChannelBindingState.Terminating, retained.State);
     }
@@ -171,7 +171,7 @@ public sealed class AsteriskCallCoordinationRaceTests
         var agentChannelId = result.Metadata[AsteriskAriConstants.AgentChannelMetadataKey];
         var bridgeId = result.Metadata["bridgeId"];
 
-        var connectedBinding = await bindingStore.FindByChannelIdAsync(agentChannelId);
+        var connectedBinding = await bindingStore.FindByChannelIdAsync(agentChannelId, TestContext.Current.CancellationToken);
         Assert.NotNull(connectedBinding);
         Assert.Equal(AsteriskChannelBindingState.Connected, connectedBinding.State);
 
@@ -187,8 +187,8 @@ public sealed class AsteriskCallCoordinationRaceTests
         Assert.Contains(bridgeId, ariClient.DestroyedBridges);
         Assert.Contains(AsteriskConstants.HoldingBridgePrefix + "caller-1", ariClient.DestroyedBridges);
         Assert.Contains("caller-1", ariClient.HungupChannels);
-        Assert.Null(await bindingStore.FindByChannelIdAsync(agentChannelId));
-        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1"));
+        Assert.Null(await bindingStore.FindByChannelIdAsync(agentChannelId, TestContext.Current.CancellationToken));
+        Assert.Null(await bindingStore.FindByChannelIdAsync("caller-1", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public sealed class AsteriskCallCoordinationRaceTests
             }
         }
 
-        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId)
+        public Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {
@@ -273,13 +273,22 @@ public sealed class AsteriskCallCoordinationRaceTests
             }
         }
 
-        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId)
+        public Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {
                 return Task.FromResult<IReadOnlyCollection<AsteriskChannelTenantBinding>>(
                     _bindings.Where(binding => binding.PeerChannelId == peerChannelId).ToArray());
             }
+        }
+
+        public Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public void ReleaseTerminationClaim(string channelId)
+        {
         }
 
         public Task<bool> CreateAsync(AsteriskChannelTenantBinding binding)

@@ -27,8 +27,9 @@ internal interface IAsteriskChannelTenantBindingStore
     /// Finds the binding for the supplied Asterisk channel identifier in the current tenant store.
     /// </summary>
     /// <param name="channelId">The Asterisk channel identifier to find.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests. This lookup performs no durable mutation, so shutdown does not wait on a stalled query.</param>
     /// <returns>The matching binding, or <see langword="null"/> when the channel is not owned by the current tenant.</returns>
-    Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId);
+    Task<AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds every binding whose peer channel matches the supplied Asterisk channel identifier in the current
@@ -38,15 +39,18 @@ internal interface IAsteriskChannelTenantBindingStore
     /// than an arbitrary single match.
     /// </summary>
     /// <param name="peerChannelId">The peer Asterisk channel identifier to find the owning bindings for.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests. This lookup performs no durable mutation, so shutdown does not wait on a stalled query.</param>
     /// <returns>All bindings referencing the peer channel; an empty collection when none reference it.</returns>
-    Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId);
+    Task<IReadOnlyCollection<AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Atomically creates the supplied channel binding when no binding for its channel exists yet in the current
     /// tenant store, returning whether THIS call created it. The create is serialized per channel so a duplicate
     /// delivery of the same channel — for example, two overlapping shell-reload listener generations handling the
     /// same StasisStart — claims the channel exactly once and only the winning caller performs the channel's inbound
-    /// side effects.
+    /// side effects. The per-channel serialization is acquired under a bounded window; when it cannot be acquired
+    /// in time an <see cref="AsteriskChannelBindingCreateTimeoutException"/> is thrown to signal an ambiguous
+    /// outcome the caller must reconcile, which is distinct from the <see langword="false"/> "lost the race" flag.
     /// </summary>
     /// <param name="binding">The binding to create.</param>
     /// <returns>
@@ -54,7 +58,33 @@ internal interface IAsteriskChannelTenantBindingStore
     /// channel already existed, which signals the caller lost the claim and must not repeat the channel's inbound
     /// side effects.
     /// </returns>
+    /// <exception cref="AsteriskChannelBindingCreateTimeoutException">Thrown when the per-channel create-serialization lock could not be acquired within the configured bounded window.</exception>
     Task<bool> CreateAsync(AsteriskChannelTenantBinding binding);
+
+    /// <summary>
+    /// Attempts to claim the channel for a stranded-caller fail-safe termination, atomically with respect to a
+    /// concurrent create for the same channel. When no binding exists the channel is claimed and, until the claim is
+    /// released, <see cref="CreateAsync"/> refuses to create a binding for it — so no delivery can route the caller
+    /// into a live call that a pending hang up would then tear down. When a binding already exists the caller was
+    /// legitimately recovered by another delivery and must not be terminated, so no claim is taken. The claim decision
+    /// is made under the same bounded per-channel lock as <see cref="CreateAsync"/>, but never spans the remote hang
+    /// up, so an unrelated channel is never blocked by the termination's I/O.
+    /// </summary>
+    /// <param name="channelId">The inbound caller channel to claim for termination.</param>
+    /// <param name="cancellationToken">A token used to observe cancellation while acquiring the per-channel lock.</param>
+    /// <returns>
+    /// <see langword="true"/> when the channel was claimed for termination and the caller must be hung up;
+    /// <see langword="false"/> when a binding already exists, meaning the caller was recovered and must not be hung up.
+    /// </returns>
+    /// <exception cref="AsteriskChannelBindingCreateTimeoutException">Thrown when the per-channel lock could not be acquired within the configured bounded window.</exception>
+    Task<bool> TryClaimChannelForTerminationAsync(string channelId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Releases a termination claim taken by <see cref="TryClaimChannelForTerminationAsync"/> once the caller is
+    /// confirmed gone, allowing subsequent creates for the channel to proceed normally again.
+    /// </summary>
+    /// <param name="channelId">The channel whose termination claim should be released.</param>
+    void ReleaseTerminationClaim(string channelId);
 
     /// <summary>
     /// Atomically transitions the binding for the supplied channel from
