@@ -43,7 +43,7 @@
     "postcss-rtl": "^2.0.0",
     "rtlcss": "4.3.0",
     "source-map": "^0.8.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
