@@ -524,7 +524,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", resolverOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", ingressOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints.Admin", navigationOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Admin", navigationOwner.FeatureId);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.EntryPoints", navigationOwner.RequiredFeatureIds);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", inboundServiceOwner.FeatureId);
     }
 

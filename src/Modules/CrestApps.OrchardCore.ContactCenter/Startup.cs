@@ -343,7 +343,8 @@ public sealed class ContactCenterAdminStartup : StartupBase
 /// screens, so the screens are a separate feature. A deployment that drives agents through its own front end or
 /// an API can enable the capability and leave this off.
 /// </remarks>
-[Feature(ContactCenterConstants.Feature.AgentsAdmin)]
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures(ContactCenterConstants.Feature.Agents)]
 public sealed class ContactCenterAgentsAdminStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -357,7 +358,8 @@ public sealed class ContactCenterAgentsAdminStartup : StartupBase
 /// <summary>
 /// Registers the queue, skill, business-hours, and agent-entitlement administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.QueuesAdmin)]
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures(ContactCenterConstants.Feature.Queues)]
 public sealed class ContactCenterQueuesAdminStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -377,7 +379,8 @@ public sealed class ContactCenterQueuesAdminStartup : StartupBase
 /// <summary>
 /// Registers the outbound dialer administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.DialerAdmin)]
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures(ContactCenterConstants.Feature.Dialer)]
 public sealed class ContactCenterDialerAdminStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -391,7 +394,8 @@ public sealed class ContactCenterDialerAdminStartup : StartupBase
 /// <summary>
 /// Registers the recording and monitoring settings screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.RecordingAdmin)]
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures(ContactCenterConstants.Feature.Recording)]
 public sealed class ContactCenterRecordingAdminStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -404,7 +408,8 @@ public sealed class ContactCenterRecordingAdminStartup : StartupBase
 /// <summary>
 /// Registers the inbound entry-point administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.EntryPointsAdmin)]
+[Feature(ContactCenterConstants.Feature.Admin)]
+[RequireFeatures(ContactCenterConstants.Feature.EntryPoints)]
 public sealed class ContactCenterEntryPointsAdminStartup : StartupBase
 {
     /// <inheritdoc/>

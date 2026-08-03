@@ -28,72 +28,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Admin,
     Name = "Contact Center Administration",
-    Description = "Adds the Contact Center settings screens, and restores every capability's screens on a tenant that predates the headless split.",
+    Description = "Adds the Contact Center settings screens and every capability's administration screens for the capabilities that are enabled on the tenant.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Area,
         OmnichannelConstants.Features.Managements,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.AgentsAdmin,
-    Name = "Contact Center Agents - Administration",
-    Description = "Adds the agent profile, presence, and reason-code administration screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Agents,
-        ContactCenterConstants.Feature.Admin,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.QueuesAdmin,
-    Name = "Contact Center Queues - Administration",
-    Description = "Adds the queue, queue group, skill, business-hours, and agent-entitlement administration screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Queues,
-        ContactCenterConstants.Feature.Admin,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.DialerAdmin,
-    Name = "Contact Center Dialer - Administration",
-    Description = "Adds the outbound dialer profile administration screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Dialer,
-        ContactCenterConstants.Feature.Admin,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.RecordingAdmin,
-    Name = "Contact Center Recording - Administration",
-    Description = "Adds the recording and monitoring settings screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Recording,
-        ContactCenterConstants.Feature.Admin,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.EntryPointsAdmin,
-    Name = "Contact Center Entry Points - Administration",
-    Description = "Adds the inbound entry-point administration screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.EntryPoints,
-        ContactCenterConstants.Feature.Admin,
     ]
 )]
 

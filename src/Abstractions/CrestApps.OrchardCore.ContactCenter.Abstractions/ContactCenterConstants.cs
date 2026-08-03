@@ -207,35 +207,10 @@ public static class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
-        /// The identifier of the Contact Center administration feature, which enables every capability's
+        /// The identifier of the Contact Center administration feature, which enables every enabled capability's
         /// administration screens together.
         /// </summary>
         public const string Admin = "CrestApps.OrchardCore.ContactCenter.Admin";
-
-        /// <summary>
-        /// The identifier of the agent administration screens.
-        /// </summary>
-        public const string AgentsAdmin = "CrestApps.OrchardCore.ContactCenter.Agents.Admin";
-
-        /// <summary>
-        /// The identifier of the queue, skill, and business-hours administration screens.
-        /// </summary>
-        public const string QueuesAdmin = "CrestApps.OrchardCore.ContactCenter.Queues.Admin";
-
-        /// <summary>
-        /// The identifier of the outbound dialer administration screens.
-        /// </summary>
-        public const string DialerAdmin = "CrestApps.OrchardCore.ContactCenter.Dialer.Admin";
-
-        /// <summary>
-        /// The identifier of the recording and monitoring settings screens.
-        /// </summary>
-        public const string RecordingAdmin = "CrestApps.OrchardCore.ContactCenter.Recording.Admin";
-
-        /// <summary>
-        /// The identifier of the inbound entry-point administration screens.
-        /// </summary>
-        public const string EntryPointsAdmin = "CrestApps.OrchardCore.ContactCenter.EntryPoints.Admin";
 
         /// <summary>
         /// The identifier of the agent, presence, and queue-membership feature.

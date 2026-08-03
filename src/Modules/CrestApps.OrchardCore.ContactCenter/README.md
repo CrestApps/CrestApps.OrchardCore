@@ -13,7 +13,7 @@ The module ships as many small, independently deployable, feature-gated capabili
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center | `CrestApps.OrchardCore.ContactCenter` | Headless interaction lifecycle, durable domain event log, and baseline permissions. Depends on Omnichannel Activities. |
-| Contact Center Administration | `CrestApps.OrchardCore.ContactCenter.Admin` | Settings screens and capability screens for tenants that predate the headless split. |
+| Contact Center Administration | `CrestApps.OrchardCore.ContactCenter.Admin` | Settings screens and the administration screens for every enabled capability. |
 
 ### Agents, queues, and routing
 
@@ -47,11 +47,11 @@ The module ships as many small, independently deployable, feature-gated capabili
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
 | Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
 
-Each `*.Admin` administration feature adds only its capability's administration screens. Administration screens exist for five capabilities: Agents (`...Agents.Admin`), Queues (`...Queues.Admin`), Dialer (`...Dialer.Admin`), Recording (`...Recording.Admin`), and Entry Points (`...EntryPoints.Admin`). Each depends on the root **Contact Center Administration** feature.
+The single **Contact Center Administration** feature (`CrestApps.OrchardCore.ContactCenter.Admin`) carries every capability's administration screens. Each capability's screens — Agents, Queues, Dialer, Recording, and Entry Points — appear only when both this feature and the matching capability are enabled, so enabling administration restores exactly the screens for the capabilities the tenant runs. There is no separate `.Admin` feature to enable per capability.
 
 ## Installation
 
-Install the package into the web/startup project and enable the capabilities you need, together with the administration features for the screens you want to configure. A minimal inbound-voice contact center, for example:
+Install the package into the web/startup project and enable the capabilities you need, together with the **Contact Center Administration** feature for the screens you want to configure. A minimal inbound-voice contact center, for example:
 
 ```json
 {
@@ -62,14 +62,11 @@ Install the package into the web/startup project and enable the capabilities you
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Admin",
         "CrestApps.OrchardCore.ContactCenter.Agents",
-        "CrestApps.OrchardCore.ContactCenter.Agents.Admin",
         "CrestApps.OrchardCore.ContactCenter.Availability",
         "CrestApps.OrchardCore.ContactCenter.Queues",
-        "CrestApps.OrchardCore.ContactCenter.Queues.Admin",
         "CrestApps.OrchardCore.ContactCenter.Routing",
         "CrestApps.OrchardCore.ContactCenter.Voice",
-        "CrestApps.OrchardCore.ContactCenter.EntryPoints",
-        "CrestApps.OrchardCore.ContactCenter.EntryPoints.Admin"
+        "CrestApps.OrchardCore.ContactCenter.EntryPoints"
       ]
     }
   ]
@@ -80,7 +77,7 @@ A Telephony provider (for example Asterisk or DialPad) and its Contact Center Vo
 
 ## Configuration
 
-Enable the relevant `*.Admin` feature and configure each capability under its **Contact Center** settings screen. Compliance, business hours, calling windows, routing policies, and dialer profiles are all configured per tenant and enforced server-side.
+Enable the **Contact Center Administration** feature and configure each capability under its **Contact Center** settings screen. Compliance, business hours, calling windows, routing policies, and dialer profiles are all configured per tenant and enforced server-side.
 
 ## Usage
 

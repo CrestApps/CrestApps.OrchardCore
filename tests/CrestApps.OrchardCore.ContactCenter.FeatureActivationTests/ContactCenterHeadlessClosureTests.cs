@@ -49,11 +49,6 @@ public sealed class ContactCenterHeadlessClosureTests
     private static readonly string[] _userExperienceFeatures =
     [
         ContactCenterConstants.Feature.Admin,
-        ContactCenterConstants.Feature.AgentsAdmin,
-        ContactCenterConstants.Feature.QueuesAdmin,
-        ContactCenterConstants.Feature.DialerAdmin,
-        ContactCenterConstants.Feature.RecordingAdmin,
-        ContactCenterConstants.Feature.EntryPointsAdmin,
         ContactCenterConstants.Feature.AgentDesktop,
         ContactCenterConstants.Feature.VoiceSoftPhone,
         ContactCenterConstants.Feature.Supervision,
@@ -133,36 +128,106 @@ public sealed class ContactCenterHeadlessClosureTests
     }
 
     [Fact]
-    public async Task EveryAdministrationFeature_RegistersTheSurfaceItsCapabilityGaveUp()
+    public async Task EnablingAdministrationWithACapability_RestoresThatCapabilitysSurface()
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
 
-        var administrationFeatures = new[]
+        // The single administration feature folds every capability's screens back in, each gated on its capability
+        // being enabled. Enabling administration with a capability must therefore register more Contact Center
+        // administration surface than administration alone, and the extra surface is what the capability gave up
+        // when it went headless.
+        var capabilityFeatures = new[]
         {
-            ContactCenterConstants.Feature.Admin,
-            ContactCenterConstants.Feature.AgentsAdmin,
-            ContactCenterConstants.Feature.QueuesAdmin,
-            ContactCenterConstants.Feature.DialerAdmin,
-            ContactCenterConstants.Feature.RecordingAdmin,
-            ContactCenterConstants.Feature.EntryPointsAdmin,
+            ContactCenterConstants.Feature.Agents,
+            ContactCenterConstants.Feature.Queues,
+            ContactCenterConstants.Feature.Dialer,
+            ContactCenterConstants.Feature.Recording,
+            ContactCenterConstants.Feature.EntryPoints,
         };
 
-        var withoutOwnSurface = new List<string>();
+        var administrationOnlySurface = await GetSurfaceAsync(host, "admin-only", [ContactCenterConstants.Feature.Admin]);
 
-        foreach (var featureId in administrationFeatures)
+        var withoutRestoredSurface = new List<string>();
+
+        foreach (var capabilityFeature in capabilityFeatures)
         {
-            if (!await ServesItsOwnUserInterfaceAsync(host, featureId))
+            var combinedSurface = await GetSurfaceAsync(
+                host,
+                "admin-with-" + capabilityFeature,
+                [ContactCenterConstants.Feature.Admin, capabilityFeature]);
+
+            var restored = combinedSurface
+                .Except(administrationOnlySurface, StringComparer.Ordinal)
+                .Any(IsContactCenterSurface);
+
+            if (!restored)
             {
-                withoutOwnSurface.Add(featureId);
+                withoutRestoredSurface.Add(capabilityFeature);
             }
         }
 
         Assert.True(
-            withoutOwnSurface.Count == 0,
+            withoutRestoredSurface.Count == 0,
             Describe(
-                "Administration features register no screens of their own, so enabling them has no effect.",
-                "Give the feature the registrations its capability gave up, or delete the feature.",
-                withoutOwnSurface));
+                "Enabling Contact Center Administration alongside a capability registered no additional " +
+                "administration surface for that capability, so the capability's screens can never be reached.",
+                "Gate the capability's administration registrations on '[Feature(Admin)] [RequireFeatures(capability)]' " +
+                "so enabling administration restores them.",
+                withoutRestoredSurface));
+    }
+
+    [Fact]
+    public async Task EnablingACapabilityWithoutAdministration_RegistersNoSurface()
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        // The mirror of the fold: a capability enabled without the administration feature must stay headless, even
+        // though the administration feature carries the registrations gated on that capability.
+        var capabilityFeatures = new[]
+        {
+            ContactCenterConstants.Feature.Agents,
+            ContactCenterConstants.Feature.Queues,
+            ContactCenterConstants.Feature.Dialer,
+            ContactCenterConstants.Feature.Recording,
+            ContactCenterConstants.Feature.EntryPoints,
+        };
+
+        var withSurface = new List<string>();
+
+        foreach (var capabilityFeature in capabilityFeatures)
+        {
+            var surface = await GetSurfaceAsync(host, "headless-" + capabilityFeature, [capabilityFeature]);
+
+            if (surface.Any(IsContactCenterSurface))
+            {
+                withSurface.Add(capabilityFeature);
+            }
+        }
+
+        Assert.True(
+            withSurface.Count == 0,
+            Describe(
+                "A capability enabled without Contact Center Administration registered administration surface.",
+                "Gate the registration on '[Feature(Admin)] [RequireFeatures(capability)]' so it stays headless " +
+                "until administration is enabled.",
+                withSurface));
+    }
+
+    private static async Task<List<string>> GetSurfaceAsync(
+        ContactCenterFeatureActivationHost host,
+        string tenantId,
+        string[] features)
+    {
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = tenantId,
+            ProviderProfile = "none",
+            Features = features,
+        });
+
+        return await host.ExecuteInTenantScopeAsync(
+            tenant,
+            serviceProvider => Task.FromResult(FindAdministrationSurface(serviceProvider)));
     }
 
     /// <summary>
