@@ -11,4 +11,4 @@ This section contains release notes and version highlights for **CrestApps.Orcha
 
 | Version | Highlights |
 | --- | --- |
-| [2.0.0](v2.0.0) | Major release — new modules, orchestrator architecture, Omnichannel Communications, MCP protocol support |
+| [2.0.0](2.0.0) | Major release - new AI platform, Omnichannel Communications, phone-number verification, telephony, Content Transfer, reports, and recipe schema improvements |

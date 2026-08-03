@@ -38,7 +38,7 @@ After installing packages, enable the required features in **Tools -> Features**
 
 ## Release notes
 
-Review the current [Version 2.0.0 Release Notes](changelog/v2.0.0) before updating package references or tenant code.
+Review the current [Version 2.0.0 Release Notes](changelog/2.0.0) before updating package references or tenant code.
 
 The current repository version is the `2.0.0-preview` line on `.NET 10` and Orchard Core `3.0.0-preview`.
 
