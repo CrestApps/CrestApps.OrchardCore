@@ -331,11 +331,13 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-017 — Seven near-identical catalog list views
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** UI duplication · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** UI duplication · **Effort:** M · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** `Views/{Queues,Skills,EntryPoints,DialerProfiles,QueueGroups,AgentStateReasonCodes,BusinessHoursCalendars}/Index.cshtml` are ~57 lines each and structurally identical, differing only by title and add-label.
 
 **Recommended solution.** Extract a shared `_CatalogList` partial/shape taking title, add-label and `ListCatalogEntryViewModel<T>`; keep per-type differences in the already-used item shape.
+
+**Resolution.** Added a shared `Views/Shared/_CatalogList.cshtml` partial (resolved globally via OrchardCore's `SharedViewLocationExpanderProvider`) backed by two new view models, `CatalogListViewModel` and `CatalogListEntry` (`ViewModels/`). The partial holds the single copy of the action-bar, search field (`asp-for="Options.Search"` binding preserved), create button, item-count row, list, empty message, no-results alert, and pager markup. Each of the seven `Index.cshtml` files now only builds a `CatalogListViewModel` — supplying its title, create label, list id, empty message, `Options`, `Pager`, and entries mapped from `INameAwareModel.Name` for client-side filtering — then renders `<partial name="_CatalogList" />`. Per-type `T["…"]` literals stay in each view so localization extraction remains per-type. Views dropped from ~57 to ~22 lines each; shared strings collapse from seven copies to one. Module and test project build with 0 warnings; all 1497 ContactCenter tests pass.
 
 ---
 
