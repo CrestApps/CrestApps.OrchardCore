@@ -33,9 +33,13 @@ Each map stores:
 
 ## Admin management
 
-Enable the feature, then open **Configuration -> Time Zones**.
+Enable the feature, then open **Tools -> Time Zones**.
 
 Create one map entry for each friendly label you want to expose. Names are unique and immutable after creation. The admin list shows the mapped `TimeZoneId`, the author display name, and the latest created or modified timestamp as badges so editors can scan changes quickly.
+
+The screencast below walks through enabling the feature, adding a `Mexico City Time` map for `America/Mexico_City`, and confirming that the friendly name is what Orchard Core now renders in **Settings -> General -> Default Time Zone**.
+
+![Screen cast of creating a time zone map and selecting it as the site default](/img/docs/time-zones.gif)
 
 ## Recipe support
 
