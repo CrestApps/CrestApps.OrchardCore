@@ -17,7 +17,7 @@ jobs:
   close-stale-prs-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v11
         with:
           stale-pr-message: >
             It seems that this pull request didn't really move for quite a while. Is this something you'd like to 
