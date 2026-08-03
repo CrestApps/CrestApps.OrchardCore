@@ -28,8 +28,6 @@
             .map(function (option) { return option.value; });
     }
 
-    var escapeHtml = window.telephonyClient.escapeHtml;
-
     function applySelectedValues(select, values) {
         if (!select) {
             return;
@@ -195,12 +193,34 @@
             });
         });
 
-        list.innerHTML = memberships.map(function (membership) {
-            return '<div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">' +
-                '<span class="small"><span class="text-body-secondary">' + escapeHtml(membership.type) + ':</span> ' + escapeHtml(membership.name) + '</span>' +
-                '<button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="' + escapeHtml(membership.kind) + '" data-membership-id="' + escapeHtml(membership.id) + '">' + escapeHtml(signOutText) + '</button>' +
-            '</div>';
-        }).join('');
+        list.replaceChildren();
+
+        memberships.forEach(function (membership) {
+            var item = document.createElement('div');
+            item.className = 'list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2';
+
+            var label = document.createElement('span');
+            label.className = 'small';
+
+            var typeLabel = document.createElement('span');
+            typeLabel.className = 'text-body-secondary';
+            typeLabel.textContent = membership.type + ':';
+
+            label.appendChild(typeLabel);
+            label.appendChild(document.createTextNode(' ' + membership.name));
+
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-sm btn-outline-secondary';
+            button.setAttribute('data-contact-center-membership-sign-out', '');
+            button.setAttribute('data-membership-kind', membership.kind);
+            button.setAttribute('data-membership-id', membership.id);
+            button.textContent = signOutText;
+
+            item.appendChild(label);
+            item.appendChild(button);
+            list.appendChild(item);
+        });
     }
 
     function updateMembershipUi(root, snapshot) {

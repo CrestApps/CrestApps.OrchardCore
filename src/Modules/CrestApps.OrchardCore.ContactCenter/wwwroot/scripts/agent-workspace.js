@@ -126,7 +126,7 @@
         if (data) {
           render(data);
         }
-      })["catch"](function () {});
+      }).catch(function () {});
     }
     function render(data) {
       state = data;
@@ -267,9 +267,9 @@
           clearError();
         }
         return refresh();
-      })["catch"](function () {
+      }).catch(function () {
         showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
-      })["finally"](function () {
+      }).finally(function () {
         setOfferButtonsDisabled(false);
       });
     }
@@ -287,9 +287,9 @@
           clearError();
         }
         return refresh();
-      })["catch"](function () {
+      }).catch(function () {
         showError(label('declineFailed', 'The offer could not be declined. Refresh the workspace and try again.'));
-      })["finally"](function () {
+      }).finally(function () {
         setOfferButtonsDisabled(false);
       });
     }
@@ -307,7 +307,7 @@
         reason: reason || ''
       }).then(function () {
         return refresh();
-      })["catch"](function () {});
+      }).catch(function () {});
     }
     function bindPresenceMenu() {
       var button = refs.presenceButton;
@@ -377,21 +377,21 @@
     if (window.contactCenterRealTime && config.hubUrl) {
       window.contactCenterRealTime.connect({
         hubUrl: config.hubUrl,
-        onConnected: function onConnected() {
+        onConnected: function () {
           setConnectionStatus('connected', 'Connected', 'is-connected');
         },
-        onReconnecting: function onReconnecting() {
+        onReconnecting: function () {
           setConnectionStatus('reconnecting', 'Connection lost. Reconnecting...', 'is-reconnecting');
         },
-        onDisconnected: function onDisconnected() {
+        onDisconnected: function () {
           setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
         },
-        onError: function onError() {
+        onError: function () {
           setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
         },
         onSnapshot: refresh,
         onPresenceChanged: refresh,
-        onOfferReceived: function onOfferReceived(notification) {
+        onOfferReceived: function (notification) {
           if (notification && notification.autoOpenActivity && notification.activityItemId && config.completeActivityUrlTemplate) {
             window.location.assign(config.completeActivityUrlTemplate.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
             return;

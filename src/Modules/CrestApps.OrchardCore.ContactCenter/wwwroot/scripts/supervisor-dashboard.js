@@ -180,7 +180,7 @@
       (state.queues || []).forEach(function (queue) {
         if (!watched[queue.id]) {
           watched[queue.id] = true;
-          realtime.watchQueue(queue.id)["catch"](function () {});
+          realtime.watchQueue(queue.id).catch(function () {});
         }
       });
     }
@@ -202,7 +202,7 @@
         if (state) {
           render(state);
         }
-      })["catch"](function () {});
+      }).catch(function () {});
     }
     function engage(interactionId, mode, button) {
       if (!config.engageUrl || !interactionId || !mode) {
@@ -222,23 +222,23 @@
         } else {
           clearError();
         }
-      })["finally"](function () {
+      }).finally(function () {
         button.disabled = false;
       });
     }
     if (window.contactCenterRealTime && config.hubUrl) {
       realtime = window.contactCenterRealTime.connect({
         hubUrl: config.hubUrl,
-        onConnected: function onConnected() {
+        onConnected: function () {
           setConnectionStatus('connected', 'Connected', 'is-connected');
         },
-        onReconnecting: function onReconnecting() {
+        onReconnecting: function () {
           setConnectionStatus('reconnecting', 'Connection lost. Reconnecting...', 'is-reconnecting');
         },
-        onDisconnected: function onDisconnected() {
+        onDisconnected: function () {
           setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
         },
-        onError: function onError() {
+        onError: function () {
           setConnectionStatus('disconnected', 'Disconnected. Live updates are paused.', 'is-disconnected');
         },
         onSnapshot: refresh,

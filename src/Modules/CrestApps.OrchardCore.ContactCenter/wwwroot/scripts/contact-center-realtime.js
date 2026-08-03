@@ -40,14 +40,14 @@
     connection.on('OfferRevoked', options.onOfferRevoked || noop);
     connection.on('QueueStatsChanged', options.onQueueStatsChanged || noop);
     connection.on('MembershipChanged', function () {
-      loadSnapshot()["catch"](function () {});
+      loadSnapshot().catch(function () {});
     });
     var heartbeatIntervalMs = options.heartbeatIntervalMs || DEFAULT_HEARTBEAT_INTERVAL_MS;
     var heartbeatTimer = null;
     function startHeartbeat() {
       stopHeartbeat();
       heartbeatTimer = window.setInterval(function () {
-        connection.invoke('Heartbeat')["catch"](function () {});
+        connection.invoke('Heartbeat').catch(function () {});
       }, heartbeatIntervalMs);
     }
     function stopHeartbeat() {
@@ -73,7 +73,7 @@
         if (typeof options.onReconnected === 'function') {
           options.onReconnected(connectionId, snapshot);
         }
-      })["catch"](function () {});
+      }).catch(function () {});
     });
     connection.onreconnecting(function (error) {
       stopHeartbeat();
@@ -92,8 +92,8 @@
       if (typeof options.onConnected === 'function') {
         options.onConnected();
       }
-      return loadSnapshot()["catch"](function () {});
-    })["catch"](function (error) {
+      return loadSnapshot().catch(function () {});
+    }).catch(function (error) {
       if (typeof options.onError === 'function') {
         options.onError(error);
       }
@@ -103,13 +103,13 @@
       connection: connection,
       started: started,
       getSnapshot: loadSnapshot,
-      watchQueue: function watchQueue(queueId) {
+      watchQueue: function (queueId) {
         return connection.invoke('WatchQueue', queueId);
       },
-      unwatchQueue: function unwatchQueue(queueId) {
+      unwatchQueue: function (queueId) {
         return connection.invoke('UnwatchQueue', queueId);
       },
-      stop: function stop() {
+      stop: function () {
         stopHeartbeat();
         return connection.stop();
       }

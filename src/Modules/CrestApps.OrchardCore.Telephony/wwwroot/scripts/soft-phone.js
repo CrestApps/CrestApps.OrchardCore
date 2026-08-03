@@ -85,11 +85,11 @@
     var remoteStream = new MediaStream();
     return {
       stream: remoteStream,
-      addTrack: function addTrack(track) {
+      addTrack: function (track) {
         remoteStream.addTrack(track);
         setRemoteStream(remoteStream);
       },
-      clear: function clear() {
+      clear: function () {
         remoteStream.getTracks().forEach(function (track) {
           remoteStream.removeTrack(track);
           track.stop();
@@ -190,17 +190,17 @@
       return Promise.resolve(activeSession.invite({
         requestDelegate: {},
         sessionDescriptionHandlerModifiers: modifiers
-      }))["catch"](function () {});
+      })).catch(function () {});
     }
     function terminateSession() {
       if (!activeSession) {
         return Promise.resolve();
       }
       if (typeof activeSession.bye === 'function') {
-        return Promise.resolve(activeSession.bye())["catch"](function () {});
+        return Promise.resolve(activeSession.bye()).catch(function () {});
       }
       if (typeof activeSession.dispose === 'function') {
-        return Promise.resolve(activeSession.dispose())["catch"](function () {});
+        return Promise.resolve(activeSession.dispose()).catch(function () {});
       }
       return Promise.resolve();
     }
@@ -223,7 +223,7 @@
         }
       },
       delegate: {
-        onInvite: function onInvite(invitation) {
+        onInvite: function (invitation) {
           wireSession(invitation);
           Promise.resolve(invitation.accept({
             sessionDescriptionHandlerOptions: {
@@ -234,7 +234,7 @@
             }
           })).then(function () {
             attachPeerConnection(invitation);
-          })["catch"](function (error) {
+          }).catch(function (error) {
             context.showError(error && error.message ? error.message : String(error));
           });
         }
@@ -249,7 +249,7 @@
       return {
         providerConfig: registrationConfig,
         mediaCodecs: media.codecs || [],
-        handleCallState: function handleCallState(call) {
+        handleCallState: function (call) {
           var stateName = normalizeState(call && call.state);
           if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
             return terminateSession();
@@ -263,16 +263,16 @@
           }
           return Promise.resolve();
         },
-        dispose: function dispose() {
+        dispose: function () {
           if (disposed) {
             return Promise.resolve();
           }
           disposed = true;
           remoteSink.clear();
           return terminateSession().then(function () {
-            return registerer ? registerer.unregister()["catch"](function () {}) : null;
+            return registerer ? registerer.unregister().catch(function () {}) : null;
           }).then(function () {
-            return userAgent.stop()["catch"](function () {});
+            return userAgent.stop().catch(function () {});
           });
         }
       };

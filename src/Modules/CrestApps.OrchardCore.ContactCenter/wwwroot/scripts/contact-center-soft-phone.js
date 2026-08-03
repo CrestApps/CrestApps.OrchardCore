@@ -28,7 +28,6 @@
       return option.value;
     });
   }
-  var escapeHtml = window.telephonyClient.escapeHtml;
   function applySelectedValues(select, values) {
     if (!select) {
       return;
@@ -161,9 +160,28 @@
         name: getOptionText(campaignSelect, campaignId)
       });
     });
-    list.innerHTML = memberships.map(function (membership) {
-      return '<div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2">' + '<span class="small"><span class="text-body-secondary">' + escapeHtml(membership.type) + ':</span> ' + escapeHtml(membership.name) + '</span>' + '<button type="button" class="btn btn-sm btn-outline-secondary" data-contact-center-membership-sign-out data-membership-kind="' + escapeHtml(membership.kind) + '" data-membership-id="' + escapeHtml(membership.id) + '">' + escapeHtml(signOutText) + '</button>' + '</div>';
-    }).join('');
+    list.replaceChildren();
+    memberships.forEach(function (membership) {
+      var item = document.createElement('div');
+      item.className = 'list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2';
+      var label = document.createElement('span');
+      label.className = 'small';
+      var typeLabel = document.createElement('span');
+      typeLabel.className = 'text-body-secondary';
+      typeLabel.textContent = membership.type + ':';
+      label.appendChild(typeLabel);
+      label.appendChild(document.createTextNode(' ' + membership.name));
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-sm btn-outline-secondary';
+      button.setAttribute('data-contact-center-membership-sign-out', '');
+      button.setAttribute('data-membership-kind', membership.kind);
+      button.setAttribute('data-membership-id', membership.id);
+      button.textContent = signOutText;
+      item.appendChild(label);
+      item.appendChild(button);
+      list.appendChild(item);
+    });
   }
   function updateMembershipUi(root, snapshot) {
     if (!root || !snapshot) {
@@ -217,7 +235,7 @@
             return recoverSoftPhoneState(root, api, client);
           }
           return null;
-        })["catch"](function (error) {
+        }).catch(function (error) {
           var statusInput = form.querySelector('input[name="status"]');
           if (!statusInput) {
             statusInput = document.createElement('input');
@@ -227,7 +245,7 @@
           }
           statusInput.value = status;
           HTMLFormElement.prototype.submit.call(form);
-        })["finally"](function () {
+        }).finally(function () {
           setPresenceBusy(false);
         });
       });
@@ -253,7 +271,7 @@
     if (api.__contactCenterQueuedVoiceSyncPromise) {
       return api.__contactCenterQueuedVoiceSyncPromise;
     }
-    api.__contactCenterQueuedVoiceSyncPromise = invokeHub(client, 'SyncQueuedVoiceWork')["catch"](function () {})["finally"](function () {
+    api.__contactCenterQueuedVoiceSyncPromise = invokeHub(client, 'SyncQueuedVoiceWork').catch(function () {}).finally(function () {
       api.__contactCenterQueuedVoiceSyncPromise = null;
     });
     return api.__contactCenterQueuedVoiceSyncPromise;
@@ -276,7 +294,7 @@
         api.setIncomingOffer(offer.call, offer.context || null);
       }
       return offer;
-    })["catch"](function () {
+    }).catch(function () {
       if (attemptsRemaining > 0) {
         return new Promise(function (resolve) {
           window.setTimeout(resolve, 250);
@@ -286,7 +304,7 @@
         });
       }
       return null;
-    })["finally"](function () {
+    }).finally(function () {
       api.__contactCenterPendingOfferPromise = null;
     });
     return api.__contactCenterPendingOfferPromise;
@@ -333,9 +351,9 @@
         invokeHub(client, 'SignIn', queueIds, campaignIds).then(function (snapshot) {
           updateMembershipUi(root, snapshot);
           return recoverSoftPhoneState(root, api, client);
-        })["catch"](function (error) {
+        }).catch(function (error) {
           showMembershipError(root, api, error && error.message ? error.message : String(error));
-        })["finally"](function () {
+        }).finally(function () {
           setBusy(root, false);
         });
       });
@@ -353,9 +371,9 @@
           if (api && typeof api.clearIncomingOffer === 'function') {
             api.clearIncomingOffer();
           }
-        })["catch"](function (error) {
+        }).catch(function (error) {
           showMembershipError(root, api, error && error.message ? error.message : String(error));
-        })["finally"](function () {
+        }).finally(function () {
           setBusy(root, false);
         });
       });
@@ -387,9 +405,9 @@
         if (method === 'SignOut' && api && typeof api.clearIncomingOffer === 'function') {
           api.clearIncomingOffer();
         }
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showMembershipError(root, api, error && error.message ? error.message : String(error));
-      })["finally"](function () {
+      }).finally(function () {
         setBusy(root, false);
       });
     });
@@ -401,10 +419,10 @@
     var hubUrl = root.getAttribute('data-contact-center-hub-url');
     var client = window.contactCenterRealTime && hubUrl ? window.contactCenterRealTime.connect({
       hubUrl: hubUrl,
-      onSnapshot: function onSnapshot(snapshot) {
+      onSnapshot: function (snapshot) {
         updateMembershipUi(root, snapshot);
       },
-      onReconnected: function onReconnected() {
+      onReconnected: function () {
         recoverSoftPhoneState(root, api, client);
       }
     }) : null;
@@ -442,7 +460,7 @@
           return recoverSoftPhoneState(root, api, client);
         });
       }
-    })["catch"](function () {});
+    }).catch(function () {});
   }
   function connectSoftPhone(root, attemptsRemaining) {
     var api = window.telephonySoftPhone && window.telephonySoftPhone.getInstance && window.telephonySoftPhone.getInstance();
