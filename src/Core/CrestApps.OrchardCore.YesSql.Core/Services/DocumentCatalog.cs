@@ -165,7 +165,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         await SavingAsync(record);
 
-        await Session.SaveAsync(record, CollectionName);
+        await Session.SaveAsync(record, false, CollectionName, cancellationToken);
     }
 
     /// <inheritdoc />
