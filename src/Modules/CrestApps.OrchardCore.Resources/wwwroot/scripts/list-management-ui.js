@@ -3,22 +3,10 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
-function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
-function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.listManagementUI = function () {
   'use strict';
 
-  var defaultOptions = {
+  const defaultOptions = {
     clientSideSearch: true,
     selectedLabel: '',
     selectionEnabled: true,
@@ -43,8 +31,8 @@ window.listManagementUI = function () {
     searchFirstElementClasses: '',
     searchLastElementClasses: ''
   };
-  var initializedAttribute = 'data-list-management-initialized';
-  var ready = function ready(callback) {
+  const initializedAttribute = 'data-list-management-initialized';
+  const ready = callback => {
     if (document.readyState !== 'loading') {
       callback();
       return;
@@ -53,7 +41,7 @@ window.listManagementUI = function () {
       once: true
     });
   };
-  var parseBoolean = function parseBoolean(value, fallback) {
+  const parseBoolean = (value, fallback) => {
     if (value === undefined || value === null || value === '') {
       return fallback;
     }
@@ -75,18 +63,14 @@ window.listManagementUI = function () {
         return fallback;
     }
   };
-  var splitClasses = function splitClasses(value) {
-    return (value || '').split(/\s+/).map(function (entry) {
-      return entry.trim();
-    }).filter(Boolean);
-  };
-  var normalizeSearchText = function normalizeSearchText(value) {
+  const splitClasses = value => (value || '').split(/\s+/).map(entry => entry.trim()).filter(Boolean);
+  const normalizeSearchText = value => {
     if (value === undefined || value === null) {
       return '';
     }
     return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   };
-  var getElements = function getElements(root, selector) {
+  const getElements = (root, selector) => {
     if (!selector) {
       return [];
     }
@@ -97,61 +81,48 @@ window.listManagementUI = function () {
       return [];
     }
   };
-  var getElement = function getElement(root, selector) {
-    return getElements(root, selector)[0] || null;
-  };
-  var getScopedRoot = function getScopedRoot(root) {
-    return root && typeof root.querySelector === 'function' ? root : document;
-  };
-  var getItemCheckboxes = function getItemCheckboxes(root, options) {
-    return getElements(root, "input[type='checkbox'][name='".concat(options.itemInputName, "']"));
-  };
-  var getCheckedItemCheckboxes = function getCheckedItemCheckboxes(root, options) {
-    return getElements(root, "input[type='checkbox'][name='".concat(options.itemInputName, "']:checked"));
-  };
-  var getSearchResults = function getSearchResults(root, options) {
-    return getElements(root, options.searchResultSelector);
-  };
-  var readOptionsFromElement = function readOptionsFromElement(root) {
-    var _root$dataset$selecte, _root$dataset$itemInp, _root$dataset$bulkAct, _root$dataset$submitB, _root$dataset$searchB, _root$dataset$searchR, _ref, _root$dataset$searchD, _root$dataset$searchA, _root$dataset$emptyAl, _root$dataset$submitF, _root$dataset$filterS, _root$dataset$actions, _root$dataset$itemsSe, _root$dataset$filters, _root$dataset$selecte2, _root$dataset$selectA, _root$dataset$bulkAct2, _root$dataset$singleR, _root$dataset$searchF, _root$dataset$searchL;
+  const getElement = (root, selector) => getElements(root, selector)[0] || null;
+  const getScopedRoot = root => root && typeof root.querySelector === 'function' ? root : document;
+  const getItemCheckboxes = (root, options) => getElements(root, `input[type='checkbox'][name='${options.itemInputName}']`);
+  const getCheckedItemCheckboxes = (root, options) => getElements(root, `input[type='checkbox'][name='${options.itemInputName}']:checked`);
+  const getSearchResults = (root, options) => getElements(root, options.searchResultSelector);
+  const readOptionsFromElement = root => {
     if (!root || !root.dataset) {
       return {};
     }
-    var clientSideSearch = parseBoolean(root.dataset.clientSideSearch, defaultOptions.clientSideSearch);
+    const clientSideSearch = parseBoolean(root.dataset.clientSideSearch, defaultOptions.clientSideSearch);
     return {
-      selectedLabel: (_root$dataset$selecte = root.dataset.selectedLabel) !== null && _root$dataset$selecte !== void 0 ? _root$dataset$selecte : defaultOptions.selectedLabel,
-      clientSideSearch: clientSideSearch,
+      selectedLabel: root.dataset.selectedLabel ?? defaultOptions.selectedLabel,
+      clientSideSearch,
       selectionEnabled: parseBoolean(root.dataset.selectionEnabled, defaultOptions.selectionEnabled),
       filterSubmit: parseBoolean(root.dataset.filterSubmit, !clientSideSearch),
-      itemInputName: (_root$dataset$itemInp = root.dataset.itemInputName) !== null && _root$dataset$itemInp !== void 0 ? _root$dataset$itemInp : defaultOptions.itemInputName,
-      bulkActionInputName: (_root$dataset$bulkAct = root.dataset.bulkActionInputName) !== null && _root$dataset$bulkAct !== void 0 ? _root$dataset$bulkAct : defaultOptions.bulkActionInputName,
-      submitBulkActionName: (_root$dataset$submitB = root.dataset.submitBulkActionName) !== null && _root$dataset$submitB !== void 0 ? _root$dataset$submitB : defaultOptions.submitBulkActionName,
-      searchBoxSelector: (_root$dataset$searchB = root.dataset.searchBoxSelector) !== null && _root$dataset$searchB !== void 0 ? _root$dataset$searchB : defaultOptions.searchBoxSelector,
-      searchResultSelector: (_root$dataset$searchR = root.dataset.searchResultSelector) !== null && _root$dataset$searchR !== void 0 ? _root$dataset$searchR : defaultOptions.searchResultSelector,
-      searchDomSelector: (_ref = (_root$dataset$searchD = root.dataset.searchDomSelector) !== null && _root$dataset$searchD !== void 0 ? _root$dataset$searchD : root.dataset.searchTextSelector) !== null && _ref !== void 0 ? _ref : defaultOptions.searchDomSelector,
-      searchAlertSelector: (_root$dataset$searchA = root.dataset.searchAlertSelector) !== null && _root$dataset$searchA !== void 0 ? _root$dataset$searchA : defaultOptions.searchAlertSelector,
-      emptyAlertSelector: (_root$dataset$emptyAl = root.dataset.emptyAlertSelector) !== null && _root$dataset$emptyAl !== void 0 ? _root$dataset$emptyAl : defaultOptions.emptyAlertSelector,
-      submitFilterSelector: (_root$dataset$submitF = root.dataset.submitFilterSelector) !== null && _root$dataset$submitF !== void 0 ? _root$dataset$submitF : defaultOptions.submitFilterSelector,
-      filterSubmitSelector: (_root$dataset$filterS = root.dataset.filterSubmitSelector) !== null && _root$dataset$filterS !== void 0 ? _root$dataset$filterS : defaultOptions.filterSubmitSelector,
-      actionsSelector: (_root$dataset$actions = root.dataset.actionsSelector) !== null && _root$dataset$actions !== void 0 ? _root$dataset$actions : defaultOptions.actionsSelector,
-      itemsSelector: (_root$dataset$itemsSe = root.dataset.itemsSelector) !== null && _root$dataset$itemsSe !== void 0 ? _root$dataset$itemsSe : defaultOptions.itemsSelector,
-      filtersSelector: (_root$dataset$filters = root.dataset.filtersSelector) !== null && _root$dataset$filters !== void 0 ? _root$dataset$filters : defaultOptions.filtersSelector,
-      selectedItemsSelector: (_root$dataset$selecte2 = root.dataset.selectedItemsSelector) !== null && _root$dataset$selecte2 !== void 0 ? _root$dataset$selecte2 : defaultOptions.selectedItemsSelector,
-      selectAllSelector: (_root$dataset$selectA = root.dataset.selectAllSelector) !== null && _root$dataset$selectA !== void 0 ? _root$dataset$selectA : defaultOptions.selectAllSelector,
-      bulkActionSelector: (_root$dataset$bulkAct2 = root.dataset.bulkActionSelector) !== null && _root$dataset$bulkAct2 !== void 0 ? _root$dataset$bulkAct2 : defaultOptions.bulkActionSelector,
-      singleResultActionSelector: (_root$dataset$singleR = root.dataset.singleResultActionSelector) !== null && _root$dataset$singleR !== void 0 ? _root$dataset$singleR : defaultOptions.singleResultActionSelector,
-      searchFirstElementClasses: (_root$dataset$searchF = root.dataset.searchFirstElementClasses) !== null && _root$dataset$searchF !== void 0 ? _root$dataset$searchF : defaultOptions.searchFirstElementClasses,
-      searchLastElementClasses: (_root$dataset$searchL = root.dataset.searchLastElementClasses) !== null && _root$dataset$searchL !== void 0 ? _root$dataset$searchL : defaultOptions.searchLastElementClasses
+      itemInputName: root.dataset.itemInputName ?? defaultOptions.itemInputName,
+      bulkActionInputName: root.dataset.bulkActionInputName ?? defaultOptions.bulkActionInputName,
+      submitBulkActionName: root.dataset.submitBulkActionName ?? defaultOptions.submitBulkActionName,
+      searchBoxSelector: root.dataset.searchBoxSelector ?? defaultOptions.searchBoxSelector,
+      searchResultSelector: root.dataset.searchResultSelector ?? defaultOptions.searchResultSelector,
+      searchDomSelector: root.dataset.searchDomSelector ?? root.dataset.searchTextSelector ?? defaultOptions.searchDomSelector,
+      searchAlertSelector: root.dataset.searchAlertSelector ?? defaultOptions.searchAlertSelector,
+      emptyAlertSelector: root.dataset.emptyAlertSelector ?? defaultOptions.emptyAlertSelector,
+      submitFilterSelector: root.dataset.submitFilterSelector ?? defaultOptions.submitFilterSelector,
+      filterSubmitSelector: root.dataset.filterSubmitSelector ?? defaultOptions.filterSubmitSelector,
+      actionsSelector: root.dataset.actionsSelector ?? defaultOptions.actionsSelector,
+      itemsSelector: root.dataset.itemsSelector ?? defaultOptions.itemsSelector,
+      filtersSelector: root.dataset.filtersSelector ?? defaultOptions.filtersSelector,
+      selectedItemsSelector: root.dataset.selectedItemsSelector ?? defaultOptions.selectedItemsSelector,
+      selectAllSelector: root.dataset.selectAllSelector ?? defaultOptions.selectAllSelector,
+      bulkActionSelector: root.dataset.bulkActionSelector ?? defaultOptions.bulkActionSelector,
+      singleResultActionSelector: root.dataset.singleResultActionSelector ?? defaultOptions.singleResultActionSelector,
+      searchFirstElementClasses: root.dataset.searchFirstElementClasses ?? defaultOptions.searchFirstElementClasses,
+      searchLastElementClasses: root.dataset.searchLastElementClasses ?? defaultOptions.searchLastElementClasses
     };
   };
-  var getFilterText = function getFilterText(element, options) {
-    var text = element.getAttribute('data-filter-value');
+  const getFilterText = (element, options) => {
+    let text = element.getAttribute('data-filter-value');
     if (options.searchDomSelector) {
-      var searchTextNodes = getElements(element, options.searchDomSelector);
+      const searchTextNodes = getElements(element, options.searchDomSelector);
       if (searchTextNodes.length > 0) {
-        text = searchTextNodes.map(function (node) {
-          return node.textContent || '';
-        }).join(' ');
+        text = searchTextNodes.map(node => node.textContent || '').join(' ');
       }
     }
     if (!text) {
@@ -159,22 +130,20 @@ window.listManagementUI = function () {
     }
     return normalizeSearchText(text);
   };
-  var getBoundaryElements = function getBoundaryElements(root, options) {
-    var ignoredElements = getElements(root, '.ignore-elements');
-    var searchResults = getSearchResults(root, options);
-    return _toConsumableArray(new Set([].concat(_toConsumableArray(ignoredElements), _toConsumableArray(searchResults))));
+  const getBoundaryElements = (root, options) => {
+    const ignoredElements = getElements(root, '.ignore-elements');
+    const searchResults = getSearchResults(root, options);
+    return [...new Set([...ignoredElements, ...searchResults])];
   };
-  var clearVisibleBoundaryClasses = function clearVisibleBoundaryClasses(root, options) {
-    var elements = getBoundaryElements(root, options);
-    var classesToRemove = ['first-child-visible', 'last-child-visible'].concat(_toConsumableArray(splitClasses(options.searchFirstElementClasses)), _toConsumableArray(splitClasses(options.searchLastElementClasses)));
-    elements.forEach(function (element) {
-      var _element$classList;
-      (_element$classList = element.classList).remove.apply(_element$classList, _toConsumableArray(classesToRemove));
+  const clearVisibleBoundaryClasses = (root, options) => {
+    const elements = getBoundaryElements(root, options);
+    const classesToRemove = ['first-child-visible', 'last-child-visible', ...splitClasses(options.searchFirstElementClasses), ...splitClasses(options.searchLastElementClasses)];
+    elements.forEach(element => {
+      element.classList.remove(...classesToRemove);
     });
   };
-  var hasVisibleIgnoredSibling = function hasVisibleIgnoredSibling(element, siblingProperty) {
-    var _element$siblingPrope;
-    var sibling = (_element$siblingPrope = element === null || element === void 0 ? void 0 : element[siblingProperty]) !== null && _element$siblingPrope !== void 0 ? _element$siblingPrope : null;
+  const hasVisibleIgnoredSibling = (element, siblingProperty) => {
+    let sibling = element?.[siblingProperty] ?? null;
     while (sibling) {
       if (!sibling.classList.contains('d-none')) {
         return sibling.classList.contains('ignore-elements');
@@ -183,47 +152,42 @@ window.listManagementUI = function () {
     }
     return false;
   };
-  var applyVisibleBoundaryClasses = function applyVisibleBoundaryClasses(root, visibleElements, options) {
+  const applyVisibleBoundaryClasses = (root, visibleElements, options) => {
     clearVisibleBoundaryClasses(root, options);
-    var firstElementClasses = splitClasses(options.searchFirstElementClasses);
-    var lastElementClasses = splitClasses(options.searchLastElementClasses);
+    const firstElementClasses = splitClasses(options.searchFirstElementClasses);
+    const lastElementClasses = splitClasses(options.searchLastElementClasses);
     if (visibleElements.length === 0) {
-      var visibleIgnoredElements = getBoundaryElements(root, options).filter(function (element) {
-        return element.classList.contains('ignore-elements') && !element.classList.contains('d-none');
-      });
+      const visibleIgnoredElements = getBoundaryElements(root, options).filter(element => element.classList.contains('ignore-elements') && !element.classList.contains('d-none'));
       if (visibleIgnoredElements.length > 0) {
-        var _visibleIgnoredElemen, _visibleIgnoredElemen2;
-        (_visibleIgnoredElemen = visibleIgnoredElements[0].classList).add.apply(_visibleIgnoredElemen, ['first-child-visible'].concat(_toConsumableArray(firstElementClasses)));
-        (_visibleIgnoredElemen2 = visibleIgnoredElements[visibleIgnoredElements.length - 1].classList).add.apply(_visibleIgnoredElemen2, ['last-child-visible'].concat(_toConsumableArray(lastElementClasses)));
+        visibleIgnoredElements[0].classList.add('first-child-visible', ...firstElementClasses);
+        visibleIgnoredElements[visibleIgnoredElements.length - 1].classList.add('last-child-visible', ...lastElementClasses);
       }
       return;
     }
     if (!hasVisibleIgnoredSibling(visibleElements[0], 'previousElementSibling')) {
-      var _visibleElements$0$cl;
-      (_visibleElements$0$cl = visibleElements[0].classList).add.apply(_visibleElements$0$cl, ['first-child-visible'].concat(_toConsumableArray(firstElementClasses)));
+      visibleElements[0].classList.add('first-child-visible', ...firstElementClasses);
     }
     if (!hasVisibleIgnoredSibling(visibleElements[visibleElements.length - 1], 'nextElementSibling')) {
-      var _visibleElements$clas;
-      (_visibleElements$clas = visibleElements[visibleElements.length - 1].classList).add.apply(_visibleElements$clas, ['last-child-visible'].concat(_toConsumableArray(lastElementClasses)));
+      visibleElements[visibleElements.length - 1].classList.add('last-child-visible', ...lastElementClasses);
     }
   };
-  var toggleSearchAlerts = function toggleSearchAlerts(root, options, hasSearch, visibleCount) {
-    var searchAlert = getElement(root, options.searchAlertSelector);
+  const toggleSearchAlerts = (root, options, hasSearch, visibleCount) => {
+    const searchAlert = getElement(root, options.searchAlertSelector);
     if (searchAlert) {
       searchAlert.classList.toggle('d-none', !hasSearch || visibleCount > 0);
     }
-    var emptyAlert = getElement(root, options.emptyAlertSelector);
+    const emptyAlert = getElement(root, options.emptyAlertSelector);
     if (emptyAlert && hasSearch) {
       emptyAlert.classList.add('d-none');
     }
   };
-  var filterClientSideResults = function filterClientSideResults(root, options, rawSearch) {
-    var search = normalizeSearchText(rawSearch);
-    var results = getSearchResults(root, options);
-    var visibleElements = [];
+  const filterClientSideResults = (root, options, rawSearch) => {
+    const search = normalizeSearchText(rawSearch);
+    const results = getSearchResults(root, options);
+    const visibleElements = [];
     clearVisibleBoundaryClasses(root, options);
-    results.forEach(function (element) {
-      var isMatch = search === '' || getFilterText(element, options).includes(search);
+    results.forEach(element => {
+      const isMatch = search === '' || getFilterText(element, options).includes(search);
       element.classList.toggle('d-none', !isMatch);
       if (isMatch) {
         visibleElements.push(element);
@@ -233,23 +197,19 @@ window.listManagementUI = function () {
     toggleSearchAlerts(root, options, search !== '', visibleElements.length);
     return visibleElements;
   };
-  var getVisibleResults = function getVisibleResults(root, options) {
-    return getSearchResults(root, options).filter(function (element) {
-      return !element.classList.contains('d-none');
-    });
-  };
-  var submitFilter = function submitFilter(root, options) {
-    var submitFilterButton = getElement(root, options.submitFilterSelector);
+  const getVisibleResults = (root, options) => getSearchResults(root, options).filter(element => !element.classList.contains('d-none'));
+  const submitFilter = (root, options) => {
+    const submitFilterButton = getElement(root, options.submitFilterSelector);
     if (submitFilterButton) {
       submitFilterButton.click();
     }
   };
-  var initializeSearch = function initializeSearch(root, options) {
-    var searchBox = getElement(root, options.searchBoxSelector);
+  const initializeSearch = (root, options) => {
+    const searchBox = getElement(root, options.searchBoxSelector);
     if (!searchBox) {
       return;
     }
-    searchBox.addEventListener('keydown', function (event) {
+    searchBox.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         searchBox.value = '';
         if (options.clientSideSearch) {
@@ -266,47 +226,47 @@ window.listManagementUI = function () {
         submitFilter(root, options);
         return;
       }
-      var visibleResults = getVisibleResults(root, options);
+      const visibleResults = getVisibleResults(root, options);
       if (visibleResults.length === 1 && options.singleResultActionSelector) {
-        var actionElement = getElement(visibleResults[0], options.singleResultActionSelector);
+        const actionElement = getElement(visibleResults[0], options.singleResultActionSelector);
         if (actionElement) {
           actionElement.click();
         }
       }
     });
     if (options.clientSideSearch) {
-      var applySearch = function applySearch() {
+      const applySearch = () => {
         filterClientSideResults(root, options, searchBox.value);
       };
       searchBox.addEventListener('input', applySearch);
       applySearch();
     }
   };
-  var initializeSelection = function initializeSelection(root, options) {
+  const initializeSelection = (root, options) => {
     if (!options.selectionEnabled) {
       return;
     }
-    var actions = getElement(root, options.actionsSelector);
-    var items = getElement(root, options.itemsSelector);
-    var filters = getElements(root, options.filtersSelector);
-    var selectedItems = getElement(root, options.selectedItemsSelector);
-    var selectAllCtrl = getElement(root, options.selectAllSelector);
-    var itemsCheckboxes = getItemCheckboxes(root, options);
-    var updateSelectedItemsText = function updateSelectedItemsText() {
+    const actions = getElement(root, options.actionsSelector);
+    const items = getElement(root, options.itemsSelector);
+    const filters = getElements(root, options.filtersSelector);
+    const selectedItems = getElement(root, options.selectedItemsSelector);
+    const selectAllCtrl = getElement(root, options.selectAllSelector);
+    const itemsCheckboxes = getItemCheckboxes(root, options);
+    const updateSelectedItemsText = () => {
       if (!selectedItems) {
         return;
       }
-      var selectedCount = getCheckedItemCheckboxes(root, options).length;
-      var label = options.selectedLabel ? " ".concat(options.selectedLabel) : '';
-      selectedItems.textContent = "".concat(selectedCount).concat(label);
+      const selectedCount = getCheckedItemCheckboxes(root, options).length;
+      const label = options.selectedLabel ? ` ${options.selectedLabel}` : '';
+      selectedItems.textContent = `${selectedCount}${label}`;
     };
-    var displayActionsOrFilters = function displayActionsOrFilters() {
-      var checkedCount = getCheckedItemCheckboxes(root, options).length;
-      var showActions = checkedCount > 1;
+    const displayActionsOrFilters = () => {
+      const checkedCount = getCheckedItemCheckboxes(root, options).length;
+      const showActions = checkedCount > 1;
       if (actions) {
         actions.classList.toggle('d-none', !showActions);
       }
-      filters.forEach(function (filterElement) {
+      filters.forEach(filterElement => {
         filterElement.classList.toggle('d-none', showActions);
       });
       if (selectedItems) {
@@ -316,20 +276,21 @@ window.listManagementUI = function () {
         items.classList.toggle('d-none', showActions);
       }
     };
-    getElements(root, options.bulkActionSelector).forEach(function (item) {
-      item.addEventListener('click', function () {
-        var checkedCheckboxes = getCheckedItemCheckboxes(root, options);
+    getElements(root, options.bulkActionSelector).forEach(item => {
+      item.addEventListener('click', () => {
+        const checkedCheckboxes = getCheckedItemCheckboxes(root, options);
         if (checkedCheckboxes.length <= 1) {
           return;
         }
-        var actionData = Object.assign({}, item.dataset);
-        confirmDialog(_objectSpread(_objectSpread({}, actionData), {}, {
-          callback: function callback(result) {
+        const actionData = Object.assign({}, item.dataset);
+        confirmDialog({
+          ...actionData,
+          callback: result => {
             if (!result) {
               return;
             }
-            var bulkActionInput = getElement(root, "[name='".concat(options.bulkActionInputName, "']"));
-            var submitBulkAction = getElement(root, "[name='".concat(options.submitBulkActionName, "']"));
+            const bulkActionInput = getElement(root, `[name='${options.bulkActionInputName}']`);
+            const submitBulkAction = getElement(root, `[name='${options.submitBulkActionName}']`);
             if (bulkActionInput) {
               bulkActionInput.value = actionData.action;
             }
@@ -337,22 +298,22 @@ window.listManagementUI = function () {
               submitBulkAction.click();
             }
           }
-        }));
+        });
       });
     });
     if (selectAllCtrl) {
-      selectAllCtrl.addEventListener('change', function () {
-        itemsCheckboxes.forEach(function (checkbox) {
+      selectAllCtrl.addEventListener('change', () => {
+        itemsCheckboxes.forEach(checkbox => {
           checkbox.checked = selectAllCtrl.checked;
         });
         updateSelectedItemsText();
         displayActionsOrFilters();
       });
     }
-    itemsCheckboxes.forEach(function (checkbox) {
-      checkbox.addEventListener('change', function () {
-        var itemsCount = itemsCheckboxes.length;
-        var selectedItemsCount = getCheckedItemCheckboxes(root, options).length;
+    itemsCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        const itemsCount = itemsCheckboxes.length;
+        const selectedItemsCount = getCheckedItemCheckboxes(root, options).length;
         if (selectAllCtrl) {
           selectAllCtrl.checked = selectedItemsCount === itemsCount;
           selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
@@ -364,25 +325,21 @@ window.listManagementUI = function () {
     updateSelectedItemsText();
     displayActionsOrFilters();
   };
-  var initializeFilterSubmission = function initializeFilterSubmission(root, options) {
+  const initializeFilterSubmission = (root, options) => {
     if (!options.filterSubmit) {
       return;
     }
-    getElements(root, options.filterSubmitSelector).forEach(function (element) {
-      element.addEventListener('change', function () {
-        return submitFilter(root, options);
-      });
-      element.addEventListener('changed.bs.select', function () {
-        return submitFilter(root, options);
-      });
+    getElements(root, options.filterSubmitSelector).forEach(element => {
+      element.addEventListener('change', () => submitFilter(root, options));
+      element.addEventListener('changed.bs.select', () => submitFilter(root, options));
     });
   };
-  var initializeRoot = function initializeRoot(root, options) {
-    var scopedRoot = getScopedRoot(root);
+  const initializeRoot = (root, options) => {
+    const scopedRoot = getScopedRoot(root);
     if (scopedRoot !== document && scopedRoot.hasAttribute(initializedAttribute)) {
       return scopedRoot;
     }
-    var config = Object.assign({}, defaultOptions, readOptionsFromElement(scopedRoot), options);
+    const config = Object.assign({}, defaultOptions, readOptionsFromElement(scopedRoot), options);
     initializeSearch(scopedRoot, config);
     initializeSelection(scopedRoot, config);
     initializeFilterSubmission(scopedRoot, config);
@@ -391,23 +348,21 @@ window.listManagementUI = function () {
     }
     return scopedRoot;
   };
-  var initializeAll = function initializeAll(root) {
-    getElements(getScopedRoot(root), '[data-list-management]').forEach(function (element) {
+  const initializeAll = root => {
+    getElements(getScopedRoot(root), '[data-list-management]').forEach(element => {
       initializeRoot(element);
     });
   };
-  var initialize = function initialize(rootOrSelectedLabel, options) {
+  const initialize = (rootOrSelectedLabel, options) => {
     if (rootOrSelectedLabel && rootOrSelectedLabel.nodeType === 1) {
       return initializeRoot(rootOrSelectedLabel, options);
     }
-    var overrides = typeof rootOrSelectedLabel === 'string' ? Object.assign({}, options, {
+    const overrides = typeof rootOrSelectedLabel === 'string' ? Object.assign({}, options, {
       selectedLabel: rootOrSelectedLabel
     }) : options;
     return initializeRoot(document, overrides);
   };
-  ready(function () {
-    return initializeAll(document);
-  });
+  ready(() => initializeAll(document));
   return {
     initialize: initialize,
     initializeAll: initializeAll
