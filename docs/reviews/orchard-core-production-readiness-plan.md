@@ -722,11 +722,13 @@ The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManag
 
 ### OC-044 — 54 report providers registered as hand-written lines
 
-- **Priority:** Low · **Status:** Not Started · **Category:** DI/organization · **Effort:** M · **Risk:** Low · **Dependencies:** `IReport` shape in the Reports module
+- **Priority:** Low · **Status:** Completed · **Category:** DI/organization · **Effort:** M · **Risk:** Low · **Dependencies:** `IReport` shape in the Reports module
 
 **Problem.** `AnalyticsStartup.ConfigureServices` (`Startup.cs:1224-1350`) contains 37 `AddEnterpriseReport(...)`, 12 `AddWorkforceReport(...)` and 5 direct `AddScoped<IReport,...>` calls, many exceeding 400 characters on one line. Resolving `IEnumerable<IReport>` constructs 54 instances per scope, and the metadata is trapped in imperative code where another module cannot extend it.
 
 **Recommended solution.** Move definitions into `ContactCenterReportOptions` via `services.Configure<...>` — the pattern this same file already uses correctly for `ActivityBatchSourceOptions` — and project them through one provider, keeping `S["..."]` in the options callback so extraction still works.
+
+**Resolution (Completed).** Added a general `IReportProvider` contract to `CrestApps.OrchardCore.Reports.Abstractions` — a single registration contributes a family of reports — and taught `ReportManager` to merge reports from both individually registered `IReport` services and `IReportProvider` instances while still enforcing globally unique report names. The 37 enterprise and 12 workforce report definitions moved out of `AnalyticsStartup` into a configurable `ContactCenterReportCatalogOptions`, populated through the options pipeline by `ConfigureContactCenterReportCatalog` (an `IConfigureOptions<>` that keeps the `S["..."]` literals intact for localization extraction). One scoped `ContactCenterReportProvider` projects the catalog into report instances, constructing a fresh instance per enumeration so the per-request-scope concurrency guarantee proven under OC-earlier work is preserved. `AnalyticsStartup` now registers the five hand-written reports, `ConfigureOptions<ConfigureContactCenterReportCatalog>()`, and `AddScoped<IReportProvider, ContactCenterReportProvider>()` — no more 400-character registration lines, and any feature can now add or remove catalog entries through the options pipeline without editing service registration. Files: `IReportProvider.cs` (new), `ReportManager.cs`, `AnalyticsStartup.cs`, `ContactCenterReportCatalogOptions.cs` (new), `ConfigureContactCenterReportCatalog.cs` (new), `ContactCenterReportProvider.cs` (new); tests `ReportManagerTests` (provider aggregation + collision) and `EnterpriseInteractionReportConcurrencyTests` (scoped-lifetime assertion updated for the provider); docs `modules/reports.md`. Independently reviewed and approved.
 
 ---
 

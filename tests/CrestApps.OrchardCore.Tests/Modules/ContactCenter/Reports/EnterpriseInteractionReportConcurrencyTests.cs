@@ -50,25 +50,26 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
     private static readonly DateTime _windowBTo = new(2026, 6, 30, 23, 59, 59, DateTimeKind.Utc);
 
     [Fact]
-    public void ConfigureServices_RegistersEveryReportProviderWithScopedLifetime()
+    public void ConfigureServices_RegistersEveryReportContributionWithScopedLifetime()
     {
         // Arrange
         var services = new ServiceCollection();
 
         // Act
-        new AnalyticsStartup(
-            new EmptyShellConfiguration(),
-            new PassThroughStringLocalizer<AnalyticsStartup>()).ConfigureServices(services);
+        new AnalyticsStartup(new EmptyShellConfiguration()).ConfigureServices(services);
 
         // Assert
         var reportDescriptors = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IReport))
+            .Where(descriptor => descriptor.ServiceType == typeof(IReport) || descriptor.ServiceType == typeof(IReportProvider))
             .ToArray();
 
         Assert.NotEmpty(reportDescriptors);
 
+        Assert.Contains(reportDescriptors, descriptor => descriptor.ServiceType == typeof(IReportProvider));
+
         // A scoped lifetime is what prevents two concurrent requests from ever sharing one provider instance, so the
-        // captured fields cannot cross requests. A singleton registration would reintroduce that risk.
+        // captured fields cannot cross requests. The catalog-driven reports are projected by a scoped IReportProvider
+        // that constructs a fresh report instance per enumeration; a singleton registration would reintroduce the risk.
         Assert.All(reportDescriptors, descriptor => Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime));
     }
 
