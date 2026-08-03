@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -116,7 +117,7 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
 
             if (activity is null)
             {
-                _logger.LogWarning("The Enqueue Activity task could not find a CRM activity with identifier '{ActivityItemId}'.", activityItemId);
+                _logger.LogWarning("The Enqueue Activity task could not find a CRM activity with identifier '{ActivityItemId}'.", activityItemId.SanitizeLogValue());
 
                 return Outcomes("Failed");
             }
@@ -127,7 +128,7 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while enqueuing activity '{ActivityItemId}' into queue '{QueueId}'.", activityItemId, queueId);
+            _logger.LogError(ex, "An error occurred while enqueuing activity '{ActivityItemId}' into queue '{QueueId}'.", activityItemId.SanitizeLogValue(), queueId.SanitizeLogValue());
 
             return Outcomes("Failed");
         }

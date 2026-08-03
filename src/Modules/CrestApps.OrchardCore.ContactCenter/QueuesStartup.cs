@@ -38,7 +38,9 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityReservationManager, ActivityReservationManager>()
             .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
-            .AddScoped<IActivityReservationService, ActivityReservationService>()
+            .AddScoped<ActivityReservationService>()
+            .AddScoped<IActivityReservationService>(static sp => sp.GetRequiredService<ActivityReservationService>())
+            .AddScoped<IActivityReservationReclaimer>(static sp => sp.GetRequiredService<ActivityReservationService>())
             .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();

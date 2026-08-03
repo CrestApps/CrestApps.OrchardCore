@@ -14,10 +14,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides the default implementation of <see cref="IActivityReservationService"/>.
 /// </summary>
-public sealed class ActivityReservationService : IActivityReservationService
+public sealed class ActivityReservationService : IActivityReservationService, IActivityReservationReclaimer
 {
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
+    // A short, positive lock wait used by the latency-sensitive reclaim path. It must be positive because the
+    // distributed Redis lock provider gates its acquisition loop on a timeout-derived cancellation token: a
+    // zero timeout cancels before the first attempt runs, so the lock is never even tried on Redis-backed
+    // tenants. A small window (below the provider's ~100 ms first retry back-off) yields effectively a single
+    // acquisition attempt on both the local and Redis providers: an uncontended lock is taken immediately, and
+    // a reservation another node is already transitioning is skipped after at most this short wait instead of
+    // being awaited on the admission path.
+    private static readonly TimeSpan _reclaimLockWait = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
     /// The maximum number of expired reservations materialized per drain page, so a large expiry backlog is
@@ -483,9 +492,24 @@ public sealed class ActivityReservationService : IActivityReservationService
 
     /// <inheritdoc/>
     public async Task<int> ExpireDueAsync(CancellationToken cancellationToken = default)
+        => await ExpireDueCoreAsync(maxReservations: null, lockWait: _lockTimeout, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<int> ReclaimDueAsync(int maxReservations, CancellationToken cancellationToken = default)
+    {
+        if (maxReservations <= 0)
+        {
+            return 0;
+        }
+
+        return await ExpireDueCoreAsync(maxReservations, lockWait: _reclaimLockWait, cancellationToken);
+    }
+
+    private async Task<int> ExpireDueCoreAsync(int? maxReservations, TimeSpan lockWait, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
         var count = 0;
+        var examined = 0;
         DateTime? afterExpiresUtc = null;
         var afterDocumentId = 0L;
 
@@ -498,21 +522,33 @@ public sealed class ActivityReservationService : IActivityReservationService
         // shift the window, so a live reservation is never skipped and a block of locked candidates at the
         // front never starves the drainable ones behind them. Candidates that could not be processed this run
         // (locked, or already changed) are simply retried on the next scheduled sweep, which restarts from the
-        // oldest expired reservation. The loop stops when a page is short (the backlog is exhausted) or when
-        // the run is cancelled.
+        // oldest expired reservation. The loop stops when a page is short (the backlog is exhausted), when the
+        // caller-supplied reservation budget is reached, or when the run is cancelled. Callers on a
+        // latency-sensitive path pass a bounded budget and a short lock wait, so the pass is strictly bounded
+        // and does not block on a reservation another node is already transitioning.
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var page = await _reservationManager.ListExpiredAsync(now, afterExpiresUtc, afterDocumentId, ExpiryPageSize, cancellationToken);
+            var pageSize = maxReservations is int max
+                ? Math.Min(ExpiryPageSize, max - examined)
+                : ExpiryPageSize;
+
+            if (pageSize <= 0)
+            {
+                break;
+            }
+
+            var page = await _reservationManager.ListExpiredAsync(now, afterExpiresUtc, afterDocumentId, pageSize, cancellationToken);
 
             foreach (var candidate in page.Reservations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                examined++;
 
                 (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
                     GetReservationLockKey(candidate.ItemId),
-                    _lockTimeout,
+                    lockWait,
                     _lockExpiration);
 
                 if (!locked)
@@ -540,6 +576,11 @@ public sealed class ActivityReservationService : IActivityReservationService
             }
 
             if (!page.HasMore)
+            {
+                break;
+            }
+
+            if (maxReservations is int budget && examined >= budget)
             {
                 break;
             }

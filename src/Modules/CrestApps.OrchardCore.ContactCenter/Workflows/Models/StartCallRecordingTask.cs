@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -85,7 +86,7 @@ public sealed class StartCallRecordingTask : TaskActivity<StartCallRecordingTask
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while starting recording for interaction '{InteractionId}'.", interactionId);
+            _logger.LogError(ex, "An error occurred while starting recording for interaction '{InteractionId}'.", interactionId.SanitizeLogValue());
 
             return Outcomes("Failed");
         }

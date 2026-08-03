@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Localization;
@@ -108,7 +109,7 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while setting agent presence for user '{UserId}'.", userId);
+            _logger.LogError(ex, "An error occurred while setting agent presence for user '{UserId}'.", userId.SanitizeLogValue());
 
             return Outcomes("Failed");
         }

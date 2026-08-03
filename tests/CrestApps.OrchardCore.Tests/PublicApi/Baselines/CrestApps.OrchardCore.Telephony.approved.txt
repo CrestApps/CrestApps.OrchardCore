@@ -143,14 +143,6 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.Collections.Generic.Dictionary<string, CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> Connections { get; set; }
     }
 }
-namespace CrestApps.OrchardCore.Telephony.Navigation
-{
-    public sealed class TelephonyAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
-    {
-        public TelephonyAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Navigation.TelephonyAdminMenu> stringLocalizer) { }
-        protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
-    }
-}
 namespace CrestApps.OrchardCore.Telephony.Services
 {
     public sealed class DefaultIncomingCallDispatcher : CrestApps.OrchardCore.Telephony.IIncomingCallDispatcher
@@ -246,6 +238,11 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TelephonyAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
+    {
+        public TelephonyAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyAdminMenu> stringLocalizer) { }
+        protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
     }
     public sealed class TelephonyCallHistoryVoiceEventHandler : CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler
     {

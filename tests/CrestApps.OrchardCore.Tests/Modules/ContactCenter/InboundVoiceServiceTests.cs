@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -958,6 +959,54 @@ public sealed class InboundVoiceServiceTests
     }
 
     [Fact]
+    public async Task OfferNextAsync_ReclaimsDueReservationsBeforeSelectingAnAgent()
+    {
+        // Arrange
+        var harness = new Harness();
+        var callOrder = new List<string>();
+        harness.ReservationReclaimer
+            .Setup(m => m.ReclaimDueAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0)
+            .Callback(() => callOrder.Add("reclaim"));
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null)
+            .Callback(() => callOrder.Add("assign"));
+
+        var service = harness.CreateService();
+
+        // Act
+        var agentUserId = await service.OfferNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(agentUserId);
+        harness.ReservationReclaimer.Verify(m => m.ReclaimDueAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(["reclaim", "assign"], callOrder);
+    }
+
+    [Fact]
+    public async Task OfferNextAsync_WhenReservationReclaimFails_StillOffers()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.ReservationReclaimer
+            .Setup(m => m.ReclaimDueAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("transient reclaim failure"));
+        harness.AssignmentService
+            .Setup(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null);
+
+        var service = harness.CreateService();
+
+        // Act
+        var agentUserId = await service.OfferNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(agentUserId);
+        harness.AssignmentService.Verify(m => m.AssignNextAsync("q1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task OfferNextAsync_WhenReservedAgentCannotBeLoaded_ReleasesReservation()
     {
         // Arrange
@@ -1151,6 +1200,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IActivityReservationService> ReservationService { get; } = new();
 
+        public Mock<IActivityReservationReclaimer> ReservationReclaimer { get; } = new();
+
         public Mock<IAgentProfileManager> AgentManager { get; } = new();
 
         public Mock<IInboundContactLookup> ContactLookup { get; } = new();
@@ -1228,11 +1279,13 @@ public sealed class InboundVoiceServiceTests
             var offerService = new VoiceQueueOfferService(
                 AssignmentService.Object,
                 ReservationService.Object,
+                ReservationReclaimer.Object,
                 AgentManager.Object,
                 InteractionManager.Object,
                 ActivityManager.Object,
                 OfferSynchronizationService.Object,
-                workManager);
+                workManager,
+                NullLogger<VoiceQueueOfferService>.Instance);
 
             var inboundProcessor = new InboundVoiceCallProcessor(
                 ChannelEndpointManager.Object,
