@@ -22,7 +22,7 @@
     "glob": "^13.0.6",
     "graceful-fs": "4.2.11",
     "gulp": "^5.0.1",
-    "gulp-babel": "8.0.0",
+    "gulp-babel": "8.1.0",
     "gulp-concat": "2.6.1",
     "gulp-dart-sass": "1.1.0",
     "gulp-eol": "0.2.0",
@@ -39,10 +39,10 @@
     "gulp-typescript": "^5.0.1",
     "merge-stream": "2.0.0",
     "path-posix": "1.0.0",
-    "postcss": "^8.5.18",
+    "postcss": "^8.5.25",
     "postcss-rtl": "^2.0.0",
     "rtlcss": "4.3.0",
-    "source-map": "^0.7.4",
+    "source-map": "^0.8.0",
     "typescript": "^5.4.5"
   },
   "dependencies": {
