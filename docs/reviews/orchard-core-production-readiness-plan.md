@@ -164,13 +164,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-006 — Provider modules register admin settings in their base feature
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Feature design · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** Feature design · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** `Asterisk/Startup.cs:101` and `DialPad/Startup.cs:39` call `AddSiteDisplayDriver<...SettingsDisplayDriver>()` in the un-attributed base `Startup`. Both drivers declare `SettingsGroupId => TelephonyConstants.SettingsGroupId`, whose menu entry is contributed only by the `Telephony Administration` feature — which neither provider depends on.
 
 **Why it matters.** Two symmetric defects: (1) headless deployments enabling Asterisk get admin drivers they explicitly do not want — the exact scenario the `.Admin` split exists to prevent; (2) enabling Asterisk *without* Telephony Administration registers a settings editor with no navigation entry, reachable only by guessing the `groupId` URL.
 
 **Recommended solution.** Move both calls into `[RequireFeatures(TelephonyConstants.Feature.Admin)]`-gated `AsteriskAdminStartup` / `DialPadAdminStartup` classes.
+
+**Resolution.** Extracted `AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()` out of the Asterisk base `Startup` fluent chain and `AddSiteDisplayDriver<DialPadSettingsDisplayDriver>()` out of the DialPad base `Startup` into new `sealed` `AsteriskAdminStartup` / `DialPadAdminStartup` classes, each decorated with `[RequireFeatures(TelephonyConstants.Feature.Admin)]`. The provider settings drivers are now registered only when the Telephony Administration feature is enabled, so the settings tab and its `telephony` group navigation entry always appear together. Both modules build with 0 warnings.
 
 ---
 

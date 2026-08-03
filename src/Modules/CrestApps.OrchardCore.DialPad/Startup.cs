@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.DialPad.Drivers;
 using CrestApps.OrchardCore.DialPad.Endpoints;
 using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -44,6 +45,17 @@ public sealed class Startup : StartupBase
             });
 
         services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
+    }
+}
+
+/// <summary>
+/// Registers the DialPad provider settings driver only when Telephony administration is enabled.
+/// </summary>
+[RequireFeatures(TelephonyConstants.Feature.Admin)]
+public sealed class DialPadAdminStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
         services.AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
     }
 }
