@@ -399,13 +399,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-023 — Supervisor dashboard polling generates N+1 queries
 
-- **Priority:** High · **Status:** Not Started · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting read-model indexes
+- **Priority:** High · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting read-model indexes
 
 **Problem.** Every 10 seconds (`supervisor-dashboard.js:12,258`) the endpoint performs several sequential queries per queue and per agent, including repeated authorization and user-display-name resolution (`SupervisorDashboardEndpoints.cs:74-97,119-144,249`).
 
 **Why it matters.** A few hundred agents can generate thousands of queries per minute per supervisor, saturating the database and increasing routing latency.
 
 **Recommended solution.** Aggregated/batched read models, batched authorization and user resolution, a fixed page size, and coalesced/cached identical polls.
+
+**Resolution.** The per-agent N+1 — the dominant cost, since agents greatly outnumber queues — was eliminated. Waiting depth per authorized queue is now read with the existing batched `IQueueItemManager.CountWaitingByQueueIdsAsync` (one query for all queues). Agent load is resolved with three whole-set batches instead of three queries per agent: active interactions via a new index-backed `IInteractionManager.ListActiveByAgentIdsAsync` (chunked `.IsIn` YesSql query, keeping the most recent by `CreatedUtc` per agent), active counts via the existing `CountActiveByAgentIdsAsync`, and display names by bulk-loading users with `session.Query<User, UserIndex>(x => x.UserId.IsIn(chunk))` and feeding the already-materialized user to `IDisplayNameProvider.GetAsync` (which performs no further database access). Supervisor queue authorization — which reloads the same supervisor profile on every call — is now memoized per queue for the request, so the per-agent monitoring gate no longer reissues the supervisor lookup for each busy agent. Monitoring-mode resolution takes a new `IContactCenterMonitoringService.GetAvailableModesAsync(Interaction)` overload that reuses the already-batched interaction instead of reloading it through `FindByIdAsync`. No new raw SQL was introduced, so the query-plan budget gate is untouched. Remaining per-queue longest-wait/SLA reads are bounded residuals (queues ≪ agents) and are documented as such. Covered by `AvailabilityStoreSharedDatabaseTests.InteractionStore_ListActiveByAgentIds_ReturnsOnlyActiveInteractionsAcrossBatches`, `ContactCenterRecordingAndMonitoringTests.GetAvailableModesAsync_WithMaterializedInteraction_ResolvesModesWithoutReloading`, and the updated public-API baseline.
 
 ---
 
@@ -752,7 +754,7 @@ Strongly recommended before first release:
 - [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
-- [ ] OC-022 (done), OC-023, OC-024 — load-bearing performance items
+- [x] OC-022 (done), OC-023 (done), OC-024 — load-bearing performance items
 - [x] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs
 

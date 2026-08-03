@@ -67,6 +67,19 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
 
         var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
 
+        return ResolveAvailableModes(interaction);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyCollection<MonitorMode>> GetAvailableModesAsync(
+        Interaction interaction,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyCollection<MonitorMode>>(ResolveAvailableModes(interaction));
+    }
+
+    private MonitorMode[] ResolveAvailableModes(Interaction interaction)
+    {
         if (interaction is null)
         {
             return [];

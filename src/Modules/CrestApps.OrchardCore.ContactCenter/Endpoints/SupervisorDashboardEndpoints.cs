@@ -10,17 +10,22 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.Modules;
 using OrchardCore.Users;
+using OrchardCore.Users.Indexes;
+using OrchardCore.Users.Models;
+using YesSql;
+using YesSql.Services;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 internal static class SupervisorDashboardEndpoints
 {
     private const int AgentPageSize = 200;
+    private const int UserQueryBatchSize = 500;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
@@ -44,7 +49,7 @@ internal static class SupervisorDashboardEndpoints
         IInteractionManager interactionManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
-        UserManager<IUser> userManager,
+        ISession session,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         HttpContext httpContext)
@@ -65,6 +70,7 @@ internal static class SupervisorDashboardEndpoints
         var monitoringService = monitoringServices.FirstOrDefault();
         var supervisorId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var authorizedQueueIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var queueAuthorizationCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
         if (string.IsNullOrEmpty(supervisorId))
         {
@@ -73,7 +79,9 @@ internal static class SupervisorDashboardEndpoints
 
         foreach (var queue in queues)
         {
-            if (!await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+            if (!await IsQueueAuthorizedAsync(
+                supervisorQueueAuthorizationService,
+                queueAuthorizationCache,
                 httpContext.User,
                 supervisorId,
                 queue.ItemId,
@@ -83,8 +91,22 @@ internal static class SupervisorDashboardEndpoints
             }
 
             authorizedQueueIds.Add(queue.ItemId);
+        }
 
-            var waitingCount = await queueItemManager.CountWaitingAsync(queue.ItemId, httpContext.RequestAborted);
+        // Waiting depth is read for every authorized queue on every poll, so it is loaded in a single batched
+        // query rather than one query per queue.
+        var waitingCounts = authorizedQueueIds.Count == 0
+            ? new Dictionary<string, int>(StringComparer.Ordinal)
+            : await queueItemManager.CountWaitingByQueueIdsAsync(authorizedQueueIds, httpContext.RequestAborted);
+
+        foreach (var queue in queues)
+        {
+            if (!authorizedQueueIds.Contains(queue.ItemId))
+            {
+                continue;
+            }
+
+            var waitingCount = waitingCounts.TryGetValue(queue.ItemId, out var count) ? count : 0;
             var longestWaiting = await queueItemManager.FindLongestWaitingAsync(queue.ItemId, httpContext.RequestAborted);
             var signedInAgents = agents
                 .Where(agent => agent.QueueIds.Contains(queue.ItemId, StringComparer.OrdinalIgnoreCase))
@@ -116,32 +138,53 @@ internal static class SupervisorDashboardEndpoints
             model.TotalWaiting += waitingCount;
         }
 
-        foreach (var agent in agents)
-        {
-            if (!agent.QueueIds.Any(authorizedQueueIds.Contains))
-            {
-                continue;
-            }
+        var scopedAgents = agents
+            .Where(agent => agent.QueueIds.Any(authorizedQueueIds.Contains))
+            .ToArray();
+        var scopedAgentIds = scopedAgents
+            .Select(agent => agent.ItemId)
+            .ToArray();
 
-            var activeInteraction = await interactionManager.FindActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted);
+        // The agent grid previously issued three queries per agent (active interaction, active count, and a
+        // user lookup for the display name). Each is now resolved once for the whole scoped set so a poll's
+        // cost no longer scales with the number of agents on watch.
+        var activeInteractionsByAgent = await ResolveActiveInteractionsAsync(
+            interactionManager,
+            scopedAgentIds,
+            httpContext.RequestAborted);
+        var activeInteractionCounts = scopedAgentIds.Length == 0
+            ? new Dictionary<string, int>(StringComparer.Ordinal)
+            : await interactionManager.CountActiveByAgentIdsAsync(scopedAgentIds, httpContext.RequestAborted);
+        var agentDisplayNames = await ResolveAgentDisplayNamesAsync(
+            scopedAgents,
+            session,
+            displayNameProvider,
+            httpContext.RequestAborted);
+
+        foreach (var agent in scopedAgents)
+        {
+            activeInteractionsByAgent.TryGetValue(agent.ItemId, out var activeInteraction);
             var canMonitorActiveInteraction = activeInteraction is not null &&
-                await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+                await IsQueueAuthorizedAsync(
+                    supervisorQueueAuthorizationService,
+                    queueAuthorizationCache,
                     httpContext.User,
                     supervisorId,
                     activeInteraction.QueueId,
                     httpContext.RequestAborted);
             var activeInteractions = canMonitorActiveInteraction
-                ? await interactionManager.CountActiveByAgentAsync(agent.ItemId, httpContext.RequestAborted)
+                && activeInteractionCounts.TryGetValue(agent.ItemId, out var activeCount)
+                ? activeCount
                 : 0;
             var availableMonitoringModes = activeInteraction is null || monitoringService is null || !canMonitorActiveInteraction
                 ? []
-                : await monitoringService.GetAvailableModesAsync(activeInteraction.ItemId, httpContext.RequestAborted);
+                : await monitoringService.GetAvailableModesAsync(activeInteraction, httpContext.RequestAborted);
 
             model.Agents.Add(new SupervisorAgentViewModel
             {
                 AgentId = agent.ItemId,
                 UserId = agent.UserId,
-                DisplayName = await GetAgentDisplayNameAsync(agent, userManager, displayNameProvider, httpContext.RequestAborted),
+                DisplayName = agentDisplayNames.TryGetValue(agent.ItemId, out var displayName) ? displayName : "Unknown agent",
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
                 QueueCount = agent.QueueIds.Count,
@@ -159,6 +202,118 @@ internal static class SupervisorDashboardEndpoints
         }
 
         return TypedResults.Ok(model);
+    }
+
+    private static async Task<bool> IsQueueAuthorizedAsync(
+        ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
+        Dictionary<string, bool> cache,
+        ClaimsPrincipal principal,
+        string supervisorId,
+        string queueId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(queueId))
+        {
+            return false;
+        }
+
+        if (cache.TryGetValue(queueId, out var authorized))
+        {
+            return authorized;
+        }
+
+        // Every authorization check resolves the same supervisor profile, so the result is memoized per queue
+        // for the request. This keeps the per-agent monitoring gate from reissuing the supervisor lookup once
+        // for each busy agent on every poll.
+        authorized = await supervisorQueueAuthorizationService.IsAuthorizedAsync(
+            principal,
+            supervisorId,
+            queueId,
+            cancellationToken);
+        cache[queueId] = authorized;
+
+        return authorized;
+    }
+
+    private static async Task<IReadOnlyDictionary<string, Interaction>> ResolveActiveInteractionsAsync(
+        IInteractionManager interactionManager,
+        string[] agentIds,
+        CancellationToken cancellationToken)
+    {
+        var activeInteractionsByAgent = new Dictionary<string, Interaction>(StringComparer.Ordinal);
+
+        if (agentIds.Length == 0)
+        {
+            return activeInteractionsByAgent;
+        }
+
+        var interactions = await interactionManager.ListActiveByAgentIdsAsync(agentIds, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            if (string.IsNullOrEmpty(interaction.AgentId))
+            {
+                continue;
+            }
+
+            if (!activeInteractionsByAgent.TryGetValue(interaction.AgentId, out var existing)
+                || interaction.CreatedUtc > existing.CreatedUtc)
+            {
+                activeInteractionsByAgent[interaction.AgentId] = interaction;
+            }
+        }
+
+        return activeInteractionsByAgent;
+    }
+
+    private static async Task<IReadOnlyDictionary<string, string>> ResolveAgentDisplayNamesAsync(
+        AgentProfile[] agents,
+        ISession session,
+        IDisplayNameProvider displayNameProvider,
+        CancellationToken cancellationToken)
+    {
+        var displayNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (agents.Length == 0)
+        {
+            return displayNames;
+        }
+
+        var userIds = agents
+            .Where(agent => !string.IsNullOrEmpty(agent.UserId))
+            .Select(agent => agent.UserId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var usersById = new Dictionary<string, IUser>(StringComparer.Ordinal);
+
+        // Resolve every agent's user in bounded batches rather than one lookup per agent; the display-name
+        // provider then works from the already-materialized user without touching the database again.
+        foreach (var userIdBatch in userIds.Chunk(UserQueryBatchSize))
+        {
+            var users = await session.Query<User, UserIndex>(index => index.UserId.IsIn(userIdBatch))
+                .ListAsync(cancellationToken);
+
+            foreach (var user in users)
+            {
+                usersById[user.UserId] = user;
+            }
+        }
+
+        foreach (var agent in agents)
+        {
+            string displayName = null;
+
+            if (!string.IsNullOrEmpty(agent.UserId) && usersById.TryGetValue(agent.UserId, out var user))
+            {
+                displayName = await displayNameProvider.GetAsync(user, cancellationToken);
+            }
+
+            displayNames[agent.ItemId] = string.IsNullOrWhiteSpace(displayName)
+                ? (string.IsNullOrWhiteSpace(agent.DisplayName) ? "Unknown agent" : agent.DisplayName)
+                : displayName;
+        }
+
+        return displayNames;
     }
 
     private static async Task<IReadOnlyCollection<AgentProfile>> ListAgentsAsync(
@@ -244,30 +399,6 @@ internal static class SupervisorDashboardEndpoints
             result.Succeeded,
             ErrorMessage = result.Reason,
         });
-    }
-
-    private static async Task<string> GetAgentDisplayNameAsync(
-        AgentProfile agent,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrEmpty(agent.UserId))
-        {
-            var user = await userManager.FindByIdAsync(agent.UserId);
-
-            if (user is not null)
-            {
-                var displayName = await displayNameProvider.GetAsync(user, cancellationToken);
-
-                if (!string.IsNullOrWhiteSpace(displayName))
-                {
-                    return displayName;
-                }
-            }
-        }
-
-        return string.IsNullOrWhiteSpace(agent.DisplayName) ? "Unknown agent" : agent.DisplayName;
     }
 
     private sealed class EngageRequest

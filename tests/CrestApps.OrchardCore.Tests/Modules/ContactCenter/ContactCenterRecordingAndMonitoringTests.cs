@@ -801,6 +801,36 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         Assert.Empty(modes);
     }
 
+    [Fact]
+    public async Task GetAvailableModesAsync_WithMaterializedInteraction_ResolvesModesWithoutReloading()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        var provider = CreateProvider(
+            ContactCenterVoiceProviderCapabilities.Monitor |
+            ContactCenterVoiceProviderCapabilities.Whisper);
+        _ = provider.As<IContactCenterVoiceMonitoringProvider>();
+        var resolver = CreateResolver(provider);
+        var service = new ContactCenterMonitoringService(
+            interactionManager.Object,
+            CreateCallSessionManager().Object,
+            resolver.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateCommandExecutor(),
+            new FakeCallControlAuthorizationService(),
+            new StubClock());
+
+        // Act
+        var modes = await service.GetAvailableModesAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal([MonitorMode.Monitor, MonitorMode.Whisper], modes);
+        interactionManager.Verify(
+            manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static Interaction CreateInteraction()
     {
         return new Interaction

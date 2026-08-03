@@ -125,6 +125,21 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListActiveByAgentIdsAsync(agentIds, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)

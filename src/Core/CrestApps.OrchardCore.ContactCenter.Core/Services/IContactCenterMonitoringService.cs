@@ -21,6 +21,18 @@ public interface IContactCenterMonitoringService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the executable supervisor engagement modes available for an already-materialized interaction. This
+    /// avoids reloading the interaction when the caller already holds it, such as a dashboard that has batch
+    /// loaded every agent's active interaction.
+    /// </summary>
+    /// <param name="interaction">The interaction to evaluate.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The available engagement modes.</returns>
+    Task<IReadOnlyCollection<MonitorMode>> GetAvailableModesAsync(
+        Interaction interaction,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Engages a live interaction as a supervisor using the requested mode when the provider supports it.
     /// </summary>
     /// <param name="interactionId">The interaction identifier.</param>

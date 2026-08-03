@@ -155,6 +155,48 @@ public sealed class AvailabilityStoreSharedDatabaseTests
         }
     }
 
+    [Fact]
+    public async Task InteractionStore_ListActiveByAgentIds_ReturnsOnlyActiveInteractionsAcrossBatches()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-availability-list-active-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+        var agentIds = Enumerable.Range(0, 501).Select(index => $"agent-{index:D3}").ToArray();
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveInteractionAsync(seedSession, "first-agent-older", agentIds[0], InteractionStatus.Connected, createdUtc: _now.AddMinutes(-5));
+                await SaveInteractionAsync(seedSession, "first-agent-newer", agentIds[0], InteractionStatus.Ringing, createdUtc: _now);
+                await SaveInteractionAsync(seedSession, "first-agent-created", agentIds[0], InteractionStatus.Created);
+                await SaveInteractionAsync(seedSession, "last-agent-active", agentIds[agentIds.Length - 1], InteractionStatus.Connected);
+                await SaveInteractionAsync(seedSession, "unscoped-agent-active", "agent-not-requested", InteractionStatus.Connected);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using var querySession = store.CreateSession();
+            var interactionStore = new InteractionStore(querySession);
+
+            // Act
+            var active = await interactionStore.ListActiveByAgentIdsAsync(
+                agentIds,
+                TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(3, active.Count);
+            Assert.Contains(active, interaction => interaction.ItemId == "first-agent-older");
+            Assert.Contains(active, interaction => interaction.ItemId == "first-agent-newer");
+            Assert.Contains(active, interaction => interaction.ItemId == "last-agent-active");
+            Assert.DoesNotContain(active, interaction => interaction.ItemId == "first-agent-created");
+            Assert.DoesNotContain(active, interaction => interaction.ItemId == "unscoped-agent-active");
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static async Task<IStore> CreateStoreAsync(string databasePath)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
@@ -207,14 +249,15 @@ public sealed class AvailabilityStoreSharedDatabaseTests
         string agentId,
         InteractionStatus status,
         DateTime? wrapUpStartedUtc = null,
-        DateTime? wrapUpCompletedUtc = null)
+        DateTime? wrapUpCompletedUtc = null,
+        DateTime? createdUtc = null)
     {
         await session.SaveAsync(
             new Interaction
             {
                 ItemId = itemId,
                 AgentId = agentId,
-                CreatedUtc = _now,
+                CreatedUtc = createdUtc ?? _now,
                 WrapUpStartedUtc = wrapUpStartedUtc,
                 WrapUpCompletedUtc = wrapUpCompletedUtc,
             }.RestorePersistedStatus(status),

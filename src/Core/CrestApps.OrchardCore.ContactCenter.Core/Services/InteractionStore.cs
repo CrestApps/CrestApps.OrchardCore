@@ -180,6 +180,38 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentIds);
+
+        if (agentIds.Count == 0)
+        {
+            return [];
+        }
+
+        var interactions = new List<Interaction>();
+
+        // One indexed query per bounded batch of agents rather than one query per agent: the supervisor
+        // dashboard polls every agent's live interaction, so a query per agent makes a single poll cost grow
+        // with the number of agents on watch, which is exactly the busy centre where the poll must stay cheap.
+        foreach (var agentIdBatch in agentIds.Chunk(QueryBatchSize))
+        {
+            var batch = await Session.Query<Interaction, InteractionIndex>(
+                index => index.AgentId.IsIn(agentIdBatch) &&
+                    index.Status.IsIn(InteractionStatuses.OccupyingAgent),
+                collection: ContactCenterConstants.CollectionName)
+                .OrderByDescending(index => index.CreatedUtc)
+                .ListAsync(cancellationToken);
+
+            interactions.AddRange(batch);
+        }
+
+        return interactions;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)

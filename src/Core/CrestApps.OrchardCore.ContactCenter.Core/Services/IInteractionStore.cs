@@ -80,6 +80,18 @@ public interface IInteractionStore : ICatalog<Interaction>
     Task<Interaction> FindActiveByAgentAsync(string agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the active (agent-occupying) interactions for the specified agents. Callers that need one
+    /// interaction per agent should keep the most recent by <see cref="Interaction.CreatedUtc"/>; more than one
+    /// row can be returned for an agent only in the transient window before a superseded interaction settles.
+    /// </summary>
+    /// <param name="agentIds">The agent profile identifiers.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The active interactions for the requested agents.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists interactions whose after-call work is still incomplete for the specified agent.
     /// </summary>
     /// <param name="agentId">The agent profile identifier.</param>
