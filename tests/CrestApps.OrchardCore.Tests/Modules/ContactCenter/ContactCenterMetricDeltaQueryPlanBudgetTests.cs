@@ -133,9 +133,9 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
 
         try
         {
-            store.RegisterIndexes([new ContactCenterEventMetricDeltaIndexProvider()], ContactCenterConstants.CollectionName);
+            store.RegisterIndexes([new ContactCenterEventMetricDeltaIndexProvider()], ContactCenterStorage.CollectionName);
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var migrationSession = store.CreateSession())
             {
@@ -159,7 +159,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
     }
 
     private static string TableName(IConfiguration configuration)
-        => configuration.TableNameConvention.GetIndexTable(typeof(ContactCenterEventMetricDeltaIndex), ContactCenterConstants.CollectionName);
+        => configuration.TableNameConvention.GetIndexTable(typeof(ContactCenterEventMetricDeltaIndex), ContactCenterStorage.CollectionName);
 
     private static async Task MigrateAsync(IConfiguration configuration, DbTransaction transaction)
     {

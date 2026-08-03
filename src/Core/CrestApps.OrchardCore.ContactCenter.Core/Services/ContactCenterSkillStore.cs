@@ -17,7 +17,7 @@ public sealed class ContactCenterSkillStore : DocumentCatalog<ContactCenterSkill
     public ContactCenterSkillStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class ContactCenterSkillStore : DocumentCatalog<ContactCenterSkill
 
         return await Session.Query<ContactCenterSkill, ContactCenterSkillIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -36,7 +36,7 @@ public sealed class ContactCenterSkillStore : DocumentCatalog<ContactCenterSkill
     {
         var skills = await Session.Query<ContactCenterSkill, ContactCenterSkillIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return skills.ToArray();

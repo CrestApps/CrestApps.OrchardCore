@@ -17,7 +17,7 @@ public sealed class AgentQueueMembershipIndexProvider : IndexProvider<AgentProfi
     /// </summary>
     public AgentQueueMembershipIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

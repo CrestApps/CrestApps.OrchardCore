@@ -24,7 +24,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
         : base(session)
     {
         _upcastService = upcastService;
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         var events = await Session.Query<InteractionEvent, InteractionEventIndex>(
             index => index.InteractionId == interactionId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.OccurredUtc)
             .ListAsync(cancellationToken);
 
@@ -63,7 +63,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         var match = await Session.Query<InteractionEvent, InteractionEventIndex>(
             index => index.IdempotencyKey == idempotencyKey,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
 
         return match is not null;
@@ -76,7 +76,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         var events = await Session.Query<InteractionEvent, InteractionEventIndex>(
             index => index.OccurredUtc < cutoffUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.OccurredUtc)
             .Take(take)
             .ListAsync(cancellationToken);
@@ -99,7 +99,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         var query = Session.Query<InteractionEvent, InteractionEventIndex>(
             index => index.AggregateType == aggregateType && index.OccurredUtc <= occurredThroughUtc,
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         if (types.Length > 0)
         {
@@ -124,7 +124,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
         var boundedTake = take <= 0 ? 100 : take;
 
         var events = await Session.Query<InteractionEvent, InteractionEventIndex>(
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.OccurredUtc)
             .ThenBy(index => index.ItemId)
             .Skip(boundedSkip)

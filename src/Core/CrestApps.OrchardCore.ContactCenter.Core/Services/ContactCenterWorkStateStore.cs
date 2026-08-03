@@ -21,7 +21,7 @@ public sealed class ContactCenterWorkStateStore : DocumentCatalog<ContactCenterW
     public ContactCenterWorkStateStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -31,7 +31,7 @@ public sealed class ContactCenterWorkStateStore : DocumentCatalog<ContactCenterW
 
         return Session.Query<ContactCenterWorkState, ContactCenterWorkStateIndex>(
             index => index.ActivityItemId == activityItemId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -54,7 +54,7 @@ public sealed class ContactCenterWorkStateStore : DocumentCatalog<ContactCenterW
 
         var states = await Session.Query<ContactCenterWorkState, ContactCenterWorkStateIndex>(
             index => index.ActivityItemId.IsIn(ids),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return states.ToArray();

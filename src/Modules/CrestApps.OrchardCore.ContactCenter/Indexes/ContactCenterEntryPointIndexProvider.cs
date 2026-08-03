@@ -14,7 +14,7 @@ public sealed class ContactCenterEntryPointIndexProvider : IndexProvider<Contact
     /// </summary>
     public ContactCenterEntryPointIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

@@ -191,7 +191,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         var suppressionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.ManualDialSuppressed,
-            AggregateType = ContactCenterConstants.ManualCallAggregateType,
+            AggregateType = ContactCenterConstants.AggregateTypes.ManualCall,
             SourceComponent = ContactCenterConstants.Components.Dialer,
         };
 

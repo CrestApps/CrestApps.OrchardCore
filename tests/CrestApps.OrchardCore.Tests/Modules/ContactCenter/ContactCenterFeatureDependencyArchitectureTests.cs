@@ -611,7 +611,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialPadContactCenterVoiceProvider>())",
                 StringComparison.Ordinal));
         var asteriskBaseStartup = asteriskStartups.Single(startup =>
-            startup.FeatureId == "CrestApps.OrchardCore.Asterisk");
+            startup.FeatureId == "CrestApps.OrchardCore.Asterisk"
+            && startup.RequiredFeatureIds.Count == 0);
 
         // Assert
         Assert.Equal(["CrestApps.OrchardCore.ContactCenter.Voice"], mediaDependencies);

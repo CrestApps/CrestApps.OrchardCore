@@ -20,7 +20,7 @@ public sealed class CallSessionIndexProvider : IndexProvider<CallSession>
     public CallSessionIndexProvider(IProviderIdentityResolver providerIdentityResolver)
     {
         _providerIdentityResolver = providerIdentityResolver;
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

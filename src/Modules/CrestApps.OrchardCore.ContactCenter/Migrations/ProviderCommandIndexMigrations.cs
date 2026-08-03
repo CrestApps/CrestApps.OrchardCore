@@ -45,13 +45,13 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ProviderCommandIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("CommandId", column => column.NotNull().Unique().WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterStorage.ProviderNameLength))
             .Column<ProviderCommandStatus>("Status")
             .Column<long>("FenceToken", column => column.NotNull().WithDefault(0L))
             .Column<string>("InteractionId", column => column.WithLength(26))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ProviderCommandIndex>(table =>
@@ -67,7 +67,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
                 "LeaseExpiresUtc",
                 "DocumentId");
         },
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // The retention column is left to the update step so a fresh installation reaches the current schema
@@ -85,7 +85,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ProviderCommandIndex>(table => table
             .AddColumn<DateTime?>("CompletedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         // Adding a column does not re-project rows that already exist, and a settled command is never written
         // again, so the pre-upgrade backlog would otherwise keep a null completion time and stay forever.
@@ -104,7 +104,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
                 "Status",
                 "CompletedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 2;
     }

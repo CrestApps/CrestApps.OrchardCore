@@ -14,7 +14,7 @@ public sealed class InteractionIndexProvider : IndexProvider<Interaction>
     /// </summary>
     public InteractionIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

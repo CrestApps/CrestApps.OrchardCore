@@ -21,7 +21,7 @@ internal sealed class AgentQueueMembershipIndexMigrations : DataMigration
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<AgentPresenceStatus>("PresenceStatus")
             .Column<int>("MaxConcurrentInteractions"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AgentQueueMembershipIndex>(table => table
@@ -31,7 +31,7 @@ internal sealed class AgentQueueMembershipIndexMigrations : DataMigration
                 "QueueId",
                 "PresenceStatus",
                 "ItemId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;

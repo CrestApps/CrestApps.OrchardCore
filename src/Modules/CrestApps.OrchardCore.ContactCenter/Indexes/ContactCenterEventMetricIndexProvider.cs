@@ -14,7 +14,7 @@ public sealed class ContactCenterEventMetricIndexProvider : IndexProvider<Contac
     /// </summary>
     public ContactCenterEventMetricIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

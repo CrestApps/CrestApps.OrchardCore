@@ -69,7 +69,7 @@ public sealed class ProviderCommandStateServiceTests
             var all = await verificationSession
                 .Query<ProviderCommand, ProviderCommandIndex>(
                     index => index.CommandId == "command-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
             Assert.Single(all);
         });
@@ -369,7 +369,7 @@ public sealed class ProviderCommandStateServiceTests
             await using (var verificationSession = store.CreateSession())
             {
                 var persisted = await verificationSession.Query<ProviderCommand>(
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                     .FirstOrDefaultAsync();
 
                 Assert.Equal(ProviderCommandStatus.Sent, persisted.Status);
@@ -379,7 +379,7 @@ public sealed class ProviderCommandStateServiceTests
 
             await using var committedSession = store.CreateSession();
             var committed = await committedSession.Query<ProviderCommand>(
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync();
 
             Assert.Equal(ProviderCommandStatus.Confirmed, committed.Status);
@@ -607,7 +607,7 @@ public sealed class ProviderCommandStateServiceTests
 
             await using var verificationSession = store.CreateSession();
             var persisted = await verificationSession.Query<ProviderCommand>(
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync();
 
             Assert.Equal(ProviderCommandStatus.OutcomeUnknown, persisted.Status);
@@ -645,7 +645,7 @@ public sealed class ProviderCommandStateServiceTests
             await using (var verificationSession = store.CreateSession())
             {
                 var persisted = await verificationSession.Query<ProviderCommand>(
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                     .FirstOrDefaultAsync();
 
                 Assert.Equal(ProviderCommandStatus.OutcomeUnknown, persisted.Status);
@@ -655,7 +655,7 @@ public sealed class ProviderCommandStateServiceTests
 
             await using var committedSession = store.CreateSession();
             var committed = await committedSession.Query<ProviderCommand>(
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync();
 
             Assert.Equal(ProviderCommandStatus.Confirmed, committed.Status);
@@ -891,7 +891,7 @@ public sealed class ProviderCommandStateServiceTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new ProviderCommandIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
         await CreateIndexSchemaAsync(store);
 
         try
@@ -920,7 +920,7 @@ public sealed class ProviderCommandStateServiceTests
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull())
             .Column<DateTime>("CompletedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 }

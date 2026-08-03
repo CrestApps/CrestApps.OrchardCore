@@ -14,7 +14,7 @@ public sealed class CallbackRequestIndexProvider : IndexProvider<CallbackRequest
     /// </summary>
     public CallbackRequestIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

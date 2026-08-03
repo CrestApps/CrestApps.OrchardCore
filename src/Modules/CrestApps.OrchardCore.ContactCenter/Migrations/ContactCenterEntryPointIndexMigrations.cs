@@ -19,12 +19,12 @@ internal sealed class ContactCenterEntryPointIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
             .Column<bool>("Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterEntryPointIndex>(table => table
             .CreateIndex("IDX_ContactCenterEntryPointIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;

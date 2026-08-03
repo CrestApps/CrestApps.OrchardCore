@@ -30,7 +30,7 @@ internal static class InteractionQueryPlanFixture
     /// </summary>
     /// <param name="configuration">The YesSql configuration naming the table and collection.</param>
     public static string TableName(IConfiguration configuration)
-        => configuration.TableNameConvention.GetIndexTable(typeof(InteractionIndex), ContactCenterConstants.CollectionName);
+        => configuration.TableNameConvention.GetIndexTable(typeof(InteractionIndex), ContactCenterStorage.CollectionName);
 
     /// <summary>
     /// Runs the real interaction migrations, in order, against the supplied transaction. The plan is measured

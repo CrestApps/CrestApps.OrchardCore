@@ -17,7 +17,7 @@ public sealed class AgentStateReasonCodeStore : DocumentCatalog<AgentStateReason
     public AgentStateReasonCodeStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class AgentStateReasonCodeStore : DocumentCatalog<AgentStateReason
 
         return await Session.Query<AgentStateReasonCode, AgentStateReasonCodeIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -36,7 +36,7 @@ public sealed class AgentStateReasonCodeStore : DocumentCatalog<AgentStateReason
     {
         var reasonCodes = await Session.Query<AgentStateReasonCode, AgentStateReasonCodeIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.SortOrder)
             .ThenBy(index => index.Name)
             .ListAsync(cancellationToken);

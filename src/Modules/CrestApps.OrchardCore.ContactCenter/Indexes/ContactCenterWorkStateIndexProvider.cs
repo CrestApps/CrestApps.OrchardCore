@@ -14,7 +14,7 @@ public sealed class ContactCenterWorkStateIndexProvider : IndexProvider<ContactC
     /// </summary>
     public ContactCenterWorkStateIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

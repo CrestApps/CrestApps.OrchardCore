@@ -24,7 +24,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     public QueueItemStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         var items = await Session.Query<QueueItem, QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.Priority)
             .ThenBy(index => index.EnqueuedUtc)
             .ListAsync(cancellationToken);
@@ -49,7 +49,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         return await Session.Query<QueueItem, QueueItemIndex>(
             index => index.ActivityItemId == activityItemId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.EnqueuedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -61,7 +61,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         return await Session.Query<QueueItem, QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -70,7 +70,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     {
         return await Session.Query<QueueItem, QueueItemIndex>(
             index => index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -137,7 +137,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
             index => index.QueueId == queueId
                 && index.Status == QueueItemStatus.Waiting
                 && index.EnqueuedUtc < thresholdUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -148,7 +148,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         return await Session.Query<QueueItem, QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.Priority)
             .ThenBy(index => index.EnqueuedUtc)
             .FirstOrDefaultAsync(cancellationToken);
@@ -161,7 +161,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         return await Session.Query<QueueItem, QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == QueueItemStatus.Waiting,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.EnqueuedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }

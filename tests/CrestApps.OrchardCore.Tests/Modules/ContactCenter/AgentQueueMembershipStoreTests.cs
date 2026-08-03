@@ -124,7 +124,7 @@ public sealed class AgentQueueMembershipStoreTests
             var rows = await querySession
                 .QueryIndex<AgentQueueMembershipIndex>(
                     index => index.ItemId == "multi",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
 
             // Assert
@@ -147,7 +147,7 @@ public sealed class AgentQueueMembershipStoreTests
             new AgentQueueMembershipIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -158,14 +158,14 @@ public sealed class AgentQueueMembershipStoreTests
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<string>("PresenceStatus", column => column.WithLength(50)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<AgentQueueMembershipIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<string>("PresenceStatus", column => column.WithLength(50))
             .Column<int>("MaxConcurrentInteractions"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -190,7 +190,7 @@ public sealed class AgentQueueMembershipStoreTests
                 AllowedQueueIds = allowedQueueIds,
                 MaxConcurrentInteractions = 1,
             },
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

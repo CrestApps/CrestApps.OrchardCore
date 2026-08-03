@@ -14,7 +14,7 @@ public sealed class ContactCenterProcessedEventIndexProvider : IndexProvider<Con
     /// </summary>
     public ContactCenterProcessedEventIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

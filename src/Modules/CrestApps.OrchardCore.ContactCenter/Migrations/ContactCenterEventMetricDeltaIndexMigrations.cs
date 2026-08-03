@@ -22,7 +22,7 @@ internal sealed class ContactCenterEventMetricDeltaIndexMigrations : DataMigrati
             .Column<string>("EventType", column => column.NotNull().WithLength(128))
             .Column<long>("Count")
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // No index is created for the roller. It drains the table in whatever order the store hands rows back,
@@ -39,7 +39,7 @@ internal sealed class ContactCenterEventMetricDeltaIndexMigrations : DataMigrati
                 "IDX_ContactCenterEventMetricDeltaIndex_Retention",
                 "CreatedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         // A reader has to add the contributions that have not been folded yet to the totals it reports, and it
         // asks for them by day. That read is on the request path, so it is given a range-seekable index rather
@@ -49,7 +49,7 @@ internal sealed class ContactCenterEventMetricDeltaIndexMigrations : DataMigrati
                 "IDX_ContactCenterEventMetricDeltaIndex_Summary",
                 "Date",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 1;
     }

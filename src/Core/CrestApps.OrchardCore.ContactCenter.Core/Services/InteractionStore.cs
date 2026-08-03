@@ -31,7 +31,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     public InteractionStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -41,7 +41,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.ActivityItemId == activityItemId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -53,7 +53,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.CorrelationId == correlationId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -65,7 +65,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.ProviderInteractionId == providerInteractionId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -82,7 +82,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.ProviderName == providerName &&
                 index.ProviderInteractionId == providerInteractionId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -92,7 +92,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     {
         var query = Session.Query<Interaction, InteractionIndex>(
             index => index.Status == status,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.CreatedUtc);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
@@ -112,7 +112,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId &&
                 index.Status.IsIn(InteractionStatuses.OccupyingAgent),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -174,7 +174,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         return await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId &&
                 index.Status.IsIn(InteractionStatuses.OccupyingAgent),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -201,7 +201,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             var batch = await Session.Query<Interaction, InteractionIndex>(
                 index => index.AgentId.IsIn(agentIdBatch) &&
                     index.Status.IsIn(InteractionStatuses.OccupyingAgent),
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .OrderByDescending(index => index.CreatedUtc)
                 .ListAsync(cancellationToken);
 
@@ -222,7 +222,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             index => index.AgentId == agentId &&
                 index.WrapUpStartedUtc != null &&
                 index.WrapUpCompletedUtc == null,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.WrapUpStartedUtc)
             .ListAsync(cancellationToken)).ToArray();
     }
@@ -234,7 +234,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.AgentId == agentId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();
@@ -247,7 +247,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
 
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.Status.IsIn(InteractionStatuses.Unsettled),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
             .OrderBy(index => index.CreatedUtc)
             .Take(take)
@@ -267,7 +267,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         return (await Session.Query<Interaction, InteractionIndex>(
             index => index.ProviderName == providerName &&
                 index.Status.IsIn(InteractionStatuses.Unsettled),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
             .OrderBy(index => index.CreatedUtc)
             .Take(take)

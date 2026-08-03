@@ -32,14 +32,14 @@ internal sealed class ContactCenterProjectionCheckpointIndexMigrations : DataMig
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("HandlerId", column => column.NotNull().WithLength(128))
             .Column<int>("Version"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterProjectionCheckpointIndex>(table => table
             .CreateIndex(
                 "IDX_ContactCenterProjectionCheckpointIndex_Handler",
                 "HandlerId",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
             SchemaBuilder,

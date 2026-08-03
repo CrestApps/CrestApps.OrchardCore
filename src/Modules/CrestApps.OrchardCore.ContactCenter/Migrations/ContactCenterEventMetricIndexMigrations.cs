@@ -32,12 +32,12 @@ internal sealed class ContactCenterEventMetricIndexMigrations : DataMigration
             .Column<string>("DateKey", column => column.NotNull().WithLength(10))
             .Column<DateTime>("Date")
             .Column<string>("EventType", column => column.NotNull().WithLength(128)),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterEventMetricIndex>(table => table
             .CreateIndex("IDX_ContactCenterEventMetricIndex_DocumentId", "DocumentId", "DateKey", "Date", "EventType"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await CreateMetricUniquenessConstraintAsync();
@@ -47,7 +47,7 @@ internal sealed class ContactCenterEventMetricIndexMigrations : DataMigration
                 "IDX_ContactCenterEventMetricIndex_Retention",
                 "Date",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -74,7 +74,7 @@ internal sealed class ContactCenterEventMetricIndexMigrations : DataMigration
                 "IDX_ContactCenterEventMetricIndex_Retention",
                 "Date",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }

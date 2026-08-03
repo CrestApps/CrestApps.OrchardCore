@@ -15,7 +15,7 @@ public sealed class InteractionEventIndexProvider : IndexProvider<InteractionEve
     /// </summary>
     public InteractionEventIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

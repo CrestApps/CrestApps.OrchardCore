@@ -39,7 +39,7 @@ public sealed class ContactCenterEventDeduplicationService : IContactCenterEvent
         var existing = await _session
             .Query<ContactCenterProcessedEvent, ContactCenterProcessedEventIndex>(
                 index => index.HandlerId == handlerId && index.EventId == eventId,
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existing is not null)
@@ -57,7 +57,7 @@ public sealed class ContactCenterEventDeduplicationService : IContactCenterEvent
 
         await _session.SaveAsync(
             marker,
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: cancellationToken);
 
         return true;

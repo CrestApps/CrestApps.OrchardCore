@@ -96,7 +96,7 @@ public sealed class ContactCenterQueueBacklogHealthCheckTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new QueueItemIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -127,7 +127,7 @@ public sealed class ContactCenterQueueBacklogHealthCheckTests
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = _now,
             }.RestorePersistedStatus(status),
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

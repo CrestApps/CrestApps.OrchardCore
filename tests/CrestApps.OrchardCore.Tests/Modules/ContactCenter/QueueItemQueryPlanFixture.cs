@@ -31,7 +31,7 @@ internal static class QueueItemQueryPlanFixture
     /// </summary>
     /// <param name="configuration">The YesSql configuration naming the table and collection.</param>
     public static string TableName(IConfiguration configuration)
-        => configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterConstants.CollectionName);
+        => configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterStorage.CollectionName);
 
     /// <summary>
     /// Runs the real queue item migrations, in order, against the supplied transaction. The plan is measured

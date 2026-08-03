@@ -31,7 +31,7 @@ public sealed class MessageClaimFencingPersistenceTests
         store.RegisterIndexes([new ContactCenterOutboxMessageIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
         await CreateOutboxSchemaAsync(store);
 
@@ -101,7 +101,7 @@ public sealed class MessageClaimFencingPersistenceTests
         store.RegisterIndexes([new ContactCenterOutboxMessageIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
         await CreateOutboxSchemaAsync(store);
 
@@ -166,7 +166,7 @@ public sealed class MessageClaimFencingPersistenceTests
         store.RegisterIndexes([new ContactCenterOutboxMessageIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
         await CreateOutboxSchemaAsync(store);
 
@@ -217,7 +217,7 @@ public sealed class MessageClaimFencingPersistenceTests
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
         await CreateInboxSchemaAsync(store);
 
@@ -311,7 +311,7 @@ public sealed class MessageClaimFencingPersistenceTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 
@@ -327,7 +327,7 @@ public sealed class MessageClaimFencingPersistenceTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime?>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 

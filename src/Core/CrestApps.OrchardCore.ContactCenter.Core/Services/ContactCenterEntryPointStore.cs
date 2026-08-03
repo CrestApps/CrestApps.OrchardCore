@@ -17,7 +17,7 @@ public sealed class ContactCenterEntryPointStore : DocumentCatalog<ContactCenter
     public ContactCenterEntryPointStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class ContactCenterEntryPointStore : DocumentCatalog<ContactCenter
 
         return await Session.Query<ContactCenterEntryPoint, ContactCenterEntryPointIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -36,7 +36,7 @@ public sealed class ContactCenterEntryPointStore : DocumentCatalog<ContactCenter
     {
         var entryPoints = await Session.Query<ContactCenterEntryPoint, ContactCenterEntryPointIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return entryPoints.ToArray();

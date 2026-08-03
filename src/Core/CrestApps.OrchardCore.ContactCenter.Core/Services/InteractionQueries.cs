@@ -30,7 +30,7 @@ public static class InteractionQueries
         ArgumentOutOfRangeException.ThrowIfLessThan(agentIdCount, 1);
 
         var dialect = configuration.SqlDialect;
-        var tableName = configuration.TableNameConvention.GetIndexTable(typeof(InteractionIndex), ContactCenterConstants.CollectionName);
+        var tableName = configuration.TableNameConvention.GetIndexTable(typeof(InteractionIndex), ContactCenterStorage.CollectionName);
         var agentColumn = dialect.QuoteForColumnName(nameof(InteractionIndex.AgentId));
         var statusColumn = dialect.QuoteForColumnName(nameof(InteractionIndex.Status));
 

@@ -34,7 +34,7 @@ public sealed class InteractionEvent : CatalogItem, IEntity
     /// <summary>
     /// Gets or sets the schema version of the event payload.
     /// </summary>
-    public int SchemaVersion { get; set; } = ContactCenterConstants.CurrentEventSchemaVersion;
+    public int SchemaVersion { get; set; } = ContactCenterStorage.CurrentEventSchemaVersion;
 
     /// <summary>
     /// Gets or sets the type of aggregate the event applies to, such as the interaction or a queue item.

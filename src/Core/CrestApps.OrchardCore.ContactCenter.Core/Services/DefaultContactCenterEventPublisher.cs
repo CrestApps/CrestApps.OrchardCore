@@ -58,7 +58,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
 
         if (interactionEvent.SchemaVersion <= 0)
         {
-            interactionEvent.SchemaVersion = ContactCenterConstants.CurrentEventSchemaVersion;
+            interactionEvent.SchemaVersion = ContactCenterStorage.CurrentEventSchemaVersion;
         }
 
         if (string.IsNullOrEmpty(interactionEvent.ActorId))

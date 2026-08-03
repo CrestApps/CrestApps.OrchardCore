@@ -209,7 +209,7 @@ public sealed class ContactCenterClaimMigrationTests
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         return store;
     }
@@ -223,7 +223,7 @@ public sealed class ContactCenterClaimMigrationTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("ExpiresUtc", column => column.NotNull())
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task CreateLegacyQueueItemIndexAsync(SchemaBuilder schemaBuilder)
@@ -237,7 +237,7 @@ public sealed class ContactCenterClaimMigrationTests
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
             .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static async Task InsertReservationIndexAsync(
@@ -332,7 +332,7 @@ public sealed class ContactCenterClaimMigrationTests
         var tableName = store.Configuration.TablePrefix +
             store.Configuration.TableNameConvention.GetIndexTable(
                 typeof(TIndex),
-                ContactCenterConstants.CollectionName);
+                ContactCenterStorage.CollectionName);
 
         return store.Configuration.SqlDialect.QuoteForTableName(
             tableName,

@@ -245,7 +245,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
 
             var deltaTable = store.Configuration.TableNameConvention.GetIndexTable(
                 typeof(ContactCenterEventMetricDeltaIndex),
-                ContactCenterConstants.CollectionName);
+                ContactCenterStorage.CollectionName);
 
             connectionFactory.Clear();
 
@@ -422,7 +422,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
         ]);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);

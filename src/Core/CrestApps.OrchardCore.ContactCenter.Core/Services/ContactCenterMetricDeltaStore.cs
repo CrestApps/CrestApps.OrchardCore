@@ -22,7 +22,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
     public ContactCenterMetricDeltaStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -35,7 +35,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
         // waiting contribution before returning one batch. The roller folds whatever it is handed and deletes
         // exactly those rows, so no order is needed to be correct.
         var deltas = await Session.Query<ContactCenterEventMetricDelta, ContactCenterEventMetricDeltaIndex>(
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .Take(take)
             .ListAsync(cancellationToken);
 
@@ -50,7 +50,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
         // exactly. Truncating under-reports transiently, which is the behaviour a lagging roller already has.
         var deltas = await Session.Query<ContactCenterEventMetricDelta, ContactCenterEventMetricDeltaIndex>(
             index => index.Date >= fromUtc && index.Date <= toUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .Take(MaxPendingContributionsPerRead)
             .ListAsync(cancellationToken);
 
@@ -65,7 +65,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
         // on is answered from the identifier the rows are already keyed by instead of by sorting the table.
         var rows = await Session.QueryIndex<ContactCenterEventMetricDeltaIndex>(
             index => index.DocumentId > afterDocumentId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.DocumentId)
             .Take(count)
             .ListAsync(cancellationToken);

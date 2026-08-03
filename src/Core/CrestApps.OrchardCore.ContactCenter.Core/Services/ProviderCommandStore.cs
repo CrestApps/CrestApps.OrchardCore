@@ -26,7 +26,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
     public ProviderCommandStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -36,7 +36,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
 
         return await Session.Query<ProviderCommand, ProviderCommandIndex>(
             index => index.CommandId == commandId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -49,7 +49,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
                 index.Status == ProviderCommandStatus.OutcomeUnknown ||
                 index.Status == ProviderCommandStatus.Compensating) &&
                 index.NextAttemptUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)
             .ListAsync(cancellationToken);
@@ -64,7 +64,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
         var commands = await Session.Query<ProviderCommand, ProviderCommandIndex>(
             index => (index.Status == ProviderCommandStatus.Claimed || index.Status == ProviderCommandStatus.Sent) &&
                 index.LeaseExpiresUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.LeaseExpiresUtc)
             .Take(take)
             .ListAsync(cancellationToken);

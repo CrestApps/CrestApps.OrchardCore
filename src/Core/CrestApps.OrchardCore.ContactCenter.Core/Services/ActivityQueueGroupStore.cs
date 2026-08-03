@@ -17,7 +17,7 @@ public sealed class ActivityQueueGroupStore : DocumentCatalog<ActivityQueueGroup
     public ActivityQueueGroupStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class ActivityQueueGroupStore : DocumentCatalog<ActivityQueueGroup
 
         return await Session.Query<ActivityQueueGroup, ActivityQueueGroupIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

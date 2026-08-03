@@ -17,7 +17,7 @@ public sealed class ActivityQueueStore : DocumentCatalog<ActivityQueue, Activity
     public ActivityQueueStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class ActivityQueueStore : DocumentCatalog<ActivityQueue, Activity
 
         return await Session.Query<ActivityQueue, ActivityQueueIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -36,7 +36,7 @@ public sealed class ActivityQueueStore : DocumentCatalog<ActivityQueue, Activity
     {
         var queues = await Session.Query<ActivityQueue, ActivityQueueIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return queues.ToArray();

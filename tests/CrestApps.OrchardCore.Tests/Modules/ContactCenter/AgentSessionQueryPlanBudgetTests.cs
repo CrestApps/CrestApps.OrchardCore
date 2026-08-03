@@ -43,9 +43,9 @@ public sealed class AgentSessionQueryPlanBudgetTests
 
         try
         {
-            store.RegisterIndexes([new AgentSessionIndexProvider()], ContactCenterConstants.CollectionName);
+            store.RegisterIndexes([new AgentSessionIndexProvider()], ContactCenterStorage.CollectionName);
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var migrationSession = store.CreateSession())
             {
@@ -108,9 +108,9 @@ public sealed class AgentSessionQueryPlanBudgetTests
 
         try
         {
-            store.RegisterIndexes([new AgentSessionIndexProvider()], ContactCenterConstants.CollectionName);
+            store.RegisterIndexes([new AgentSessionIndexProvider()], ContactCenterStorage.CollectionName);
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var migrationSession = store.CreateSession())
             {
@@ -164,7 +164,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
         .ToArray();
 
     private static string TableName(IConfiguration configuration)
-        => configuration.TableNameConvention.GetIndexTable(typeof(AgentSessionIndex), ContactCenterConstants.CollectionName);
+        => configuration.TableNameConvention.GetIndexTable(typeof(AgentSessionIndex), ContactCenterStorage.CollectionName);
 
     private static async Task MigrateAsync(IStore store, IConfiguration configuration, DbTransaction transaction)
     {

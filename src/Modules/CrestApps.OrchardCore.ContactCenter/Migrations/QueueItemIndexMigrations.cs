@@ -52,12 +52,12 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
             .Column<DateTime?>("DequeuedUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
             .CreateIndex("IDX_QueueItemIndex_DocumentId", "DocumentId", "QueueId", "Status", "ActivityItemId", "AgentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // The claim constraint is created the same way the upgrade path creates it. Declaring it inline
@@ -72,7 +72,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
             .CreateIndex("IDX_QueueItemIndex_Retention", "Status", "DequeuedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 3;
@@ -87,7 +87,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
             .AddColumn<DateTime?>("DequeuedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         // Adding a column does not re-project rows that already exist, and a settled item is never written
         // again, so without this the whole pre-upgrade backlog would keep a null dequeue time and could never
@@ -103,7 +103,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
             .CreateIndex("IDX_QueueItemIndex_Retention", "Status", "DequeuedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -117,7 +117,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         var tableName = SchemaBuilder.TablePrefix +
             SchemaBuilder.TableNameConvention.GetIndexTable(
                 typeof(QueueItemIndex),
-                ContactCenterConstants.CollectionName);
+                ContactCenterStorage.CollectionName);
         var quotedTableName = SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
         var activityClaimColumn = SchemaBuilder.Dialect.QuoteForColumnName("ActivityClaimKey");
         var activityItemColumn = SchemaBuilder.Dialect.QuoteForColumnName("ActivityItemId");
@@ -134,7 +134,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             table.AddColumn<string>(
                 "ActivityClaimKey",
                 column => column.NotNull().WithDefault(string.Empty).WithLength(26)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await using (var command = SchemaBuilder.Connection.CreateCommand())
         {
@@ -227,7 +227,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
                 "QueueId",
                 "Status",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 4;
     }

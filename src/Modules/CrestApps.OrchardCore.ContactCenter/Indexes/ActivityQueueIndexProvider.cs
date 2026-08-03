@@ -14,7 +14,7 @@ public sealed class ActivityQueueIndexProvider : IndexProvider<ActivityQueue>
     /// </summary>
     public ActivityQueueIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

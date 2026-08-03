@@ -37,7 +37,7 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("HandlerId", column => column.NotNull().WithLength(128))
             .Column<string>("EventId", column => column.NotNull().WithLength(26)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
             .CreateIndex(
@@ -45,7 +45,7 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
                 "HandlerId",
                 "EventId",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
             SchemaBuilder,
@@ -70,7 +70,7 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
             .AddColumn<DateTime>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.AddRetentionColumnAsync(
             SchemaBuilder,
@@ -84,7 +84,7 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
                 "IDX_ContactCenterProcessedEventIndex_Retention",
                 "ProcessedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 2;
     }

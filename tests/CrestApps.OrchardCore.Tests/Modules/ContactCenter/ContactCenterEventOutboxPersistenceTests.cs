@@ -40,7 +40,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
                         ActivityItemId = "activity-1",
                         QueueId = "queue-1",
                     },
-                    collection: ContactCenterConstants.CollectionName);
+                    collection: ContactCenterStorage.CollectionName);
                 await publisher.PublishAsync(
                     CreateEvent(),
                     TestContext.Current.CancellationToken);
@@ -48,13 +48,13 @@ public sealed class ContactCenterEventOutboxPersistenceTests
 
             await using var verificationSession = store.CreateSession();
             var queueItem = await verificationSession
-                .Query<QueueItem>(collection: ContactCenterConstants.CollectionName)
+                .Query<QueueItem>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var interactionEvent = await verificationSession
-                .Query<InteractionEvent>(collection: ContactCenterConstants.CollectionName)
+                .Query<InteractionEvent>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var outboxMessage = await verificationSession
-                .Query<ContactCenterOutboxMessage>(collection: ContactCenterConstants.CollectionName)
+                .Query<ContactCenterOutboxMessage>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             // Assert
@@ -87,7 +87,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
                         ActivityItemId = "activity-1",
                         QueueId = "queue-1",
                     },
-                    collection: ContactCenterConstants.CollectionName);
+                    collection: ContactCenterStorage.CollectionName);
                 await publisher.PublishAsync(
                     CreateEvent(),
                     TestContext.Current.CancellationToken);
@@ -96,13 +96,13 @@ public sealed class ContactCenterEventOutboxPersistenceTests
 
             await using var verificationSession = store.CreateSession();
             var queueItem = await verificationSession
-                .Query<QueueItem>(collection: ContactCenterConstants.CollectionName)
+                .Query<QueueItem>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var interactionEvent = await verificationSession
-                .Query<InteractionEvent>(collection: ContactCenterConstants.CollectionName)
+                .Query<InteractionEvent>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var outboxMessage = await verificationSession
-                .Query<ContactCenterOutboxMessage>(collection: ContactCenterConstants.CollectionName)
+                .Query<ContactCenterOutboxMessage>(collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             // Assert
@@ -130,10 +130,10 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             await using var secondSession = store.CreateSession();
             firstSession.Save(
                 new QueueItem { ItemId = "queue-item-1", ActivityItemId = "activity-1", QueueId = "queue-1" },
-                collection: ContactCenterConstants.CollectionName);
+                collection: ContactCenterStorage.CollectionName);
             secondSession.Save(
                 new QueueItem { ItemId = "queue-item-2", ActivityItemId = "activity-2", QueueId = "queue-1" },
-                collection: ContactCenterConstants.CollectionName);
+                collection: ContactCenterStorage.CollectionName);
             await StageEventAndOutboxAsync(firstSession, CreateEvent(), TestContext.Current.CancellationToken);
             await StageEventAndOutboxAsync(secondSession, CreateEvent(), TestContext.Current.CancellationToken);
 
@@ -146,13 +146,13 @@ public sealed class ContactCenterEventOutboxPersistenceTests
 
             await using var verificationSession = store.CreateSession();
             var queueItems = await verificationSession
-                .Query<QueueItem>(collection: ContactCenterConstants.CollectionName)
+                .Query<QueueItem>(collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
             var interactionEvents = await verificationSession
-                .Query<InteractionEvent>(collection: ContactCenterConstants.CollectionName)
+                .Query<InteractionEvent>(collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
             var outboxMessages = await verificationSession
-                .Query<ContactCenterOutboxMessage>(collection: ContactCenterConstants.CollectionName)
+                .Query<ContactCenterOutboxMessage>(collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
 
             Assert.Single(queueItems);
@@ -207,7 +207,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
     {
         interactionEvent.ItemId = IdGenerator.GenerateId();
         interactionEvent.OccurredUtc = _now;
-        interactionEvent.SchemaVersion = ContactCenterConstants.CurrentEventSchemaVersion;
+        interactionEvent.SchemaVersion = ContactCenterStorage.CurrentEventSchemaVersion;
         interactionEvent.ActorId = ContactCenterConstants.SystemActor;
         var eventStore = new InteractionEventStore(session, new DefaultInteractionEventUpcastService([]));
         var outboxStore = new ContactCenterOutboxStore(session);
@@ -245,7 +245,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();

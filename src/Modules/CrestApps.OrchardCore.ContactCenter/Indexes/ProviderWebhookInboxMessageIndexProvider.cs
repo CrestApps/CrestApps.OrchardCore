@@ -19,7 +19,7 @@ public sealed class ProviderWebhookInboxMessageIndexProvider : IndexProvider<Pro
     public ProviderWebhookInboxMessageIndexProvider(IProviderIdentityResolver providerIdentityResolver)
     {
         _providerIdentityResolver = providerIdentityResolver;
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

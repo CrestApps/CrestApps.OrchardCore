@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IInteractionEventUpcastService
 {
     /// <summary>
-    /// Converts the event's payload to <see cref="ContactCenterConstants.CurrentEventSchemaVersion"/> in place,
+    /// Converts the event's payload to <see cref="ContactCenterStorage.CurrentEventSchemaVersion"/> in place,
     /// applying one registered <see cref="IInteractionEventUpcaster"/> per version step.
     /// </summary>
     /// <param name="interactionEvent">The event read from storage.</param>

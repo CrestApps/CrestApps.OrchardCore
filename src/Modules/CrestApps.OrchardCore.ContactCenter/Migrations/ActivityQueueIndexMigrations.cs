@@ -20,12 +20,12 @@ internal sealed class ActivityQueueIndexMigrations : DataMigration
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("QueueGroupId", column => column.WithLength(26))
             .Column<bool>("Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityQueueIndex>(table => table
             .CreateIndex("IDX_ActivityQueueIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;
@@ -41,7 +41,7 @@ internal sealed class ActivityQueueIndexMigrations : DataMigration
         {
             table.AddColumn<string>("QueueGroupId", column => column.WithLength(26));
         },
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;

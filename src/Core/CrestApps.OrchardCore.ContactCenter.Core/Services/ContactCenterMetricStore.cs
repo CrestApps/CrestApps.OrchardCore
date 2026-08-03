@@ -19,7 +19,7 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
     public ContactCenterMetricStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -30,7 +30,7 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
 
         return await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
             index => index.DateKey == dateKey && index.EventType == eventType,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -39,7 +39,7 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
     {
         var metrics = await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
             index => index.Date >= fromUtc && index.Date <= toUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return metrics.ToArray();
@@ -49,7 +49,7 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
     public async Task<IReadOnlyCollection<ContactCenterEventMetric>> ListAllAsync(CancellationToken cancellationToken = default)
     {
         var metrics = await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return metrics.ToArray();

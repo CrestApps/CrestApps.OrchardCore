@@ -14,7 +14,7 @@ public sealed class ContactCenterOutboxMessageIndexProvider : IndexProvider<Cont
     /// </summary>
     public ContactCenterOutboxMessageIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

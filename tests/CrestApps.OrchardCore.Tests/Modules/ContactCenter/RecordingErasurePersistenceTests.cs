@@ -57,16 +57,16 @@ public sealed class RecordingErasurePersistenceTests
             var interaction = await verification
                 .Query<Interaction, InteractionIndex>(
                     index => index.ItemId == "interaction-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var callSession = await verification
                 .Query<CallSession, CallSessionIndex>(
                     index => index.InteractionId == "interaction-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var events = await verification
                 .Query<InteractionEvent, InteractionEventIndex>(
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("storage/interaction-1", interaction.RecordingReference);
@@ -112,22 +112,22 @@ public sealed class RecordingErasurePersistenceTests
             var interaction = await verification
                 .Query<Interaction, InteractionIndex>(
                     index => index.ItemId == "interaction-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var callSession = await verification
                 .Query<CallSession, CallSessionIndex>(
                     index => index.InteractionId == "interaction-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var interactionEvent = await verification
                 .Query<InteractionEvent, InteractionEventIndex>(
                     index => index.EventType == ContactCenterConstants.Events.RecordingErased,
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             var outbox = await verification
                 .Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
                     index => index.EventId == interactionEvent.ItemId,
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             Assert.Null(interaction.RecordingReference);
@@ -215,7 +215,7 @@ public sealed class RecordingErasurePersistenceTests
                 ProviderInteractionId = "provider-call-1",
                 RecordingReference = "storage/interaction-1",
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         session.Save(
             new CallSession
             {
@@ -226,7 +226,7 @@ public sealed class RecordingErasurePersistenceTests
                 RecordingReference = "storage/interaction-1",
                 CreatedUtc = _erasedUtc.AddHours(-1),
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -250,7 +250,7 @@ public sealed class RecordingErasurePersistenceTests
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();

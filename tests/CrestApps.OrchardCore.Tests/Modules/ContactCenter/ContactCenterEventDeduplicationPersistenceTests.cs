@@ -56,7 +56,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
                         index =>
                             index.HandlerId == "ContactCenter/MetricsProjection/v1" &&
                             index.EventId == "event-1",
-                        collection: ContactCenterConstants.CollectionName)
+                        collection: ContactCenterStorage.CollectionName)
                     .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
                 var contributions = await new ContactCenterMetricDeltaStore(verificationSession)
                     .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
@@ -157,7 +157,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();

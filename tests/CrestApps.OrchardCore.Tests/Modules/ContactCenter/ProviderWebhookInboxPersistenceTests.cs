@@ -29,7 +29,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new ProviderWebhookInboxMessageIndexProvider(new ProviderIdentityResolver([]))]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
         await CreateIndexSchemaAsync(store);
 
         try
@@ -80,7 +80,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime?>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 

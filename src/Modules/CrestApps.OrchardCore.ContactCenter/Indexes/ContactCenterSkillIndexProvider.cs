@@ -14,7 +14,7 @@ public sealed class ContactCenterSkillIndexProvider : IndexProvider<ContactCente
     /// </summary>
     public ContactCenterSkillIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

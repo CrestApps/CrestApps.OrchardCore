@@ -21,7 +21,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     public AgentProfileStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -31,7 +31,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
 
         return await Session.Query<AgentProfile, AgentProfileIndex>(
             index => index.UserId == userId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -43,7 +43,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
         var normalizedQueueId = queueId.ToLowerInvariant();
         var available = await Session.Query<AgentProfile, AgentQueueMembershipIndex>(
             index => index.QueueId == normalizedQueueId && index.PresenceStatus == AgentPresenceStatus.Available,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return available.ToArray();
@@ -56,7 +56,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     {
         return (await Session.Query<AgentProfile, AgentProfileIndex>(
             index => index.PresenceStatus == presenceStatus,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken)).ToArray();
     }
 }

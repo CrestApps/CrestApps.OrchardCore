@@ -121,7 +121,7 @@ public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : IContac
         var take = batchSize <= 0 ? 100 : batchSize;
 
         var expired = await _session
-            .Query<TModel, TIndex>(BuildExpiredPredicate(cutoffUtc), collection: ContactCenterConstants.CollectionName)
+            .Query<TModel, TIndex>(BuildExpiredPredicate(cutoffUtc), collection: ContactCenterStorage.CollectionName)
             .Take(take)
             .ListAsync(cancellationToken);
 

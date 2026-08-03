@@ -137,7 +137,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             // key during the rebuild's index gap.
             await schemaBuilder.AlterIndexTableAsync<CallSessionIndex>(
                 table => table.DropIndex("UQ_CallSessionIndex_ProviderCallClaimKey"),
-                collection: ContactCenterConstants.CollectionName);
+                collection: ContactCenterStorage.CollectionName);
 
             await ExecuteAsync(
                 schemaBuilder,
@@ -530,7 +530,7 @@ public sealed class ContactCenterUniquenessMigrationTests
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         return store;
     }
@@ -548,7 +548,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task CreateLegacyInteractionEventIndexAsync(SchemaBuilder schemaBuilder)
@@ -562,7 +562,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("CorrelationId", column => column.WithLength(26))
             .Column<string>("IdempotencyKey", column => column.WithLength(128))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task CreateLegacyInboxIndexAsync(SchemaBuilder schemaBuilder)
@@ -574,7 +574,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task CreateLegacyEventMetricIndexAsync(SchemaBuilder schemaBuilder)
@@ -584,7 +584,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             .Column<string>("DateKey", column => column.WithLength(10))
             .Column<DateTime>("Date")
             .Column<string>("EventType", column => column.WithLength(128)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static async Task InsertCallSessionAsync(
@@ -771,7 +771,7 @@ public sealed class ContactCenterUniquenessMigrationTests
     private static string GetIndexTableName<TIndex>(IStore store)
     {
         var tableName = store.Configuration.TablePrefix +
-            store.Configuration.TableNameConvention.GetIndexTable(typeof(TIndex), ContactCenterConstants.CollectionName);
+            store.Configuration.TableNameConvention.GetIndexTable(typeof(TIndex), ContactCenterStorage.CollectionName);
 
         return store.Configuration.SqlDialect.QuoteForTableName(tableName, store.Configuration.Schema);
     }

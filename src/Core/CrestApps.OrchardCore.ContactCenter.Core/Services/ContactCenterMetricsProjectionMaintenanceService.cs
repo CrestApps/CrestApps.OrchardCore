@@ -248,15 +248,15 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
 
     private async Task AdvanceCheckpointAsync(RecomputeResult recomputed, DateTime rebuiltUtc, CancellationToken cancellationToken)
     {
-        var checkpoint = await _checkpointStore.FindByHandlerAsync(ContactCenterConstants.MetricsProjectionHandlerId, cancellationToken);
+        var checkpoint = await _checkpointStore.FindByHandlerAsync(ContactCenterStorage.MetricsProjectionHandlerId, cancellationToken);
 
         if (checkpoint is null)
         {
             checkpoint = new ContactCenterProjectionCheckpoint
             {
                 ItemId = IdGenerator.GenerateId(),
-                HandlerId = ContactCenterConstants.MetricsProjectionHandlerId,
-                Version = ContactCenterConstants.MetricsProjectionVersion,
+                HandlerId = ContactCenterStorage.MetricsProjectionHandlerId,
+                Version = ContactCenterStorage.MetricsProjectionVersion,
                 LastOccurredUtc = recomputed.LastOccurredUtc,
                 LastEventId = recomputed.LastEventId,
                 RebuiltUtc = rebuiltUtc,
@@ -267,7 +267,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
             return;
         }
 
-        checkpoint.Version = ContactCenterConstants.MetricsProjectionVersion;
+        checkpoint.Version = ContactCenterStorage.MetricsProjectionVersion;
         checkpoint.LastOccurredUtc = recomputed.LastOccurredUtc;
         checkpoint.LastEventId = recomputed.LastEventId;
         checkpoint.RebuiltUtc = rebuiltUtc;

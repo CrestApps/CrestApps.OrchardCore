@@ -531,7 +531,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
             new ContactCenterWorkStateIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
         await CreateIndexSchemaAsync(store);
 
@@ -572,7 +572,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
             var persistedWorkState = await verificationSession
                 .Query<ContactCenterWorkState, ContactCenterWorkStateIndex>(
                     index => index.ActivityItemId == "activity-1",
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("Customer asked for a callback.", persistedActivity.Notes);
@@ -777,14 +777,14 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
             .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<string>("PresenceStatus", column => column.WithLength(50)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ContactCenterWorkStateIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -794,7 +794,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("ReservedById", column => column.WithLength(26))
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ActivityReservationIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -805,7 +805,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("ExpiresUtc", column => column.NotNull())
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }

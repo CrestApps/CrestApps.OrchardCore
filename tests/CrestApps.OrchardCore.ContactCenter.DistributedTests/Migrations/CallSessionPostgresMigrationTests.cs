@@ -51,7 +51,7 @@ public sealed class CallSessionPostgresMigrationTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var session = store.CreateSession())
             {
@@ -140,7 +140,7 @@ public sealed class CallSessionPostgresMigrationTests
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
             .CreateIndex("IDX_CallSessionIndex_DocumentId",
@@ -149,14 +149,14 @@ public sealed class CallSessionPostgresMigrationTests
                 "ProviderCallId",
                 "InteractionId",
                 "State"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
             .CreateIndex("IDX_CallSessionIndex_Lookup",
                 "ActivityItemId",
                 "AgentId",
                 "QueueId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
             schemaBuilder,
@@ -169,7 +169,7 @@ public sealed class CallSessionPostgresMigrationTests
             .CreateIndex("IDX_CallSessionIndex_Retention",
                 "EndedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static async Task SeedAsync(SchemaBuilder schemaBuilder, IStore store)
@@ -331,7 +331,7 @@ public sealed class CallSessionPostgresMigrationTests
 
     private static string PhysicalTableName(IStore store)
         => store.Configuration.TablePrefix +
-            store.Configuration.TableNameConvention.GetIndexTable(typeof(CallSessionIndex), ContactCenterConstants.CollectionName);
+            store.Configuration.TableNameConvention.GetIndexTable(typeof(CallSessionIndex), ContactCenterStorage.CollectionName);
 
     private static string QuotedTableName(IStore store)
         => store.Configuration.SqlDialect.QuoteForTableName(PhysicalTableName(store), store.Configuration.Schema);
@@ -339,7 +339,7 @@ public sealed class CallSessionPostgresMigrationTests
     private static string QuotedDocumentTableName(IStore store)
     {
         var tableName = store.Configuration.TablePrefix +
-            store.Configuration.TableNameConvention.GetDocumentTable(ContactCenterConstants.CollectionName);
+            store.Configuration.TableNameConvention.GetDocumentTable(ContactCenterStorage.CollectionName);
 
         return store.Configuration.SqlDialect.QuoteForTableName(tableName, store.Configuration.Schema);
     }

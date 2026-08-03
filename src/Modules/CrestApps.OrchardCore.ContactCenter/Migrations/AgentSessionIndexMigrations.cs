@@ -32,7 +32,7 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<bool>("IsOnline")
             .Column<DateTime>("LastHeartbeatUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
@@ -42,7 +42,7 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
                 "UserId",
                 "IsOnline",
                 "LastHeartbeatUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
@@ -57,7 +57,7 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
                 "IDX_AgentSessionIndex_Retention",
                 "LastHeartbeatUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -73,7 +73,7 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
                 "IDX_AgentSessionIndex_Retention",
                 "LastHeartbeatUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }

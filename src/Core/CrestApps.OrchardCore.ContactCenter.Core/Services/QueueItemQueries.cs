@@ -31,7 +31,7 @@ public static class QueueItemQueries
         ArgumentOutOfRangeException.ThrowIfLessThan(queueIdCount, 1);
 
         var dialect = configuration.SqlDialect;
-        var tableName = configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterConstants.CollectionName);
+        var tableName = configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterStorage.CollectionName);
         var queueColumn = dialect.QuoteForColumnName(nameof(QueueItemIndex.QueueId));
         var statusColumn = dialect.QuoteForColumnName(nameof(QueueItemIndex.Status));
 

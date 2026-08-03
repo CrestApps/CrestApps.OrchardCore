@@ -18,12 +18,12 @@ internal sealed class ActivityQueueGroupIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<ActivityQueueGroupIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255)),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityQueueGroupIndex>(table => table
             .CreateIndex("IDX_ActivityQueueGroupIndex_DocumentId", "DocumentId", "ItemId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;

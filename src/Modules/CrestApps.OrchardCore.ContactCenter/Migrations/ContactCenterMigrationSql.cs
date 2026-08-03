@@ -20,7 +20,7 @@ internal static class ContactCenterMigrationSql
     public static string GetQuotedTableName(ISchemaBuilder schemaBuilder, IStore store, Type indexType)
     {
         var tableName = schemaBuilder.TablePrefix +
-            schemaBuilder.TableNameConvention.GetIndexTable(indexType, ContactCenterConstants.CollectionName);
+            schemaBuilder.TableNameConvention.GetIndexTable(indexType, ContactCenterStorage.CollectionName);
 
         return schemaBuilder.Dialect.QuoteForTableName(tableName, store.Configuration.Schema);
     }

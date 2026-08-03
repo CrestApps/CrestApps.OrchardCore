@@ -58,9 +58,9 @@ public sealed class ContactCenterRetentionPersistenceTests
             // Assert
             await using (var session = store.CreateSession())
             {
-                var queueItems = await session.Query<QueueItem, QueueItemIndex>(collection: ContactCenterConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
-                var commands = await session.Query<ProviderCommand, ProviderCommandIndex>(collection: ContactCenterConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
-                var interactions = await session.Query<Interaction, InteractionIndex>(collection: ContactCenterConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+                var queueItems = await session.Query<QueueItem, QueueItemIndex>(collection: ContactCenterStorage.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+                var commands = await session.Query<ProviderCommand, ProviderCommandIndex>(collection: ContactCenterStorage.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+                var interactions = await session.Query<Interaction, InteractionIndex>(collection: ContactCenterStorage.CollectionName).ListAsync(TestContext.Current.CancellationToken);
 
                 Assert.Equal(
                     ["queue-live", "queue-recent"],
@@ -96,7 +96,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 {
                     await session.SaveAsync(
                         ExpiredQueueItem($"queue-{i.ToString("D4", CultureInfo.InvariantCulture)}"),
-                        collection: ContactCenterConstants.CollectionName,
+                        collection: ContactCenterStorage.CollectionName,
                         cancellationToken: TestContext.Current.CancellationToken);
                 }
 
@@ -117,7 +117,7 @@ public sealed class ContactCenterRetentionPersistenceTests
 
             await using (var verification = store.CreateSession())
             {
-                var remaining = await verification.Query<QueueItem, QueueItemIndex>(collection: ContactCenterConstants.CollectionName).CountAsync(TestContext.Current.CancellationToken);
+                var remaining = await verification.Query<QueueItem, QueueItemIndex>(collection: ContactCenterStorage.CollectionName).CountAsync(TestContext.Current.CancellationToken);
 
                 Assert.Equal(0, remaining);
             }
@@ -143,7 +143,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 {
                     await session.SaveAsync(
                         ExpiredQueueItem($"queue-{i.ToString("D4", CultureInfo.InvariantCulture)}"),
-                        collection: ContactCenterConstants.CollectionName,
+                        collection: ContactCenterStorage.CollectionName,
                         cancellationToken: TestContext.Current.CancellationToken);
                 }
 
@@ -164,7 +164,7 @@ public sealed class ContactCenterRetentionPersistenceTests
 
             await using (var verification = store.CreateSession())
             {
-                var remaining = await verification.Query<QueueItem, QueueItemIndex>(collection: ContactCenterConstants.CollectionName).CountAsync(TestContext.Current.CancellationToken);
+                var remaining = await verification.Query<QueueItem, QueueItemIndex>(collection: ContactCenterStorage.CollectionName).CountAsync(TestContext.Current.CancellationToken);
 
                 Assert.Equal(70, remaining);
             }
@@ -192,7 +192,7 @@ public sealed class ContactCenterRetentionPersistenceTests
 
                     await session.SaveAsync(
                         ExpiredQueueItem($"queue-{suffix}"),
-                        collection: ContactCenterConstants.CollectionName,
+                        collection: ContactCenterStorage.CollectionName,
                         cancellationToken: TestContext.Current.CancellationToken);
 
                     await session.SaveAsync(
@@ -206,7 +206,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                             LeaseExpiresUtc = _nowUtc.AddDays(-90),
                             CompletedUtc = _nowUtc.AddDays(-89),
                         },
-                        collection: ContactCenterConstants.CollectionName,
+                        collection: ContactCenterStorage.CollectionName,
                         cancellationToken: TestContext.Current.CancellationToken);
                 }
 
@@ -285,7 +285,7 @@ public sealed class ContactCenterRetentionPersistenceTests
             Assert.Equal(1, report.Entities.Single(entity => entity.EntityName == nameof(ActivityReservation)).PurgedCount);
 
             var remaining = await session
-                .Query<ActivityReservation, ActivityReservationIndex>(collection: ContactCenterConstants.CollectionName)
+                .Query<ActivityReservation, ActivityReservationIndex>(collection: ContactCenterStorage.CollectionName)
                 .ListAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("reservation-2", Assert.Single(remaining).ItemId);
@@ -335,7 +335,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                         RecordingReference = "storage/held",
                         RecordingLegalHold = true,
                     }.RestorePersistedStatus(InteractionStatus.Ended),
-                    collection: ContactCenterConstants.CollectionName,
+                    collection: ContactCenterStorage.CollectionName,
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 await session.SaveAsync(
@@ -348,7 +348,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                         EndedUtc = _nowUtc.AddDays(-89),
                         RecordingReference = "storage/recorded",
                     }.RestorePersistedStatus(InteractionStatus.Ended),
-                    collection: ContactCenterConstants.CollectionName,
+                    collection: ContactCenterStorage.CollectionName,
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 await session.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -368,7 +368,7 @@ public sealed class ContactCenterRetentionPersistenceTests
             // Assert
             await using (var session = store.CreateSession())
             {
-                var interactions = await session.Query<Interaction, InteractionIndex>(collection: ContactCenterConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
+                var interactions = await session.Query<Interaction, InteractionIndex>(collection: ContactCenterStorage.CollectionName).ListAsync(TestContext.Current.CancellationToken);
 
                 Assert.Equal(["interaction-held"], interactions.Select(interaction => interaction.ItemId));
             }
@@ -466,7 +466,7 @@ public sealed class ContactCenterRetentionPersistenceTests
 
     private static async Task SeedAsync(ISession session)
     {
-        await session.SaveAsync(ExpiredQueueItem("queue-expired"), collection: ContactCenterConstants.CollectionName);
+        await session.SaveAsync(ExpiredQueueItem("queue-expired"), collection: ContactCenterStorage.CollectionName);
 
         // Settled long ago by the clock that matters, but still waiting, so it must survive.
         await session.SaveAsync(
@@ -478,7 +478,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = _nowUtc.AddDays(-90),
             }.RestorePersistedStatus(QueueItemStatus.Waiting),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveAsync(
             new QueueItem
@@ -490,7 +490,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 EnqueuedUtc = _nowUtc.AddDays(-2),
                 DequeuedUtc = _nowUtc.AddDays(-1),
             }.RestorePersistedStatus(QueueItemStatus.Completed),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveAsync(
             new ProviderCommand
@@ -503,7 +503,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 LeaseExpiresUtc = _nowUtc.AddDays(-90),
                 CompletedUtc = _nowUtc.AddDays(-89),
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         // Old but never completed: a command still awaiting an outcome is not safe to delete at any age.
         await session.SaveAsync(
@@ -516,7 +516,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 NextAttemptUtc = _nowUtc.AddDays(-90),
                 LeaseExpiresUtc = _nowUtc.AddDays(-90),
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveAsync(
             new ProviderCommand
@@ -529,7 +529,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 LeaseExpiresUtc = _nowUtc.AddDays(-2),
                 CompletedUtc = _nowUtc.AddDays(-1),
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveAsync(
             new Interaction
@@ -540,7 +540,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 CreatedUtc = _nowUtc.AddDays(-95),
                 EndedUtc = _nowUtc.AddDays(-89),
             }.RestorePersistedStatus(InteractionStatus.Ended),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         // A conversation that started three months ago and has not ended is still live.
         await session.SaveAsync(
@@ -551,7 +551,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 Direction = InteractionDirection.Inbound,
                 CreatedUtc = _nowUtc.AddDays(-95),
             }.RestorePersistedStatus(InteractionStatus.Connected),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveAsync(
             new Interaction
@@ -562,7 +562,7 @@ public sealed class ContactCenterRetentionPersistenceTests
                 CreatedUtc = _nowUtc.AddDays(-3),
                 EndedUtc = _nowUtc.AddDays(-1),
             }.RestorePersistedStatus(InteractionStatus.Ended),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static string DatabasePath(string suffix)
@@ -581,7 +581,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         ]);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         var providerIdentityResolver = new Mock<IProviderIdentityResolver>();
         providerIdentityResolver.Setup(resolver => resolver.Canonicalize(It.IsAny<string>())).Returns<string>(value => value);

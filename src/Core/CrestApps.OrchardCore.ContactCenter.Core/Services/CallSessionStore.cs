@@ -32,7 +32,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
     public CallSessionStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -42,7 +42,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
 
         return await Session.Query<CallSession, CallSessionIndex>(
             index => index.ProviderCallId == providerCallId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -59,7 +59,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
         return await Session.Query<CallSession, CallSessionIndex>(
             index => index.ProviderName == providerName &&
                 index.ProviderCallId == providerCallId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -71,7 +71,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
 
         return await Session.Query<CallSession, CallSessionIndex>(
             index => index.InteractionId == interactionId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -81,7 +81,7 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
     {
         return await Session.Query<CallSession, CallSessionIndex>(
             index => index.EndedUtc == null,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 

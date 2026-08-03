@@ -109,7 +109,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         var interactions = (await _session.Query<Interaction, InteractionIndex>(
             index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken))
             .ToArray();
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
@@ -1226,7 +1226,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             ? []
             : (await _session.Query<CallSession, CallSessionIndex>(
                 index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .ListAsync(cancellationToken))
                 .Where(callSession => interactionIds.Contains(callSession.InteractionId))
                 .ToArray();

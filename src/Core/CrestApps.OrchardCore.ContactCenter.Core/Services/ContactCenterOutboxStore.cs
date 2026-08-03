@@ -20,7 +20,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     public ContactCenterOutboxStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -30,7 +30,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
 
         return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
             index => index.EventId == eventId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -42,7 +42,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
         var due = await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
             index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)
             .ListAsync(cancellationToken);
@@ -55,7 +55,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     {
         return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
             index => index.Status == status,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -65,7 +65,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
         return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
             index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 }

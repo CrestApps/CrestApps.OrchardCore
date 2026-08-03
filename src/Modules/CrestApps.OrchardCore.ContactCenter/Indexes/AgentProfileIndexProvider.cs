@@ -14,7 +14,7 @@ public sealed class AgentProfileIndexProvider : IndexProvider<AgentProfile>
     /// </summary>
     public AgentProfileIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

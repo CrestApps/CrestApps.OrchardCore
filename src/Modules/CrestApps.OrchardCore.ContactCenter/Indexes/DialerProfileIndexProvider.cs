@@ -14,7 +14,7 @@ public sealed class DialerProfileIndexProvider : IndexProvider<DialerProfile>
     /// </summary>
     public DialerProfileIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

@@ -22,7 +22,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
             .Column<InteractionDirection>("Direction")
             .Column<InteractionStatus>("Status")
             .Column<string>("ActivityItemId", column => column.WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterStorage.ProviderNameLength))
             .Column<string>("ProviderInteractionId", column => column.WithLength(128))
             .Column<string>("ProviderLegId", column => column.WithLength(128))
             .Column<string>("QueueId", column => column.WithLength(26))
@@ -30,7 +30,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
             .Column<string>("CorrelationId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table => table
@@ -40,7 +40,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
                 "Status",
                 "QueueId",
                 "AgentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table => table
@@ -49,7 +49,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
                 "ProviderInteractionId",
                 "ProviderLegId",
                 "CorrelationId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;
@@ -66,7 +66,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
             table.AddColumn<DateTime>("WrapUpStartedUtc");
             table.AddColumn<DateTime>("WrapUpCompletedUtc");
         },
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;
@@ -84,7 +84,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
                 "IDX_InteractionIndex_Retention",
                 "EndedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -104,7 +104,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
                 "AgentId",
                 "Status",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 4;
     }
@@ -119,7 +119,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table =>
             table.AddColumn<bool>("RecordingLegalHold", column => column.WithDefault(false)),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 5;

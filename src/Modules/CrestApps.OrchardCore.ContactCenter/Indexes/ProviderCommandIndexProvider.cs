@@ -14,7 +14,7 @@ public sealed class ProviderCommandIndexProvider : IndexProvider<ProviderCommand
     /// </summary>
     public ProviderCommandIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

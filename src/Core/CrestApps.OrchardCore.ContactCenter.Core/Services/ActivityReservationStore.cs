@@ -21,7 +21,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     public ActivityReservationStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -50,13 +50,13 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
                     && index.ExpiresUtc <= utcNow
                     && (index.ExpiresUtc > cursorExpiresUtc
                         || (index.ExpiresUtc == cursorExpiresUtc && index.DocumentId > afterDocumentId)),
-                collection: ContactCenterConstants.CollectionName);
+                collection: ContactCenterStorage.CollectionName);
         }
         else
         {
             indexQuery = Session.QueryIndex<ActivityReservationIndex>(
                 index => index.Status == ReservationStatus.Pending && index.ExpiresUtc <= utcNow,
-                collection: ContactCenterConstants.CollectionName);
+                collection: ContactCenterStorage.CollectionName);
         }
 
         var indexRows = (await indexQuery
@@ -74,7 +74,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
 
         var documents = await Session.GetAsync<ActivityReservation>(
             documentIds,
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken);
 
         // A full page means there may be more work behind it, so surface the cursor. A short page means the
@@ -96,7 +96,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
 
         return await Session.Query<ActivityReservation, ActivityReservationIndex>(
             index => index.AgentId == agentId && index.Status == ReservationStatus.Pending,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -110,7 +110,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
         var reservations = await Session.Query<ActivityReservation, ActivityReservationIndex>(
             index => index.AgentId == agentId &&
                 (index.Status == ReservationStatus.Pending || index.Status == ReservationStatus.Accepted),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return reservations.ToArray();
@@ -124,7 +124,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
         var reservations = await Session.Query<ActivityReservation, ActivityReservationIndex>(
             index => index.ActivityItemId == activityItemId &&
                 (index.Status == ReservationStatus.Pending || index.Status == ReservationStatus.Accepted),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return reservations.ToArray();

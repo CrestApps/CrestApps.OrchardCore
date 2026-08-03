@@ -17,7 +17,7 @@ public sealed class ContactCenterProjectionCheckpointStore : DocumentCatalog<Con
     public ContactCenterProjectionCheckpointStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class ContactCenterProjectionCheckpointStore : DocumentCatalog<Con
 
         return await Session.Query<ContactCenterProjectionCheckpoint, ContactCenterProjectionCheckpointIndex>(
             index => index.HandlerId == handlerId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

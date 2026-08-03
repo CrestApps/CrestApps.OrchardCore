@@ -17,7 +17,7 @@ public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerPr
     public DialerProfileStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -25,7 +25,7 @@ public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerPr
     {
         var profiles = await Session.Query<DialerProfile, DialerProfileIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return profiles.ToArray();
@@ -38,7 +38,7 @@ public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerPr
 
         return await Session.Query<DialerProfile, DialerProfileIndex>(
             index => index.CampaignId == campaignId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

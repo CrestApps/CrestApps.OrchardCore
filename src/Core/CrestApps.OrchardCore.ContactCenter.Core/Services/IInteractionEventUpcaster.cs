@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// conversion the stored JSON is deserialized straight into today's type, so a renamed, split, or re-united
 /// property arrives as its default value and the handler acts on a payload that is quietly wrong rather than
 /// failing. One implementation converts exactly one version step for one event type, and the steps are chained
-/// until the payload reaches <see cref="ContactCenterConstants.CurrentEventSchemaVersion"/>.
+/// until the payload reaches <see cref="ContactCenterStorage.CurrentEventSchemaVersion"/>.
 /// </summary>
 public interface IInteractionEventUpcaster
 {

@@ -17,7 +17,7 @@ public sealed class BusinessHoursCalendarStore : DocumentCatalog<BusinessHoursCa
     public BusinessHoursCalendarStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public sealed class BusinessHoursCalendarStore : DocumentCatalog<BusinessHoursCa
 
         return await Session.Query<BusinessHoursCalendar, BusinessHoursCalendarIndex>(
             index => index.Name == name,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -36,7 +36,7 @@ public sealed class BusinessHoursCalendarStore : DocumentCatalog<BusinessHoursCa
     {
         var calendars = await Session.Query<BusinessHoursCalendar, BusinessHoursCalendarIndex>(
             index => index.Enabled,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return calendars.ToArray();

@@ -57,12 +57,12 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             .Column<ReservationStatus>("Status")
             .Column<DateTime>("ExpiresUtc", column => column.NotNull())
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
             .CreateIndex("IDX_ActivityReservationIndex_DocumentId", "DocumentId", "AgentId", "Status", "ExpiresUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // The claim constraints are created the same way the upgrade path creates them. Declaring them inline
@@ -83,7 +83,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
             .CreateIndex("IDX_ActivityReservationIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 3;
@@ -99,7 +99,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
             .AddColumn<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.AddRetentionColumnAsync(
             SchemaBuilder,
@@ -111,7 +111,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table
             .CreateIndex("IDX_ActivityReservationIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -125,7 +125,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
         var tableName = SchemaBuilder.TablePrefix +
             SchemaBuilder.TableNameConvention.GetIndexTable(
                 typeof(ActivityReservationIndex),
-                ContactCenterConstants.CollectionName);
+                ContactCenterStorage.CollectionName);
         var quotedTableName = SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
         var activityClaimColumn = SchemaBuilder.Dialect.QuoteForColumnName("ActivityClaimKey");
         var activityItemColumn = SchemaBuilder.Dialect.QuoteForColumnName("ActivityItemId");
@@ -150,7 +150,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
                 "AgentClaimKey",
                 column => column.NotNull().WithDefault(string.Empty).WithLength(26));
         },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await using (var command = SchemaBuilder.Connection.CreateCommand())
         {

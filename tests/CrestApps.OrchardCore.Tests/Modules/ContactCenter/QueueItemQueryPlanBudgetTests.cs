@@ -40,7 +40,7 @@ public sealed class QueueItemQueryPlanBudgetTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -123,7 +123,7 @@ public sealed class QueueItemQueryPlanBudgetTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -167,9 +167,9 @@ public sealed class QueueItemQueryPlanBudgetTests
 
         try
         {
-            store.RegisterIndexes([new QueueItemIndexProvider()], ContactCenterConstants.CollectionName);
+            store.RegisterIndexes([new QueueItemIndexProvider()], ContactCenterStorage.CollectionName);
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var migrationSession = store.CreateSession())
             {

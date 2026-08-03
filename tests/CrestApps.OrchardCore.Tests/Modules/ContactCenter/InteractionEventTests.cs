@@ -60,6 +60,6 @@ public sealed class InteractionEventTests
         var interactionEvent = new InteractionEvent();
 
         // Assert
-        Assert.Equal(ContactCenterConstants.CurrentEventSchemaVersion, interactionEvent.SchemaVersion);
+        Assert.Equal(ContactCenterStorage.CurrentEventSchemaVersion, interactionEvent.SchemaVersion);
     }
 }

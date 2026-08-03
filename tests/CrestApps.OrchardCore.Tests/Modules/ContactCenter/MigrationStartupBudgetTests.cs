@@ -151,7 +151,7 @@ public sealed class MigrationStartupBudgetTests
         });
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         return store;
     }
@@ -169,7 +169,7 @@ public sealed class MigrationStartupBudgetTests
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task CreateLegacyInboxIndexAsync(SchemaBuilder schemaBuilder)
@@ -181,7 +181,7 @@ public sealed class MigrationStartupBudgetTests
             .Column<int>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private static Task InsertCallSessionAsync(
@@ -250,7 +250,7 @@ public sealed class MigrationStartupBudgetTests
     private static string GetIndexTableName<TIndex>(IStore store)
     {
         var tableName = store.Configuration.TablePrefix +
-            store.Configuration.TableNameConvention.GetIndexTable(typeof(TIndex), ContactCenterConstants.CollectionName);
+            store.Configuration.TableNameConvention.GetIndexTable(typeof(TIndex), ContactCenterStorage.CollectionName);
 
         return store.Configuration.SqlDialect.QuoteForTableName(tableName, store.Configuration.Schema);
     }

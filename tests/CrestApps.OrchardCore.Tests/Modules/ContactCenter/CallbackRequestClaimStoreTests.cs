@@ -93,7 +93,7 @@ public sealed class CallbackRequestClaimStoreTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new CallbackRequestIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -105,7 +105,7 @@ public sealed class CallbackRequestClaimStoreTests
             .Column<DateTime>("ScheduledUtc")
             .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable())
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -128,7 +128,7 @@ public sealed class CallbackRequestClaimStoreTests
                 ScheduledUtc = scheduledUtc,
                 LeaseExpiresUtc = leaseExpiresUtc,
             },
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

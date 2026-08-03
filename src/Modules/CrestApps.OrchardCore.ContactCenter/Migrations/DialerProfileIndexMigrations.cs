@@ -21,12 +21,12 @@ internal sealed class DialerProfileIndexMigrations : DataMigration
             .Column<string>("CampaignId", column => column.WithLength(26))
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<bool>("Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<DialerProfileIndex>(table => table
             .CreateIndex("IDX_DialerProfileIndex_DocumentId", "DocumentId", "CampaignId", "QueueId", "Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;

@@ -21,12 +21,12 @@ internal sealed class AgentProfileIndexMigrations : DataMigration
             .Column<string>("Name", column => column.WithLength(255))
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<AgentPresenceStatus>("PresenceStatus"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AgentProfileIndex>(table => table
             .CreateIndex("IDX_AgentProfileIndex_DocumentId", "DocumentId", "ItemId", "UserId", "PresenceStatus"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 1;

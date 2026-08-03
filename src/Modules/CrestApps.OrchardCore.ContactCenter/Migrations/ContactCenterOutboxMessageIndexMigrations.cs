@@ -39,7 +39,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
             .Column<OutboxMessageStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
@@ -47,7 +47,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
                 "DocumentId",
                 "Status",
                 "NextAttemptUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
@@ -55,7 +55,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
                 "Status",
                 "CreatedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;
@@ -70,7 +70,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
             .AddColumn<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.AddRetentionColumnAsync(
             SchemaBuilder,
@@ -84,7 +84,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
                 "Status",
                 "CreatedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 2;
     }

@@ -39,7 +39,7 @@ public sealed class InteractionEventUpcastPersistenceTests
 
         try
         {
-            var storedVersion = ContactCenterConstants.CurrentEventSchemaVersion + 5;
+            var storedVersion = ContactCenterStorage.CurrentEventSchemaVersion + 5;
 
             await SeedAsync(store, schemaVersion: storedVersion);
 
@@ -171,7 +171,7 @@ public sealed class InteractionEventUpcastPersistenceTests
             var stored = await verification
                 .Query<InteractionEvent, InteractionEventIndex>(
                     index => index.ItemId == SeededEventId,
-                    collection: ContactCenterConstants.CollectionName)
+                    collection: ContactCenterStorage.CollectionName)
                 .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             // Assert
@@ -383,7 +383,7 @@ public sealed class InteractionEventUpcastPersistenceTests
                 SchemaVersion = schemaVersion,
                 Data = data,
             },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -395,7 +395,7 @@ public sealed class InteractionEventUpcastPersistenceTests
         store.RegisterIndexes([new InteractionEventIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
-            ContactCenterConstants.CollectionName,
+            ContactCenterStorage.CollectionName,
             TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();

@@ -40,12 +40,12 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("ProviderName", column => column.WithLength(ContactCenterConstants.ProviderNameLength))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterStorage.ProviderNameLength))
             .Column<string>("DeliveryId", column => column.WithLength(256))
             .Column<ProviderWebhookInboxStatus>("Status")
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime?>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table =>
         {
@@ -65,7 +65,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
                 "ProcessedUtc",
                 "DocumentId");
         },
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
             SchemaBuilder,
@@ -88,7 +88,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
             .AddColumn<DateTime?>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await ContactCenterMigrationSql.AddRetentionColumnAsync(
             SchemaBuilder,
@@ -104,7 +104,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
                 "Status",
                 "ProcessedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }

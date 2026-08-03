@@ -32,7 +32,7 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
     public AgentSessionStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -42,7 +42,7 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
 
         return await Session.Query<AgentSession, AgentSessionIndex>(
             index => index.UserId == userId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.IsOnline)
             .ThenByDescending(index => index.LastHeartbeatUtc)
             .FirstOrDefaultAsync(cancellationToken);
@@ -69,7 +69,7 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
         // which is already the resolution this cleanup has.
         var candidates = await Session.QueryIndex<AgentSessionIndex>(
             index => index.IsOnline && index.LastHeartbeatUtc < heartbeatCutoffUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.LastHeartbeatUtc)
             .Take(MaxStaleSessionsPerPass)
             .ListAsync(cancellationToken);
@@ -106,7 +106,7 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
         {
             sessions.AddRange(await Session.Query<AgentSession, AgentSessionIndex>(
                 index => index.UserId.IsIn(userIdBatch),
-                collection: ContactCenterConstants.CollectionName)
+                collection: ContactCenterStorage.CollectionName)
                 .ListAsync(cancellationToken));
         }
 

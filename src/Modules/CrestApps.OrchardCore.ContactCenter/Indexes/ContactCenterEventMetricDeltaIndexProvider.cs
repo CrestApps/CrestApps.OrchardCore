@@ -14,7 +14,7 @@ public sealed class ContactCenterEventMetricDeltaIndexProvider : IndexProvider<C
     /// </summary>
     public ContactCenterEventMetricDeltaIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

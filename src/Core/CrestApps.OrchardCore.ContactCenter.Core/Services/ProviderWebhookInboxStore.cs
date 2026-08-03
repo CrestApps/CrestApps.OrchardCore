@@ -20,7 +20,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     public ProviderWebhookInboxStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
 
         return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
             index => index.ProviderName == providerName && index.DeliveryId == deliveryId,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -48,7 +48,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
         var messages = await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
             index => (index.Status == ProviderWebhookInboxStatus.Pending || index.Status == ProviderWebhookInboxStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)
             .ListAsync(cancellationToken);
@@ -61,7 +61,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     {
         return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
             index => index.Status == status,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -71,7 +71,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
         return await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
             index => (index.Status == ProviderWebhookInboxStatus.Pending || index.Status == ProviderWebhookInboxStatus.Claimed) &&
                 index.NextAttemptUtc <= nowUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 
@@ -86,7 +86,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
         return (await Session.Query<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>(
             index => index.Status == ProviderWebhookInboxStatus.Completed &&
                 index.NextAttemptUtc < processedBeforeUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();

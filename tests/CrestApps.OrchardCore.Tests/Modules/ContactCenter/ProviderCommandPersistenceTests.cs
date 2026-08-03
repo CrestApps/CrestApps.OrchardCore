@@ -119,7 +119,7 @@ public sealed class ProviderCommandPersistenceTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new ProviderCommandIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
         await CreateIndexSchemaAsync(store);
 
         return store;
@@ -167,7 +167,7 @@ public sealed class ProviderCommandPersistenceTests
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull())
             .Column<DateTime>("CompletedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 }

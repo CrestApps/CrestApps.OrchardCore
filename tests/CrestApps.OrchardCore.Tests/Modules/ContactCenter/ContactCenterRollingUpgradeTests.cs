@@ -47,7 +47,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// </remarks>
 public sealed class ContactCenterRollingUpgradeTests
 {
-    private const string CollectionName = ContactCenterConstants.CollectionName;
+    private const string CollectionName = ContactCenterStorage.CollectionName;
 
     // Discovery floors. These stop the suite passing vacuously if migration discovery silently breaks, which
     // would otherwise turn every assertion below into a loop over an empty set.

@@ -41,7 +41,7 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -107,8 +107,8 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
-            store.RegisterIndexes([new QueueItemIndexProvider()], ContactCenterConstants.CollectionName);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
+            store.RegisterIndexes([new QueueItemIndexProvider()], ContactCenterStorage.CollectionName);
 
             await using (var schemaSession = store.CreateSession())
             {
@@ -161,7 +161,7 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
                 ActivityItemId = $"activity-{itemId}",
                 EnqueuedUtc = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc),
             }.RestorePersistedStatus(status),
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: cancellationToken);
     }
 
@@ -186,7 +186,7 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
         });
 
     private static string TableName(IConfiguration configuration)
-        => configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterConstants.CollectionName);
+        => configuration.TableNameConvention.GetIndexTable(typeof(QueueItemIndex), ContactCenterStorage.CollectionName);
 
     private static async Task MigrateAsync(IStore store, IConfiguration configuration, DbTransaction transaction)
     {
@@ -223,7 +223,7 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
         // index rows belong to have to exist. Seeding only the index would prove a plan for a shape the database
         // would never have accepted.
         var documentTable = dialect.QuoteForTableName(
-            configuration.TableNameConvention.GetDocumentTable(ContactCenterConstants.CollectionName),
+            configuration.TableNameConvention.GetDocumentTable(ContactCenterStorage.CollectionName),
             configuration.Schema);
 
         await ExecuteAsync(

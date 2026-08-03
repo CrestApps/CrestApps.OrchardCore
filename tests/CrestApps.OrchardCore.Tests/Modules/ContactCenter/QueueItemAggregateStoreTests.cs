@@ -128,7 +128,7 @@ public sealed class QueueItemAggregateStoreTests
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes([new QueueItemIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -144,7 +144,7 @@ public sealed class QueueItemAggregateStoreTests
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
             .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -167,7 +167,7 @@ public sealed class QueueItemAggregateStoreTests
                 Priority = InteractionPriority.Normal,
                 EnqueuedUtc = enqueuedUtc,
             }.RestorePersistedStatus(status),
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

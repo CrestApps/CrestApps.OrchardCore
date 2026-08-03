@@ -193,7 +193,7 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
         store.RegisterIndexes([new InteractionIndexProvider()]);
 
         await store.InitializeAsync(cancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
         await using (var migrationSession = store.CreateSession())
         {
@@ -226,7 +226,7 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
                 Direction = InteractionDirection.Inbound,
                 CreatedUtc = createdUtc,
             }.RestorePersistedStatus(InteractionStatus.Ended),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     private sealed class FlippingCapabilityGuard : IContactCenterReportCapabilityGuard

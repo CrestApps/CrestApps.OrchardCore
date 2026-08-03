@@ -6,46 +6,23 @@ namespace CrestApps.OrchardCore.ContactCenter;
 public static class ContactCenterConstants
 {
     /// <summary>
-    /// The YesSql collection name used to store Contact Center documents in isolation from other modules.
-    /// </summary>
-    public const string CollectionName = "ContactCenter";
-
-    /// <summary>
-    /// The current schema version applied to newly published Contact Center domain events.
-    /// </summary>
-    public const int CurrentEventSchemaVersion = 1;
-
-    /// <summary>
-    /// The stable, versioned identifier of the daily event-count metrics projection. It namespaces the
-    /// projection's deduplication markers and replay checkpoint, so its value must never change for a given
-    /// projection logic version.
-    /// </summary>
-    public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
-
-    /// <summary>
-    /// The projection logic version of the daily event-count metrics projection. Bumping it forces a full
-    /// replay because the stored checkpoint version no longer matches.
-    /// </summary>
-    public const int MetricsProjectionVersion = 1;
-
-    /// <summary>
     /// Identifies a system actor for events that are not originated by an interactive user.
     /// </summary>
     public const string SystemActor = "system";
 
     /// <summary>
-    /// The event aggregate type used for a manual, agent-initiated soft-phone call, which is not part of a
-    /// campaign and therefore has no dialer profile or CRM activity to anchor the event to.
+    /// Contains the stable <c>AggregateType</c> discriminators that are not derived from a public domain-model
+    /// type name. These values are emitted on published <c>InteractionEvent</c> instances and therefore form
+    /// part of the module's public event contract that webhook and workflow consumers may inspect.
     /// </summary>
-    public const string ManualCallAggregateType = "ManualCall";
-
-    /// <summary>
-    /// The maximum stored length, in characters, of a canonicalized telephony provider name. The same canonical
-    /// value is persisted across several Contact Center index tables, so every migration that stores it must pin
-    /// this width to keep the column definitions consistent and avoid a value that fits in one table but truncates
-    /// in another.
-    /// </summary>
-    public const int ProviderNameLength = 128;
+    public static class AggregateTypes
+    {
+        /// <summary>
+        /// The event aggregate type used for a manual, agent-initiated soft-phone call, which is not part of a
+        /// campaign and therefore has no dialer profile or CRM activity to anchor the event to.
+        /// </summary>
+        public const string ManualCall = "ManualCall";
+    }
 
     /// <summary>
     /// Contains the identifiers used to register and select the Contact Center operational health checks.

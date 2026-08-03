@@ -23,12 +23,12 @@ public sealed class InteractionEventUpcastCoverageTests
         var declared = Declare(registered);
 
         // Act
-        var gaps = MissingSteps(declared, ContactCenterConstants.CurrentEventSchemaVersion);
+        var gaps = MissingSteps(declared, ContactCenterStorage.CurrentEventSchemaVersion);
 
         // Assert
         Assert.True(
             gaps.Count == 0,
-            $"Contact Center events are written at schema version {ContactCenterConstants.CurrentEventSchemaVersion}, but no registered upcaster converts from version(s) {string.Join(", ", gaps)}. Every event already stored below the current version has to be able to reach it.");
+            $"Contact Center events are written at schema version {ContactCenterStorage.CurrentEventSchemaVersion}, but no registered upcaster converts from version(s) {string.Join(", ", gaps)}. Every event already stored below the current version has to be able to reach it.");
     }
 
     [Fact]
@@ -41,10 +41,10 @@ public sealed class InteractionEventUpcastCoverageTests
         var declared = Declare(RegisteredUpcasterTypes());
 
         // Act
-        var gaps = MissingSteps(declared, ContactCenterConstants.CurrentEventSchemaVersion + 1);
+        var gaps = MissingSteps(declared, ContactCenterStorage.CurrentEventSchemaVersion + 1);
 
         // Assert
-        Assert.Contains(ContactCenterConstants.CurrentEventSchemaVersion, gaps);
+        Assert.Contains(ContactCenterStorage.CurrentEventSchemaVersion, gaps);
     }
 
     [Fact]

@@ -33,12 +33,12 @@ internal sealed class AgentStateReasonCodeIndexMigrations : DataMigration
             .Column<string>("Name", column => column.WithLength(255))
             .Column<int>("SortOrder")
             .Column<bool>("Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AgentStateReasonCodeIndex>(table => table
             .CreateIndex("IDX_AgentStateReasonCodeIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await _recipeMigrator.ExecuteAsync($"agent-state-reason-codes{RecipesConstants.RecipeExtension}", this);

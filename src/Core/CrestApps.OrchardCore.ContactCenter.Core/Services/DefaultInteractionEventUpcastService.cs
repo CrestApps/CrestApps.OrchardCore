@@ -22,7 +22,7 @@ public sealed class DefaultInteractionEventUpcastService : IInteractionEventUpca
     /// would make the converted payload depend on registration order.
     /// </exception>
     public DefaultInteractionEventUpcastService(IEnumerable<IInteractionEventUpcaster> upcasters)
-        : this(upcasters, ContactCenterConstants.CurrentEventSchemaVersion)
+        : this(upcasters, ContactCenterStorage.CurrentEventSchemaVersion)
     {
     }
 

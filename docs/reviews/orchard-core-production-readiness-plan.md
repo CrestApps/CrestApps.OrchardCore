@@ -271,13 +271,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-013 — Internal implementation details published via `ContactCenterConstants`
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Public API · **Effort:** M · **Risk:** Low · **Dependencies:** Regenerate public-API baseline
+- **Priority:** Medium · **Status:** Completed · **Category:** Public API · **Effort:** M · **Risk:** Low · **Dependencies:** Regenerate public-API baseline
 
 **Problem.** An 819-line `ContactCenterConstants` in the public Abstractions package exposes YesSql `CollectionName`, `CurrentEventSchemaVersion`, projection checkpoint IDs and similar internals.
 
 **Why it matters.** Incrementing an internal projection version forces a public-package version bump and churns downstream consumers who only needed the webhook interfaces.
 
 **Recommended solution.** Keep feature names, permissions and claim types public; move storage/schema/projection constants to `internal static` in `ContactCenter.Core`. Split the file by domain.
+
+**Resolution.** Moved five storage/schema/projection scalars (`CollectionName`, `CurrentEventSchemaVersion`, `MetricsProjectionHandlerId`, `MetricsProjectionVersion`, `ProviderNameLength`) out of the public `ContactCenterConstants` in the Abstractions package into a new `internal static ContactCenterStorage` class in `ContactCenter.Core` (same `CrestApps.OrchardCore.ContactCenter` namespace, so references resolve without new usings). The manual-call aggregate-type discriminator stayed public — it is emitted as `InteractionEvent.AggregateType` on the published `ManualDialSuppressed` event and forms part of the event contract webhook/workflow consumers may inspect — and was relocated into a new public `ContactCenterConstants.AggregateTypes` group (`ManualCall`). Exposed the Core internals to the module and distributed-test assemblies via `InternalsVisibleTo`, then mechanically repointed all ~430 references across Core/Module/Tests/DistributedTests. `SystemActor` and the diagnostic `Components` taxonomy also stay public. Regenerated the `CrestApps.OrchardCore.ContactCenter.Abstractions` and `.Core` public-API baselines to reflect the reduced surface and the two new `InternalsVisibleTo` grants. Incrementing a projection version now no longer forces a public-package bump. Domain file-splitting of the remaining public constants is tracked separately by OC-047. Also corrected a pre-existing `ContactCenterFeatureDependencyArchitectureTests` `.Single()` ambiguity introduced by OC-006's `AsteriskAdminStartup` (disambiguated the base-feature startup by `RequiredFeatureIds.Count == 0`).
 
 ---
 

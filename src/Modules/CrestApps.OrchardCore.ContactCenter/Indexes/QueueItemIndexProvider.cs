@@ -15,7 +15,7 @@ public sealed class QueueItemIndexProvider : IndexProvider<QueueItem>
     /// </summary>
     public QueueItemIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

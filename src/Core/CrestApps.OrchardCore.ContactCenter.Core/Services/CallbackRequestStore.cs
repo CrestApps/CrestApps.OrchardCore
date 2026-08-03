@@ -20,7 +20,7 @@ public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, Call
     public CallbackRequestStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
@@ -31,7 +31,7 @@ public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, Call
             index => index.Status == CallbackRequestStatus.Pending &&
                 index.ScheduledUtc <= utcNow &&
                 (index.LeaseExpiresUtc == null || index.LeaseExpiresUtc <= utcNow),
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .OrderBy(index => index.ScheduledUtc)
             .Take(take)
             .ListAsync(cancellationToken);

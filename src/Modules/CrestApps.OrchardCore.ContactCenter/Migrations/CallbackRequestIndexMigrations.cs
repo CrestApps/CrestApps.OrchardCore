@@ -48,12 +48,12 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             .Column<DateTime>("ScheduledUtc")
             .Column<DateTime>("LeaseExpiresUtc", column => column.Nullable())
             .Column<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
             .CreateIndex("IDX_CallbackRequestIndex_DocumentId", "DocumentId", "ItemId", "Status", "ScheduledUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // Adding a column does not re-project rows that already exist, so the pre-upgrade backlog would keep
@@ -68,7 +68,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
             .CreateIndex("IDX_CallbackRequestIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 3;
@@ -82,7 +82,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
             .AddColumn<DateTime>("LeaseExpiresUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;
@@ -97,7 +97,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
             .AddColumn<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // Adding a column does not re-project rows that already exist, so the pre-upgrade backlog would keep
@@ -112,7 +112,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
             .CreateIndex("IDX_CallbackRequestIndex_Retention", "Status", "ModifiedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 3;

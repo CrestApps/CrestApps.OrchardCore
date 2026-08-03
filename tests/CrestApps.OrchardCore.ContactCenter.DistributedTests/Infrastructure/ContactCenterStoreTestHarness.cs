@@ -32,7 +32,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
         store.RegisterIndexes(indexProviders);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -72,7 +72,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<DateTime>("WrapUpStartedUtc")
             .Column<DateTime>("WrapUpCompletedUtc")
             .Column<bool>("RecordingLegalHold"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     public static async Task CreateCallSessionSchemaAsync(SchemaBuilder schemaBuilder)
@@ -96,7 +96,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("DurableCommandId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
     }
 
     public static async Task CreateAgentSessionSchemaAsync(SchemaBuilder schemaBuilder)
@@ -106,7 +106,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<bool>("IsOnline")
             .Column<DateTime>("LastHeartbeatUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await CreateUniqueIndexAsync(schemaBuilder, typeof(AgentSessionIndex), "UQ_Test_AgentSessionIndex_UserId", "UserId");
     }
@@ -123,7 +123,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
             .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await CreateUniqueIndexAsync(schemaBuilder, typeof(QueueItemIndex), "UQ_Test_QueueItemIndex_ActivityClaimKey", "ActivityClaimKey");
     }
@@ -137,7 +137,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("Status", column => column.WithLength(50))
             .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
             .Column<DateTime?>("ProcessedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await CreateUniqueIndexAsync(
             schemaBuilder,
@@ -154,7 +154,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
         params string[] columnNames)
     {
         var tableName = schemaBuilder.TablePrefix +
-            schemaBuilder.TableNameConvention.GetIndexTable(indexType, ContactCenterConstants.CollectionName);
+            schemaBuilder.TableNameConvention.GetIndexTable(indexType, ContactCenterStorage.CollectionName);
         var quotedTableName = schemaBuilder.Dialect.QuoteForTableName(tableName, null);
         var quotedIndexName = schemaBuilder.Dialect.QuoteForColumnName(schemaBuilder.Dialect.FormatIndexName(indexName));
         var quotedColumns = string.Join(", ", columnNames.Select(schemaBuilder.Dialect.QuoteForColumnName));

@@ -14,7 +14,7 @@ public sealed class AgentStateReasonCodeIndexProvider : IndexProvider<AgentState
     /// </summary>
     public AgentStateReasonCodeIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

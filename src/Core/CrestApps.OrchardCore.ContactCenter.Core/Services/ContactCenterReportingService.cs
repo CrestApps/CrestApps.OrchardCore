@@ -721,7 +721,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
         var interactions = await _session.Query<Interaction, InteractionIndex>(
             index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
-            collection: ContactCenterConstants.CollectionName)
+            collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 
         return interactions.ToArray();

@@ -38,7 +38,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
                             LastHeartbeatUtc = _now,
                             CreatedUtc = _now,
                         },
-                        collection: ContactCenterConstants.CollectionName,
+                        collection: ContactCenterStorage.CollectionName,
                         cancellationToken: TestContext.Current.CancellationToken);
                 }
 
@@ -206,7 +206,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             new InteractionIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -217,7 +217,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<bool>("IsOnline")
             .Column<DateTime>("LastHeartbeatUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<InteractionIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -236,7 +236,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             .Column<DateTime>("WrapUpStartedUtc")
             .Column<DateTime>("WrapUpCompletedUtc")
             .Column<bool>("RecordingLegalHold"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -261,7 +261,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
                 WrapUpStartedUtc = wrapUpStartedUtc,
                 WrapUpCompletedUtc = wrapUpCompletedUtc,
             }.RestorePersistedStatus(status),
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

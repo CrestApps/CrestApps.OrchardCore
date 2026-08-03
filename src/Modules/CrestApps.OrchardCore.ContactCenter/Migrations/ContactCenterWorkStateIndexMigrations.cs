@@ -40,12 +40,12 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
             .Column<string>("ReservationId", column => column.WithLength(26))
             .Column<string>("ReservedById", column => column.WithLength(26))
             .Column<string>("AssignedToId", column => column.WithLength(26)),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
             .CreateIndex("IDX_ContactCenterWorkStateIndex_DocumentId", "DocumentId", "AssignmentStatus", "AssignedToId", "ReservedById"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // One activity may only ever have one routing work state row. Without this constraint a concurrent
@@ -70,7 +70,7 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
             .AddColumn<DateTime>("ModifiedUtc", column => column.Nullable()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         // Adding a column does not re-project rows that already exist, so without this every work state that
@@ -84,7 +84,7 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
             .CreateIndex("IDX_ContactCenterWorkStateIndex_Retention", "ModifiedUtc", "DocumentId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         return 2;

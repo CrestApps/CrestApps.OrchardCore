@@ -25,7 +25,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
     // than any real provider call identifier while keeping the composed claim key within SQL Server's 900-byte
     // unique-index key limit. The claim key length is derived from the two parts it concatenates so it can never
     // truncate a value the source columns can hold, and 385 stays within that limit.
-    private const int ProviderNameLength = ContactCenterConstants.ProviderNameLength;
+    private const int ProviderNameLength = ContactCenterStorage.ProviderNameLength;
     private const int ProviderCallIdLength = 256;
     private const int ProviderCallClaimKeyLength = ProviderNameLength + 1 + ProviderCallIdLength;
 
@@ -71,7 +71,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             .Column<string>("QueueId", column => column.WithLength(26))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<DateTime>("EndedUtc"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
@@ -81,7 +81,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "ProviderCallId",
                 "InteractionId",
                 "State"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
@@ -89,7 +89,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "ActivityItemId",
                 "AgentId",
                 "QueueId"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
@@ -105,7 +105,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "IDX_CallSessionIndex_Retention",
                 "EndedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 4;
     }
@@ -124,7 +124,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             .AddColumn<string>(
                 "ProviderCallClaimKey",
                 column => column.NotNull().WithDefault(string.Empty).WithLength(261)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await CanonicalizeAndBackfillClaimKeysAsync(quotedTableName);
 
@@ -150,7 +150,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "IDX_CallSessionIndex_Retention",
                 "EndedUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -185,7 +185,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 _store,
                 typeof(CallSessionIndex),
                 indexName,
-                ContactCenterConstants.CollectionName);
+                ContactCenterStorage.CollectionName);
 
             if (qualifiedIndexName is null)
             {
@@ -213,11 +213,11 @@ internal sealed class CallSessionIndexMigrations : DataMigration
 
         await tolerantSchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(
             table => table.DropIndex("UQ_CallSessionIndex_ProviderCallClaimKey"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await tolerantSchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(
             table => table.DropIndex("IDX_CallSessionIndex_DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await IndexStringColumnRebuild.WidenAsync<CallSessionIndex>(
             SchemaBuilder,
@@ -226,7 +226,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             ProviderCallIdLength,
             isNotNull: false,
             defaultValue: null,
-            ContactCenterConstants.CollectionName);
+            ContactCenterStorage.CollectionName);
 
         await IndexStringColumnRebuild.WidenAsync<CallSessionIndex>(
             SchemaBuilder,
@@ -235,7 +235,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
             ProviderCallClaimKeyLength,
             isNotNull: true,
             defaultValue: string.Empty,
-            ContactCenterConstants.CollectionName);
+            ContactCenterStorage.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
             .CreateIndex("IDX_CallSessionIndex_DocumentId",
@@ -244,7 +244,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "ProviderCallId",
                 "InteractionId",
                 "State"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await EnsureNoDuplicateClaimKeysAsync();
 

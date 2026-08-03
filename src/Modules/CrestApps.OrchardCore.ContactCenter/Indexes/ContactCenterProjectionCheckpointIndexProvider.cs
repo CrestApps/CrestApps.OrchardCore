@@ -14,7 +14,7 @@ public sealed class ContactCenterProjectionCheckpointIndexProvider : IndexProvid
     /// </summary>
     public ContactCenterProjectionCheckpointIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

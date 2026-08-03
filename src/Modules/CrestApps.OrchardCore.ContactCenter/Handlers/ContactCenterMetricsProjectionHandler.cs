@@ -27,7 +27,7 @@ public sealed class ContactCenterMetricsProjectionHandler : IContactCenterEventH
     }
 
     /// <inheritdoc/>
-    public string HandlerId => ContactCenterConstants.MetricsProjectionHandlerId;
+    public string HandlerId => ContactCenterStorage.MetricsProjectionHandlerId;
 
     /// <inheritdoc/>
     public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.DeduplicatedByEventId;

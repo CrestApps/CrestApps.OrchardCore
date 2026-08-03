@@ -38,7 +38,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             .Column<string>("IdempotencyKey", column => column.WithLength(128))
             .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
@@ -46,13 +46,13 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
                 "InteractionId",
                 "OccurredUtc",
                 "EventType"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
             .CreateIndex("IDX_InteractionEventIndex_Idempotency",
                 "IdempotencyKey"),
-            collection: ContactCenterConstants.CollectionName
+            collection: ContactCenterStorage.CollectionName
         );
 
         await ContactCenterMigrationSql.CreateUniqueIndexAsync(
@@ -76,7 +76,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
                 "IDX_InteractionEventIndex_Retention",
                 "OccurredUtc",
                 "DocumentId"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         return 3;
     }
@@ -99,7 +99,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             .AddColumn<string>(
                 "IdempotencyClaimKey",
                 column => column.NotNull().WithDefault(string.Empty).WithLength(128)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await using (var command = SchemaBuilder.Connection.CreateCommand())
         {

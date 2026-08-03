@@ -78,10 +78,10 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
             Assert.True(changes >= 3);
 
             var checkpointStore = new ContactCenterProjectionCheckpointStore(assertSession);
-            var checkpoint = await checkpointStore.FindByHandlerAsync(ContactCenterConstants.MetricsProjectionHandlerId, TestContext.Current.CancellationToken);
+            var checkpoint = await checkpointStore.FindByHandlerAsync(ContactCenterStorage.MetricsProjectionHandlerId, TestContext.Current.CancellationToken);
 
             Assert.NotNull(checkpoint);
-            Assert.Equal(ContactCenterConstants.MetricsProjectionVersion, checkpoint.Version);
+            Assert.Equal(ContactCenterStorage.MetricsProjectionVersion, checkpoint.Version);
             Assert.Equal(_dayB.AddMinutes(30), checkpoint.LastOccurredUtc);
             Assert.Equal(_now, checkpoint.RebuiltUtc);
         }
@@ -506,12 +506,12 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                         var folded = await rollupSession
                             .Query<ContactCenterEventMetricDelta, ContactCenterEventMetricDeltaIndex>(
                                 index => index.DocumentId <= afterDocumentId,
-                                collection: ContactCenterConstants.CollectionName)
+                                collection: ContactCenterStorage.CollectionName)
                             .ListAsync(TestContext.Current.CancellationToken);
 
                         foreach (var contribution in folded)
                         {
-                            rollupSession.Delete(contribution, ContactCenterConstants.CollectionName);
+                            rollupSession.Delete(contribution, ContactCenterStorage.CollectionName);
                         }
 
                         await rollupSession.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -554,7 +554,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
             new ContactCenterProjectionCheckpointIndexProvider(),
         ]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
-        await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, TestContext.Current.CancellationToken);
+        await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, TestContext.Current.CancellationToken);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -570,14 +570,14 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
             .Column<string>("IdempotencyKey", column => column.WithLength(128))
             .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ContactCenterEventMetricIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("DateKey", column => column.NotNull().WithLength(10))
             .Column<DateTime>("Date")
             .Column<string>("EventType", column => column.NotNull().WithLength(128)),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ContactCenterEventMetricDeltaIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
@@ -586,13 +586,13 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
             .Column<string>("EventType", column => column.NotNull().WithLength(128))
             .Column<long>("Count")
             .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<ContactCenterProjectionCheckpointIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("HandlerId", column => column.NotNull().WithLength(128))
             .Column<int>("Version"),
-            collection: ContactCenterConstants.CollectionName);
+            collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -615,7 +615,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 AggregateId = $"interaction-{itemId}",
                 OccurredUtc = occurredUtc,
             },
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
@@ -637,7 +637,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 Count = count,
                 CreatedUtc = date,
             },
-            collection: ContactCenterConstants.CollectionName,
+            collection: ContactCenterStorage.CollectionName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

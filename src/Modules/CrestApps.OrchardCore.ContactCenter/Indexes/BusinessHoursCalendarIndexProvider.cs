@@ -14,7 +14,7 @@ public sealed class BusinessHoursCalendarIndexProvider : IndexProvider<BusinessH
     /// </summary>
     public BusinessHoursCalendarIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

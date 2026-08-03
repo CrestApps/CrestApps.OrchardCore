@@ -17,6 +17,6 @@ public sealed class ContactCenterProcessedEventStore : DocumentCatalog<ContactCe
     public ContactCenterProcessedEventStore(ISession session)
         : base(session)
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 }

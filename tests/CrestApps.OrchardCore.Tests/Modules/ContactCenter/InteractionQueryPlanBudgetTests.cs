@@ -38,7 +38,7 @@ public sealed class InteractionQueryPlanBudgetTests
         try
         {
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -117,7 +117,7 @@ public sealed class InteractionQueryPlanBudgetTests
         {
             store.RegisterIndexes([new InteractionIndexProvider()]);
             await store.InitializeAsync(cancellationToken);
-            await store.InitializeCollectionAsync(ContactCenterConstants.CollectionName, cancellationToken);
+            await store.InitializeCollectionAsync(ContactCenterStorage.CollectionName, cancellationToken);
 
             await using (var seedSession = store.CreateSession())
             {

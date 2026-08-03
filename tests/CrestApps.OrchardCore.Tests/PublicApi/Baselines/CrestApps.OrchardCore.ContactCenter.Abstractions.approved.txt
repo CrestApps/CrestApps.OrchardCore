@@ -2,13 +2,11 @@ namespace CrestApps.OrchardCore.ContactCenter
 {
     public static class ContactCenterConstants
     {
-        public const string CollectionName = "ContactCenter";
-        public const int CurrentEventSchemaVersion = 1;
-        public const string ManualCallAggregateType = "ManualCall";
-        public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
-        public const int MetricsProjectionVersion = 1;
-        public const int ProviderNameLength = 128;
         public const string SystemActor = "system";
+        public static class AggregateTypes
+        {
+            public const string ManualCall = "ManualCall";
+        }
         public static class AttendedTransferMetadata
         {
             public const string AgentUserId = "attendedTransferAgentUserId";

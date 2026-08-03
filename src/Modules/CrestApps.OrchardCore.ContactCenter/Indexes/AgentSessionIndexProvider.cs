@@ -14,7 +14,7 @@ public sealed class AgentSessionIndexProvider : IndexProvider<AgentSession>
     /// </summary>
     public AgentSessionIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>

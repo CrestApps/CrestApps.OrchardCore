@@ -15,7 +15,7 @@ public sealed class ActivityReservationIndexProvider : IndexProvider<ActivityRes
     /// </summary>
     public ActivityReservationIndexProvider()
     {
-        CollectionName = ContactCenterConstants.CollectionName;
+        CollectionName = ContactCenterStorage.CollectionName;
     }
 
     /// <inheritdoc/>
