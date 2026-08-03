@@ -5,7 +5,7 @@
 <div class="ocat-wrapper">
     <label class="ocat-label" asp-for="EventType">@T["Event type"]</label>
     <div class="ocat-end">
-        <input class="form-control" asp-for="EventType" placeholder="@T["Any event"]" />
-        <span class="hint">@T["Optionally react to a single Contact Center event type, such as CallEnded, InteractionCreated, or RoutingDecisionMade. Leave empty to react to every event."]</span>
+        <select class="form-select" asp-for="EventType" asp-items="Model.EventTypes"></select>
+        <span class="hint">@T["Optionally react to a single Contact Center event type. Leave set to <em>Any event type</em> to react to every event."]</span>
     </div>
 </div>
