@@ -714,11 +714,18 @@ The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManag
 
 ### OC-041 — `ContactCenter.Core/Services` is 226 flat files
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Code organization · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+- **Priority:** Medium · **Status:** Won't Fix (deferred — disproportionate churn for zero capability) · **Category:** Code organization · **Effort:** L · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** Verified: 226 `.cs` files in a single flat `Services/` directory within a ~33k-line library whose only other folders are `HealthChecks`, `Indexes`, `Models`, `Telemetry`.
 
 **Recommended solution.** Partition by bounded context — `AgentManagement`, `ActivityQueuing`, `Reporting`, `ProviderExecution`, `CallTopology`. Sub-folders first (low risk); consider extracting `ContactCenter.Reporting.Core` if the reporting surface keeps growing.
+
+**Disposition (Won't Fix / deferred — independently reviewed, gpt-5.6-sol).** The observation is accurate — the directory is flat and large (now 231 files) — but it is a navigability nicety, and in *this* library every available reorganization is disproportionate to a Medium code-organization item with no behavioural or capability benefit, so it is deferred rather than forced.
+
+- **The convention-correct reorg is a large public-surface + solution-wide churn.** All 231 files declare `namespace CrestApps.OrchardCore.ContactCenter.Core.Services`, and **228 of them expose public types** in a library that is public precisely so the module and tests can consume it. The repository convention (and the approved-baseline format, which groups types under `namespace { … }` blocks) is *namespace matches folder*, so moving files into `Services/AgentManagement`, `Services/Reporting`, … means renaming their namespaces to match. That is a **228-type change to the governed `ContactCenter.Core` public-API baseline** plus a mechanical edit of every consumer: `using CrestApps.OrchardCore.ContactCenter.Core.Services;` appears in **255 files across `src` and `tests`**, each of which would have to be re-split into up to five sub-namespace usings. Hundreds of files touched, a large reviewed-surface diff, and real regression surface — for zero behavioural change.
+- **The zero-API alternative violates the stated convention.** Moving the files into sub-folders while *keeping* the flat `…Core.Services` namespace avoids every API and using change, but it deliberately creates the folder/namespace mismatch the repository convention forbids (there is no `IDE0130`/`namespace_match_folder` rule enforcing it in `.editorconfig`, so it would compile, but it contradicts a documented convention and invites a later "correction" that reintroduces the churn above). Trading a documented convention for directory tidiness is not a clean win.
+- **Almost nothing is internal, so there is no low-risk subset.** Only 3 of the 231 types are non-public, so there is no meaningful cohesive slice that could be re-foldered without touching the baseline.
+- **Deferral, not denial.** If the reporting surface keeps growing to where a separate `ContactCenter.Reporting.Core` assembly is independently justified (its own bounded context, its own baseline), that extraction becomes worth its cost and is the right moment to carve reporting out of the flat directory. Until a concrete driver like that exists, the flat `Services/` directory is left as-is; the other concerns (`HealthChecks`, `Indexes`, `Models`, `Telemetry`) already live in their own folders.
 
 ---
 
