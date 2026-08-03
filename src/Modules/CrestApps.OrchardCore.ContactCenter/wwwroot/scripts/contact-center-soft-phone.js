@@ -314,13 +314,32 @@
       return offer ? null : postQueuedVoiceSync(root, api, client);
     });
   }
+  function resolveSafeSameOriginUrl(candidate) {
+    var resolved;
+    try {
+      resolved = new URL(candidate, window.location.origin);
+    } catch (error) {
+      return null;
+    }
+    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
+      return null;
+    }
+    if (resolved.origin !== window.location.origin) {
+      return null;
+    }
+    return resolved.href;
+  }
   function openAssignedDialerActivity(root, notification) {
     if (!notification || !notification.autoOpenActivity || !notification.activityItemId) {
       return;
     }
     var template = root.getAttribute('data-contact-center-complete-activity-url-template');
-    if (template) {
-      window.location.assign(template.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+    if (!template) {
+      return;
+    }
+    var targetUrl = resolveSafeSameOriginUrl(template.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+    if (targetUrl) {
+      window.location.assign(targetUrl);
     }
   }
   function bindMembershipForms(root, api, client) {

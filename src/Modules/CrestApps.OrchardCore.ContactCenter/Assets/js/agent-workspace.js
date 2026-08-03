@@ -61,6 +61,26 @@
         });
     }
 
+    function resolveSafeSameOriginUrl(candidate) {
+        var resolved;
+
+        try {
+            resolved = new URL(candidate, window.location.origin);
+        } catch (error) {
+            return null;
+        }
+
+        if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
+            return null;
+        }
+
+        if (resolved.origin !== window.location.origin) {
+            return null;
+        }
+
+        return resolved.href;
+    }
+
     function init(root) {
         var config = parseConfig(root);
         var strings = config.strings;
@@ -513,7 +533,11 @@
                 onPresenceChanged: refresh,
                 onOfferReceived: function (notification) {
                     if (notification && notification.autoOpenActivity && notification.activityItemId && config.completeActivityUrlTemplate) {
-                        window.location.assign(config.completeActivityUrlTemplate.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+                        var targetUrl = resolveSafeSameOriginUrl(config.completeActivityUrlTemplate.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
+
+                        if (targetUrl) {
+                            window.location.assign(targetUrl);
+                        }
 
                         return;
                     }
