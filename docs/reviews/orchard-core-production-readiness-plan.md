@@ -361,13 +361,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-020 — Inline script in a settings view hardcodes English strings
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Resource management / localization · **Effort:** S · **Risk:** Low · **Dependencies:** OC-019
+- **Priority:** Medium · **Status:** Completed · **Category:** Resource management / localization · **Effort:** S · **Risk:** Low · **Dependencies:** OC-019
 
 **Problem.** `ContactCenterExternalTransferSettings.Edit.cshtml:65-122` contains a ~57-line inline `<script>` with no `at="Foot"`. Server-rendered rows use `@T["Display name"]`/`@T["Remove destination"]`, but the JS row template hardcodes `placeholder="Display name"` and `title="Remove destination"`, so dynamically added rows are always English and the strings are invisible to extraction.
 
 **Recommended solution.** Move to a registered `DefineScript` resource and pass a `strings` config object, as `AgentWorkspace`/`SupervisorDashboard` already do correctly.
 
 **Scope note.** Only **3** of 101 views contain true inline `<script>` blocks; the other two (`AsteriskSettings.Edit.cshtml`, `DialPadSettings.Edit.cshtml`) use `at="Foot"` for ~20 lines of view glue and are acceptable. All 5 `<style>` usages are correct `<style asp-name>` forms, and the single inline `style=` is a justified dynamic CSS variable.
+
+**Resolution.** Extracted the inline logic into a new Gulp-built asset `Assets/js/contact-center-external-transfer-settings.js` (output to `wwwroot/scripts`, minified), registered as the named resource `contact-center-external-transfer-settings` through a new `ContactCenterExternalTransferResourceConfiguration : IConfigureOptions<ResourceManagementOptions>` added to the **Contact Center Administration** feature's startup (matching the feature that registers the settings driver). The view now requires the script with `<script asp-name="contact-center-external-transfer-settings" at="Foot"></script>` and serializes a `strings` config object (`displayName`, `removeDestination`) into a `data-config` attribute on the wrapper — mirroring the `AgentWorkspace`/`SupervisorDashboard` pattern — and the JS reads those localized strings so dynamically added rows honor the active culture and the strings are visible to extraction. The dynamic-row template also HTML-attribute-encodes the injected strings. Module builds 0 warnings; assets rebuilt with `gulp rebuild`.
 
 ---
 

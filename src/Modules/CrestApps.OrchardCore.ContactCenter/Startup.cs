@@ -329,6 +329,7 @@ public sealed class ContactCenterAdminStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
             .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
             .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }

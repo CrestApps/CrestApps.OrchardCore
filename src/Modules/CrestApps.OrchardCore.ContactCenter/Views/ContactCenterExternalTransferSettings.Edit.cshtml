@@ -1,10 +1,24 @@
+@using System.Text.Json
 @model ContactCenterExternalTransferSettingsViewModel
+
+@{
+    var config = new Dictionary<string, object>
+    {
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["displayName"] = T["Display name"].Value,
+            ["removeDestination"] = T["Remove destination"].Value,
+        },
+    };
+}
+
+<script asp-name="contact-center-external-transfer-settings" at="Foot"></script>
 
 <p class="alert alert-info">
     @T["Approved external transfer destinations are resolved exclusively server-side. Callers supply only a destination identifier; the canonical phone number is always taken from this catalog. Only enabled entries are reachable."]
 </p>
 
-<div class="ocat-wrapper">
+<div class="ocat-wrapper" data-cc-ext-transfer data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
     <label class="ocat-label">@T["Approved destinations"]</label>
     <div class="ocat-end">
         <table class="table table-sm align-middle" id="cc-ext-dest-table">
@@ -17,7 +31,7 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody id="cc-ext-dest-tbody">
+            <tbody id="cc-ext-dest-tbody" data-cc-ext-dest-tbody>
                 @for (var i = 0; i < Model.Destinations.Count; i++)
                 {
                     <tr class="cc-dest-row">
@@ -52,7 +66,7 @@
             </tbody>
         </table>
 
-        <button type="button" id="cc-add-dest" class="btn btn-sm btn-outline-secondary mt-1">
+        <button type="button" id="cc-add-dest" data-cc-add-dest class="btn btn-sm btn-outline-secondary mt-1">
             <i class="fa-solid fa-plus"></i> @T["Add destination"]
         </button>
 
@@ -62,61 +76,3 @@
     </div>
 </div>
 
-<script>
-    (function () {
-        var tbody = document.getElementById('cc-ext-dest-tbody');
-        var addBtn = document.getElementById('cc-add-dest');
-        var rowIndex = @Model.Destinations.Count;
-
-        function renumberRows() {
-            var rows = tbody.querySelectorAll('tr.cc-dest-row');
-            rows.forEach(function (row, idx) {
-                row.querySelectorAll('[name]').forEach(function (el) {
-                    el.name = el.name.replace(/Destinations\[\d+\]/, 'Destinations[' + idx + ']');
-                    el.id = el.id.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
-                    if (el.htmlFor) {
-                        el.htmlFor = el.htmlFor.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
-                    }
-                });
-            });
-            rowIndex = rows.length;
-        }
-
-        addBtn.addEventListener('click', function () {
-            var idx = rowIndex;
-            var tr = document.createElement('tr');
-            tr.className = 'cc-dest-row';
-            tr.innerHTML =
-                '<td>' +
-                    '<input type="hidden" name="Destinations[' + idx + '].Id" value="" />' +
-                    '<input name="Destinations[' + idx + '].DisplayName" id="Destinations_' + idx + '__DisplayName"' +
-                        ' class="form-control form-control-sm" placeholder="Display name" />' +
-                '</td>' +
-                '<td>' +
-                    '<input name="Destinations[' + idx + '].E164Address" id="Destinations_' + idx + '__E164Address"' +
-                        ' class="form-control form-control-sm" placeholder="+15551234567" autocomplete="off" />' +
-                '</td>' +
-                '<td><code class="text-muted small">&mdash;</code></td>' +
-                '<td class="text-center">' +
-                    '<input type="checkbox" name="Destinations[' + idx + '].Enabled" id="Destinations_' + idx + '__Enabled"' +
-                        ' class="form-check-input" value="true" checked />' +
-                '</td>' +
-                '<td>' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger cc-remove-dest"' +
-                        ' title="Remove destination"><i class="fa-solid fa-trash-can"></i></button>' +
-                '</td>';
-            tbody.appendChild(tr);
-            rowIndex++;
-        });
-
-        tbody.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cc-remove-dest');
-            if (!btn) return;
-            var row = btn.closest('tr.cc-dest-row');
-            if (row) {
-                row.remove();
-                renumberRows();
-            }
-        });
-    }());
-</script>

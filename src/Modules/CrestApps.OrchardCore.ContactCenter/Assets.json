@@ -24,6 +24,12 @@
     "output": "wwwroot/scripts/contact-center-soft-phone.js"
   },
   {
+    "inputs": [
+      "Assets/js/contact-center-external-transfer-settings.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-external-transfer-settings.js"
+  },
+  {
     "generateSourceMaps": false,
     "inputs": [
       "Assets/scss/contact-center-workspace.scss"
