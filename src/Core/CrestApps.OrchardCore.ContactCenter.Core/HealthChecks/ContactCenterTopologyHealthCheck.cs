@@ -69,6 +69,23 @@ public sealed class ContactCenterTopologyHealthCheck : IHealthCheck
             return HealthCheckResult.Healthy("No Contact Center topology profile is declared; this deployment does not claim production support.");
         }
 
+        var profile = ContactCenterTopologyProfiles.Find(result.DeclaredProfileId);
+
+        if (profile is { IsProduction: true, MaximumApplicationNodes: 1 })
+        {
+            // A single-active-node production profile carries a constraint this check cannot enforce: it verifies
+            // the declared infrastructure prerequisites but never counts how many application nodes are actually
+            // running, so two hosts can each declare this profile and both report healthy while double-claiming
+            // the same real-time voice application on different nodes. Surfacing the operator responsibility in
+            // the healthy verdict itself keeps it in front of whoever inspects health, not only in the docs.
+            return HealthCheckResult.Healthy(
+                $"This deployment satisfies the '{result.DeclaredProfileId}' Contact Center topology. " +
+                "This profile certifies exactly one active application node. This check verifies the declared " +
+                "infrastructure prerequisites but cannot detect a second active node claiming the same real-time " +
+                "voice application, so running a single active node is an operator responsibility. See " +
+                "docs/telephony/asterisk.md.");
+        }
+
         return HealthCheckResult.Healthy($"This deployment satisfies the '{result.DeclaredProfileId}' Contact Center topology.");
     }
 }

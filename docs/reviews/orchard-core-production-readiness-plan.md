@@ -593,13 +593,15 @@ The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManag
 
 ### OC-033 — Cross-tenant ARI ownership guard is process-local static state
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Multi-tenancy/scale · **Effort:** M · **Risk:** Medium · **Dependencies:** Needs a cross-tenant coordination primitive
+- **Priority:** Medium · **Status:** Completed · **Category:** Multi-tenancy/scale · **Effort:** M · **Risk:** Medium · **Dependencies:** Needs a cross-tenant coordination primitive
 
 **Problem.** `AsteriskAriApplicationOwnershipRegistry.cs:18` uses a `static readonly ConcurrentDictionary` to stop two tenants on one node attaching to the same ARI application. The implementation is careful and its comment candidly explains that `IDistributedLock`/`IDistributedCache` are tenant-scoped and therefore unusable here.
 
 **Why it matters.** On two web nodes, tenant A on node 1 and tenant B on node 2 can both claim the same ARI application — the exact collision the registry exists to prevent — and the failure is silent. It is also the one place in scope violating the repo's "no static mutable state" rule.
 
 **Recommended solution.** Back the claim with a lease in a shared store keyed by ARI identity, keeping the static dictionary as a local fast cache. Short of that, document the single-node constraint in `docs/telephony/asterisk.md` and surface it in the existing topology health check.
+
+**Resolution.** The fallback path is delivered; the full cross-node lease is dispositioned as a documented follow-up because it genuinely requires infrastructure the platform does not yet expose. Orchard Core's `IDistributedLock`/`IDistributedCache` are tenant-scoped, so a claim shared across tenants on one node — let alone across nodes — cannot be arbitrated by them, which is exactly why the registry is a node-local static in the first place; backing the claim with a cross-tenant lease is blocked on a cross-tenant coordination primitive that does not exist, and is left as a **Won't-Fix-now / future improvement** (the `single-region-multi-node` profile remains uncertified until it lands). What is delivered: the single-active-node operator responsibility is now **surfaced by the platform at runtime** rather than living only in the docs. `ContactCenterTopologyHealthCheck.Evaluate` looks up the satisfied profile and, when it is a production profile capped at one active application node (`MaximumApplicationNodes == 1`, which is the certified `single-node-distributed`), its *healthy* verdict states that the profile certifies exactly one active application node and that the check verifies infrastructure prerequisites but cannot detect a second active node claiming the same real-time voice application, so single-active-node operation is an operator responsibility. Because the Contact Center readiness probe deliberately writes only the aggregate status (its detailed disclosure is confined to the authorized *dependency* endpoint, and topology is a node-local *readiness* verdict that the tag separation keeps off that endpoint by design), the operator-visible surface for this static, activation-time fact is the tenant-activation log: `ContactCenterTopologyValidator` already logs the satisfied-topology verdict once on activation, and that success log now names the single-active-node operator responsibility for a single-node production profile, logged at `Warning` so the caveat survives the `Warning` default minimum log level shipped by the production host (the ordinary satisfied-topology message stays at `Information`). This is layer-clean — driven by the topology profile in `ContactCenter.Core`, with no reference to Asterisk — and the health-check description signature is unchanged, so the governed public-API baseline is unaffected. The registry's XML remark and `docs/telephony/asterisk.md` were updated to note the health check now surfaces the responsibility, and a health-check test asserts the healthy verdict carries the "one active application node" / "operator responsibility" language.
 
 ---
 
@@ -891,7 +893,8 @@ Strongly recommended before first release:
 
 Post-merge follow-ups:
 
-- [ ] OC-033, OC-034 — multi-node coordination and edge rate limiting
+- [ ] OC-034 — multi-node coordination and edge rate limiting
+- [x] OC-033 — single-active-node ARI ownership constraint now surfaced in the topology health check (full cross-node lease deferred: needs a cross-tenant coordination primitive)
 - [x] OC-035 — antiforgery coverage (delivered as a reflection-based architecture test proving no module controller opts out of the global `AutoValidateAntiforgeryToken` filter)
 - [ ] OC-040 → OC-045 — technical debt
 - [ ] OC-046 — agent profile split

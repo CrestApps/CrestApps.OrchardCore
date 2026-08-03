@@ -43,7 +43,7 @@ public sealed class ContactCenterTopologyHealthCheckTests
     }
 
     [Fact]
-    public void Evaluate_ReportsHealthy_WhenTheDeclaredProductionTopologyIsSatisfied()
+    public void Evaluate_ReportsHealthy_AndSurfacesTheSingleActiveNodeResponsibility_WhenTheDeclaredProductionTopologyIsSatisfied()
     {
         var verdict = new ContactCenterTopologyValidationResult
         {
@@ -55,6 +55,8 @@ public sealed class ContactCenterTopologyHealthCheckTests
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
         Assert.Contains(ContactCenterTopologyProfiles.SingleNodeDistributedId, result.Description, StringComparison.Ordinal);
+        Assert.Contains("one active application node", result.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("operator responsibility", result.Description, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

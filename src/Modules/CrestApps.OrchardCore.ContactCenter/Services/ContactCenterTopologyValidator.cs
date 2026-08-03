@@ -105,12 +105,36 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
             return;
         }
 
-        if (result.IsProductionTopology && _logger.IsEnabled(LogLevel.Information))
+        if (result.IsProductionTopology)
         {
-            _logger.LogInformation(
-                "Tenant '{TenantName}' satisfies the production Contact Center topology '{ProfileId}'.",
-                _shellSettings.Name,
-                result.DeclaredProfileId);
+            var profile = ContactCenterTopologyProfiles.Find(result.DeclaredProfileId);
+
+            if (profile is { MaximumApplicationNodes: 1 })
+            {
+                // A single-active-node production profile carries a constraint no probe on this node can enforce:
+                // topology validation confirms the declared infrastructure prerequisites but never counts how many
+                // application nodes are actually running, so a second active node claiming the same real-time voice
+                // application is not detected. Emitting the operator responsibility on the one-time activation log
+                // — the surface operators read for activation-time deployment facts — keeps it visible without
+                // leaking topology detail onto the anonymous readiness probe or muddying the readiness/dependency
+                // health-check separation. It is logged at Warning so the caveat survives the Warning default
+                // minimum level shipped by the production host; the ordinary satisfied-topology message stays at
+                // Information.
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(
+                        "Tenant '{TenantName}' satisfies the production Contact Center topology '{ProfileId}', which certifies exactly one active application node. This node cannot detect a second active node claiming the same real-time voice application, so running a single active node is an operator responsibility. See docs/telephony/asterisk.md.",
+                        _shellSettings.Name,
+                        result.DeclaredProfileId);
+                }
+            }
+            else if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Tenant '{TenantName}' satisfies the production Contact Center topology '{ProfileId}'.",
+                    _shellSettings.Name,
+                    result.DeclaredProfileId);
+            }
         }
     }
 

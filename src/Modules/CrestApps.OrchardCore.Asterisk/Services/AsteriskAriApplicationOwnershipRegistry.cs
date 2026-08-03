@@ -16,9 +16,10 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// <remarks>
 /// Because the backing store is node-local, this registry prevents a same-node collision but cannot
 /// arbitrate a claim shared across nodes, and the Contact Center topology health check does not count
-/// running nodes to catch one. Real-time Asterisk voice is therefore supported only on a single active
-/// application process — an operator responsibility, consistent with the single-node production
-/// certification. See <c>docs/telephony/asterisk.md</c> for the operator guidance and the planned
+/// running nodes to catch one — it instead surfaces the single-active-node operator responsibility in its
+/// healthy verdict for a single-node production profile. Real-time Asterisk voice is therefore supported only
+/// on a single active application process — an operator responsibility, consistent with the single-node
+/// production certification. See <c>docs/telephony/asterisk.md</c> for the operator guidance and the planned
 /// shared-lease path to multi-node.
 /// </remarks>
 internal sealed class AsteriskAriApplicationOwnershipRegistry : IAsteriskAriApplicationOwnershipRegistry
