@@ -312,9 +312,18 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
         // first so the supervisor leg has somewhere to be placed the instant it answers.
         await _ariClient.CreateBridgeAsync(supervisorBridgeId, AsteriskAriConstants.MixingBridgeType, cancellationToken);
 
-        var ready = await OriginateSupervisorLegAsync(request.InteractionId, supervisorEndpoint, supervisorChannelId, cancellationToken);
+        var readyOutcome = await OriginateSupervisorLegAsync(request.InteractionId, supervisorEndpoint, supervisorChannelId, cancellationToken);
 
-        if (!ready)
+        if (readyOutcome == AsteriskAgentChannelReadyOutcome.Canceled)
+        {
+            // Let the outer engagement catch compensate and rethrow, so a canceled engagement is never persisted as
+            // a false supervisor no-answer.
+            cancellationToken.ThrowIfCancellationRequested();
+
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        if (readyOutcome != AsteriskAgentChannelReadyOutcome.Ready)
         {
             await CompensateSupervisorEngagementAsync(
                 request.Mode,
@@ -354,9 +363,18 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
             return Failure("monitor_call_not_owned", "No owned Asterisk conversation bridge was found for the requested barge engagement.");
         }
 
-        var ready = await OriginateSupervisorLegAsync(request.InteractionId, supervisorEndpoint, supervisorChannelId, cancellationToken);
+        var readyOutcome = await OriginateSupervisorLegAsync(request.InteractionId, supervisorEndpoint, supervisorChannelId, cancellationToken);
 
-        if (!ready)
+        if (readyOutcome == AsteriskAgentChannelReadyOutcome.Canceled)
+        {
+            // Let the outer engagement catch compensate and rethrow, so a canceled engagement is never persisted as
+            // a false supervisor no-answer.
+            cancellationToken.ThrowIfCancellationRequested();
+
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        if (readyOutcome != AsteriskAgentChannelReadyOutcome.Ready)
         {
             await CompensateSupervisorEngagementAsync(
                 MonitorMode.Barge,
@@ -435,7 +453,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
         };
     }
 
-    private async Task<bool> OriginateSupervisorLegAsync(
+    private async Task<AsteriskAgentChannelReadyOutcome> OriginateSupervisorLegAsync(
         string interactionId,
         string supervisorEndpoint,
         string supervisorChannelId,

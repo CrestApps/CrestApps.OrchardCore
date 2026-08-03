@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class AsteriskAgentChannelReadySignalTests
 {
     [Fact]
-    public async Task WaitAsync_WhenChannelIsSignaled_ReturnsTrue()
+    public async Task WaitAsync_WhenChannelIsSignaled_ReturnsReady()
     {
         // Arrange
         var signal = new AsteriskAgentChannelReadySignal();
@@ -13,24 +13,40 @@ public sealed class AsteriskAgentChannelReadySignalTests
 
         // Act
         signal.Signal("agent-chan-1");
-        var ready = await registration.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var outcome = await registration.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(ready);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.Ready, outcome);
     }
 
     [Fact]
-    public async Task WaitAsync_WhenTimeoutElapses_ReturnsFalse()
+    public async Task WaitAsync_WhenTimeoutElapses_ReturnsNotReady()
     {
         // Arrange
         var signal = new AsteriskAgentChannelReadySignal();
         using var registration = signal.Register("agent-chan-1");
 
         // Act
-        var ready = await registration.WaitAsync(TimeSpan.Zero, TestContext.Current.CancellationToken);
+        var outcome = await registration.WaitAsync(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(ready);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.NotReady, outcome);
+    }
+
+    [Fact]
+    public async Task WaitAsync_WhenCancellationRequested_ReturnsCanceled()
+    {
+        // Arrange
+        var signal = new AsteriskAgentChannelReadySignal();
+        using var registration = signal.Register("agent-chan-1");
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        // Act
+        var outcome = await registration.WaitAsync(TimeSpan.FromSeconds(5), cts.Token);
+
+        // Assert
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.Canceled, outcome);
     }
 
     [Fact]
@@ -42,10 +58,10 @@ public sealed class AsteriskAgentChannelReadySignalTests
 
         // Act
         signal.Signal("unrelated-chan");
-        var ready = await registration.WaitAsync(TimeSpan.Zero, TestContext.Current.CancellationToken);
+        var outcome = await registration.WaitAsync(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(ready);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.NotReady, outcome);
     }
 
     [Fact]
@@ -58,10 +74,10 @@ public sealed class AsteriskAgentChannelReadySignalTests
 
         // Act
         signal.Signal("agent-chan-1");
-        var ready = await registration.WaitAsync(TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
+        var outcome = await registration.WaitAsync(TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(ready);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.NotReady, outcome);
     }
 
     [Fact]
@@ -73,12 +89,12 @@ public sealed class AsteriskAgentChannelReadySignalTests
 
         // Act
         using var current = signal.Register("agent-chan-1");
-        var staleReady = await stale.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var staleOutcome = await stale.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         signal.Signal("agent-chan-1");
-        var currentReady = await current.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var currentOutcome = await current.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(staleReady);
-        Assert.True(currentReady);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.NotReady, staleOutcome);
+        Assert.Equal(AsteriskAgentChannelReadyOutcome.Ready, currentOutcome);
     }
 }

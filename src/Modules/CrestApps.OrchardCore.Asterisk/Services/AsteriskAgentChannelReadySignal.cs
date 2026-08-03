@@ -71,7 +71,7 @@ internal sealed class AsteriskAgentChannelReadySignal : IAsteriskAgentChannelRea
             _completion = completion;
         }
 
-        public async Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
+        public async Task<AsteriskAgentChannelReadyOutcome> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
         {
             using var delayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -79,16 +79,27 @@ internal sealed class AsteriskAgentChannelReadySignal : IAsteriskAgentChannelRea
             {
                 var completed = await Task.WhenAny(_completion.Task, Task.Delay(timeout, delayCancellation.Token));
 
-                if (completed == _completion.Task)
+                // Give caller cancellation precedence over either terminal result: a superseding registration can
+                // complete this waiter with false at the same moment the host cancels, and WhenAny would otherwise
+                // report NotReady, letting the caller persist a false no-answer for what was actually a cancellation.
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    return _completion.Task.Result;
+                    return AsteriskAgentChannelReadyOutcome.Canceled;
                 }
 
-                return false;
+                if (completed == _completion.Task)
+                {
+                    return _completion.Task.Result
+                        ? AsteriskAgentChannelReadyOutcome.Ready
+                        : AsteriskAgentChannelReadyOutcome.NotReady;
+                }
+
+                // The delay won the race without cancellation, so this is a genuine answer timeout.
+                return AsteriskAgentChannelReadyOutcome.NotReady;
             }
             catch (OperationCanceledException)
             {
-                return false;
+                return AsteriskAgentChannelReadyOutcome.Canceled;
             }
             finally
             {

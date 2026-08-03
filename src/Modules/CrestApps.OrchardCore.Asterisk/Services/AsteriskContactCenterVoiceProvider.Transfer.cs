@@ -170,7 +170,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
                 TimeSpan.FromSeconds(AsteriskAriConstants.AgentAnswerTimeoutSeconds),
                 cancellationToken);
 
-            if (!destinationReady)
+            if (destinationReady != AsteriskAgentChannelReadyOutcome.Ready)
             {
                 // A cancelled wait surfaces as a not-ready result, so distinguish genuine no-answer from cancellation
                 // and let cancellation propagate to the unknown-outcome path instead of reporting a confirmed timeout.

@@ -36,9 +36,11 @@ internal sealed class FakeAsteriskAgentChannelReadySignal : IAsteriskAgentChanne
             _ready = ready;
         }
 
-        public Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
+        public Task<AsteriskAgentChannelReadyOutcome> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_ready);
+            return Task.FromResult(_ready
+                ? AsteriskAgentChannelReadyOutcome.Ready
+                : AsteriskAgentChannelReadyOutcome.NotReady);
         }
 
         public void Dispose()

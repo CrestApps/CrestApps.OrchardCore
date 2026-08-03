@@ -50,6 +50,20 @@ public static class AsteriskConstants
     public const int MaxRealtimeEventBufferCapacity = 100_000;
 
     /// <summary>
+    /// The largest single reassembled real-time WebSocket message, in bytes, a deployment may configure before
+    /// validation rejects it as a memory-exhaustion risk. A single message may hold up to this many bytes while
+    /// its frames are being accumulated.
+    /// </summary>
+    public const int MaxRealtimeMessageBytesCeiling = 64 * 1024 * 1024;
+
+    /// <summary>
+    /// The bounded time, in seconds, the real-time voice listener waits when closing a WebSocket. A hostile peer
+    /// that never completes the close handshake (for example, after being sent a <c>MessageTooBig</c> close) must
+    /// not be able to stall the listener indefinitely, so the close is abandoned once this window elapses.
+    /// </summary>
+    public const int RealtimeCloseHandshakeTimeoutSeconds = 5;
+
+    /// <summary>
     /// The default short-lived PJSIP credential lifetime, in minutes.
     /// </summary>
     public const int DefaultPjsipCredentialLifetimeMinutes = 15;

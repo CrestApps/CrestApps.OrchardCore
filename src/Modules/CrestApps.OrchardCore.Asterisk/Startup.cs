@@ -101,6 +101,12 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.RealtimeEventBackpressureTimeout > TimeSpan.Zero,
                 "'CrestApps:Asterisk:Coordination:RealtimeEventBackpressureTimeout' must be greater than zero, otherwise a saturated buffer reconnects immediately instead of applying backpressure.")
+            .Validate(
+                options => options.MaxRealtimeMessageBytes > 0,
+                "'CrestApps:Asterisk:Coordination:MaxRealtimeMessageBytes' must be greater than zero, otherwise no real-time message could ever be received.")
+            .Validate(
+                options => options.MaxRealtimeMessageBytes <= AsteriskConstants.MaxRealtimeMessageBytesCeiling,
+                $"'CrestApps:Asterisk:Coordination:MaxRealtimeMessageBytes' must not exceed {AsteriskConstants.MaxRealtimeMessageBytesCeiling}, otherwise a single oversized message could exhaust process memory before the size guard closes the socket.")
             .ValidateOnStart();
 
         services

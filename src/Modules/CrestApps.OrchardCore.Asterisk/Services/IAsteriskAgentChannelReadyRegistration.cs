@@ -11,6 +11,9 @@ internal interface IAsteriskAgentChannelReadyRegistration : IDisposable
     /// </summary>
     /// <param name="timeout">The maximum time to wait for the channel to become ready.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns><see langword="true"/> when the channel became ready in time; otherwise, <see langword="false"/>.</returns>
-    Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken);
+    /// <returns>
+    /// An <see cref="AsteriskAgentChannelReadyOutcome"/> describing whether the channel became ready, failed to
+    /// become ready in time, or the wait was canceled by the supplied token.
+    /// </returns>
+    Task<AsteriskAgentChannelReadyOutcome> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken);
 }

@@ -408,6 +408,10 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
                 completedHandlerIds.Add(handlerId);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 handlerFailed = true;

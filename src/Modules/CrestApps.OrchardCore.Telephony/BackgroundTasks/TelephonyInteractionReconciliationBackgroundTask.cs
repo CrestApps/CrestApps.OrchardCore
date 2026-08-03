@@ -25,6 +25,10 @@ public sealed class TelephonyInteractionReconciliationBackgroundTask : IBackgrou
         {
             await synchronizationService.ReconcileActiveInteractionsAsync(cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The tenant is shutting down; stop quietly instead of logging the cancellation as a reconciliation failure.
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while reconciling telephony interaction state.");

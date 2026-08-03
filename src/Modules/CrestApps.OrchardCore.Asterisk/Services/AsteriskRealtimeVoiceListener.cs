@@ -229,7 +229,22 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
                             result.CloseStatus,
                             result.CloseStatusDescription.SanitizeLogValue());
 
-                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
+                        await CloseSocketSafelyAsync(socket, WebSocketCloseStatus.NormalClosure, "Closed", cancellationToken);
+
+                        return (false, receiveStopwatch.Elapsed);
+                    }
+
+                    if (message.Length + result.Count > _coordinationOptions.MaxRealtimeMessageBytes)
+                    {
+                        _logger.LogWarning(
+                            "The Asterisk real-time voice listener for provider {ProviderName} abandoned a message that exceeded the {MaxBytes}-byte limit and closed the socket. A peer that never sets the end-of-message flag cannot be allowed to grow the reassembly buffer without bound.",
+                            settings.ProviderName,
+                            _coordinationOptions.MaxRealtimeMessageBytes);
+
+                        // The peer that produced the oversized message is presumed hostile, so use CloseOutputAsync
+                        // under a bounded token: it sends the close frame without waiting for the peer's close reply,
+                        // and the timeout guarantees even the send cannot stall the listener if the peer stops reading.
+                        await CloseSocketSafelyAsync(socket, WebSocketCloseStatus.MessageTooBig, "Message too large", cancellationToken);
 
                         return (false, receiveStopwatch.Elapsed);
                     }
@@ -308,6 +323,37 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         var jitter = 0.8 + (Random.Shared.NextDouble() * 0.4);
 
         return TimeSpan.FromSeconds(seconds * jitter);
+    }
+
+    private async Task CloseSocketSafelyAsync(
+        ClientWebSocket socket,
+        WebSocketCloseStatus closeStatus,
+        string statusDescription,
+        CancellationToken cancellationToken)
+    {
+        // Bound the close so a peer that never completes (or reads) the close handshake cannot stall the listener.
+        using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        closeCts.CancelAfter(TimeSpan.FromSeconds(AsteriskConstants.RealtimeCloseHandshakeTimeoutSeconds));
+
+        try
+        {
+            // CloseOutputAsync only sends the close frame; it does not wait for the peer's close reply, so a peer
+            // that stops responding cannot block the listener beyond the send itself, which the token bounds.
+            await socket.CloseOutputAsync(closeStatus, statusDescription, closeCts.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Abandoned the Asterisk real-time voice WebSocket close handshake after {TimeoutSeconds}s because the peer did not complete it.",
+                    AsteriskConstants.RealtimeCloseHandshakeTimeoutSeconds);
+            }
+        }
+        catch (WebSocketException ex)
+        {
+            _logger.LogDebug(ex, "The Asterisk real-time voice WebSocket close frame could not be sent.");
+        }
     }
 
     private async Task ReconcileAsync(string providerName, CancellationToken cancellationToken)

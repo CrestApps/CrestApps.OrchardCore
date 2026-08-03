@@ -215,6 +215,10 @@ public sealed class DialPadTelephonyProvider :
             return TelephonyResult.Success(call);
         }
 
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
             _logger.LogError(ex, "An error occurred while placing a DialPad call.");
@@ -319,6 +323,10 @@ public sealed class DialPadTelephonyProvider :
                 Found = true,
                 Call = call,
             };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -577,6 +585,10 @@ public sealed class DialPadTelephonyProvider :
                     .ToList(),
             };
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while loading the DialPad directory.");
@@ -708,6 +720,10 @@ public sealed class DialPadTelephonyProvider :
                 _logger.LogWarning("DialPad rejected an OAuth token revocation request with status code {StatusCode}.", response.StatusCode);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while revoking DialPad OAuth tokens.");
@@ -765,6 +781,10 @@ public sealed class DialPadTelephonyProvider :
             }
 
             return tokens;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -861,6 +881,10 @@ public sealed class DialPadTelephonyProvider :
             }
 
             return TelephonyResult.Success(onSuccess());
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

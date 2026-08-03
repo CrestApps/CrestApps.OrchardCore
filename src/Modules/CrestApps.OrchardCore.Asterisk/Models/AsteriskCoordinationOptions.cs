@@ -51,4 +51,14 @@ public sealed class AsteriskCoordinationOptions
     /// provider tears the socket down first and the listener degrades to reconnect and reconcile.
     /// </summary>
     public TimeSpan RealtimeEventBackpressureTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets or sets the maximum size, in bytes, of a single reassembled real-time WebSocket message from the
+    /// provider. Provider frames are accumulated until the end-of-message flag is set; a peer that never sets it
+    /// could otherwise grow the reassembly buffer without bound and exhaust process memory. When the accumulated
+    /// size would exceed this limit the message is abandoned and the socket is closed with
+    /// <c>MessageTooBig</c>, after which the listener reconnects and reconciles. The value is validated to stay
+    /// within a positive, memory-safe range. Defaults to 1 MiB, which is far above any legitimate ARI event.
+    /// </summary>
+    public int MaxRealtimeMessageBytes { get; set; } = 1024 * 1024;
 }

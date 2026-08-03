@@ -216,6 +216,44 @@ public sealed class AsteriskContactCenterVoiceProviderConnectFailureTests
     }
 
     [Fact]
+    public async Task ConnectToAgentAsync_WhenCancelledDuringBridgeCreate_PropagatesCancellationAndRetainsRecordForReconciler()
+    {
+        // Arrange
+        // Host cancellation strikes while the deterministic mixing bridge is being created: the bridge may still
+        // materialize on Asterisk after compensation runs, so cancellation must (1) propagate as an
+        // OperationCanceledException rather than a false provider failure, and (2) RETAIN the durable record so the
+        // age-gated reconciler can reclaim a bridge that commits late instead of orphaning it — even though no
+        // originate was attempted yet.
+        using var cts = new CancellationTokenSource();
+        var ariClient = new TestAriClient
+        {
+            ExistingChannels = ["caller-1"],
+            OriginateChannel = new AsteriskAriChannel { Id = "agent-chan-1" },
+            CreateBridgeShouldThrow = (bridgeId, _) =>
+            {
+                if (bridgeId == _mixingBridgeId)
+                {
+                    cts.Cancel();
+
+                    return true;
+                }
+
+                return false;
+            },
+            CreateBridgeException = new OperationCanceledException(),
+        };
+        var bindingStore = new TestBindingStore();
+        var service = CreateService(ariClient, bindingStore);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => service.ConnectToAgentAsync(CreateRequest(), cts.Token));
+
+        Assert.Contains(_agentChannelId, bindingStore.CreatedChannelIds);
+        Assert.DoesNotContain(_agentChannelId, bindingStore.RemovedChannelIds);
+    }
+
+    [Fact]
     public async Task ConnectToAgentAsync_WhenMixingBridgeCreateIsRejectedWithClientError_CompensatesAndRetiresRecord()
     {
         // Arrange

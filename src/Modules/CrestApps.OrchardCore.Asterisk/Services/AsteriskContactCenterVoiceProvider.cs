@@ -272,12 +272,24 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
             // owned-origination StasisStart (bounded by the answer timeout) before bridging the two legs. The
             // caller stays parked in the holding bridge until then, so it keeps hearing hold music instead of
             // dead air.
-            var agentReady = await readyRegistration.WaitAsync(
+            var agentReadyOutcome = await readyRegistration.WaitAsync(
                 TimeSpan.FromSeconds(AsteriskAriConstants.AgentAnswerTimeoutSeconds),
                 cancellationToken);
 
-            if (!agentReady)
+            if (agentReadyOutcome == AsteriskAgentChannelReadyOutcome.Canceled)
             {
+                // The host canceled the attempt. Let the cancellation handler below compensate and rethrow so the
+                // attempt is never persisted as a false agent no-answer that would corrupt the interaction outcome
+                // and the agent's metrics.
+                cancellationToken.ThrowIfCancellationRequested();
+
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            if (agentReadyOutcome != AsteriskAgentChannelReadyOutcome.Ready)
+            {
+                // A genuine answer timeout: clean up the originated agent leg and mixing bridge. The compensation
+                // itself must complete even during shutdown, so it runs on a non-cancelable token.
                 await CompensateAsync(
                     agentChannelId,
                     bridgeId,
@@ -355,6 +367,23 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
                     ["bridgeId"] = bridgeId,
                 },
             };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Host shutdown/cancellation is not a provider fault, so it must not be persisted as a provider failure
+            // (which would corrupt the interaction outcome). Compensate the same side effects the generic fault path
+            // would, then rethrow the cancellation. Any bridge-create or originate that was attempted may still
+            // commit on Asterisk after this compensation runs, so the durable record is retained as ambiguous
+            // whenever either provisioning operation was attempted, letting the age-gated reconciler reclaim a
+            // resource that materializes late instead of orphaning it.
+            await CompensateAsync(
+                bindingPersisted ? agentChannelId : null,
+                bridgeCreateAttempted ? bridgeId : null,
+                holdingDetached ? callerChannelId : null,
+                bridgeCreateAttempted || originateAttempted,
+                CancellationToken.None);
+
+            throw;
         }
         catch (Exception ex)
         {

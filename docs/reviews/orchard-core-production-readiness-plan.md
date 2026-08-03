@@ -575,7 +575,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-036 — Cancellation handled as an ordinary fault; unbounded WebSocket frames
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Async correctness / DoS · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Medium · **Status:** Completed · **Category:** Async correctness / DoS · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem (cluster).**
 - Broad handlers catch `OperationCanceledException` alongside real failures, so shutdown produces error noise and loops continue with a canceled token (`ContactCenterOutbox.cs:411`, `DialerPacingBackgroundTask.cs:42`, `TelephonyInteractionReconciliationBackgroundTask.cs:28`, `DialPadTelephonyProvider.cs:239-329`).
@@ -585,6 +585,14 @@ Deeper investigation showed the central premise is factually wrong and the recom
 - Durable hub work uses `MustComplete` with no host-stopping token or bounded deadline (`ContactCenterHub.cs:304-350,372-429`).
 
 **Recommended solution.** Rethrow `OperationCanceledException` when the supplied token is canceled before generic handling; return a distinct `Ready/TimedOut/Canceled` result and re-check cancellation before no-answer compensation; enforce a configured max WebSocket message size and close with `MessageTooBig`; thread cancellation through the binding store; link durable hub work to application shutdown with a bounded timeout.
+
+**Resolution.** The cluster was triaged into fixes and two documented Won't-Fix sub-parts (the panel review deliberately treats each sub-part on its own merits rather than mechanically applying the reviewer's blanket recommendation):
+
+- **Cancellation-as-fault (FIXED).** Added `catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }` guards ahead of the swallowing generic handlers in `ContactCenterOutbox` (handler loop), `TelephonyInteractionReconciliationBackgroundTask`, and the six generic catches in `DialPadTelephonyProvider` (call-state, directory list, token revoke, token request, call-action, place-call). `DialerPacingBackgroundTask` was re-examined and already rethrows on shell-token cancellation while distinguishing its own run-budget token — no change required.
+- **Canceled readiness recorded as no-answer (FIXED).** Introduced a tri-state `AsteriskAgentChannelReadyOutcome { Ready, NotReady, Canceled }` and changed `IAsteriskAgentChannelReadyRegistration.WaitAsync` to return it (both `internal`, so no PublicApi baseline impact). `AsteriskAgentChannelReadySignal` now distinguishes a genuine answer-timeout from host cancellation by re-checking the caller's token when the delay wins the race, and gives caller cancellation **precedence** over a superseded-registration `false` result so a simultaneous supersede + cancel is never reported as `NotReady`. All four readiness call sites (connect, conference, transfer, supervisor monitor/barge) now propagate `OperationCanceledException` on `Canceled` instead of compensating into a false `*_no_answer` disposition, so shutdown never corrupts interaction outcomes or agent metrics. The connect path additionally gained a dedicated `catch (OperationCanceledException) when (token.IsCancellationRequested)` guard ahead of its broad fault catch, because the readiness-thrown cancellation was otherwise swallowed and returned as `agent_connect_failed` (found by the independent review). Added `AsteriskAgentChannelReadySignalTests` coverage for the `Ready`/`NotReady`/`Canceled` outcomes.
+- **Unbounded WebSocket frames (FIXED).** Added a validated `AsteriskCoordinationOptions.MaxRealtimeMessageBytes` (default 1 MiB, ceiling 64 MiB via `AsteriskConstants.MaxRealtimeMessageBytesCeiling`, `.Validate(...)` in `Startup`). `AsteriskRealtimeVoiceListener` now tracks accumulated frame size in its receive loop and, when a message would exceed the cap, logs a warning and closes the socket with `WebSocketCloseStatus.MessageTooBig` instead of buffering unbounded attacker-controlled data. The close is bounded (`CloseOutputAsync` under a `RealtimeCloseHandshakeTimeoutSeconds` token) so a hostile peer cannot stall the listener by refusing to complete the close handshake (found by the independent review).
+- **Binding-store cancellation threading (SPLIT → OC-050).** The independent review correctly observed that the OC-036 "durable mutations must run to completion" rationale does not justify the store's *uncancellable, unbounded create-lock acquisition* or its uncancellable *read* queries: a wedged holder can block unrelated colliding channels indefinitely. A safe fix changes `CreateAsync`'s failure contract (an acquisition timeout must surface distinctly, not masquerade as a lost create race) and is larger than OC-036's scope, so it is tracked as **OC-050**. The durable write mutation itself still legitimately runs to completion.
+- **`ContactCenterHub` `MustComplete` (SPLIT → OC-051).** `HubConnectionWork.MustComplete` uses `CancellationToken.None` by deliberate, documented design because durable state plus SignalR group membership must not be abandoned half-applied (no repair mechanism exists), and the convention is enforced by `HubCancellationConventionTests`. The independent review agreed the client-disconnect token must stay ignored but noted the missing *bounded application-shutdown* seam. Because a shutdown token is only safe once each durable step is idempotent and group membership is reconstructed on reconnect — an L-sized redesign — it is tracked as **OC-051** rather than changed here, where introducing the token alone would reintroduce the half-applied inconsistency the design prevents.
 
 ---
 
@@ -750,6 +758,41 @@ Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep e
 
 ---
 
+### OC-050 — Uncancellable channel-binding create lock can block colliding channels indefinitely
+
+- **Priority:** Medium · **Status:** Not Started · **Category:** Async correctness / liveness · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `AsteriskChannelTenantBindingStore.CreateAsync` acquires a process-wide static striped `SemaphoreSlim` with an uncancellable, unbounded `WaitAsync()` and then performs YesSql query + save operations while holding it. If one holder wedges on a database operation, every other channel that hashes to the same stripe — including unrelated channels and other tenants sharing the process — blocks on the lock indefinitely. The store's read-only lookups (`FindByChannelIdAsync`, `FindAllByPeerChannelIdAsync`) also ignore cancellation even though they perform no durable mutation.
+
+**Root cause.** The single-node exactly-once inbound-claim design (see the store's `CreateLockStripeCount` comment) intentionally serializes same-channel creates in-process, but the serialization primitive was written without a liveness bound because the original threat model only considered the two-contender connect/teardown race, not a wedged database operation holding the stripe.
+
+**Recommended solution.**
+- Give the create-lock acquisition a bounded wait. On acquisition timeout, surface a distinct failure (throw a dedicated exception the caller maps to its ambiguous/reconcile path) rather than returning the `false` "lost the create race" flag, which would incorrectly signal that another attempt owns the channel and could strand it.
+- Thread `CancellationToken` into the read-only lookup methods (no durable-mutation risk) so shutdown does not wait on stalled queries. Keep durable **write** mutations running to completion (the OC-036 rationale still holds for the mutation itself, only the *acquisition* and *reads* gain a bound).
+- Consider replacing the striped in-process lock with a YesSql unique index on `ChannelId` so the database enforces exactly-once creation without a process-wide gate; evaluate migration cost against the existing optimistic-concurrency model first.
+
+**Acceptance criteria.** A wedged create holder can no longer block an unrelated colliding channel beyond the bounded window; read-only lookups honor cancellation; every existing binding-store and reconciliation test stays green; no live call is stranded by a create that times out (verified by a unit test that forces acquisition contention).
+
+**Notes.** Split out of OC-036 from the independent gpt-5.6 review, which correctly observed that the OC-036 "durable mutations must complete" rationale does not justify an *uncancellable, unbounded lock acquisition* or uncancellable *read* queries. Kept as its own item because a safe fix changes `CreateAsync`'s failure contract and is larger than OC-036's scope.
+
+---
+
+### OC-051 — Durable hub work uses `CancellationToken.None` with no bounded shutdown deadline
+
+- **Priority:** Medium · **Status:** Not Started · **Category:** Async correctness / graceful shutdown · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `HubConnectionWork.MustComplete` runs durable Contact Center hub work under `CancellationToken.None`. This prevents a client disconnect from abandoning half-applied durable state plus SignalR group membership (correct), but it also means a wedged database or backplane call can hang indefinitely and block graceful shutdown, and it cannot actually *guarantee* completion — the host can still be force-terminated after the shutdown deadline, leaving the same mid-operation state the `None` token was meant to prevent.
+
+**Root cause.** Group membership and durable state are mutated in separate steps with no idempotent replay or reconnect-time reconstruction, so the only tool available to avoid a half-applied disconnect was to make the work uninterruptible. The `HubCancellationConventionTests` convention then froze that decision.
+
+**Recommended solution.** Keep ignoring the client-disconnect token, but (1) make each durable step idempotent and reconstruct group membership on reconnect, then (2) run the work under a token linked to application shutdown with a bounded deadline so shutdown stays graceful. The two parts must land together: introducing the shutdown token before idempotency/reconstruction exists would reintroduce the half-applied membership inconsistency. Update `HubCancellationConventionTests` to encode the new "client-disconnect-ignored, shutdown-bounded, idempotent" contract.
+
+**Acceptance criteria.** Client disconnects still never abandon durable work mid-flight; application shutdown no longer blocks indefinitely on hub work; a killed-mid-operation process recovers consistent group membership on reconnect; the convention test encodes the new contract.
+
+**Notes.** Split out of OC-036 from the independent gpt-5.6 review. The reviewer agreed the client-disconnect token must stay ignored; the disagreement was only about the missing *bounded shutdown* seam. Kept as its own item because it is an idempotency/reconstruction redesign (L) enforced by a convention test, not an OC-036-sized change.
+
+---
+
 ## Production Readiness Checklist
 
 Pre-merge blockers:
@@ -775,11 +818,13 @@ Strongly recommended before first release:
 Post-merge follow-ups:
 
 - [ ] OC-033, OC-034 — multi-node coordination and edge rate limiting
-- [ ] OC-035 — antiforgery integration test
+- [x] OC-035 — antiforgery coverage (delivered as a reflection-based architecture test proving no module controller opts out of the global `AutoValidateAntiforgeryToken` filter)
 - [ ] OC-040 → OC-045 — technical debt
 - [ ] OC-046 — agent profile split
 - [ ] OC-048 — attribute manual-dial suppression audits to the initiating agent
 - [ ] OC-049 — optional fresh-activation fold + sharpen rolling-upgrade docs/tests (non-blocking)
+- [ ] OC-050 — bound the channel-binding create-lock acquisition; thread cancellation into read-only lookups (split from OC-036)
+- [ ] OC-051 — bounded application-shutdown seam for durable hub work, gated on idempotent steps + group reconstruction (split from OC-036)
 
 ---
 
