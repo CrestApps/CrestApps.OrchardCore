@@ -6,11 +6,11 @@
 window.collapsiblePanel = function () {
   'use strict';
 
-  var storagePrefix = 'crestapps.collapsible-panel.';
-  var expandedState = 'expanded';
-  var collapsedState = 'collapsed';
-  var initializedAttribute = 'data-collapsible-panel-initialized';
-  var ready = function ready(callback) {
+  const storagePrefix = 'crestapps.collapsible-panel.';
+  const expandedState = 'expanded';
+  const collapsedState = 'collapsed';
+  const initializedAttribute = 'data-collapsible-panel-initialized';
+  const ready = callback => {
     if (document.readyState !== 'loading') {
       callback();
       return;
@@ -19,69 +19,67 @@ window.collapsiblePanel = function () {
       once: true
     });
   };
-  var readState = function readState(key) {
+  const readState = key => {
     try {
       return window.localStorage.getItem(storagePrefix + key);
-    } catch (_unused) {
+    } catch {
       return null;
     }
   };
-  var writeState = function writeState(key, state) {
+  const writeState = (key, state) => {
     try {
       window.localStorage.setItem(storagePrefix + key, state);
-    } catch (_unused2) {
+    } catch {
       // Storage can be unavailable (private mode or disabled cookies). The panel still works, it just won't remember its state.
     }
   };
-  var findTriggers = function findTriggers(panel) {
+  const findTriggers = panel => {
     if (!panel.id) {
       return [];
     }
-    var selector = '[data-bs-toggle="collapse"][data-bs-target="#' + panel.id + '"], [data-bs-toggle="collapse"][href="#' + panel.id + '"]';
+    const selector = '[data-bs-toggle="collapse"][data-bs-target="#' + panel.id + '"], [data-bs-toggle="collapse"][href="#' + panel.id + '"]';
     return Array.from(document.querySelectorAll(selector));
   };
-  var syncTriggers = function syncTriggers(panel, isExpanded) {
-    findTriggers(panel).forEach(function (trigger) {
+  const syncTriggers = (panel, isExpanded) => {
+    findTriggers(panel).forEach(trigger => {
       trigger.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
       trigger.classList.toggle('collapsed', !isExpanded);
-      trigger.querySelectorAll('[data-collapsible-panel-icon]').forEach(function (icon) {
+      trigger.querySelectorAll('[data-collapsible-panel-icon]').forEach(icon => {
         icon.classList.toggle('fa-chevron-up', isExpanded);
         icon.classList.toggle('fa-chevron-down', !isExpanded);
       });
     });
   };
-  var initialize = function initialize(panel) {
-    var key = panel.getAttribute('data-collapsible-panel');
+  const initialize = panel => {
+    const key = panel.getAttribute('data-collapsible-panel');
     if (!key || panel.hasAttribute(initializedAttribute)) {
       return;
     }
     panel.setAttribute(initializedAttribute, 'true');
-    var storedState = readState(key);
+    const storedState = readState(key);
     if (storedState === collapsedState) {
       panel.classList.remove('show');
     } else if (storedState === expandedState) {
       panel.classList.add('show');
     }
     syncTriggers(panel, panel.classList.contains('show'));
-    panel.addEventListener('shown.bs.collapse', function (event) {
+    panel.addEventListener('shown.bs.collapse', event => {
       if (event.target === panel) {
         writeState(key, expandedState);
         syncTriggers(panel, true);
       }
     });
-    panel.addEventListener('hidden.bs.collapse', function (event) {
+    panel.addEventListener('hidden.bs.collapse', event => {
       if (event.target === panel) {
         writeState(key, collapsedState);
         syncTriggers(panel, false);
       }
     });
   };
-  var initializeAll = function initializeAll(container) {
+  const initializeAll = container => {
     (container || document).querySelectorAll('[data-collapsible-panel]').forEach(initialize);
   };
-  ready(function () {
-    return initializeAll(document);
-  });
+  ready(() => initializeAll(document));
   return {
     initialize: initialize,
     initializeAll: initializeAll

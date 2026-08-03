@@ -98,11 +98,11 @@
     var remoteStream = new MediaStream();
     return {
       stream: remoteStream,
-      addTrack: function addTrack(track) {
+      addTrack: function (track) {
         remoteStream.addTrack(track);
         setRemoteStream(remoteStream);
       },
-      clear: function clear() {
+      clear: function () {
         remoteStream.getTracks().forEach(function (track) {
           remoteStream.removeTrack(track);
           track.stop();
@@ -203,17 +203,17 @@
       return Promise.resolve(activeSession.invite({
         requestDelegate: {},
         sessionDescriptionHandlerModifiers: modifiers
-      }))["catch"](function () {});
+      })).catch(function () {});
     }
     function terminateSession() {
       if (!activeSession) {
         return Promise.resolve();
       }
       if (typeof activeSession.bye === 'function') {
-        return Promise.resolve(activeSession.bye())["catch"](function () {});
+        return Promise.resolve(activeSession.bye()).catch(function () {});
       }
       if (typeof activeSession.dispose === 'function') {
-        return Promise.resolve(activeSession.dispose())["catch"](function () {});
+        return Promise.resolve(activeSession.dispose()).catch(function () {});
       }
       return Promise.resolve();
     }
@@ -236,7 +236,7 @@
         }
       },
       delegate: {
-        onInvite: function onInvite(invitation) {
+        onInvite: function (invitation) {
           wireSession(invitation);
           Promise.resolve(invitation.accept({
             sessionDescriptionHandlerOptions: {
@@ -247,7 +247,7 @@
             }
           })).then(function () {
             attachPeerConnection(invitation);
-          })["catch"](function (error) {
+          }).catch(function (error) {
             context.showError(error && error.message ? error.message : String(error));
           });
         }
@@ -262,7 +262,7 @@
       return {
         providerConfig: registrationConfig,
         mediaCodecs: media.codecs || [],
-        handleCallState: function handleCallState(call) {
+        handleCallState: function (call) {
           var stateName = normalizeState(call && call.state);
           if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
             return terminateSession();
@@ -276,16 +276,16 @@
           }
           return Promise.resolve();
         },
-        dispose: function dispose() {
+        dispose: function () {
           if (disposed) {
             return Promise.resolve();
           }
           disposed = true;
           remoteSink.clear();
           return terminateSession().then(function () {
-            return registerer ? registerer.unregister()["catch"](function () {}) : null;
+            return registerer ? registerer.unregister().catch(function () {}) : null;
           }).then(function () {
-            return userAgent.stop()["catch"](function () {});
+            return userAgent.stop().catch(function () {});
           });
         }
       };
@@ -472,7 +472,7 @@
     function releaseBrowserAudio() {
       browserAudioPromise = null;
       if (browserAudioSession && typeof browserAudioSession.dispose === 'function') {
-        Promise.resolve(browserAudioSession.dispose())["catch"](function () {});
+        Promise.resolve(browserAudioSession.dispose()).catch(function () {});
       }
       browserAudioSession = null;
       stopLocalAudioStream();
@@ -486,7 +486,7 @@
       }
       dom.remoteAudio.srcObject = stream || null;
       if (stream && typeof dom.remoteAudio.play === 'function') {
-        Promise.resolve(dom.remoteAudio.play())["catch"](function () {});
+        Promise.resolve(dom.remoteAudio.play()).catch(function () {});
       }
     }
     function ensureBrowserAudio() {
@@ -525,10 +525,10 @@
       }).then(function (session) {
         browserAudioSession = session || {};
         return browserAudioSession;
-      })["catch"](function (error) {
+      }).catch(function (error) {
         releaseBrowserAudio();
         throw error;
-      })["finally"](function () {
+      }).finally(function () {
         browserAudioPromise = null;
       });
       return browserAudioPromise;
@@ -543,7 +543,7 @@
         track.enabled = microphoneEnabled;
       });
       if (typeof browserAudioSession.handleCallState === 'function') {
-        Promise.resolve(browserAudioSession.handleCallState(call || null))["catch"](function (error) {
+        Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
           showError(error && error.message ? error.message : String(error));
         });
       }
@@ -551,7 +551,7 @@
     function invokeWithBrowserAudio(method, payload) {
       return ensureBrowserAudio().then(function () {
         return invoke(method, payload);
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
         return null;
       });
@@ -1138,10 +1138,10 @@
       return connection.invoke(method, payload).then(function (result) {
         applyCommandResult(result);
         return result;
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
         throw error;
-      })["finally"](function () {
+      }).finally(function () {
         activeCommand = null;
         render();
       });
@@ -1208,10 +1208,10 @@
       })).then(function (results) {
         results.forEach(applyCommandResult);
         return results;
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
         throw error;
-      })["finally"](function () {
+      }).finally(function () {
         activeCommand = null;
         render();
       });
@@ -1273,7 +1273,7 @@
         }
         directoryEntries = result.entries || [];
         render();
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
       });
     }
@@ -1514,12 +1514,12 @@
               succeeded: false
             };
           }
-          return response.json()["catch"](function () {
+          return response.json().catch(function () {
             return {
               succeeded: true
             };
           });
-        })["catch"](function () {
+        }).catch(function () {
           return {
             succeeded: false
           };
@@ -1535,7 +1535,7 @@
       if (isBrowserAudioEnabled() && !browserAudioSession) {
         ensureBrowserAudio().then(function () {
           answerIncoming(openUrl);
-        })["catch"](function (error) {
+        }).catch(function (error) {
           showError(error && error.message ? error.message : String(error));
         });
         return;
@@ -1581,7 +1581,7 @@
             callId: id
           });
         }
-      })["finally"](function () {
+      }).finally(function () {
         incomingAcceptPending = false;
       });
     }
@@ -1657,7 +1657,7 @@
           connectionStatusResolved = true;
           render();
         }
-      })["catch"](function () {
+      }).catch(function () {
         // Leave the default unavailable state when the hub call fails.
       });
     }
@@ -1670,7 +1670,7 @@
           capabilities = value;
           render();
         }
-      })["catch"](function () {
+      }).catch(function () {
         // Keep the capabilities provided in the configuration when the hub call fails.
       });
     }
@@ -1718,7 +1718,7 @@
       }
       connection.invoke('GetInteractions', config.recentCallsCount || 30).then(function (items) {
         renderHistory(items || []);
-      })["catch"](function () {
+      }).catch(function () {
         renderHistory([]);
       });
     }
@@ -1735,7 +1735,7 @@
       if (!connection) {
         return Promise.resolve();
       }
-      return refreshActiveCalls()["catch"](function () {});
+      return refreshActiveCalls().catch(function () {});
     }
     function formatTime(value) {
       try {
@@ -1757,13 +1757,13 @@
         var inbound = isInbound(interaction);
         var missed = isMissed(interaction);
         var inProgress = isInProgress(interaction);
-        var directionGlyph = inbound ? "\u2199" : "\u2197";
+        var directionGlyph = inbound ? '\u2199' : '\u2197';
         var number = inbound ? interaction.from || '' : interaction.to || '';
         var formattedNumber = formatPhoneNumber(number);
         var label = missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
         var time = formatTime(interaction.startedUtc);
         var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
-        var meta = escapeHtml(label) + (time ? " \u2022 " + escapeHtml(time) : '');
+        var meta = escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
         return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || label) + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
       }).join('');
       Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-history-number]'), function (item) {
@@ -1798,7 +1798,7 @@
               incomingHandled = false;
             }
             if (!tracked) {
-              refreshActiveCalls()["catch"](function (error) {
+              refreshActiveCalls().catch(function (error) {
                 showError(error && error.message ? error.message : String(error));
               });
             }
@@ -1835,7 +1835,7 @@
               loadHistory();
             }
             render();
-          })["catch"](function (error) {
+          }).catch(function (error) {
             showError(error && error.message ? error.message : String(error));
           });
         });
@@ -1858,7 +1858,7 @@
           loadHistory();
         }
         render();
-      })["catch"](function (error) {
+      }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
       });
     }
@@ -1989,23 +1989,23 @@
       merge: merge,
       pressKey: pressKey,
       togglePanel: togglePanel,
-      open: function open() {
+      open: function () {
         togglePanel(true);
       },
-      getCurrentCall: function getCurrentCall() {
+      getCurrentCall: function () {
         return currentCall;
       },
       getActiveCalls: getActiveCalls,
-      isIncomingAcceptPending: function isIncomingAcceptPending() {
+      isIncomingAcceptPending: function () {
         return incomingAcceptPending;
       },
       setIncomingOffer: setIncomingOffer,
       clearIncomingOffer: clearIncomingOffer,
       showError: showError,
-      getConnection: function getConnection() {
+      getConnection: function () {
         return connection;
       },
-      registerMediaAdapter: function registerMediaAdapter(name, adapter) {
+      registerMediaAdapter: function (name, adapter) {
         if (!name || typeof adapter !== 'function') {
           return false;
         }
@@ -2035,11 +2035,11 @@
     // Authentication handlers keyed by scheme. Providers using a different per-user authentication
     // scenario can register their own handler so the widget remains extensible.
     authHandlers: {
-      oauth2: function oauth2(context) {
+      oauth2: function (context) {
         context.startOAuth();
       }
     },
-    dial: function dial(number) {
+    dial: function (number) {
       var instance = getInstance();
       if (instance) {
         instance.dialNumber(number);

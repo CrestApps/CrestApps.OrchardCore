@@ -375,7 +375,7 @@
       applyRange(range);
       var presetName = labelForRadio(radio);
       var rangeText = range ? describeRange(range.from, range.to) : '';
-      label.textContent = rangeText ? presetName + " \u2014 " + rangeText : presetName;
+      label.textContent = rangeText ? presetName + ' \u2014 ' + rangeText : presetName;
       closeMenu();
     }
     radios.forEach(function (radio) {
@@ -449,7 +449,7 @@
       var to = readDate(toInput, toPicker);
       var rangeText = describeRange(from, to);
       var presetName = labelForRadio(radio);
-      label.textContent = rangeText ? presetName + " \u2014 " + rangeText : presetName;
+      label.textContent = rangeText ? presetName + ' \u2014 ' + rangeText : presetName;
       return true;
     }
     if (initialKey && selectInitialPreset(initialKey)) {
