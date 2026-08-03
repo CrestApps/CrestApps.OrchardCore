@@ -236,6 +236,14 @@ public sealed class MigrationAdditiveOnlyGuardTests
         ["QuoteForTableName"] = "YesSql.ISqlDialect",
     };
 
+    // Fallback identity for synthetic probe sources that do not map to a project on disk. It is a neutral name that is
+    // not an InternalsVisibleTo friend of any product assembly, so probes bind only against public surface, which is all
+    // they exercise. Real migration files are compiled under their own owning module identity instead (see
+    // ResolveOwningAssemblyName) so internal helpers resolve exactly as they do in that module's real build, no broader.
+    private const string GuardCompilationAssemblyName = "MigrationAdditiveOnlyGuard";
+
+    private static readonly Lazy<string> _repositoryRoot = new(FindRepositoryRoot);
+
     private static readonly Lazy<MetadataReference[]> _metadataReferences = new(LoadMetadataReferences);
 
     // Migration sources rely on the SDK's implicit global usings. Without them nothing binds, every call is refused, and
@@ -494,19 +502,19 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",
-            "ffc9d55907b0a22a",
+            "4179923c87cc7344",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExecuteAsync",
-            "ffc9d55907b0a22a",
+            "4179923c87cc7344",
             "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "CreateUniqueIndexAsync",
-            "ffc9d55907b0a22a",
+            "4179923c87cc7344",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
     ];
 
@@ -1070,7 +1078,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), cancellationToken: TestContext.Current.CancellationToken);
 
             var model = CSharpCompilation
-                .Create("MigrationAdditiveOnlyGuard", [_implicitUsings.Value, tree], _metadataReferences.Value)
+                .Create(ResolveOwningAssemblyName(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
                 .GetSemanticModel(tree);
 
             foreach (var node in tree.GetRoot(TestContext.Current.CancellationToken).DescendantNodes())
@@ -1573,7 +1581,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
         // trusting the member's name. References come from the test output, so every assembly a migration compiles
         // against is present; a call that still fails to bind is refused by the caller rather than assumed safe.
         var model = CSharpCompilation
-            .Create("MigrationAdditiveOnlyGuard", [_implicitUsings.Value, tree], _metadataReferences.Value)
+            .Create(ResolveOwningAssemblyName(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
             .GetSemanticModel(tree);
         var occurrences = new List<MigrationOccurrence>();
 
@@ -2207,6 +2215,31 @@ public sealed class MigrationAdditiveOnlyGuardTests
         Assert.NotNull(directory);
 
         return directory.FullName;
+    }
+
+    private static string ResolveOwningAssemblyName(string relativePath)
+    {
+        // Compile each migration under its own module's assembly identity so internal helpers resolve exactly as they do
+        // in that module's real build: neither broader (which the shared test assembly would grant, since it is an
+        // InternalsVisibleTo friend of many projects) nor narrower. The owning project is the nearest ancestor that
+        // carries a project file, and its name is the assembly name because no migration-owning project overrides it.
+        var directory = Path.GetDirectoryName(Path.Combine(_repositoryRoot.Value, relativePath));
+
+        while (directory is not null && directory.StartsWith(_repositoryRoot.Value, StringComparison.Ordinal))
+        {
+            var project = Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory, "*.csproj").FirstOrDefault()
+                : null;
+
+            if (project is not null)
+            {
+                return Path.GetFileNameWithoutExtension(project);
+            }
+
+            directory = Path.GetDirectoryName(directory);
+        }
+
+        return GuardCompilationAssemblyName;
     }
 
     private sealed record MigrationOccurrence(

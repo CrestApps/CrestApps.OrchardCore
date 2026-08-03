@@ -123,7 +123,7 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
                     _logger.LogWarning(
-                        "Tenant '{TenantName}' satisfies the production Contact Center topology '{ProfileId}', which certifies exactly one active application node. This node cannot detect a second active node claiming the same real-time voice application, so running a single active node is an operator responsibility. See docs/telephony/asterisk.md.",
+                        "Tenant '{TenantName}' satisfies the production Contact Center topology '{ProfileId}', which certifies exactly one active application node. This node cannot detect a second active node claiming the same real-time voice application, so running a single active node is an operator responsibility. See docs/telephony/index.md.",
                         _shellSettings.Name,
                         result.DeclaredProfileId);
                 }

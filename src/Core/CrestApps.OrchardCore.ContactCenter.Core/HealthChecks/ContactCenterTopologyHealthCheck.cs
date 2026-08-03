@@ -83,7 +83,7 @@ public sealed class ContactCenterTopologyHealthCheck : IHealthCheck
                 "This profile certifies exactly one active application node. This check verifies the declared " +
                 "infrastructure prerequisites but cannot detect a second active node claiming the same real-time " +
                 "voice application, so running a single active node is an operator responsibility. See " +
-                "docs/telephony/asterisk.md.");
+                "docs/telephony/index.md.");
         }
 
         return HealthCheckResult.Healthy($"This deployment satisfies the '{result.DeclaredProfileId}' Contact Center topology.");
