@@ -883,7 +883,7 @@ Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep e
 
 ### OC-051 — Durable hub work uses `CancellationToken.None` with no bounded shutdown deadline
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Async correctness / graceful shutdown · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+- **Priority:** Medium · **Status:** Won't Fix (deferred to post-merge follow-up — no safe partial exists) · **Category:** Async correctness / graceful shutdown · **Effort:** L · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** `HubConnectionWork.MustComplete` runs durable Contact Center hub work under `CancellationToken.None`. This prevents a client disconnect from abandoning half-applied durable state plus SignalR group membership (correct), but it also means a wedged database or backplane call can hang indefinitely and block graceful shutdown, and it cannot actually *guarantee* completion — the host can still be force-terminated after the shutdown deadline, leaving the same mid-operation state the `None` token was meant to prevent.
 
@@ -894,6 +894,13 @@ Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep e
 **Acceptance criteria.** Client disconnects still never abandon durable work mid-flight; application shutdown no longer blocks indefinitely on hub work; a killed-mid-operation process recovers consistent group membership on reconnect; the convention test encodes the new contract.
 
 **Notes.** Split out of OC-036 from the independent gpt-5.6 review. The reviewer agreed the client-disconnect token must stay ignored; the disagreement was only about the missing *bounded shutdown* seam. Kept as its own item because it is an idempotency/reconstruction redesign (L) enforced by a convention test, not an OC-036-sized change.
+
+**Disposition (Won't Fix / deferred to post-merge follow-up — independently reviewed, gpt-5.6-sol).** The gap is real, but there is no *safe, beneficial* partial that can land now, so the item stays a tracked post-merge follow-up rather than a rushed change on the live signalling path.
+
+- **A shutdown-bounded token is only safe once the durable steps are idempotent and group membership is reconstructed on reconnect — the two halves genuinely must land together.** Without idempotency, a shutdown-linked deadline has no good value: set it equal to the host's `ShutdownTimeout` and it changes nothing (the host already waits that long for the in-flight invocation before force-terminating), set it shorter and it merely *raises* the probability of cancelling a durable multi-step mutation part-way — the exact half-applied inconsistency the `None` token exists to prevent. So the partial the plan warns against (shutdown token first) is not just incomplete, it is a regression on the hottest signalling path.
+- **The residual risk today is already bounded by the host.** The concern that `None` "blocks graceful shutdown indefinitely" is capped in practice: at application stop the host waits for in-flight hub invocations only up to `HostOptions.ShutdownTimeout` (30s default) and then the process exits regardless. `None` converts that into an unbounded-wait-then-kill only within that host window; it does not hang the box forever. The real defect is that completion is *not actually guaranteed* at force-termination — which is precisely what the idempotency/reconstruction redesign, not a token change, is needed to fix.
+- **The safe fix is an L/XL redesign disproportionate to a Medium item on an unreleased module.** `MustComplete` is consumed at ~28 durable call sites across `ContactCenterHub` and `TelephonyHub`; the safe change must make each of those steps idempotent, add reconnect-time group reconstruction, run the work under a bounded application-stopping token, and rewrite `HubCancellationConventionTests` (whose `TheConventionToken_IsOneThatNeverCancels` currently asserts `MustComplete.CanBeCanceled == false`). That is a coordinated redesign, not a local edit, and it belongs behind the same test-hardening effort that would cover it.
+- **Correct default preserved, and already tracked.** The client-disconnect behaviour — the dangerous case — is correct and stays. The remaining shutdown seam is already recorded as a post-merge follow-up in the checklist with explicit acceptance criteria, so deferring it loses no visibility. The convention test continues to pin the current contract until the redesign replaces it.
 
 ---
 
