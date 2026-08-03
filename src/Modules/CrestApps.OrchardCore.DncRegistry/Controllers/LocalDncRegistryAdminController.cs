@@ -362,7 +362,7 @@ public sealed class LocalDncRegistryAdminController : Controller
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"local-dnc-import-{listId}",
                 listId,
-                static (scope, id) => BackgroundTasks.LocalDncImportBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, CancellationToken.None, id));
+                static (scope, id) => BackgroundTasks.LocalDncImportBackgroundTask.ProcessEntriesAsync(scope.ServiceProvider, id, CancellationToken.None));
         });
     }
 

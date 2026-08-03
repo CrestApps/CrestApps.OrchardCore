@@ -1013,7 +1013,7 @@ public sealed class AdminController : Controller, IUpdateModel
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"content-transfer-import-{entryId}",
                 entryId,
-                static (backgroundScope, id) => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, CancellationToken.None, id));
+                static (backgroundScope, id) => BackgroundTasks.ImportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, id, CancellationToken.None));
         });
     }
 
@@ -1024,7 +1024,7 @@ public sealed class AdminController : Controller, IUpdateModel
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
                 $"content-transfer-export-{entryId}",
                 entryId,
-                static (backgroundScope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, CancellationToken.None, id));
+                static (backgroundScope, id) => BackgroundTasks.ExportFilesBackgroundTask.ProcessEntriesAsync(backgroundScope.ServiceProvider, id, CancellationToken.None));
         });
     }
 
