@@ -23,6 +23,11 @@ public static class DialPadConstants
     public const string OAuthProtectorName = "DialPad.OAuth";
 
     /// <summary>
+    /// The name of the data protector used to protect the DialPad webhook signing secret.
+    /// </summary>
+    public const string WebhookProtectorName = "DialPad.Webhook";
+
+    /// <summary>
     /// The DialPad OAuth scope that allows access to a refresh token so access tokens can be renewed
     /// without prompting the user to reconnect.
     /// </summary>

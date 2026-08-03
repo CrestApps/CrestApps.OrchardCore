@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -13,7 +14,6 @@ using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
 
@@ -241,6 +241,77 @@ public sealed class DefaultSubjectActionExecutorTests
         // Assert
         Assert.True(contact.TryGet<OmnichannelContactPart>(out var part));
         Assert.True(part.DoNotCall);
+    }
+
+    [Theory]
+    [InlineData("TryAgain")]
+    [InlineData("NewActivity")]
+    public async Task ExecuteAsync_WithPreparationNotes_SetsFollowUpInstructions(string actionType)
+    {
+        // Arrange
+        var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.ActionPreparationNotes = new Dictionary<string, string>
+        {
+            [action.ItemId] = "  Call back after lunch.  ",
+        };
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal("Call back after lunch.", savedActivity.Instructions);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPreparationNotes_TryAgainKeepsOriginalInstructions()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.Instructions = "Original instructions.";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal("Original instructions.", savedActivity.Instructions);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPreparationNotes_NewActivityHasNoInstructions()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.Instructions = "Original instructions.";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Null(savedActivity.Instructions);
     }
 
     private static DefaultSubjectActionExecutor CreateExecutor(

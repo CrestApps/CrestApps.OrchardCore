@@ -3,154 +3,143 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-window.itemSelector = function () {
-  var initializedAttribute = 'data-item-selector-initialized';
-  var escapeHtml = function escapeHtml(value) {
-    return String(value !== null && value !== void 0 ? value : '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+window.itemSelector = (() => {
+  const initializedAttribute = 'data-item-selector-initialized';
+  const escapeHtml = value => {
+    return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
   };
-  var debounce = function debounce(callback, delay) {
-    var timeoutId;
-    return function () {
-      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
+  const debounce = (callback, delay) => {
+    let timeoutId;
+    return (...args) => {
       window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(function () {
-        return callback.apply(void 0, args);
-      }, delay);
+      timeoutId = window.setTimeout(() => callback(...args), delay);
     };
   };
-  var parseConfiguration = function parseConfiguration(root) {
-    var configurationNode = root.querySelector('.item-selector-config');
+  const parseConfiguration = root => {
+    const configurationNode = root.querySelector('.item-selector-config');
     if (!configurationNode) {
       throw new Error('Missing item selector configuration.');
     }
     return JSON.parse(configurationNode.textContent);
   };
-  var buildUrl = function buildUrl(endpoint, query) {
-    var url = new URL(endpoint, window.location.origin);
+  const buildUrl = (endpoint, query) => {
+    const url = new URL(endpoint, window.location.origin);
     if (query) {
       url.searchParams.set('query', query);
     } else {
-      url.searchParams["delete"]('query');
+      url.searchParams.delete('query');
     }
     return url.toString();
   };
-  var normalizeItem = function normalizeItem(item) {
-    var _item$text, _item$secondaryText;
+  const normalizeItem = item => {
     if (!item || !item.value) {
       return null;
     }
     return {
       value: item.value,
-      text: (_item$text = item.text) !== null && _item$text !== void 0 ? _item$text : item.value,
-      secondaryText: (_item$secondaryText = item.secondaryText) !== null && _item$secondaryText !== void 0 ? _item$secondaryText : '',
+      text: item.text ?? item.value,
+      secondaryText: item.secondaryText ?? '',
       isEnabled: item.isEnabled !== false,
       selected: item.selected === true
     };
   };
-  var formatText = function formatText(template, value) {
-    return String(template !== null && template !== void 0 ? template : '').replace('{0}', value);
+  const formatText = (template, value) => {
+    return String(template ?? '').replace('{0}', value);
   };
-  var initialize = function initialize(root) {
-    var _configuration$initia, _configuration$initia2;
+  const initialize = root => {
     if (!root || root.getAttribute(initializedAttribute) === 'true') {
       return;
     }
-    var configuration = parseConfiguration(root);
-    var hiddenInputs = root.querySelector('.item-selector-hidden-inputs');
-    var selectedContainer = root.querySelector('.item-selector-selected');
-    var selectedItemsContainer = root.querySelector('.item-selector-selected-items');
-    var selectionSummary = root.querySelector('.item-selector-selection-summary');
-    var selectionSummaryLabel = selectionSummary === null || selectionSummary === void 0 ? void 0 : selectionSummary.querySelector('.item-selector-section-title');
-    var menuTitle = root.querySelector('.item-selector-menu-title');
-    var toggleButton = root.querySelector('.item-selector-toggle');
-    var closeButton = root.querySelector('.item-selector-close');
-    var menu = root.querySelector('.item-selector-menu');
-    var searchContainer = root.querySelector('.item-selector-search');
-    var searchInput = root.querySelector('.item-selector-search-input');
-    var searchButton = root.querySelector('.item-selector-search-button');
-    var actions = root.querySelector('.item-selector-actions');
-    var selectAllButton = root.querySelector('.item-selector-select-all');
-    var deselectAllButton = root.querySelector('.item-selector-deselect-all');
-    var availableItemsLabel = root.querySelector('.item-selector-available-label');
-    var status = root.querySelector('.item-selector-status');
-    var options = root.querySelector('.item-selector-options');
-    var knownItems = new Map();
-    var selectedValues = [];
-    var initialLoadCompleted = false;
-    var isLoading = false;
-    var lastRequestedQuery = null;
-    var activeRequestId = 0;
-    var isSelected = function isSelected(value) {
+    const configuration = parseConfiguration(root);
+    const hiddenInputs = root.querySelector('.item-selector-hidden-inputs');
+    const selectedContainer = root.querySelector('.item-selector-selected');
+    const selectedItemsContainer = root.querySelector('.item-selector-selected-items');
+    const selectionSummary = root.querySelector('.item-selector-selection-summary');
+    const selectionSummaryLabel = selectionSummary?.querySelector('.item-selector-section-title');
+    const menuTitle = root.querySelector('.item-selector-menu-title');
+    const toggleButton = root.querySelector('.item-selector-toggle');
+    const closeButton = root.querySelector('.item-selector-close');
+    const menu = root.querySelector('.item-selector-menu');
+    const searchContainer = root.querySelector('.item-selector-search');
+    const searchInput = root.querySelector('.item-selector-search-input');
+    const searchButton = root.querySelector('.item-selector-search-button');
+    const actions = root.querySelector('.item-selector-actions');
+    const selectAllButton = root.querySelector('.item-selector-select-all');
+    const deselectAllButton = root.querySelector('.item-selector-deselect-all');
+    const availableItemsLabel = root.querySelector('.item-selector-available-label');
+    const status = root.querySelector('.item-selector-status');
+    const options = root.querySelector('.item-selector-options');
+    const knownItems = new Map();
+    const selectedValues = [];
+    let initialLoadCompleted = false;
+    let isLoading = false;
+    let lastRequestedQuery = null;
+    let activeRequestId = 0;
+    const isSelected = value => {
       return selectedValues.includes(value);
     };
-    var cacheItems = function cacheItems(items) {
-      items.map(normalizeItem).filter(Boolean).forEach(function (item) {
+    const cacheItems = items => {
+      items.map(normalizeItem).filter(Boolean).forEach(item => {
         knownItems.set(item.value, item);
       });
     };
-    var setStatus = function setStatus(message) {
-      var isVisible = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    const setStatus = (message, isVisible = true) => {
       if (!status) {
         return;
       }
-      status.textContent = message !== null && message !== void 0 ? message : '';
+      status.textContent = message ?? '';
       status.classList.toggle('d-none', !isVisible || !message);
     };
-    var showMenu = function showMenu() {
+    const showMenu = () => {
       menu.classList.add('show');
       toggleButton.setAttribute('aria-expanded', 'true');
     };
-    var hideMenu = function hideMenu() {
+    const hideMenu = () => {
       menu.classList.remove('show');
       toggleButton.setAttribute('aria-expanded', 'false');
     };
-    var updateToggleText = function updateToggleText() {
-      var selectedCount = selectedValues.length;
+    const updateToggleText = () => {
+      const selectedCount = selectedValues.length;
       if (selectedCount === 0) {
         toggleButton.textContent = configuration.buttonText;
         return;
       }
       if (!configuration.multiple) {
-        var _item$text2;
-        var item = knownItems.get(selectedValues[0]);
-        toggleButton.textContent = (_item$text2 = item === null || item === void 0 ? void 0 : item.text) !== null && _item$text2 !== void 0 ? _item$text2 : configuration.buttonText;
+        const item = knownItems.get(selectedValues[0]);
+        toggleButton.textContent = item?.text ?? configuration.buttonText;
         return;
       }
-      toggleButton.textContent = "".concat(configuration.buttonText, " (").concat(selectedCount, ")");
+      toggleButton.textContent = `${configuration.buttonText} (${selectedCount})`;
     };
-    var renderHiddenInputs = function renderHiddenInputs() {
+    const renderHiddenInputs = () => {
       hiddenInputs.innerHTML = '';
-      selectedValues.forEach(function (value) {
-        var input = document.createElement('input');
+      selectedValues.forEach(value => {
+        const input = document.createElement('input');
         input.type = 'hidden';
         input.name = configuration.inputName;
         input.value = value;
         hiddenInputs.appendChild(input);
       });
     };
-    var createChipHtml = function createChipHtml(item) {
-      return "\n<span class=\"badge text-bg-secondary item-selector-chip\">\n    <span class=\"item-selector-chip-label\">".concat(escapeHtml(item.text), "</span>\n    <button type=\"button\" class=\"btn-close btn-close-white ms-2 item-selector-remove\" aria-label=\"Remove\" data-value=\"").concat(escapeHtml(item.value), "\"></button>\n</span>");
+    const createChipHtml = item => {
+      return `
+<span class="badge text-bg-secondary item-selector-chip">
+    <span class="item-selector-chip-label">${escapeHtml(item.text)}</span>
+    <button type="button" class="btn-close btn-close-white ms-2 item-selector-remove" aria-label="Remove" data-value="${escapeHtml(item.value)}"></button>
+</span>`;
     };
-    var wireRemoveButtons = function wireRemoveButtons(container) {
-      container.querySelectorAll('.item-selector-remove').forEach(function (button) {
-        button.addEventListener('click', function (event) {
+    const wireRemoveButtons = container => {
+      container.querySelectorAll('.item-selector-remove').forEach(button => {
+        button.addEventListener('click', event => {
           event.preventDefault();
           event.stopPropagation();
           removeValue(button.dataset.value);
         });
       });
     };
-    var renderSelected = function renderSelected() {
-      var selectedItems = selectedValues.map(function (value) {
-        return knownItems.get(value);
-      }).filter(Boolean);
-      var selectedHtml = selectedItems.length === 0 ? "<span class=\"text-muted small item-selector-placeholder\">".concat(escapeHtml(configuration.noSelectionText), "</span>") : selectedItems.map(createChipHtml).join('');
+    const renderSelected = () => {
+      const selectedItems = selectedValues.map(value => knownItems.get(value)).filter(Boolean);
+      const selectedHtml = selectedItems.length === 0 ? `<span class="text-muted small item-selector-placeholder">${escapeHtml(configuration.noSelectionText)}</span>` : selectedItems.map(createChipHtml).join('');
       selectedItemsContainer.innerHTML = selectedHtml;
       wireRemoveButtons(selectedItemsContainer);
       if (!configuration.showSelectedItems) {
@@ -161,10 +150,10 @@ window.itemSelector = function () {
       selectedContainer.innerHTML = selectedHtml;
       wireRemoveButtons(selectedContainer);
     };
-    var getSortedItems = function getSortedItems() {
-      return Array.from(knownItems.values()).sort(function (left, right) {
-        var leftSelected = isSelected(left.value);
-        var rightSelected = isSelected(right.value);
+    const getSortedItems = () => {
+      return Array.from(knownItems.values()).sort((left, right) => {
+        const leftSelected = isSelected(left.value);
+        const rightSelected = isSelected(right.value);
         if (leftSelected && !rightSelected) {
           return -1;
         }
@@ -174,34 +163,43 @@ window.itemSelector = function () {
         return left.text.localeCompare(right.text);
       });
     };
-    var renderOptions = function renderOptions() {
-      var items = getSortedItems();
+    const renderOptions = () => {
+      const items = getSortedItems();
       if (items.length === 0) {
-        options.innerHTML = "<div class=\"list-group-item text-muted small item-selector-empty\">".concat(escapeHtml(configuration.emptyResultsText), "</div>");
+        options.innerHTML = `<div class="list-group-item text-muted small item-selector-empty">${escapeHtml(configuration.emptyResultsText)}</div>`;
         return;
       }
-      options.innerHTML = items.map(function (item) {
-        var type = configuration.multiple ? 'checkbox' : 'radio';
-        var checked = isSelected(item.value) ? ' checked' : '';
-        var disabled = item.isEnabled ? '' : ' disabled';
-        var activeClass = isSelected(item.value) ? ' active' : '';
-        var secondaryText = item.secondaryText ? "<span class=\"small text-body-secondary item-selector-option-secondary\">".concat(escapeHtml(item.secondaryText), "</span>") : '';
-        return "\n<button type=\"button\" class=\"list-group-item list-group-item-action".concat(activeClass, "\" data-item-selector-option data-value=\"").concat(escapeHtml(item.value), "\"").concat(disabled, ">\n    <span class=\"item-selector-option\">\n        <input class=\"form-check-input item-selector-option-indicator\" type=\"").concat(type, "\" tabindex=\"-1\"").concat(checked).concat(disabled, ">\n        <span class=\"item-selector-option-text\">\n            <span class=\"item-selector-option-primary\">").concat(escapeHtml(item.text), "</span>\n            ").concat(secondaryText, "\n        </span>\n    </span>\n</button>");
+      options.innerHTML = items.map(item => {
+        const type = configuration.multiple ? 'checkbox' : 'radio';
+        const checked = isSelected(item.value) ? ' checked' : '';
+        const disabled = item.isEnabled ? '' : ' disabled';
+        const activeClass = isSelected(item.value) ? ' active' : '';
+        const secondaryText = item.secondaryText ? `<span class="small text-body-secondary item-selector-option-secondary">${escapeHtml(item.secondaryText)}</span>` : '';
+        return `
+<button type="button" class="list-group-item list-group-item-action${activeClass}" data-item-selector-option data-value="${escapeHtml(item.value)}"${disabled}>
+    <span class="item-selector-option">
+        <input class="form-check-input item-selector-option-indicator" type="${type}" tabindex="-1"${checked}${disabled}>
+        <span class="item-selector-option-text">
+            <span class="item-selector-option-primary">${escapeHtml(item.text)}</span>
+            ${secondaryText}
+        </span>
+    </span>
+</button>`;
       }).join('');
-      options.querySelectorAll('[data-item-selector-option]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
+      options.querySelectorAll('[data-item-selector-option]').forEach(button => {
+        button.addEventListener('click', event => {
           event.preventDefault();
           toggleSelection(button.dataset.value);
         });
       });
     };
-    var syncUi = function syncUi() {
+    const syncUi = () => {
       renderHiddenInputs();
       renderSelected();
       renderOptions();
       updateToggleText();
     };
-    var addValue = function addValue(value) {
+    const addValue = value => {
       if (!value || isSelected(value)) {
         return;
       }
@@ -214,147 +212,88 @@ window.itemSelector = function () {
         hideMenu();
       }
     };
-    var removeValue = function removeValue(value) {
-      var index = selectedValues.indexOf(value);
+    const removeValue = value => {
+      const index = selectedValues.indexOf(value);
       if (index === -1) {
         return;
       }
       selectedValues.splice(index, 1);
       syncUi();
     };
-    var toggleSelection = function toggleSelection(value) {
+    const toggleSelection = value => {
       if (isSelected(value)) {
         removeValue(value);
         return;
       }
       addValue(value);
     };
-    var selectAll = function selectAll() {
+    const selectAll = () => {
       if (!configuration.multiple) {
         return;
       }
-      getSortedItems().filter(function (item) {
-        return item.isEnabled;
-      }).forEach(function (item) {
+      getSortedItems().filter(item => item.isEnabled).forEach(item => {
         if (!isSelected(item.value)) {
           selectedValues.push(item.value);
         }
       });
       syncUi();
     };
-    var deselectAll = function deselectAll() {
+    const deselectAll = () => {
       selectedValues.splice(0, selectedValues.length);
       syncUi();
     };
-    var loadItems = /*#__PURE__*/function () {
-      var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(query) {
-        var _query$trim;
-        var normalizedQuery, requestId, response, items, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
-            case 0:
-              normalizedQuery = (_query$trim = query === null || query === void 0 ? void 0 : query.trim()) !== null && _query$trim !== void 0 ? _query$trim : '';
-              requestId = ++activeRequestId;
-              isLoading = true;
-              setStatus(configuration.loadingText);
-              _context.p = 1;
-              _context.n = 2;
-              return fetch(buildUrl(configuration.endpoint, normalizedQuery), {
-                credentials: 'same-origin',
-                headers: {
-                  Accept: 'application/json'
-                }
-              });
-            case 2:
-              response = _context.v;
-              if (response.ok) {
-                _context.n = 3;
-                break;
-              }
-              throw new Error("Request failed with status ".concat(response.status, "."));
-            case 3:
-              _context.n = 4;
-              return response.json();
-            case 4:
-              items = _context.v;
-              if (!(requestId !== activeRequestId)) {
-                _context.n = 5;
-                break;
-              }
-              return _context.a(2);
-            case 5:
-              cacheItems(items);
-              initialLoadCompleted = true;
-              lastRequestedQuery = normalizedQuery;
-              setStatus(normalizedQuery ? formatText(configuration.resultsTextFormat, items.length) : null, !!normalizedQuery);
-              syncUi();
-              _context.n = 8;
-              break;
-            case 6:
-              _context.p = 6;
-              _t = _context.v;
-              if (!(requestId !== activeRequestId)) {
-                _context.n = 7;
-                break;
-              }
-              return _context.a(2);
-            case 7:
-              console.error(_t);
-              setStatus(configuration.loadErrorText);
-            case 8:
-              _context.p = 8;
-              if (requestId === activeRequestId) {
-                isLoading = false;
-              }
-              return _context.f(8);
-            case 9:
-              return _context.a(2);
+    const loadItems = async query => {
+      const normalizedQuery = query?.trim() ?? '';
+      const requestId = ++activeRequestId;
+      isLoading = true;
+      setStatus(configuration.loadingText);
+      try {
+        const response = await fetch(buildUrl(configuration.endpoint, normalizedQuery), {
+          credentials: 'same-origin',
+          headers: {
+            Accept: 'application/json'
           }
-        }, _callee, null, [[1, 6, 8, 9]]);
-      }));
-      return function loadItems(_x) {
-        return _ref.apply(this, arguments);
-      };
-    }();
-    var requestSearch = /*#__PURE__*/function () {
-      var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var force,
-          query,
-          _args2 = arguments;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              force = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : false;
-              query = searchInput.value.trim();
-              if (!(!force && query === lastRequestedQuery)) {
-                _context2.n = 1;
-                break;
-              }
-              return _context2.a(2);
-            case 1:
-              if (!(isLoading && !force)) {
-                _context2.n = 2;
-                break;
-              }
-              return _context2.a(2);
-            case 2:
-              _context2.n = 3;
-              return loadItems(query);
-            case 3:
-              return _context2.a(2);
-          }
-        }, _callee2);
-      }));
-      return function requestSearch() {
-        return _ref2.apply(this, arguments);
-      };
-    }();
-    var debouncedSearch = debounce(function () {
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}.`);
+        }
+        const items = await response.json();
+        if (requestId !== activeRequestId) {
+          return;
+        }
+        cacheItems(items);
+        initialLoadCompleted = true;
+        lastRequestedQuery = normalizedQuery;
+        setStatus(normalizedQuery ? formatText(configuration.resultsTextFormat, items.length) : null, !!normalizedQuery);
+        syncUi();
+      } catch (error) {
+        if (requestId !== activeRequestId) {
+          return;
+        }
+        console.error(error);
+        setStatus(configuration.loadErrorText);
+      } finally {
+        if (requestId === activeRequestId) {
+          isLoading = false;
+        }
+      }
+    };
+    const requestSearch = async (force = false) => {
+      const query = searchInput.value.trim();
+      if (!force && query === lastRequestedQuery) {
+        return;
+      }
+      if (isLoading && !force) {
+        return;
+      }
+      await loadItems(query);
+    };
+    const debouncedSearch = debounce(() => {
       requestSearch();
     }, configuration.searchDelay);
-    cacheItems((_configuration$initia = configuration.initialItems) !== null && _configuration$initia !== void 0 ? _configuration$initia : []);
-    ((_configuration$initia2 = configuration.initialItems) !== null && _configuration$initia2 !== void 0 ? _configuration$initia2 : []).forEach(function (item) {
-      var normalized = normalizeItem(item);
+    cacheItems(configuration.initialItems ?? []);
+    (configuration.initialItems ?? []).forEach(item => {
+      const normalized = normalizeItem(item);
       if (normalized && normalized.selected !== false && !isSelected(normalized.value)) {
         selectedValues.push(normalized.value);
       }
@@ -376,119 +315,67 @@ window.itemSelector = function () {
       selectAllButton.textContent = configuration.selectAllText;
       deselectAllButton.textContent = configuration.deselectAllText;
     }
-    toggleButton.addEventListener('click', /*#__PURE__*/function () {
-      var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(event) {
-        var isOpen;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
-            case 0:
-              event.preventDefault();
-              event.stopPropagation();
-              isOpen = menu.classList.contains('show');
-              if (!isOpen) {
-                _context3.n = 1;
-                break;
-              }
-              hideMenu();
-              return _context3.a(2);
-            case 1:
-              showMenu();
-              if (initialLoadCompleted) {
-                _context3.n = 2;
-                break;
-              }
-              _context3.n = 2;
-              return loadItems('');
-            case 2:
-              if (configuration.enableSearch) {
-                searchInput.focus();
-              }
-            case 3:
-              return _context3.a(2);
-          }
-        }, _callee3);
-      }));
-      return function (_x2) {
-        return _ref3.apply(this, arguments);
-      };
-    }());
-    searchButton.addEventListener('click', /*#__PURE__*/function () {
-      var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(event) {
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.n) {
-            case 0:
-              event.preventDefault();
-              event.stopPropagation();
-              _context4.n = 1;
-              return requestSearch(true);
-            case 1:
-              return _context4.a(2);
-          }
-        }, _callee4);
-      }));
-      return function (_x3) {
-        return _ref4.apply(this, arguments);
-      };
-    }());
-    closeButton.addEventListener('click', function (event) {
+    toggleButton.addEventListener('click', async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = menu.classList.contains('show');
+      if (isOpen) {
+        hideMenu();
+        return;
+      }
+      showMenu();
+      if (!initialLoadCompleted) {
+        await loadItems('');
+      }
+      if (configuration.enableSearch) {
+        searchInput.focus();
+      }
+    });
+    searchButton.addEventListener('click', async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      await requestSearch(true);
+    });
+    closeButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       hideMenu();
     });
-    searchInput.addEventListener('click', function (event) {
+    searchInput.addEventListener('click', event => {
       event.stopPropagation();
     });
-    searchInput.addEventListener('input', function () {
+    searchInput.addEventListener('input', () => {
       if (!configuration.enableSearch) {
         return;
       }
       debouncedSearch();
     });
-    searchInput.addEventListener('keydown', /*#__PURE__*/function () {
-      var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(event) {
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
-            case 0:
-              if (!(event.key === 'Escape')) {
-                _context5.n = 1;
-                break;
-              }
-              event.preventDefault();
-              hideMenu();
-              return _context5.a(2);
-            case 1:
-              if (!(event.key !== 'Enter')) {
-                _context5.n = 2;
-                break;
-              }
-              return _context5.a(2);
-            case 2:
-              event.preventDefault();
-              _context5.n = 3;
-              return requestSearch(true);
-            case 3:
-              return _context5.a(2);
-          }
-        }, _callee5);
-      }));
-      return function (_x4) {
-        return _ref5.apply(this, arguments);
-      };
-    }());
-    selectAllButton.addEventListener('click', function (event) {
+    searchInput.addEventListener('keydown', async event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        hideMenu();
+        return;
+      }
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      await requestSearch(true);
+    });
+    selectAllButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       selectAll();
     });
-    deselectAllButton.addEventListener('click', function (event) {
+    deselectAllButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       deselectAll();
     });
-    menu.addEventListener('click', function (event) {
+    menu.addEventListener('click', event => {
       event.stopPropagation();
     });
-    document.addEventListener('click', function (event) {
+    document.addEventListener('click', event => {
       if (root.contains(event.target)) {
         return;
       }
@@ -497,17 +384,12 @@ window.itemSelector = function () {
     root.setAttribute(initializedAttribute, 'true');
     syncUi();
   };
-  var initializeAll = function initializeAll() {
-    var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '[data-item-selector]';
-    document.querySelectorAll(selector).forEach(function (root) {
-      return initialize(root);
-    });
+  const initializeAll = (selector = '[data-item-selector]') => {
+    document.querySelectorAll(selector).forEach(root => initialize(root));
   };
-  document.addEventListener('DOMContentLoaded', function () {
-    return initializeAll();
-  });
+  document.addEventListener('DOMContentLoaded', () => initializeAll());
   return {
-    initialize: initialize,
-    initializeAll: initializeAll
+    initialize,
+    initializeAll
   };
-}();
+})();

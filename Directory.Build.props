@@ -17,9 +17,37 @@
     <CommonTargetFrameworks>$(DefaultTargetFramework)</CommonTargetFrameworks>
   </PropertyGroup>
 
+  <!--
+    The GitHub Copilot SDK downloads a platform-specific Copilot CLI tarball from registry.npmjs.org during
+    BeforeBuild. That makes the whole solution unbuildable without public npm egress, which breaks air-gapped
+    and restricted-network builds and pulls an unpinned artifact into the build. The download is opt-in here.
+
+    To build the Copilot chat orchestrator with its CLI, set one of:
+      -p:CopilotSkipCliDownload=false            downloads the CLI from the configured npm registry
+      -p:CopilotCliBinaryPath=<path-to-binary>   uses a vendored binary and skips the download entirely
+  -->
+  <PropertyGroup>
+    <CopilotSkipCliDownload Condition="'$(CopilotSkipCliDownload)' == '' And '$(CopilotCliBinaryPath)' == ''">true</CopilotSkipCliDownload>
+  </PropertyGroup>
+
+  <!--
+    Dependency vulnerability auditing. This has to be a build failure rather than a warning: CI previously
+    passed -p:NuGetAudit=false on every workflow, so advisories against transitive packages went unseen.
+    Auditing every package at the lowest severity is deliberate - a transitive moderate advisory is exactly
+    what the suppressed builds were hiding. When a new advisory appears, pin the patched version in
+    Directory.Packages.props rather than lowering these settings.
+  -->
+  <PropertyGroup>
+    <NuGetAudit Condition="'$(NuGetAudit)' == ''">true</NuGetAudit>
+    <NuGetAuditMode Condition="'$(NuGetAuditMode)' == ''">all</NuGetAuditMode>
+    <NuGetAuditLevel Condition="'$(NuGetAuditLevel)' == ''">low</NuGetAuditLevel>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+
   <!-- Default TFMs to use when building and packaging -->
   <PropertyGroup>
-    <TargetFrameworks>$(CommonTargetFrameworks)</TargetFrameworks>
+    <TargetFramework Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'False'">$(CommonTargetFrameworks)</TargetFramework>
+    <TargetFrameworks Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'True'">$(CommonTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>

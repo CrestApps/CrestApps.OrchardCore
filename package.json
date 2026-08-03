@@ -13,16 +13,16 @@
     "cleanup": "node .scripts/cleanup.js"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-env": "^7.29.7",
-    "@babel/preset-flow": "7.27.1",
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
+    "@babel/preset-flow": "8.0.1",
     "child_process": "^1.0.2",
     "es6-promise": "4.2.8",
     "fancy-log": "^2.0.0",
     "glob": "^13.0.6",
     "graceful-fs": "4.2.11",
     "gulp": "^5.0.1",
-    "gulp-babel": "8.0.0",
+    "gulp-babel": "8.1.0",
     "gulp-concat": "2.6.1",
     "gulp-dart-sass": "1.1.0",
     "gulp-eol": "0.2.0",
@@ -39,15 +39,16 @@
     "gulp-typescript": "^5.0.1",
     "merge-stream": "2.0.0",
     "path-posix": "1.0.0",
-    "postcss": "^8.5.18",
+    "postcss": "^8.5.25",
     "postcss-rtl": "^2.0.0",
     "rtlcss": "4.3.0",
-    "source-map": "^0.7.4",
-    "typescript": "^5.4.5"
+    "source-map": "^0.8.0",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
-    "extendable-media-recorder": "^9.2.36"
+    "extendable-media-recorder": "^9.2.36",
+    "sip.js": "0.21.2"
   },
   "overrides": {
     "brace-expansion": "^5.0.5",

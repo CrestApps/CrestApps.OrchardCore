@@ -41,8 +41,6 @@ public sealed class Startup : StartupBase
 
         services
             .AddPermissionProvider<TelephonyPermissionProvider>()
-            .AddSiteDisplayDriver<TelephonySettingsDisplayDriver>()
-            .AddNavigationProvider<TelephonyAdminMenu>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
     }
 
@@ -67,6 +65,25 @@ public sealed class Startup : StartupBase
             areaName: TelephonyConstants.Feature.Area,
             pattern: "Telephony/Disconnect",
             defaults: new { controller = "TelephonyOAuth", action = "Disconnect" });
+    }
+}
+
+/// <summary>
+/// Registers the telephony provider settings screen.
+/// </summary>
+/// <remarks>
+/// The telephony services, hub and provider bindings are usable without any screen, so a headless deployment can
+/// enable the capability and configure it from a recipe or an API without carrying an administration surface.
+/// </remarks>
+[Feature(TelephonyConstants.Feature.Admin)]
+public sealed class TelephonyAdminStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddSiteDisplayDriver<TelephonySettingsDisplayDriver>()
+            .AddNavigationProvider<TelephonyAdminMenu>();
     }
 }
 

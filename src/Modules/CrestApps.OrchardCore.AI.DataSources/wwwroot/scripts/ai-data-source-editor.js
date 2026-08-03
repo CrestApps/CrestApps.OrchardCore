@@ -81,7 +81,7 @@
         contentSelect.disabled = false;
         titleSelect.disabled = false;
         keySelect.disabled = false;
-      })["catch"](function () {
+      }).catch(function () {
         clearFields();
       });
     }

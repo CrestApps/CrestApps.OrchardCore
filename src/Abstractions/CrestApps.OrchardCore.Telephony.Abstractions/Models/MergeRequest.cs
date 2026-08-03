@@ -1,22 +1,29 @@
 namespace CrestApps.OrchardCore.Telephony.Models;
 
 /// <summary>
-/// Represents a request to merge two active calls into a single conference.
+/// Represents a request to merge active calls into a single conference.
 /// </summary>
 public sealed class MergeRequest
 {
     /// <summary>
-    /// Gets or sets the identifier of the primary call that hosts the conference.
+    /// Gets or sets the identifiers of the calls to merge.
     /// </summary>
-    public string PrimaryCallId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the secondary call to merge into the conference.
-    /// </summary>
-    public string SecondaryCallId { get; set; }
+    public IReadOnlyList<string> CallIds { get; set; } = [];
 
     /// <summary>
     /// Gets or sets an optional name for the resulting conference.
     /// </summary>
     public string ConferenceName { get; set; }
+
+    /// <summary>
+    /// Gets the distinct, non-empty call identifiers to merge.
+    /// </summary>
+    /// <returns>The call identifiers to merge.</returns>
+    public IReadOnlyList<string> GetCallIds()
+    {
+        return (CallIds ?? [])
+            .Where(callId => !string.IsNullOrWhiteSpace(callId))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
 }

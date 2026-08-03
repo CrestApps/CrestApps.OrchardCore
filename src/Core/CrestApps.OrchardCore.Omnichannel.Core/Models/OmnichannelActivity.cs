@@ -128,6 +128,14 @@ public sealed class OmnichannelActivity : CatalogItem
     public int Attempts { get; set; } = 1;
 
     /// <summary>
+    /// Gets or sets the number of times the automated-activities background processor has attempted to start this
+    /// activity and failed. This is an internal technical retry counter used only to back off and eventually fail a
+    /// permanently failing automated activity. It is deliberately separate from <see cref="Attempts"/>, which is a
+    /// routing/dialing concept projected from the contact-center work state and surfaced in reports and the UI.
+    /// </summary>
+    public int ProcessingAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the assigned to id.
     /// </summary>
     public string AssignedToId { get; set; }

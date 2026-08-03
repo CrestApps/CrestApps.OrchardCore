@@ -159,6 +159,8 @@
             const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
             const currentAttempts = @Model.Attempts;
             const scheduleAtText = @Html.Raw(JsonSerializer.Serialize(T["Schedule at"].Value));
+            const preparationNotesText = @Html.Raw(JsonSerializer.Serialize(T["Preparation notes"].Value));
+            const preparationNotesPlaceholder = @Html.Raw(JsonSerializer.Serialize(T["Notes to prepare the agent for the next activity (optional)"].Value));
 
             function initFlatpickr(input) {
                 flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
@@ -235,6 +237,24 @@
                             scheduleContainer.append(label, input);
                             cardBody.appendChild(scheduleContainer);
                         }
+
+                        const notesInputId = 'notes-' + action.actionId;
+                        const notesInputName = 'ActionPreparationNotes[' + action.actionId + ']';
+                        const notesContainer = document.createElement("div");
+                        notesContainer.className = "mt-2";
+                        const notesLabel = document.createElement("label");
+                        notesLabel.htmlFor = notesInputId;
+                        notesLabel.className = "form-label";
+                        notesLabel.textContent = preparationNotesText;
+                        const notesInput = document.createElement("textarea");
+                        notesInput.id = notesInputId;
+                        notesInput.name = notesInputName;
+                        notesInput.rows = 2;
+                        notesInput.className = "form-control";
+                        notesInput.placeholder = preparationNotesPlaceholder;
+
+                        notesContainer.append(notesLabel, notesInput);
+                        cardBody.appendChild(notesContainer);
 
                         card.appendChild(cardBody);
                         actionsList.appendChild(card);

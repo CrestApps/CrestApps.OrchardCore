@@ -1,0 +1,50 @@
+{
+  "docsSidebar": [
+    "intro",
+    "getting-started",
+    "feature-reference",
+    {
+      "type": "category",
+      "label": "Artificial Intelligence",
+      "collapsed": false,
+      "items": [
+        "ai/index",
+        "ai/ai-services",
+        "ai/ai-chat",
+        "ai/ai-agent",
+        "ai/ai-mcp"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "AI Providers",
+      "items": [
+        "providers/index",
+        "providers/azure-ai-inference",
+        "providers/openai",
+        "providers/azure-openai",
+        "providers/ollama"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Modules",
+      "items": [
+        "modules/index",
+        "modules/content-access-control",
+        "modules/resources",
+        "modules/roles",
+        "modules/signalr",
+        "modules/users"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Changelog",
+      "items": [
+        "changelog/index",
+        "changelog/1.2.0"
+      ]
+    }
+  ]
+}

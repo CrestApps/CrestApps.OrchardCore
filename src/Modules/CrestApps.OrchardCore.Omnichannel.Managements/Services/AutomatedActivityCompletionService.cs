@@ -45,6 +45,7 @@ public sealed class AutomatedActivityCompletionService : IAutomatedActivityCompl
             Source = ActivityDispositionSource.AI,
             Notes = request.Summary?.Trim(),
             ActionScheduleDates = request.ActionScheduleDates,
+            ActionPreparationNotes = request.ActionPreparationNotes,
             ActorId = request.ActorId,
             ActorDisplayName = request.ActorDisplayName,
         }, cancellationToken);

@@ -32,4 +32,11 @@ public sealed class SubjectActionExecutionContext
     /// Key is the subject action ItemId, value is the schedule date.
     /// </summary>
     public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional preparation notes provided by the user during completion. Each note becomes the
+    /// <see cref="OmnichannelActivity.Instructions"/> of the follow-up activity created by the matching subject action.
+    /// Key is the subject action ItemId, value is the preparation note.
+    /// </summary>
+    public IDictionary<string, string> ActionPreparationNotes { get; set; }
 }
