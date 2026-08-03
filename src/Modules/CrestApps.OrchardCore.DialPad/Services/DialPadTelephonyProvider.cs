@@ -191,7 +191,7 @@ public sealed class DialPadTelephonyProvider :
             {
                 _logger.LogError("DialPad rejected a dial request with status code {StatusCode}.", response.StatusCode);
 
-                if (IsAmbiguousStatusCode(response.StatusCode))
+                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
                 {
                     return TelephonyResult.Unknown(S["DialPad did not confirm whether the call was placed."].Value);
                 }
@@ -231,12 +231,6 @@ public sealed class DialPadTelephonyProvider :
 
             return TelephonyResult.Failed(S["DialPad could not place the call."].Value);
         }
-    }
-
-    private static bool IsAmbiguousStatusCode(HttpStatusCode statusCode)
-    {
-        return statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
-            (int)statusCode >= 500;
     }
 
     /// <inheritdoc/>
@@ -310,7 +304,7 @@ public sealed class DialPadTelephonyProvider :
                 state,
                 isMuted: ReadBoolean(root, "is_muted"),
                 isOnHold: state == CallState.OnHold,
-                direction: ResolveDirection(ReadString(root, "direction")));
+                direction: TelephonyProviderResponse.ResolveDirection(ReadString(root, "direction")));
 
             call.From = ReadString(root, "external_number") ?? ReadString(root, "from");
             call.To = ReadString(root, "target") ?? ReadString(root, "internal_number") ?? ReadString(root, "to");
@@ -720,7 +714,7 @@ public sealed class DialPadTelephonyProvider :
 
                 // A timeout, throttling, or server-side error cannot prove whether the unsafe deauthorize
                 // POST committed, so the outcome is indeterminate rather than a definitive rejection.
-                if (IsAmbiguousStatusCode(response.StatusCode))
+                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
                 {
                     return TelephonyResult.Unknown($"DialPad did not confirm the token revocation (status code {(int)response.StatusCode}).");
                 }
@@ -965,13 +959,6 @@ public sealed class DialPadTelephonyProvider :
         };
 
         return Enum.IsDefined(mapped);
-    }
-
-    private static CallDirection ResolveDirection(string direction)
-    {
-        return string.Equals(direction?.Trim(), "inbound", StringComparison.OrdinalIgnoreCase)
-            ? CallDirection.Inbound
-            : CallDirection.Outbound;
     }
 
     private static string ReadString(JsonElement element, string propertyName)

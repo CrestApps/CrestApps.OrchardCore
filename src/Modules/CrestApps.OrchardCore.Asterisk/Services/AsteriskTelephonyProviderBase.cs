@@ -141,7 +141,7 @@ internal abstract class AsteriskTelephonyProviderBase :
                     response.StatusCode,
                     responseBody.SanitizeLogValue());
 
-                if (IsAmbiguousDialStatusCode(response.StatusCode))
+                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
                 {
                     return TelephonyResult.Unknown(S["Asterisk did not confirm whether the call was placed."].Value);
                 }
@@ -181,12 +181,6 @@ internal abstract class AsteriskTelephonyProviderBase :
 
             return TelephonyResult.Failed(S["The call could not be placed."].Value);
         }
-    }
-
-    private static bool IsAmbiguousDialStatusCode(HttpStatusCode statusCode)
-    {
-        return statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
-            (int)statusCode >= 500;
     }
 
     public async Task<TelephonyCallLookupResult> GetCallStateAsync(string callId, CancellationToken cancellationToken = default)
@@ -331,7 +325,7 @@ internal abstract class AsteriskTelephonyProviderBase :
                 state,
                 isOnHold: isOnHold,
                 isMuted: muteState ?? false,
-                direction: ResolveDirection(ReadString(root, "direction")));
+                direction: TelephonyProviderResponse.ResolveDirection(ReadString(root, "direction")));
 
             call.From = ReadNestedString(root, "caller", "number");
             call.To = ReadNestedString(root, "connected", "number") ?? ReadNestedString(root, "dialplan", "exten");
@@ -987,13 +981,6 @@ internal abstract class AsteriskTelephonyProviderBase :
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
         return ReadString(document.RootElement, "value");
-    }
-
-    private static CallDirection ResolveDirection(string direction)
-    {
-        return string.Equals(direction?.Trim(), "inbound", StringComparison.OrdinalIgnoreCase)
-            ? CallDirection.Inbound
-            : CallDirection.Outbound;
     }
 
     private static string ReadString(JsonElement element, string propertyName)

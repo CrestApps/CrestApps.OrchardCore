@@ -728,11 +728,17 @@ The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManag
 
 ### OC-043 — Duplication between the two provider implementations
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** DRY · **Effort:** L · **Risk:** Medium · **Dependencies:** OC-011, OC-012
+- **Priority:** Medium · **Status:** Completed (partial extraction; sweeping base class Won't Fix) · **Category:** DRY · **Effort:** L · **Risk:** Medium · **Dependencies:** OC-011, OC-012
 
 **Problem.** Asterisk and DialPad each re-implement quiescing guards, HTTP status mapping, retry semantics and the call-lifecycle methods. A bug fix in the dial flow needs two patches.
 
 **Recommended solution.** Extract a shared `TelephonyProviderBase` into `Telephony.Core` covering the quiescing guard, HTTP result mapping and lifecycle scaffolding; both providers extend it. Combines naturally with OC-012.
+
+**Resolution (partial fix delivered; the sweeping base class is Won't Fix — premise substantially overstated; independently reviewed, gpt-5.6-sol).** The premise was audited call-by-call and is mostly disproven, but two genuinely-identical pure helpers were found and consolidated.
+
+*What was disproven.* The one cross-provider concern the finding names first — the **quiescing / work-admission guard** — is *already shared*: both providers depend on `IContactCenterFeatureWorkManager` and merely add a one-line call plus a provider-specific "temporarily unavailable" message (which *should* differ per provider). The "HTTP status mapping", "retry semantics" and "call-lifecycle methods" are **not** mechanically duplicated: Asterisk speaks the Asterisk REST Interface (ARI — channels, bridges, Stasis, its own `AsteriskAriClient`/`AsteriskAriOutcomeClassifier`/`AsteriskAriException`) while DialPad speaks a cloud REST API, so their dial/hangup/transfer/state flows, status semantics and retry conditions diverge by protocol. A shared lifecycle base over two independently-varying remote APIs would be a **false abstraction**, and the recommended `TelephonyProviderBase` carries the exact ISP-breaking objection the board already **sustained in OC-012** (a monolithic base makes every provider satisfy every capability `is`-check, defeating capability detection) — and OC-043's own stated dependencies, OC-011 and OC-012, are both **Won't Fix**. The claimed hazard ("a bug fix in the dial flow needs two patches") does not hold: the dial flows are not shared code.
+
+*What was fixed.* Two helpers were **byte-identical** across the providers and encode real provider-agnostic *telephony policy*, so they were extracted into a new `public static TelephonyProviderResponse` in `Telephony.Abstractions` (alongside the existing `TelephonyAudioModeResolver` precedent): (1) `IsAmbiguousStatusCode(HttpStatusCode)` — the cross-provider policy for which HTTP outcomes (request timeout, throttling, `>= 500`) leave a call's real outcome *ambiguous* and must be reported as `Unknown` rather than success/failure; and (2) `ResolveDirection(string)` — the normalized inbound/outbound decision. Both providers now call the shared helper (three call sites in Asterisk, three in DialPad), the six duplicated private methods were removed, and future REST-backed providers inherit the same policy. A third overlap (`ReadString(JsonElement,string)`) was deliberately **left in place**: it is a generic `System.Text.Json` utility with no telephony semantics, and centralizing generic JSON helpers in a telephony contract package would be scope creep, not DRY. The Telephony.Abstractions public-API baseline was regenerated for the additive type.
 
 ---
 

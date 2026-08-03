@@ -255,6 +255,11 @@ namespace CrestApps.OrchardCore.Telephony
         public CrestApps.OrchardCore.Telephony.TelephonyProviderOptions ReplaceProvider(string name, CrestApps.OrchardCore.Telephony.TelephonyProviderTypeOptions options) { }
         public CrestApps.OrchardCore.Telephony.TelephonyProviderOptions TryAddProvider(string name, CrestApps.OrchardCore.Telephony.TelephonyProviderTypeOptions options) { }
     }
+    public static class TelephonyProviderResponse
+    {
+        public static bool IsAmbiguousStatusCode(System.Net.HttpStatusCode statusCode) { }
+        public static CrestApps.OrchardCore.Telephony.Models.CallDirection ResolveDirection(string direction) { }
+    }
     public sealed class TelephonyProviderTypeOptions
     {
         public TelephonyProviderTypeOptions(System.Type type) { }
