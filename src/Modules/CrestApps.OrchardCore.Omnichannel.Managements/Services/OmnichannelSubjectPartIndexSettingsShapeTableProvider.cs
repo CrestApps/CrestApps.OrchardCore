@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using OrchardCore.DisplayManagement.Descriptors;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -55,6 +56,6 @@ internal sealed class OmnichannelSubjectPartIndexSettingsShapeTableProvider : IS
             string.Equals(GetRouteValue(routeValues, "name"), OmnichannelConstants.ContentParts.OmnichannelSubject, StringComparison.Ordinal);
     }
 
-    private static string GetRouteValue(IReadOnlyDictionary<string, object> routeValues, string key)
+    private static string GetRouteValue(RouteValueDictionary routeValues, string key)
         => routeValues.TryGetValue(key, out var value) ? value as string : null;
 }
