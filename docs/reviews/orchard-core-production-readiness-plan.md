@@ -208,11 +208,20 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-009 — No `placement.json` in any module
 
-- **Priority:** Low · **Status:** Not Started · **Category:** Display management · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Low · **Status:** Won't Fix · **Category:** Display management · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 **Problem.** None of the four modules ships a `placement.json`; drivers hardcode `.Location("Content:1")`, `"Actions:5"`, `"Meta:5"`.
 
 **Why it matters.** Integrators can still override from a theme, but a module-shipped `placement.json` documents the available slots and lets shape output be reordered or hidden without code — the standard Orchard extension point core modules provide.
+
+**Disposition (Won't Fix).** The premise is accurate — the four modules set default placement in their display drivers rather than in a `placement.json` — but neither available form of the change adds capability or value, so it is not worth the churn and regression surface.
+
+- **There is no capability gap.** Orchard Core resolves placement globally by shape type, so an integrator, site, or theme can already ship a `placement.json` targeting any of these shapes (for example `ContactCenterSkill_Fields_SummaryAdmin`, `ContactCenterSkill_Buttons_SummaryAdmin`, or a settings shape's `Content:10#Asterisk` slot) to reorder or hide it with no code. The driver `.Location()` calls provide sensible, fully overridable defaults, which is exactly the extension point the item asks for. Nothing in the current design blocks a theme- or site-level override.
+- **A module `placement.json` that duplicates the driver defaults would violate DRY.** Restating the current 52 default locations across 22 drivers creates two sources of truth that must stay byte-for-byte in sync; any drift silently changes rendering. This adds regression surface for zero behavioural benefit. (Shipping module-default placement is itself a legitimate Orchard Core idiom — `OrchardCore.Contents` does it — the objection is specifically to *duplicating* defaults that already live in the drivers.)
+- **The single-source alternative — deleting the `.Location()` calls and moving every default into `placement.json` — would be DRY, but adds risk across all 52 placements while adding no functionality.** It is a pure representation change of defaults that already work and are already overridable, so it carries migration and regression risk with no offsetting value.
+- **No specific beneficial override was identified.** A `placement.json` is worth shipping when it *hides* or *reorders* a shape whose current default is wrong (as `CrestApps.OrchardCore.Users/placement.json` does with `{"UserMenuItems":[{"differentiator":"Title","place":"-"}]}`). Every current default here is appropriate, so there is no targeted override to ship.
+
+Because there is no capability gap and no beneficial targeted override to add, no change is made. If a concrete customization need arises later, it can be met by a targeted `placement.json` at that time without any change to these modules.
 
 ---
 
