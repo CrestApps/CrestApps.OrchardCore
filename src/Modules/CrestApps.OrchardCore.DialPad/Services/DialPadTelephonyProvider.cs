@@ -191,7 +191,7 @@ public sealed class DialPadTelephonyProvider :
             {
                 _logger.LogError("DialPad rejected a dial request with status code {StatusCode}.", response.StatusCode);
 
-                if (IsAmbiguousDialStatusCode(response.StatusCode))
+                if (IsAmbiguousStatusCode(response.StatusCode))
                 {
                     return TelephonyResult.Unknown(S["DialPad did not confirm whether the call was placed."].Value);
                 }
@@ -233,7 +233,7 @@ public sealed class DialPadTelephonyProvider :
         }
     }
 
-    private static bool IsAmbiguousDialStatusCode(HttpStatusCode statusCode)
+    private static bool IsAmbiguousStatusCode(HttpStatusCode statusCode)
     {
         return statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
             (int)statusCode >= 500;
@@ -689,19 +689,18 @@ public sealed class DialPadTelephonyProvider :
     }
 
     /// <inheritdoc/>
-    public async Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
     {
         if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
         {
-            return;
+            return TelephonyResult.Success();
         }
 
+        // Attempt revocation whenever an access token exists, regardless of the current authentication
+        // mode. A tenant that switched from OAuth to API-key authentication can still hold a previously
+        // issued per-user OAuth token that must be revoked at DialPad, so the deauthorize call must not be
+        // skipped just because the effective mode is no longer OAuth.
         var settings = await GetResolvedSettingsAsync();
-
-        if (GetEffectiveAuthenticationType(settings) != DialPadAuthenticationType.OAuth2)
-        {
-            return;
-        }
 
         try
         {
@@ -718,7 +717,18 @@ public sealed class DialPadTelephonyProvider :
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("DialPad rejected an OAuth token revocation request with status code {StatusCode}.", response.StatusCode);
+
+                // A timeout, throttling, or server-side error cannot prove whether the unsafe deauthorize
+                // POST committed, so the outcome is indeterminate rather than a definitive rejection.
+                if (IsAmbiguousStatusCode(response.StatusCode))
+                {
+                    return TelephonyResult.Unknown($"DialPad did not confirm the token revocation (status code {(int)response.StatusCode}).");
+                }
+
+                return TelephonyResult.Failed($"DialPad rejected the token revocation request with status code {(int)response.StatusCode}.");
             }
+
+            return TelephonyResult.Success();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -727,6 +737,8 @@ public sealed class DialPadTelephonyProvider :
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while revoking DialPad OAuth tokens.");
+
+            return TelephonyResult.Unknown("The DialPad token revocation request could not be completed.");
         }
     }
 

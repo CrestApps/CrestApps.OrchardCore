@@ -437,16 +437,71 @@ public sealed class DialPadTelephonyProviderTests
         var provider = CreateOAuthProvider(handler);
 
         // Act
-        await provider.RevokeTokensAsync(
+        var result = await provider.RevokeTokensAsync(
             new TelephonyUserTokens { AccessToken = "access-1" },
             TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.Succeeded);
         Assert.NotNull(handler.LastRequest);
         Assert.Equal(HttpMethod.Post, handler.LastRequest.Method);
         Assert.Equal("https://dialpad.com/oauth2/deauthorize", handler.LastRequest.RequestUri.AbsoluteUri);
         Assert.Equal("Bearer", handler.LastRequest.Headers.Authorization.Scheme);
         Assert.Equal("access-1", handler.LastRequest.Headers.Authorization.Parameter);
+    }
+
+    [Fact]
+    public async Task RevokeTokensAsync_WhenProviderRejectsRequest_ReturnsFailedResult()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.BadRequest);
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        var result = await provider.RevokeTokensAsync(
+            new TelephonyUserTokens { AccessToken = "access-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.False(result.OutcomeUnknown);
+        Assert.NotNull(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task RevokeTokensAsync_WhenProviderReturnsAmbiguousStatus_ReturnsUnknown()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.ServiceUnavailable);
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        var result = await provider.RevokeTokensAsync(
+            new TelephonyUserTokens { AccessToken = "access-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.NotNull(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task RevokeTokensAsync_WhenAuthenticationSwitchedToApiKeyButTokenExists_StillCallsDeauthorize()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler, authenticationType: DialPadAuthenticationType.ApiKey);
+
+        // Act
+        var result = await provider.RevokeTokensAsync(
+            new TelephonyUserTokens { AccessToken = "access-1" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal("https://dialpad.com/oauth2/deauthorize", handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
     [Fact]
@@ -457,11 +512,12 @@ public sealed class DialPadTelephonyProviderTests
         var provider = CreateOAuthProvider(handler);
 
         // Act
-        await provider.RevokeTokensAsync(
+        var result = await provider.RevokeTokensAsync(
             new TelephonyUserTokens { AccessToken = "" },
             TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.Succeeded);
         Assert.Null(handler.LastRequest);
     }
 
@@ -512,7 +568,7 @@ public sealed class DialPadTelephonyProviderTests
         Assert.True(settings.UseOAuth);
     }
 
-    private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialPadEnvironment environment = DialPadEnvironment.Production)
+    private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialPadEnvironment environment = DialPadEnvironment.Production, DialPadAuthenticationType authenticationType = DialPadAuthenticationType.OAuth2)
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
 
@@ -524,7 +580,7 @@ public sealed class DialPadTelephonyProviderTests
         {
             IsEnabled = true,
             Environment = environment,
-            AuthenticationType = DialPadAuthenticationType.OAuth2,
+            AuthenticationType = authenticationType,
             ClientId = "client-id",
             ClientSecret = protectedSecret,
             Scopes = "calls",

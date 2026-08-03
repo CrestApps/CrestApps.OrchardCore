@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -18,6 +19,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ITelephonyUserAccessor _userAccessor;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
     private readonly TimeSpan _tokenRefreshLockTimeout;
     private readonly TimeSpan _tokenRefreshLockExpiration;
 
@@ -31,6 +33,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="distributedLock">The distributed lock used to serialize concurrent token refreshes per user and provider.</param>
     /// <param name="clock">The clock used to evaluate token expiration.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
+    /// <param name="logger">The logger used to record incomplete remote revocations.</param>
     public DefaultTelephonyAuthenticationService(
         ISiteService siteService,
         ITelephonyProviderResolver providerResolver,
@@ -38,7 +41,8 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         ITelephonyUserAccessor userAccessor,
         IDistributedLock distributedLock,
         IClock clock,
-        IOptions<TelephonyCoordinationOptions> coordinationOptions)
+        IOptions<TelephonyCoordinationOptions> coordinationOptions,
+        ILogger<DefaultTelephonyAuthenticationService> logger)
     {
         _siteService = siteService;
         _providerResolver = providerResolver;
@@ -46,6 +50,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         _userAccessor = userAccessor;
         _distributedLock = distributedLock;
         _clock = clock;
+        _logger = logger;
         _tokenRefreshLockTimeout = coordinationOptions.Value.TokenRefreshLockTimeout;
         _tokenRefreshLockExpiration = coordinationOptions.Value.TokenRefreshLockExpiration;
     }
@@ -191,30 +196,55 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     }
 
     /// <inheritdoc/>
-    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> DisconnectAsync(CancellationToken cancellationToken = default)
     {
         var name = await GetDefaultProviderNameAsync();
 
         if (string.IsNullOrEmpty(name))
         {
-            return;
+            return TelephonyResult.Success();
         }
 
         var tokens = await _tokenStore.GetAsync(name, cancellationToken);
 
-        if (tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken))
-        {
-            var provider = await _providerResolver.GetAsync(name);
+        // Clear the local interactive credentials first and commit the deletion durably before attempting
+        // the remote revocation, so the user is disconnected locally immediately, concurrent requests can
+        // no longer observe the credentials, and a canceled or failing remote call cannot leave the local
+        // tokens behind.
+        await _tokenStore.RemoveAsync(name, cancellationToken);
+        await _userAccessor.SaveChangesAsync();
 
-            if (provider is ITelephonyAuthenticationProvider authenticationProvider)
-            {
-                // Revoke the tokens at the provider before removing them locally so the provider does
-                // not keep issuing API keys on behalf of the disconnected user.
-                await authenticationProvider.RevokeTokensAsync(tokens, cancellationToken);
-            }
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            return TelephonyResult.Success();
         }
 
-        await _tokenStore.RemoveAsync(name, cancellationToken);
+        var provider = await _providerResolver.GetAsync(name);
+
+        if (provider is not ITelephonyAuthenticationProvider authenticationProvider)
+        {
+            // A live token existed but the provider is no longer available to revoke it, so the remote
+            // grant may still be active. Report the indeterminate outcome instead of a false success.
+            _logger.LogWarning(
+                "Telephony provider '{ProviderName}' is unavailable to revoke the disconnected user's grant. The local connection was cleared, but the remote grant may still be active.",
+                name);
+
+            return TelephonyResult.Unknown("The telephony provider was unavailable to revoke the remote grant.");
+        }
+
+        // Revoke the tokens at the provider after the local copy is removed so the provider does not keep
+        // issuing API keys on behalf of the disconnected user.
+        var revocation = await authenticationProvider.RevokeTokensAsync(tokens, cancellationToken);
+
+        if (!revocation.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telephony provider '{ProviderName}' did not confirm revocation of the disconnected user's grant. The local connection was cleared, but the remote grant may still be active. Reason: {Reason}",
+                name,
+                revocation.Error);
+        }
+
+        return revocation;
     }
 
     /// <inheritdoc/>

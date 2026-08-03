@@ -132,9 +132,14 @@ public sealed class TelephonyOAuthController : Controller
     }
 
     /// <summary>
-    /// Disconnects the current user from the configured provider by removing the stored tokens.
+    /// Disconnects the current user from the configured provider by removing the stored tokens. The
+    /// local connection is always cleared; the response indicates whether the provider confirmed that
+    /// the remote grant was revoked.
     /// </summary>
-    /// <returns>An empty success result.</returns>
+    /// <returns>
+    /// A success result when the remote grant was revoked, or an accepted result carrying a warning when
+    /// the local connection was cleared but the remote grant may still be active.
+    /// </returns>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Disconnect()
@@ -144,9 +149,18 @@ public sealed class TelephonyOAuthController : Controller
             return Forbid();
         }
 
-        await _authenticationService.DisconnectAsync();
+        var result = await _authenticationService.DisconnectAsync();
 
-        return Ok();
+        if (result.Succeeded)
+        {
+            return Ok();
+        }
+
+        return Ok(new
+        {
+            remoteRevocationConfirmed = false,
+            message = result.Error,
+        });
     }
 
     private ContentResult BuildCompletionPage(bool success, string returnUrl)

@@ -54,6 +54,10 @@ internal sealed class FakeAuthTelephonyProvider :
 
     public TelephonyUserTokens RevokedTokens { get; private set; }
 
+    public TelephonyResult RevokeResult { get; set; } = TelephonyResult.Success();
+
+    public Exception RevokeException { get; set; }
+
     public LocalizedString Name => new("FakeAuth", "FakeAuth");
 
     public TelephonyCapabilities Capabilities => TelephonyCapabilities.Dial;
@@ -77,11 +81,16 @@ internal sealed class FakeAuthTelephonyProvider :
         return RefreshResult;
     }
 
-    public Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    public Task<TelephonyResult> RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
     {
         RevokedTokens = tokens;
 
-        return Task.CompletedTask;
+        if (RevokeException is not null)
+        {
+            throw RevokeException;
+        }
+
+        return Task.FromResult(RevokeResult);
     }
 
     public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)

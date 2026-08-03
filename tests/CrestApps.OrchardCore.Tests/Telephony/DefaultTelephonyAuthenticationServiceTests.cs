@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -157,12 +158,98 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             tokenStore);
 
         // Act
-        await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
         var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.Succeeded);
         Assert.NotNull(provider.RevokedTokens);
         Assert.Equal("valid", provider.RevokedTokens.AccessToken);
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenRemoteRevocationFails_ClearsLocalTokensAndReportsFailure()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            RevokeResult = TelephonyResult.Failed("The provider rejected the revocation."),
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            tokenStore);
+
+        // Act
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.NotNull(provider.RevokedTokens);
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenProviderCannotRevoke_ClearsLocalTokensAndReportsUnknown()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new CallControlOnlyTelephonyProvider();
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            tokenStore);
+
+        // Act
+        var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.True(result.OutcomeUnknown);
+        Assert.Null(stored);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenRemoteRevocationThrows_StillRemovesLocalTokens()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            RevokeException = new OperationCanceledException(),
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "DialPad" },
+            tokenStore);
+
+        // Act
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => service.DisconnectAsync(TestContext.Current.CancellationToken));
+        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+
+        // Assert
         Assert.Null(stored);
     }
 
@@ -241,6 +328,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             userAccessor,
             distributedLock,
             new StubClock(),
-            options);
+            options,
+            NullLogger<DefaultTelephonyAuthenticationService>.Instance);
     }
 }

@@ -68,12 +68,12 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> ExchangeCodeAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyCodeExchangeContext context, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> GetAuthorizationUrlAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyAuthorizationContext context, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> RefreshTokensAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens tokens, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task RevokeTokensAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens tokens, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> RevokeTokensAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens tokens, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITelephonyAuthenticationService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task DisconnectAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DisconnectAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyAuthorizationRequest> GetAuthorizationUrlAsync(string redirectUri, string state, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyConnectionStatus> GetStatusAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> GetValidTokensAsync(string providerName, System.Threading.CancellationToken cancellationToken = default);

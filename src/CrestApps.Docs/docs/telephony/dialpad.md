@@ -91,8 +91,18 @@ provider follows DialPad's documented requirements:
 - The **environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
   endpoints.
-- When a user **disconnects**, the provider calls DialPad's `deauthorize` endpoint to revoke every token
-  DialPad issued on the user's behalf before the stored tokens are removed locally.
+- When a user **disconnects**, the local tokens are always removed first — and that deletion is durably
+  committed before the provider is contacted, so a concurrent request cannot observe stale credentials — so
+  the interactive credentials are cleared immediately, then the provider calls DialPad's `deauthorize`
+  endpoint to revoke the token
+  DialPad issued on the user's behalf. Revocation is attempted whenever a stored access token exists, even
+  if the tenant has since switched to API-key authentication, so a leftover OAuth grant is never silently
+  abandoned. Revocation reports a typed result: a confirmed success, a definitive rejection, or an
+  indeterminate outcome. A timeout, throttling (`429`), or server error (`5xx`) is treated as indeterminate
+  because the unsafe deauthorize `POST` may still have committed. When DialPad does not confirm the
+  revocation, the disconnect still succeeds locally but is logged as an incomplete remote revocation and the
+  disconnect response reports `remoteRevocationConfirmed: false` so operators know the grant may still be
+  active at the provider.
 
 ## Capabilities
 
