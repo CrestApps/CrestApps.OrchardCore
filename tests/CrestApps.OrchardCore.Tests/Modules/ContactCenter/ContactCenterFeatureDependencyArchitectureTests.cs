@@ -14,7 +14,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 {
     private const string ContactCenterManifestPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Manifest.cs";
     private const string ContactCenterModulePath = "src/Modules/CrestApps.OrchardCore.ContactCenter";
-    private const string ContactCenterStartupPath = "src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs";
     private const string AsteriskManifestPath = "src/Modules/CrestApps.OrchardCore.Asterisk/Manifest.cs";
     private const string AsteriskModulePath = "src/Modules/CrestApps.OrchardCore.Asterisk";
     private const string DialPadManifestPath = "src/Modules/CrestApps.OrchardCore.DialPad/Manifest.cs";
@@ -112,9 +111,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -151,9 +150,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -201,9 +200,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -233,9 +232,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -264,9 +263,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -307,9 +306,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -347,9 +346,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -394,9 +393,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -427,9 +426,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -459,9 +458,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -494,9 +493,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
@@ -536,9 +535,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
             .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
-        var startupClasses = ParseStartupClasses(
+        var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
-            ContactCenterStartupPath,
+            ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act

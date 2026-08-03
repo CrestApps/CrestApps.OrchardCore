@@ -269,11 +269,13 @@ public sealed class ContactCenterRetentionCoverageTests
     public void EveryPolicy_IsRegistered_SoACoveredTableIsActuallyPurgedAtRuntime()
     {
         // Arrange
-        var startupPath = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter", "Startup.cs");
+        var moduleDirectory = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter");
 
-        Assert.True(File.Exists(startupPath), $"Could not find the Contact Center startup file at '{startupPath}'.");
+        Assert.True(Directory.Exists(moduleDirectory), $"Could not find the Contact Center module directory at '{moduleDirectory}'.");
 
-        var startup = File.ReadAllText(startupPath);
+        var startup = string.Concat(Directory
+            .EnumerateFiles(moduleDirectory, "*Startup.cs", SearchOption.AllDirectories)
+            .Select(File.ReadAllText));
 
         // Act
         var unregistered = DiscoverPolicies()

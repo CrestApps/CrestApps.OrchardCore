@@ -654,13 +654,15 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-040 — `ContactCenter/Startup.cs`: 36 public types in 1,368 lines
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Code organization · **Effort:** M · **Risk:** Low · **Dependencies:** OC-008 (do after feature consolidation)
+- **Priority:** Medium · **Status:** Completed · **Category:** Code organization · **Effort:** M · **Risk:** Low · **Dependencies:** OC-008 (do after feature consolidation)
 
 **Problem.** Verified: 36 public types in one file — the only serious violation of the repo's one-public-type-per-file rule in the entire scope (the next worst files have 2–3, an accepted Startup idiom). It also contains 73 registration calls.
 
 **Recommended solution.** Split into per-feature startup files (`VoiceStartup.cs`, `ReportingStartup.cs`, `AgentPresenceStartup.cs`, …), each named for its type.
 
 **Note.** An earlier reviewer reported "363 service registrations"; the verified count is **73**. The file-size and type-count problems are real; the registration count is not extreme.
+
+**Resolution.** Split the 1,298-line `Startup.cs` into 36 files, one per `StartupBase` type, each named for its class (`VoiceStartup.cs`, `RoutingStartup.cs`, `ComplianceStartup.cs`, `AnalyticsStartup.cs`, the seven `*AdminStartup` / `*DeploymentStartup` / `*RecipesStartup` feature startups, and so on). `Startup.cs` now holds only the base `Startup` feature class. Every extracted file carries only the `using` directives it needs (verified via a one-off IDE0005 pass with `dotnet format`); the shared 57-line using block that would otherwise be copied into each file was trimmed to its per-file minimum. No type, namespace, attribute, or registration changed, so behaviour is identical. Two source-parsing architecture tests that had read the single `Startup.cs` were updated to scan the whole module: `ContactCenterFeatureDependencyArchitectureTests` now calls `ParseStartupClassesInDirectory(ContactCenterModulePath, …)` at its twelve Contact Center call sites, and `ContactCenterRetentionCoverageTests.EveryPolicy_IsRegistered_…` concatenates every `*Startup.cs` in the module before asserting each retention policy is registered. Module and test project build 0 warnings; all 1497 ContactCenter tests pass.
 
 ---
 
