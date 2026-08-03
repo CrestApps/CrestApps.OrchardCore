@@ -22,6 +22,10 @@ Bulk import and export Orchard Core content by using the enabled transfer file f
 
 By default, content types appear in the import and export screens automatically. Set **Allow Bulk Import** or **Allow Bulk Export** to `false` on a content type when that type should opt out.
 
+The screencast below enables **Content Transfer** and the optional **OpenXml** format, configures a bulk export for the Blog Post type as an Excel workbook, and opens the bulk import screen with its upload form, template downloads, and column requirements.
+
+![Screen cast of enabling Content Transfer, exporting a content type, and starting a bulk import](/img/docs/content-transfer.gif)
+
 ## Supported file formats
 
 The base module always supports CSV files (`.csv`).
