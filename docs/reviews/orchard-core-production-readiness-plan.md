@@ -310,13 +310,20 @@ Because there is no capability gap and no beneficial targeted override to add, n
 
 ### OC-015 — Optional cross-feature dependencies hidden behind `IEnumerable<T>` + `FirstOrDefault()`
 
-- **Priority:** Low · **Status:** Not Started · **Category:** DI hygiene · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+- **Priority:** Low · **Status:** Won't Fix · **Category:** DI hygiene · **Effort:** M · **Risk:** Medium · **Dependencies:** None
 
 **Problem.** Feature-conditional services are injected as `IEnumerable<TService>` and reduced with `.FirstOrDefault()`, then null-checked per use site (`ContactCenterCallCommandService.cs:54-55,68-69`, `AgentPresenceManagerService.cs:46-47`, and others).
 
 **Why it matters.** The dependency is invisible in the constructor signature and easy to omit in new code paths. **Verified mitigating fact:** the highest-risk instance (Compliance disabled while Dialer enabled) degrades safely — `ContactCenterCallCommandService.cs:98-111` falls through to the accept-only path rather than dialing ungated. So this is maintainability, not a live correctness defect.
 
 **Recommended solution.** Split feature-gated consumers so the dependency becomes required, or register a null-object default via `TryAddScoped`.
+
+**Disposition — Won't Fix (documented).** `IEnumerable<TService>` injection reduced with `FirstOrDefault()` is the sanctioned Orchard Core idiom for consuming a service that lives in a *feature which may be disabled*. When that feature is off, the tenant container holds no registration for `TService`, so a direct `TService` constructor parameter would throw `InvalidOperationException` at activation for every deployment that has not enabled the optional feature — the exact failure the idiom exists to avoid. Orchard Core itself resolves optional cross-feature services this way (`IEnumerable<T>` / `GetServices<T>()`). Re-examining the premise against the two recommended alternatives, both regress rather than improve the code:
+
+- **Splitting the consumers** so the dependency becomes required would fracture central orchestrators along a feature seam. `ContactCenterCallCommandService` performs offer acceptance, media connection, and state advancement as one cohesive server-side operation, and `AgentPresenceManagerService` owns the sign-in/sign-out lifecycle; carving the Dialer-only or session-only branch into a second type would scatter one cohesive workflow across two classes and duplicate the surrounding orchestration for no correctness benefit — a larger, riskier change than the item it addresses, and against the SRP intent it claims to serve.
+- **Null-object defaults via `TryAddScoped`** would remove the per-site null checks but at a real cost: the field would then *look* mandatory while silently no-opping when the feature is absent, hiding the feature-gating that the `IEnumerable<T>` signature currently makes explicit; it would require roughly ten no-op implementations to be authored and kept in lockstep with their interfaces; and it changes nothing about correctness, since `FirstOrDefault() is null` and "call a no-op" already produce the same safe degradation.
+
+The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManager>` in the signature is a widely-understood Orchard Core signal for "zero-or-more, optional." The pattern is applied uniformly at ~19 reduction sites across the module set, so it is a deliberate convention rather than an oversight, and that consistency has its own maintainability value. Keeping the idiom — correct, visible, consistently applied, and safer than either alternative — is the right call. The safe-degradation guarantee remains covered by the existing Compliance/Dialer test noted above.
 
 ---
 
