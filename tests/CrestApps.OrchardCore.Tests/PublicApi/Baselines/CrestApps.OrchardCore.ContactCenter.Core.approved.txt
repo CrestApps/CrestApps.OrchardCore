@@ -489,6 +489,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.Collections.Generic.IList<string> RemovedCampaignIds { get; set; }
         public System.Collections.Generic.IList<string> RemovedQueueIds { get; set; }
     }
+    public sealed class AgentManagedConfiguration
+    {
+        public AgentManagedConfiguration() { }
+        public System.Collections.Generic.IEnumerable<string> AllowedCampaignIds { get; init; }
+        public System.Collections.Generic.IEnumerable<string> AllowedQueueIds { get; init; }
+        public string DisplayName { get; init; }
+        public int MaxConcurrentInteractions { get; init; }
+        public System.Collections.Generic.IEnumerable<string> Skills { get; init; }
+    }
     public sealed class AgentPresenceChangedEventData
     {
         public AgentPresenceChangedEventData() { }
@@ -1902,6 +1911,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentPresenceManagerService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager
     {
         public AgentPresenceManagerService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionManager> sessionManagers, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService> agentWorkStateHealingServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.AgentPresenceManagerService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> ApplyManagedConfigurationAsync(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentManagedConfiguration configuration, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> CompleteWorkAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SetPresenceAsync(string userId, CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignInAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default) { }
@@ -2501,6 +2511,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IAgentPresenceManager
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> ApplyManagedConfigurationAsync(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentManagedConfiguration configuration, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> CompleteWorkAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SetPresenceAsync(string userId, CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignInAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default);

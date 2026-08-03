@@ -35,12 +35,13 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | Entry point | Contact Center Entry Points | `ContactCenterEntryPoint` | `EntryPoints` |
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
+| Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |
 
 The CRM configuration a contact centre routes and reports on travels the same way. Those steps are described in [Omnichannel management](../omnichannel/management.md#exporting-and-importing-configuration).
 
 A step only appears when the feature that owns its entity is enabled, so a tenant that does not run the dialer is not offered a dialer profile step.
 
-Agent profiles do not travel. A profile names the person who holds it, carries their contact details, and records the state they are in right now; it is a record of who works in an environment rather than of how that environment is configured, so it is treated as runtime state and stays where it is produced.
+Full agent profiles do not travel. A profile names the person who holds it, carries their contact details, and records the state they are in right now; it is a record of who works in an environment rather than of how that environment is configured, so it is treated as runtime state and stays where it is produced. The manager-owned entitlement configuration an operator does grant — display name, maximum concurrent interactions, allowed queues, allowed campaigns and skills — travels through the **Contact Center Agent Entitlements** step. That step is a deliberate projection: it is keyed by the Orchard user name (the internal user identifier differs between environments) and it never carries live presence, the internal user identifier, or the profile item identifier. The user name is resolved from the live user record at export time, so a plan stays valid even after an administrator renames the user. On import each entry is matched to a user by name — an entry whose user is absent from the destination is reported and skipped — dangling queue and campaign references are dropped, and an existing profile has only its configuration promoted, so a signed-in agent's presence and active reservation are left untouched.
 
 Runtime state deliberately does not travel. Activities, activity batches, interactions, interaction events, call sessions, queue items, reservations, agent sessions, callback requests, provider commands, webhook inbox messages, the outbox, the deduplication ledger, projection checkpoints, work state, and aggregated metrics are produced by traffic in the environment that owns them; copying them would move one tenant's live work into another. Every stored entity is either carried by a step or recorded as runtime state, and a build fails if a new entity is neither.
 
@@ -74,8 +75,9 @@ A recipe runs its steps in file order, and a reference is checked when the entry
 2. Queues.
 3. Entry points.
 4. Dialer profiles.
+5. Agent entitlements.
 
-Agent state reason codes reference nothing and can be placed anywhere. Where Contact Center configuration references CRM configuration - a dialer profile that names a campaign, or a queue that overflows to a channel endpoint - place the Omnichannel steps before the Contact Center steps that need them.
+Agent state reason codes reference nothing and can be placed anywhere. Agent entitlements reference queues and campaigns, so place the **Contact Center Agent Entitlements** step after the queue step and after the Omnichannel campaign step. Where Contact Center configuration references CRM configuration - a dialer profile that names a campaign, or a queue that overflows to a channel endpoint - place the Omnichannel steps before the Contact Center steps that need them.
 
 The standard agent state reason codes seeded by the Contact Center migrations use fixed identifiers, so every tenant agrees on them and a plan that references a standard reason code still resolves after it is replayed.
 
@@ -107,12 +109,27 @@ The steps are plain recipe steps, so a tenant can also be scripted from scratch.
           "Enabled": true
         }
       ]
+    },
+    {
+      "name": "ContactCenterAgentEntitlement",
+      "Agents": [
+        {
+          "UserName": "agent.smith",
+          "DisplayName": "Agent Smith",
+          "MaxConcurrentInteractions": 1,
+          "AllowedQueueIds": [],
+          "AllowedCampaignIds": [],
+          "Skills": ["Spanish"]
+        }
+      ]
     }
   ]
 }
 ```
 
 Omitting `ItemId` creates a new entry under an identifier the store issues. Including an `ItemId` that the destination already holds updates that entry; including one it does not hold creates the entry under that identifier, which is what lets a hand-written plan be replayed without duplicating what it created the first time.
+
+The agent entitlement step is the exception to the `ItemId` rule: it identifies an entry by `UserName` rather than by `ItemId`, because an agent is a person who already exists in the destination's user store. An entry whose `UserName` does not resolve to a user in the destination is reported and skipped, and an existing agent has only the manager-owned configuration in the step promoted — live presence and any active reservation are left untouched.
 
 ## Rules applied on import
 

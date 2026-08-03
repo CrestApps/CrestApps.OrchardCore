@@ -21,7 +21,7 @@ public sealed class ContactCenterConfigurationCoverageTests
     /// </summary>
     private static readonly Dictionary<string, string> _runtimeState = new(StringComparer.Ordinal)
     {
-        ["AgentProfile"] = "Tenant-local. It binds a Contact Center agent to an Orchard user that does not exist in the destination environment, and it carries live presence and the agent's current reservation, which are produced by traffic. Carrying it would also write the agent roster, with user names and identifiers, into a plan committed to source control.",
+        ["AgentProfile"] = "Tenant-local. It binds a Contact Center agent to an Orchard user that does not exist in the destination environment, and it carries live presence and the agent's current reservation, which are produced by traffic. The entity itself therefore stays put; only the manager-owned entitlement projection (display name, capacity, allowed queues and campaigns, and skills) travels, keyed by user name, through the separate ContactCenterAgentEntitlement deployment and recipe step, which never carries presence, the internal user identifier, or the item identifier.",
         ["ActivityReservation"] = "Runtime state. One row per offer of work to an agent; replaying one would assign work that no longer exists.",
         ["AgentSession"] = "Runtime state. One row per signed-in agent, heartbeat driven.",
         ["CallSession"] = "Runtime state. One row per call in progress or completed.",

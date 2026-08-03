@@ -39,4 +39,9 @@ public static class ContactCenterDeploymentSteps
     /// The recipe step that carries agent state reason codes.
     /// </summary>
     public const string AgentStateReasonCode = "AgentStateReasonCode";
+
+    /// <summary>
+    /// The recipe step that carries manager-owned agent entitlements.
+    /// </summary>
+    public const string AgentEntitlement = "ContactCenterAgentEntitlement";
 }

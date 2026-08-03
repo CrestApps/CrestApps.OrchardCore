@@ -17,6 +17,7 @@ public sealed class QueuesDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<ContactCenterSkillDeploymentSource, ContactCenterSkillDeploymentStep>();
+        services.AddDeployment<ContactCenterAgentEntitlementDeploymentSource, ContactCenterAgentEntitlementDeploymentStep>();
         services.AddDeployment<ContactCenterQueueGroupDeploymentSource, ContactCenterQueueGroupDeploymentStep>();
         services.AddDeployment<ContactCenterBusinessHoursCalendarDeploymentSource, ContactCenterBusinessHoursCalendarDeploymentStep>();
         services.AddDeployment<ContactCenterQueueDeploymentSource, ContactCenterQueueDeploymentStep>();

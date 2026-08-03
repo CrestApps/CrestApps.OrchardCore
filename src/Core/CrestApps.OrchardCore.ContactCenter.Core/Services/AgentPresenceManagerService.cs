@@ -423,7 +423,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     }
 
     /// <inheritdoc/>
-    public async Task<AgentProfile> UpdateEntitlementsAsync(
+    public Task<AgentProfile> UpdateEntitlementsAsync(
         string agentId,
         IEnumerable<string> allowedQueueIds,
         IEnumerable<string> allowedCampaignIds,
@@ -431,6 +431,43 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
+        return UpdateManagedConfigurationCoreAsync(
+            agentId,
+            allowedQueueIds,
+            allowedCampaignIds,
+            applyAdditionalConfiguration: null,
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<AgentProfile> ApplyManagedConfigurationAsync(
+        string agentId,
+        AgentManagedConfiguration configuration,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return UpdateManagedConfigurationCoreAsync(
+            agentId,
+            configuration.AllowedQueueIds,
+            configuration.AllowedCampaignIds,
+            profile =>
+            {
+                profile.DisplayName = configuration.DisplayName;
+                profile.MaxConcurrentInteractions = configuration.MaxConcurrentInteractions;
+                profile.Skills = AgentEntitlementUtilities.NormalizeIds(configuration.Skills);
+            },
+            cancellationToken);
+    }
+
+    private async Task<AgentProfile> UpdateManagedConfigurationCoreAsync(
+        string agentId,
+        IEnumerable<string> allowedQueueIds,
+        IEnumerable<string> allowedCampaignIds,
+        Action<AgentProfile> applyAdditionalConfiguration,
+        CancellationToken cancellationToken)
+    {
         var profile = await _agentManager.FindByIdAsync(agentId, cancellationToken);
 
         if (profile is null)
@@ -459,6 +496,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         profile.AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(allowedQueueIds);
         profile.AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(allowedCampaignIds);
+
+        applyAdditionalConfiguration?.Invoke(profile);
 
         var previousQueueIds = profile.QueueIds.ToList();
         var previousCampaignIds = profile.CampaignIds.ToList();

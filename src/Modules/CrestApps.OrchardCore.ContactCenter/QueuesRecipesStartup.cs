@@ -16,6 +16,7 @@ public sealed class QueuesRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<ContactCenterSkillStep>();
+        services.AddRecipeExecutionStep<ContactCenterAgentEntitlementStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueGroupStep>();
         services.AddRecipeExecutionStep<ContactCenterBusinessHoursCalendarStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueStep>();

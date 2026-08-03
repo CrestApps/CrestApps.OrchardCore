@@ -74,4 +74,16 @@ public interface IAgentPresenceManager
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The updated agent profile, or <see langword="null"/> when no profile exists.</returns>
     Task<AgentProfile> UpdateEntitlementsAsync(string agentId, IEnumerable<string> allowedQueueIds, IEnumerable<string> allowedCampaignIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies the manager-owned portable configuration to the agent profile, pruning any live queue or campaign
+    /// membership that the new entitlements no longer authorize while preserving the agent's current presence status
+    /// and active reservation. Unlike <see cref="UpdateEntitlementsAsync"/> this also applies the display name,
+    /// concurrency limit and skills carried by a promoted configuration.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="configuration">The portable configuration to apply.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The updated agent profile, or <see langword="null"/> when no profile exists.</returns>
+    Task<AgentProfile> ApplyManagedConfigurationAsync(string agentId, AgentManagedConfiguration configuration, CancellationToken cancellationToken = default);
 }

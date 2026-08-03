@@ -279,6 +279,93 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task ApplyManagedConfigurationAsync_PromotesConfiguration_AndPreservesRuntimePresence()
+    {
+        // Arrange
+        var existing = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            DisplayName = "Old Name",
+            MaxConcurrentInteractions = 1,
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "r1",
+            QueueIds = ["q1", "q2"],
+            CampaignIds = ["c1"],
+            AllowedQueueIds = ["q1", "q2"],
+            AllowedCampaignIds = ["c1"],
+            Skills = ["old-skill"],
+        };
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        var configuration = new AgentManagedConfiguration
+        {
+            DisplayName = "New Name",
+            MaxConcurrentInteractions = 3,
+            AllowedQueueIds = ["q1"],
+            AllowedCampaignIds = [],
+            Skills = ["  spanish  ", "spanish", "french"],
+        };
+
+        // Act
+        var profile = await service.ApplyManagedConfigurationAsync("a1", configuration, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("New Name", profile.DisplayName);
+        Assert.Equal(3, profile.MaxConcurrentInteractions);
+        Assert.Equal(["spanish", "french"], profile.Skills);
+        Assert.Equal(["q1"], profile.AllowedQueueIds);
+        Assert.Empty(profile.AllowedCampaignIds);
+        Assert.Equal(["q1"], profile.QueueIds);
+        Assert.Empty(profile.CampaignIds);
+        Assert.Equal(AgentPresenceStatus.Busy, profile.PresenceStatus);
+        Assert.Equal("r1", profile.ActiveReservationId);
+    }
+
+    [Fact]
+    public async Task ApplyManagedConfigurationAsync_WhenAgentDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("missing", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(
+            agentManager.Object,
+            [],
+            [],
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateDistributedLock().Object,
+            clock.Object,
+            new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        var configuration = new AgentManagedConfiguration
+        {
+            DisplayName = "New Name",
+            AllowedQueueIds = ["q1"],
+            AllowedCampaignIds = [],
+        };
+
+        // Act
+        var profile = await service.ApplyManagedConfigurationAsync("missing", configuration, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(profile);
+    }
+
+    [Fact]
     public async Task SignOutAsync_ClearsMembershipAndSetsOffline()
     {
         // Arrange
