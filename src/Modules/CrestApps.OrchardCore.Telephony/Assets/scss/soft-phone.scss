@@ -1,5 +1,6 @@
 .telephony-soft-phone {
     --telephony-accent: #2f6fed;
+    --telephony-view-height: 18rem;
     position: fixed;
     right: 1.5rem;
     bottom: 1.5rem;
@@ -53,12 +54,19 @@
 
     &__title {
         font-weight: 600;
+        margin-right: auto;
+    }
+
+    &__header-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
     }
 
     &__status {
-        margin-left: auto;
-        font-size: 0.78rem;
-        opacity: 0.9;
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, rgba(255, 255, 255, 0.85));
     }
 
     &__icon-btn {
@@ -79,26 +87,48 @@
     }
 
     &__unavailable {
-        padding: 1.25rem 1rem;
-        text-align: center;
-        color: var(--bs-secondary-color, #6c757d);
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin: 0.85rem;
+        padding: 0.75rem 0.85rem;
+        font-size: 0.8rem;
 
         i {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: var(--bs-tertiary-color, #adb5bd);
+            flex: 0 0 auto;
+            margin-top: 0.1rem;
         }
 
         p {
             margin: 0;
-            font-size: 0.85rem;
+            text-align: left;
         }
     }
 
     &__history {
-        max-height: 18rem;
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
         overflow-y: auto;
         padding: 0.35rem 0.5rem 0.65rem;
+    }
+
+    &__view {
+    }
+
+    &__view[data-telephony-view="keypad"] {
+        max-height: min(32rem, calc(100vh - 8rem));
+        overflow-y: auto;
+    }
+
+    &__body {
+        min-height: var(--telephony-view-height);
+    }
+
+    &__extension-view {
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
+        overflow-y: auto;
+        padding: 0.75rem 0.85rem;
     }
 
     &__history-empty {
@@ -111,7 +141,7 @@
     &__history-item {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
+        gap: 0.5rem;
         width: 100%;
         border: none;
         background: transparent;
@@ -139,9 +169,17 @@
     }
 
     &__history-dir {
-        flex: 0 0 1.25rem;
+        flex: 0 0 1.15rem;
+        width: 1.15rem;
+        height: 1.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
         color: var(--bs-secondary-color, #6c757d);
-        text-align: center;
+        font-size: 0.8rem;
+        line-height: 1;
     }
 
     &__history-body {
@@ -201,13 +239,15 @@
         user-select: none;
     }
 
-    &--in-call &__toggle {
-        background-color: #d23f3f;
-        animation: telephony-soft-phone-pulse 1.4s ease-in-out infinite;
-    }
-
     &__display {
         padding: 0.85rem 0.85rem 0.35rem;
+    }
+
+    &__display-meta {
+        display: flex;
+        justify-content: flex-end;
+        min-height: 1rem;
+        margin-bottom: 0.35rem;
     }
 
     &__number {
@@ -224,19 +264,19 @@
             color: var(--bs-secondary-color, #6c757d);
             opacity: 1;
         }
-    }
 
-    &__peer {
-        min-height: 1rem;
-        margin-top: 0.35rem;
-        font-size: 0.8rem;
-        color: var(--bs-secondary-color, #6c757d);
-        text-align: center;
+        &:disabled {
+            background-color: var(--bs-secondary-bg, #e9ecef);
+            opacity: 1;
+        }
     }
 
     &__connect {
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
         padding: 1rem 0.85rem;
         text-align: center;
+        overflow-y: auto;
     }
 
     &__connect-text {
@@ -249,6 +289,159 @@
         margin: 0 0.85rem 0.5rem;
         padding: 0.4rem 0.6rem;
         font-size: 0.78rem;
+    }
+
+    &__active-calls {
+        margin: 0 0.85rem 0.6rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    &__active-calls-heading {
+        padding: 0.35rem 0.5rem;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__active-call {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 0.5rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+
+        &.is-current {
+            box-shadow: inset 0.2rem 0 0 var(--telephony-accent);
+        }
+    }
+
+    &__active-call-check {
+        margin: 0;
+    }
+
+    &__active-call-select {
+        min-width: 0;
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        border: none;
+        padding: 0;
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        text-align: left;
+    }
+
+    &__active-call-number {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__active-call-state {
+        flex: 0 0 auto;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.68rem;
+        white-space: nowrap;
+    }
+
+    &__transfer-panel {
+        margin: 0 0.85rem 0.6rem;
+        padding: 0.55rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.5rem;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+    }
+
+    &__transfer-title,
+    &__directory-heading {
+        margin-bottom: 0.35rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__transfer-input {
+        width: 100%;
+        padding: 0.4rem 0.5rem;
+        border: 1px solid var(--bs-border-color, #ced4da);
+        border-radius: 0.4rem;
+        background-color: var(--bs-body-bg, #fff);
+        color: var(--bs-body-color, #212529);
+    }
+
+    &__directory {
+        margin-top: 0.5rem;
+    }
+
+    &__directory-list {
+        max-height: 8rem;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.4rem;
+        background-color: var(--bs-body-bg, #fff);
+    }
+
+    &__directory-entry {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.35rem 0.45rem;
+        border: none;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        text-align: left;
+
+        &:first-child {
+            border-top: none;
+        }
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    &__directory-name {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__directory-destination {
+        flex: 0 0 auto;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.68rem;
+    }
+
+    &__directory-empty {
+        padding: 0.55rem;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.75rem;
+        text-align: center;
+    }
+
+    &__transfer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
     }
 
     &__keypad {
@@ -300,6 +493,10 @@
             background-color: #d23f3f;
         }
 
+        &--hangup-all {
+            background-color: #a52834;
+        }
+
         &--hold,
         &--resume,
         &--mute,
@@ -307,6 +504,29 @@
         &--transfer,
         &--merge {
             background-color: var(--telephony-accent);
+        }
+    }
+
+    &__view[data-telephony-view="keypad"],
+    &__history,
+    &__extension-view,
+    &__connect,
+    &__unavailable,
+    &__directory-list {
+        scrollbar-width: thin;
+        scrollbar-color: var(--bs-secondary-color, #6c757d) transparent;
+
+        &::-webkit-scrollbar {
+            width: 0.35rem;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: var(--bs-secondary-color, #6c757d);
+            border-radius: 999px;
         }
     }
 }
@@ -332,5 +552,154 @@
 
     100% {
         box-shadow: 0 0.25rem 0.75rem rgba(210, 63, 63, 0.5);
+    }
+}
+
+.telephony-incoming {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.45);
+    }
+
+    &__dialog {
+        position: relative;
+        width: min(26rem, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+        background-color: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.35);
+        padding: 1.25rem;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    &__pulse {
+        flex: 0 0 auto;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        background-color: #198754;
+        animation: telephony-soft-phone-pulse 1.4s ease-in-out infinite;
+    }
+
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+    }
+
+    &__caller {
+        font-size: 1.15rem;
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    &__queue {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    &__cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        max-height: 14rem;
+        overflow-y: auto;
+    }
+
+    &__cards-heading {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+    }
+
+    &__card {
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.6rem 0.7rem;
+        border: 1px solid #e3e6ea;
+        border-radius: 0.6rem;
+        background-color: #f8f9fa;
+    }
+
+    &__card-icon {
+        flex: 0 0 auto;
+        color: var(--telephony-accent, #2f6fed);
+        font-size: 1.1rem;
+    }
+
+    &__card-body {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__card-title {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    &__card-subtitle,
+    &__card-desc {
+        font-size: 0.8rem;
+        color: #6c757d;
+        word-break: break-word;
+    }
+
+    &__card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.35rem;
+    }
+
+    &__card-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+        font-size: 0.8rem;
+    }
+
+    &__card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        justify-content: center;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 0.5rem;
+
+        .telephony-incoming__btn {
+            flex: 1 1 0;
+        }
     }
 }

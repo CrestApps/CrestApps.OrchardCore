@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.Security;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

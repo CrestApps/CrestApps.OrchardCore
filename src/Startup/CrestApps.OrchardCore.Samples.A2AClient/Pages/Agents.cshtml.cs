@@ -135,7 +135,7 @@ public sealed class AgentsModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to communicate with the A2A agent at '{AgentUrl}'.", agentUrl);
+            _logger.LogError(ex, "Failed to communicate with the A2A agent.");
 
             return new JsonResult(new { error = $"An error occurred while communicating with the agent: {ex.Message}" });
         }

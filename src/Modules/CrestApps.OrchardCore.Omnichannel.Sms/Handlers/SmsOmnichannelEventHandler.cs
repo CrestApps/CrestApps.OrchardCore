@@ -43,7 +43,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIProfileManager _profileManager;
     private readonly ITemplateService _aiTemplateService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
-    private readonly ICatalog<SubjectFlowSettings> _flowSettingsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
     private readonly ISession _session;
@@ -68,7 +68,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="aiTemplateService">The ai template service.</param>
     /// <param name="channelEndpointsManager">The channel endpoints manager.</param>
-    /// <param name="flowSettingsCatalog">The subject flow settings catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="session">The session.</param>
@@ -87,7 +87,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIProfileManager profileManager,
         ITemplateService aiTemplateService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
-        ICatalog<SubjectFlowSettings> flowSettingsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
         IClock clock,
         ISession session,
@@ -106,7 +106,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _profileManager = profileManager;
         _aiTemplateService = aiTemplateService;
         _channelEndpointsManager = channelEndpointsManager;
-        _flowSettingsCatalog = flowSettingsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
         _clock = clock;
         _session = session;
@@ -423,34 +423,41 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (result.Result.Concluded)
                         {
-                            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-                            var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
-
-                            omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
-
-                            omnichannelActivity.Status = ActivityStatus.Completed;
-
-                            omnichannelActivity.CompletedUtc = clock.UtcNow;
-
-                            omnichannelActivity.DispositionId = result.Result.DispositionId;
-
-                            omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
-                            omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
-
-                            await store.UpdateAsync(omnichannelActivity);
-
-                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
-                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-                            var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
-
-                            await executor.ExecuteAsync(new SubjectActionExecutionContext
+                            if (flowSettings.RequireDisposition && string.IsNullOrEmpty(result.Result.DispositionId))
                             {
-                                Activity = omnichannelActivity,
-                                Contact = contact,
-                                Subject = subject,
-                                Disposition = dispositionObj,
-                            });
+                                _logger.LogWarning("The automated SMS conversation for Activity {ActivityId} reported concluded without a disposition, but its subject flow requires one. The activity is left open so the required-disposition policy is not bypassed; it will close through the existing no-response timeout or opt-out paths.", activity.ItemId.SanitizeLogValue());
+                            }
+                            else
+                            {
+                                var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+                                var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
+
+                                omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
+
+                                omnichannelActivity.Status = ActivityStatus.Completed;
+
+                                omnichannelActivity.CompletedUtc = clock.UtcNow;
+
+                                omnichannelActivity.DispositionId = result.Result.DispositionId;
+
+                                omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
+                                omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
+
+                                await store.UpdateAsync(omnichannelActivity);
+
+                                subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                                contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                                var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);
+
+                                await executor.ExecuteAsync(new SubjectActionExecutionContext
+                                {
+                                    Activity = omnichannelActivity,
+                                    Contact = contact,
+                                    Subject = subject,
+                                    Disposition = dispositionObj,
+                                });
+                            }
                         }
                     }
                 });
@@ -476,10 +483,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return null;
         }
 
-        var flowSettings = await _flowSettingsCatalog.GetAllAsync(cancellationToken);
-
-        return flowSettings.FirstOrDefault(settings =>
-            string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase));
+        return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType, cancellationToken);
     }
 
     private async Task ApplySmsOptOutAsync(

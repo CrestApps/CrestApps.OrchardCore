@@ -21,12 +21,12 @@ public sealed class LocalDncImportBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => ProcessEntriesAsync(serviceProvider, cancellationToken);
+        => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
 
     internal static async Task ProcessEntriesAsync(
         IServiceProvider serviceProvider,
-        CancellationToken cancellationToken,
-        string listId = null)
+        string listId = null,
+        CancellationToken cancellationToken = default)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();

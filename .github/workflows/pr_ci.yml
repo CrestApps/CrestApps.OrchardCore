@@ -20,6 +20,9 @@ jobs:
     name: Build & Test
     steps:
     - uses: actions/checkout@v6
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
     - uses: actions/setup-node@v6
       with:
         node-version: "15"
@@ -33,7 +36,7 @@ jobs:
       # treat warnings as errors could break anytime, without us changing the code. This prevents that. Treating them as
       # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
       run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
+        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 

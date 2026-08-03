@@ -472,3 +472,9 @@ src/docs/node_modules/
 src/docs/build/
 src/docs/.docusaurus/
 src/docs/.cache-loader/
+
+# Public API approval output written when a recorded surface no longer matches.
+*.received.txt
+
+# Playwright MCP planning scaffolding (not part of the shipped product).
+.playwright-mcp/

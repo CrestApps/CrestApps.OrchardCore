@@ -3,9 +3,17 @@ updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "daily"
-    # Disable version update PRs; only Dependabot security updates create PRs.
-    open-pull-requests-limit: 0
+      interval: "weekly"
+    # Version update PRs are enabled so patched versions arrive before an advisory is published.
+    # NuGetAudit fails the build on a known advisory, so a dependency left to drift becomes a hard
+    # stop rather than a warning. OrchardCore packages stay pinned via the ignore list below.
+    open-pull-requests-limit: 10
+    groups:
+      # One PR per weekly run for routine bumps keeps review load proportional to risk.
+      non-major-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
       # OrchardCore packages are pinned; never auto-update them.
       - dependency-name: "OrchardCore.*"
@@ -19,11 +27,22 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 0
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      non-major-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 0
+      interval: "weekly"
+    # Action versions are part of the supply chain: a stale action is an unpatched dependency that runs
+    # with repository credentials.
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"

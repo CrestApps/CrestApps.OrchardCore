@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -13,7 +14,6 @@ using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
 

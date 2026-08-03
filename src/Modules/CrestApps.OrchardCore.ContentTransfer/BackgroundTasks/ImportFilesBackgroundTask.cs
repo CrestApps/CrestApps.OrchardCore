@@ -28,9 +28,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
 
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => ProcessEntriesAsync(serviceProvider, cancellationToken);
+        => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
 
-    internal static async Task ProcessEntriesAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken, string entryId = null)
+    internal static async Task ProcessEntriesAsync(IServiceProvider serviceProvider, string entryId = null, CancellationToken cancellationToken = default)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();

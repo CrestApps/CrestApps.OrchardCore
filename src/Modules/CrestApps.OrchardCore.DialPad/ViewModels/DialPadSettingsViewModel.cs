@@ -55,6 +55,11 @@ public class DialPadSettingsViewModel
     public string UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the DialPad webhook signing secret used to validate inbound call-event webhooks.
+    /// </summary>
+    public string WebhookSigningSecret { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether an API key has already been saved.
     /// </summary>
     [BindNever]
@@ -65,4 +70,10 @@ public class DialPadSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasClientSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a webhook signing secret has already been saved.
+    /// </summary>
+    [BindNever]
+    public bool HasWebhookSigningSecret { get; set; }
 }
