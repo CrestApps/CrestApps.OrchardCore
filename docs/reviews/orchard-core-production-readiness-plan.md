@@ -651,11 +651,13 @@ Because there is no capability gap and no beneficial targeted override to add, n
 
 ### OC-039 — Document the single-active-process telephony constraint at the point of use
 
-- **Priority:** Low · **Status:** Not Started · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** OC-033
+- **Priority:** Low · **Status:** Completed · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** OC-033
 
 **Problem.** The single-active-process constraint for ARI ownership is a deployment-critical limitation that is not surfaced in `docs/telephony/asterisk.md` or in the module README.
 
 **Recommended solution.** Document it in the operator docs and reference it from the topology health check message.
+
+**Resolution.** Added a **"Single active process per ARI application"** subsection to `docs/telephony/asterisk.md`, placed directly after the tenant-scoped ARI listener description. It explains that Asterisk delivers each Stasis event to exactly one ARI application consumer, that the ownership guard is a process-wide (node-local) registry that cannot arbitrate a cross-node claim, and that real-time voice is therefore supported only on a single active application process — an **operator responsibility**, not something the platform detects. The write is precise about enforcement: the only production-certified topology is `single-node-distributed` (exactly one application node) and `single-region-multi-node` is not production-certified, but `ContactCenterTopologyEvaluator`/`ContactCenterTopologyHealthCheck` only validate a declared profile's *infrastructure prerequisites* (production host declares a profile, required database provider, required Redis distributed-lock/SignalR backplane features) — they do **not** observe the number of running application nodes, so two hosts can each declare the single-node profile and both report healthy. The guidance directs operators to guarantee single-process operation through deployment rather than rely on the health check to catch a second node. A `<remarks>` block on `AsteriskAriApplicationOwnershipRegistry` mirrors this and points to the operator guidance and the planned shared-lease path to multi-node (OC-033). No code behavior changed. (An initial draft overstated the health check as refusing admission on a multi-node deployment; independent review flagged that node count is never observed, and the wording was corrected to describe operator-enforced single-process operation.)
 
 ---
 
