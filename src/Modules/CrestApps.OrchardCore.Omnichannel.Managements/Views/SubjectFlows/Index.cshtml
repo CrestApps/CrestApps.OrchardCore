@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
@@ -73,7 +74,9 @@ else
                             @if (Model.CanEditContentTypes)
                             {
                                 <a class="btn btn-sm btn-secondary"
-                                   href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.ContentTypes", id = subject.ContentTypeName })">@T["Edit content type"]</a>
+                                   href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.ContentTypes", id = subject.ContentTypeName })">@T["Edit Content Type"]</a>
+                                <a class="btn btn-sm btn-secondary"
+                                   href="@Url.Action("EditTypePart", "Admin", new { area = "OrchardCore.ContentTypes", id = subject.ContentTypeName, name = OmnichannelConstants.ContentParts.OmnichannelSubject })">@T["Edit Settings"]</a>
                             }
                             <a class="btn btn-sm btn-primary"
                                asp-route-action="ManageActions"

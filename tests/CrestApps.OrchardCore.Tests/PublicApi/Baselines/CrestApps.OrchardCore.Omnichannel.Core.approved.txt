@@ -206,6 +206,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class ActivityDispositionRequest
     {
         public ActivityDispositionRequest() { }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public string ActorDisplayName { get; set; }
@@ -286,6 +287,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public AutomatedActivityCompletionRequest() { }
         public string AISessionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public string ActorDisplayName { get; set; }
@@ -689,6 +691,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class SubjectActionExecutionContext
     {
         public SubjectActionExecutionContext() { }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public OrchardCore.ContentManagement.ContentItem Contact { get; set; }

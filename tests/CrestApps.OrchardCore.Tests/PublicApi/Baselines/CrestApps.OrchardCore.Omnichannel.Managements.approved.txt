@@ -143,7 +143,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         [Microsoft.AspNetCore.Mvc.ActionName("Complete")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/complete/{id}", null)]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create(string contentItemId) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]

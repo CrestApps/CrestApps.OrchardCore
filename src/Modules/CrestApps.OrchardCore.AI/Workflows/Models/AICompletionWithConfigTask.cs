@@ -1,14 +1,10 @@
-using CrestApps.Core.AI;
-using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Resilience;
 using Fluid;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Liquid;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -18,14 +14,16 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 /// <summary>
 /// A workflow task activity that performs AI completion using direct configuration parameters.
+/// The full set of parameters is captured on an embedded <see cref="ChatInteraction"/> so that every
+/// enabled feature can contribute its own configuration through dedicated display drivers, mirroring
+/// the Chat Interactions experience.
 /// </summary>
 public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithConfigTask>
 {
-    private readonly IAIClientFactory _aIClientFactory;
-    private readonly IAIToolsService _aIToolsService;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
+    private readonly IAICompletionService _completionService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -33,46 +31,38 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionWithConfigTask"/> class.
     /// </summary>
-    /// <param name="aIClientFactory">The AI client factory for creating chat clients.</param>
-    /// <param name="aIToolsService">The AI tools service for resolving tool definitions.</param>
+    /// <param name="completionContextBuilder">The completion context builder that populates the AI completion context from the configured interaction.</param>
+    /// <param name="completionService">The AI completion service used to invoke the model.</param>
     /// <param name="deploymentManager">The deployment manager for resolving deployments.</param>
     /// <param name="liquidTemplateManager">The Liquid template manager for rendering prompt templates.</param>
-    /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
-    /// <param name="defaultOptions">The default AI options.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
     public AICompletionWithConfigTask(
-        IAIClientFactory aIClientFactory,
-        IAIToolsService aIToolsService,
+        IAICompletionContextBuilder completionContextBuilder,
+        IAICompletionService completionService,
         IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
-        IServiceProvider serviceProvider,
-        IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AICompletionWithConfigTask> logger,
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
-        _aIClientFactory = aIClientFactory;
-        _aIToolsService = aIToolsService;
+        _completionContextBuilder = completionContextBuilder;
+        _completionService = completionService;
         _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
-        _defaultOptions = defaultOptions.Value;
-        ServiceProvider = serviceProvider;
         _logger = logger;
         S = stringLocalizer;
     }
-
-    internal IServiceProvider ServiceProvider { get; }
 
     public override LocalizedString DisplayText => S["AI Completion using Direct Config"];
 
     public override LocalizedString Category => S["Artificial Intelligence"];
 
     /// <summary>
-    /// Gets or sets the deployment name used for the AI completion.
+    /// Gets or sets the interaction that carries the full set of AI parameters used to invoke the model.
     /// </summary>
-    public string DeploymentName
+    public ChatInteraction Interaction
     {
-        get => GetProperty<string>();
+        get => GetProperty(() => new ChatInteraction());
         set => SetProperty(value);
     }
 
@@ -86,74 +76,11 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
     }
 
     /// <summary>
-    /// Gets or sets the system message sent to the AI model.
-    /// </summary>
-    public string SystemMessage
-    {
-        get => GetProperty<string>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the frequency penalty for the AI completion.
-    /// </summary>
-    public float? FrequencyPenalty
-    {
-        get => GetProperty<float?>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the presence penalty for the AI completion.
-    /// </summary>
-    public float? PresencePenalty
-    {
-        get => GetProperty<float?>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the temperature for the AI completion.
-    /// </summary>
-    public float? Temperature
-    {
-        get => GetProperty<float?>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the top-P (nucleus sampling) value for the AI completion.
-    /// </summary>
-    public float? TopP
-    {
-        get => GetProperty<float?>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the maximum number of tokens for the AI completion output.
-    /// </summary>
-    public int? MaxTokens
-    {
-        get => GetProperty<int?>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
     /// Gets or sets the property name used to store the AI response in the workflow output.
     /// </summary>
     public string ResultPropertyName
     {
         get => GetProperty<string>();
-        set => SetProperty(value);
-    }
-
-    /// <summary>
-    /// Gets or sets the names of the AI tools to enable for this task.
-    /// </summary>
-    public string[] ToolNames
-    {
-        get => GetProperty<string[]>();
         set => SetProperty(value);
     }
 
@@ -175,63 +102,22 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
         try
         {
+            var interaction = Interaction;
+
+            var context = await _completionContextBuilder.BuildAsync(interaction);
+
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentPurpose.Chat,
-                deploymentName: DeploymentName);
+                deploymentName: context.ChatDeploymentName);
 
             if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
             {
-                _logger.LogWarning("Unable to resolve the selected chat deployment with a valid connection. Deployment: '{DeploymentName}'.", DeploymentName);
+                _logger.LogWarning("Unable to resolve the selected chat deployment with a valid connection. Deployment: '{DeploymentName}'.", context.ChatDeploymentName);
+
                 return Outcomes("Failed");
             }
 
-            var client = await _aIClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
-
-            var chatOptions = new ChatOptions
-            {
-                FrequencyPenalty = FrequencyPenalty,
-                PresencePenalty = PresencePenalty,
-                Temperature = Temperature,
-                TopP = TopP,
-                MaxOutputTokens = MaxTokens,
-            };
-
-            if (ToolNames is not null && ToolNames.Length > 0)
-            {
-                chatOptions.Tools = [];
-                chatOptions.ToolMode = ChatToolMode.Auto;
-
-                client = client
-                    .AsBuilder()
-                    .UseDefaultResilience()
-                    .UseFunctionInvocation(ServiceProvider.GetRequiredService<ILoggerFactory>(), c =>
-                    {
-                        c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
-                    }).Build(ServiceProvider);
-
-                foreach (var toolName in ToolNames)
-                {
-                    var tool = await _aIToolsService.GetByNameAsync(toolName);
-
-                    if (tool is null)
-                    {
-                        continue;
-                    }
-
-                    chatOptions.Tools.Add(tool);
-                }
-            }
-
-            var messages = new List<ChatMessage>();
-
-            if (!string.IsNullOrWhiteSpace(SystemMessage))
-            {
-                messages.Add(new ChatMessage(ChatRole.System, SystemMessage.Trim()));
-            }
-
-            messages.Add(new ChatMessage(ChatRole.User, userPrompt.Trim()));
-
-            var completion = await client.GetResponseAsync(messages, chatOptions);
+            var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();
 

@@ -110,7 +110,7 @@ An **Activity** is a task to be completed for a contact.
 - **Manual activity**: A user completes the activity in the UI, adds notes, and selects a disposition.
 - **Automated activity**: An AI agent completes the activity through the configured channel.
 
-When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date before submitting.
+When an activity is completed, the user selects a disposition and is shown a preview of the subject actions that will execute. Actions that create follow-up activities allow the user to adjust the schedule date and, optionally, enter **Preparation notes** for each result. A preparation note becomes the follow-up activity's instructions, giving the next agent context before they start the work.
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
@@ -175,7 +175,7 @@ Omnichannel contact imports and exports integrate with **Content Transfer**.
 - imports can normalize national-format phone numbers to E.164 by using the selected lead country before duplicate checks, before DNC registry lookups run, and before contact-method storage runs
 - channel endpoints now normalize valid phone numbers to Orchard Core's international `+<country code><number>` format before saving, so SMS and phone campaigns compare the same canonical value
 - contact publish and update operations now keep the omnichannel contact indexes in sync automatically
-Use **Settings** -> **Import Content Settings** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
+Use **Settings** -> **Content Import** to enforce DNC checks globally for imports, and use **Settings** -> **DNC Registries** to configure provider access for registries such as **USA FTC Registry** and **Canada LNNTE-DNCL Registry**. See [DNC Registry](../modules/dnc-registry) for setup details, credential requirements, and extension guidance.
 
 When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
 
@@ -210,7 +210,7 @@ Campaign groups let reporting users combine multiple related campaigns without c
 Subject flow configuration lives on the `OmnichannelSubjectPart` content-type part settings, so you edit it from the content type editor. The `Interaction Center` → `Management` → `Subject Flows` list gives you a read-only overview and shortcuts.
 
 1. Go to `Interaction Center` → `Management` → `Subject Flows` and review the content types that attach `OmnichannelSubjectPart`. Each subject shows a badge for its configured direction (**Outbound** or **Inbound**). Automated subjects additionally show an **Automated** badge and the channel being used.
-2. To change the configuration, click **Edit content type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject.
+2. To change the configuration, click **Edit Content Type** (shown when you have permission to edit content type definitions). This opens the Orchard Core content type editor for the subject. Alternatively, click **Edit Settings** to jump straight to the `OmnichannelSubjectPart` settings editor. On that part settings screen the Azure AI Search and Elasticsearch index settings that Orchard Core injects into every part editor are hidden, because indexing for omnichannel subjects is managed automatically.
 3. In the `OmnichannelSubjectPart` settings, select the direction. New subjects default to **Outbound**.
 4. For **Inbound** subjects, select the interaction type and channel; automated inbound subjects also require a channel endpoint. For **Outbound** subjects these fields are hidden because they are resolved when inventory is loaded.
 5. Optionally set the default campaign, which is applied to activities created outside an activity batch and used as the batch fallback. Leave **Require a disposition** enabled unless the subject is a fire-and-forget notification with no outcome to record.
@@ -281,7 +281,7 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 2. Review the contact and subject details.
 3. Select a disposition from the dropdown.
 4. A preview appears showing what actions will execute (for example, `Try Again` with a schedule date or `New Activity` targeting another subject).
-5. Adjust the schedule dates if needed.
+5. Adjust the schedule dates if needed, and optionally add **Preparation notes** for any result. A note is stored as the instructions of the follow-up activity it generates.
 6. Click **Complete** to save and execute the subject actions.
 
 ### Scheduled activities list

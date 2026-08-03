@@ -30,7 +30,7 @@ internal sealed class DncRegistryAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Settings"], settings => settings
-                .Add(S["Import Content"], S["Import Content"].PrefixPosition(), importContent => importContent
+                .Add(S["Content Import"], S["Content Import"].PrefixPosition(), importContent => importContent
                     .AddClass("import-content-settings")
                     .Id("importContentSettings")
                     .Action("Index", "Admin", _importContentRouteValues)

@@ -243,6 +243,77 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.True(part.DoNotCall);
     }
 
+    [Theory]
+    [InlineData("TryAgain")]
+    [InlineData("NewActivity")]
+    public async Task ExecuteAsync_WithPreparationNotes_SetsFollowUpInstructions(string actionType)
+    {
+        // Arrange
+        var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.ActionPreparationNotes = new Dictionary<string, string>
+        {
+            [action.ItemId] = "  Call back after lunch.  ",
+        };
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal("Call back after lunch.", savedActivity.Instructions);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPreparationNotes_TryAgainKeepsOriginalInstructions()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.Instructions = "Original instructions.";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Equal("Original instructions.", savedActivity.Instructions);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPreparationNotes_NewActivityHasNoInstructions()
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.NewActivity, SubjectActionOwnerAssignmentType.SameOwner);
+        var session = new Mock<ISession>();
+        OmnichannelActivity savedActivity = null;
+
+        SetupSave(session, activity => savedActivity = activity);
+
+        var executor = CreateExecutor(action, session);
+        var context = CreateContext();
+        context.Activity.Instructions = "Original instructions.";
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(savedActivity);
+        Assert.Null(savedActivity.Instructions);
+    }
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
         Mock<ISession> session,

@@ -129,7 +129,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             ContactResolvedById = activity.ContactResolvedById,
             ContactResolvedByUsername = activity.ContactResolvedByUsername,
             CampaignId = activity.CampaignId,
-            Instructions = activity.Instructions,
+            Instructions = ResolvePreparationNotes(action, context, activity.Instructions),
             Attempts = activity.Attempts + 1,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
@@ -187,7 +187,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             ContactResolvedById = activity.ContactResolvedById,
             ContactResolvedByUsername = activity.ContactResolvedByUsername,
             CampaignId = activity.CampaignId,
-            Instructions = null,
+            Instructions = ResolvePreparationNotes(action, context, null),
             Attempts = 1,
             CreatedById = activity.CompletedById,
             CreatedByUsername = activity.CompletedByUsername,
@@ -295,6 +295,20 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         return _clock.UtcNow.AddDays(1);
+    }
+
+    private static string ResolvePreparationNotes(
+        SubjectAction action,
+        SubjectActionExecutionContext context,
+        string fallback)
+    {
+        if (context.ActionPreparationNotes?.TryGetValue(action.ItemId, out var note) == true &&
+            !string.IsNullOrWhiteSpace(note))
+        {
+            return note.Trim();
+        }
+
+        return fallback;
     }
 
     private async Task<bool> TryAssignOwnerAsync(

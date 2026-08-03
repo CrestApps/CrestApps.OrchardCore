@@ -30,7 +30,7 @@ The module splits settings by responsibility:
 
 | Location | Purpose |
 | --- | --- |
-| **Settings** -> **Import Content Settings** | Enforce do-not-call checks globally for imports and choose registries that must always run |
+| **Settings** -> **Content Import** | Enforce do-not-call checks globally for imports and choose registries that must always run |
 | **Settings** -> **DNC Registries** -> **USA FTC Registry** | Configure USA FTC API access |
 | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** | Configure Canada DNCL API access |
 | **Interaction Center** -> **Local DNC Registry** | Manage locally uploaded DNC lists |

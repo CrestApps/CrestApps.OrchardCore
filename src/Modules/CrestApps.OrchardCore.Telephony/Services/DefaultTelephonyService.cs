@@ -31,6 +31,7 @@ public sealed class DefaultTelephonyService : ITelephonyService
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

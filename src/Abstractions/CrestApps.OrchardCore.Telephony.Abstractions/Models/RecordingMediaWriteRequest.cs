@@ -27,6 +27,7 @@ public sealed class RecordingMediaWriteRequest
     public string Format { get; set; }
 
     /// <summary>
+    /// <summary>
     /// Gets or sets the readable stream of raw, unencrypted recording bytes to persist. The store reads the
     /// stream to completion and encrypts it at rest without buffering the whole recording in memory. The caller
     /// retains ownership of the stream and is responsible for disposing it.
