@@ -51,7 +51,7 @@ public sealed class AICompletionWithConfigToolInstancesDisplayDriver : DisplayDr
                 })
                 .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-        }).Location("Content:4#Capabilities;1");
+        }).Location("Content:4#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

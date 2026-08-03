@@ -2,36 +2,32 @@
 
 @model AICompletionWithConfigDataSourceViewModel
 
-<div class="mb-3">
-    <label asp-for="DataSourceId" class="form-label">
-        @T["Data source"]
-        <span class="info-icon text-muted" data-bs-toggle="tooltip" data-bs-placement="top" title="@T["The data-source where your data is stored."]" aria-label="@T["Information about data source parameter"]">
-            <i class="fa-solid fa-circle-question"></i>
-        </span>
-    </label>
-    <select asp-for="DataSourceId" class="form-select">
-        <option value="">@T["No data source"]</option>
-        @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
-        {
-            @if (source.ItemId == Model.DataSourceId)
+<div class="ocat-wrapper">
+    <label asp-for="DataSourceId" class="ocat-label">@T["Data source"]</label>
+    <div class="ocat-end">
+        <select asp-for="DataSourceId" class="form-select">
+            <option value="">@T["No data source"]</option>
+            @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
             {
-                <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
-                continue;
-            }
+                @if (source.ItemId == Model.DataSourceId)
+                {
+                    <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
+                    continue;
+                }
 
-            <option value="@source.ItemId">@source.DisplayText</option>
-        }
-    </select>
+                <option value="@source.ItemId">@source.DisplayText</option>
+            }
+        </select>
+        <span class="hint">@T["The data-source where your data is stored."]</span>
+    </div>
 </div>
 
-<div class="mb-3 d-none data-source-filter-dependent">
-    <label asp-for="Filter" class="form-label">
-        @T["Filter"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Optional filter expression to query a subset of indexed data. The filter format depends on the search provider. Leave blank to search all data."]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <input type="text" class="form-control" asp-for="Filter">
+<div class="ocat-wrapper d-none data-source-filter-dependent">
+    <label asp-for="Filter" class="ocat-label">@T["Filter"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="Filter">
+        <span class="hint">@T["Optional filter expression to query a subset of indexed data. The filter format depends on the search provider. Leave blank to search all data."]</span>
+    </div>
 </div>
 
 <script>

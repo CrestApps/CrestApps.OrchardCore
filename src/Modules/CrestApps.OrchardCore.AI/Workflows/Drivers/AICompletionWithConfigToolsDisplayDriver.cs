@@ -54,7 +54,7 @@ public sealed class AICompletionWithConfigToolsDisplayDriver : DisplayDriver<IAc
                     Description = entry.Value.Description,
                     IsSelected = interaction.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Content:1#Capabilities;1");
+        }).Location("Content:1#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

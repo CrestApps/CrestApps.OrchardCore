@@ -117,7 +117,7 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Knowledge;3");
+        }).Location("Content:5#Knowledge;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

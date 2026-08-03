@@ -54,7 +54,7 @@ public sealed class AICompletionWithConfigA2AConnectionsDisplayDriver : DisplayD
                     IsSelected = interaction.A2AConnectionIds?.Contains(entry.ItemId) ?? false,
                 }).OrderBy(entry => entry.DisplayText)
                 .ToArray();
-        }).Location("Content:3#Capabilities;1");
+        }).Location("Content:3#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

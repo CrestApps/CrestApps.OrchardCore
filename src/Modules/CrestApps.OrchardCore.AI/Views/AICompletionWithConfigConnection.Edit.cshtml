@@ -8,7 +8,6 @@
         <label asp-for="OrchestratorName" class="ocat-label">@T["Orchestrator"]</label>
         <div class="ocat-end">
             <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
-                <option value="">@T["Default"]</option>
             </select>
             <span class="hint">@T["The orchestrator controls how tools are selected and how the AI execution loop is managed."]</span>
         </div>

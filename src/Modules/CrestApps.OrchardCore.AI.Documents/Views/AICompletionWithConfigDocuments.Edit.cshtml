@@ -12,44 +12,54 @@
 
 @if (!Model.HasIndexProfile)
 {
-    <div class="alert alert-warning" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i>
-        <strong>@T["Index not configured"]</strong>
-        <p class="mb-0">
-            @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
-        </p>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Index not configured"]</strong>
+                <p class="mb-0">
+                    @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
+                </p>
+            </div>
+        </div>
     </div>
 }
 else if (!Model.HasVectorSearchService)
 {
-    <div class="alert alert-warning" role="alert">
-        <i class="fa-solid fa-triangle-exclamation me-2"></i>
-        <strong>@T["Vector Search Service Not Available"]</strong>
-        <p class="mb-0">
-            @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
-        </p>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Vector Search Service Not Available"]</strong>
+                <p class="mb-0">
+                    @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
+                </p>
+            </div>
+        </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="DocumentRetrievalMode" class="form-label">@T["Document retrieval mode"]</label>
-    <div>
+<div class="ocat-wrapper">
+    <label asp-for="DocumentRetrievalMode" class="ocat-label">@T["Document retrieval mode"]</label>
+    <div class="ocat-end">
         <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select">
             <option value="">@T["Use site default"]</option>
         </select>
-        <div class="form-text">@T["Overrides the site default when this activity searches uploaded document knowledge."]</div>
+        <span class="hint">@T["Overrides the site default when this activity searches uploaded document knowledge."]</span>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="TopN" class="form-label">@T["Retrieved documents"]</label>
-    <input asp-for="TopN" type="number" min="1" class="form-control" />
-    <div class="form-text">@T["The maximum number of matching document chunks to include in the AI context."]</div>
+<div class="ocat-wrapper">
+    <label asp-for="TopN" class="ocat-label">@T["Retrieved documents"]</label>
+    <div class="ocat-end">
+        <input asp-for="TopN" type="number" min="1" class="form-control" />
+        <span class="hint">@T["The maximum number of matching document chunks to include in the AI context."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label class="form-label">@T["Attached files"]</label>
-    <div class="border rounded p-3 bg-light">
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Attached files"]</label>
+    <div class="ocat-end border rounded p-3 bg-light">
         <!-- Drag and drop zone -->
         <div id="activityDropZone-@uniqueId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
             <div class="drop-zone-content d-flex flex-column align-items-center" id="activityDropZoneContent-@uniqueId">
