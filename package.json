@@ -13,7 +13,7 @@
     "cleanup": "node .scripts/cleanup.js"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^8.0.1",
     "@babel/preset-env": "^7.29.7",
     "@babel/preset-flow": "7.27.1",
     "child_process": "^1.0.2",
