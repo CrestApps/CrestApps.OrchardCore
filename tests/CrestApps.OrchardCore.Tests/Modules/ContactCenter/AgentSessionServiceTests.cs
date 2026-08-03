@@ -2,6 +2,8 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -296,6 +298,33 @@ public sealed class AgentSessionServiceTests
     }
 
     [Fact]
+    public async Task ExpireStaleAsync_RevokesSoftPhoneCredentials()
+    {
+        // Arrange
+        var stale = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.ListStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stale);
+
+        var revoker = new Mock<ISoftPhoneCredentialRevoker>();
+        revoker.SetupGet(r => r.ProviderName).Returns("test");
+
+        var service = CreateService(
+            sessionManager,
+            new Mock<IAgentProfileManager>(),
+            credentialRevokers: [revoker.Object]);
+
+        // Act
+        var count = await service.ExpireStaleAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, count);
+        revoker.Verify(
+            r => r.RevokeForUserAsync("u1", "session-expired", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ExpireStaleAsync_WhenHeartbeatRefreshed_SkipsSession()
     {
         // Arrange
@@ -416,7 +445,8 @@ public sealed class AgentSessionServiceTests
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentPresenceManager> presenceManager = null,
         Mock<IDistributedLock> distributedLock = null,
-        IContactCenterScopeExecutor scopeExecutor = null)
+        IContactCenterScopeExecutor scopeExecutor = null,
+        IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -427,7 +457,9 @@ public sealed class AgentSessionServiceTests
             (presenceManager ?? new Mock<IAgentPresenceManager>()).Object,
             (distributedLock ?? CreateDistributedLock()).Object,
             scopeExecutor ?? new StubScopeExecutor(sessionManager.Object),
-            clock.Object);
+            clock.Object,
+            credentialRevokers ?? [],
+            NullLogger<AgentSessionService>.Instance);
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock()

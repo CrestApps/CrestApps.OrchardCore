@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 
@@ -14,9 +14,10 @@ public sealed class AgentLogoutCredentialRevocationTests
         var logger = new TestLogger();
 
         // Act
-        await AvailabilityStartup.RevokeCredentialsOnSignOutAsync(
+        await SoftPhoneCredentialRevocation.RevokeForUserAsync(
             [revoker],
             "user-1",
+            "signed-out",
             logger,
             TestContext.Current.CancellationToken);
 
@@ -34,9 +35,10 @@ public sealed class AgentLogoutCredentialRevocationTests
         var logger = new TestLogger();
 
         // Act & Assert — must not throw
-        await AvailabilityStartup.RevokeCredentialsOnSignOutAsync(
+        await SoftPhoneCredentialRevocation.RevokeForUserAsync(
             [revoker],
             "user-1",
+            "signed-out",
             logger,
             TestContext.Current.CancellationToken);
     }
@@ -49,9 +51,10 @@ public sealed class AgentLogoutCredentialRevocationTests
         var logger = new TestLogger();
 
         // Act
-        await AvailabilityStartup.RevokeCredentialsOnSignOutAsync(
+        await SoftPhoneCredentialRevocation.RevokeForUserAsync(
             [revoker],
             "user-1",
+            "signed-out",
             logger,
             TestContext.Current.CancellationToken);
 
@@ -68,9 +71,10 @@ public sealed class AgentLogoutCredentialRevocationTests
         var logger = new TestLogger();
 
         // Act
-        await AvailabilityStartup.RevokeCredentialsOnSignOutAsync(
+        await SoftPhoneCredentialRevocation.RevokeForUserAsync(
             [failing, succeeding],
             "user-1",
+            "signed-out",
             logger,
             TestContext.Current.CancellationToken);
 
@@ -85,9 +89,10 @@ public sealed class AgentLogoutCredentialRevocationTests
         var logger = new TestLogger();
 
         // Act & Assert — must not throw
-        await AvailabilityStartup.RevokeCredentialsOnSignOutAsync(
+        await SoftPhoneCredentialRevocation.RevokeForUserAsync(
             [],
             "user-1",
+            "signed-out",
             logger,
             TestContext.Current.CancellationToken);
     }

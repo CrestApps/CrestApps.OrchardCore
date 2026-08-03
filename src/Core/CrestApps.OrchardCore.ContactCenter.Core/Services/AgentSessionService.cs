@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -27,6 +29,8 @@ public sealed class AgentSessionService : IAgentSessionService
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
+    private readonly IEnumerable<ISoftPhoneCredentialRevoker> _credentialRevokers;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentSessionService"/> class.
@@ -37,13 +41,17 @@ public sealed class AgentSessionService : IAgentSessionService
     /// <param name="distributedLock">The distributed lock used to serialize per-user session writes.</param>
     /// <param name="scopeExecutor">The scope executor used to commit heartbeat stamps in their own unit of work.</param>
     /// <param name="clock">The clock used to stamp session activity.</param>
+    /// <param name="credentialRevokers">The soft-phone credential revokers invoked when an abandoned session is cleaned up.</param>
+    /// <param name="logger">The logger used to record stale-session cleanup diagnostics.</param>
     public AgentSessionService(
         IAgentSessionManager sessionManager,
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock)
+        IClock clock,
+        IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers,
+        ILogger<AgentSessionService> logger)
     {
         _sessionManager = sessionManager;
         _agentManager = agentManager;
@@ -51,6 +59,8 @@ public sealed class AgentSessionService : IAgentSessionService
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
         _clock = clock;
+        _credentialRevokers = credentialRevokers;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -304,6 +314,11 @@ public sealed class AgentSessionService : IAgentSessionService
             {
                 await _presenceManager.SignOutAsync(session.UserId, cancellationToken);
             }
+
+            // A session can reach this cleanup path purely by cookie expiry, which never raises a sign-out and so
+            // never revokes the agent's browser soft-phone credentials. Revoke them here so the durable backstop
+            // tears down the same credentials the interactive sign-out flow would have.
+            await SoftPhoneCredentialRevocation.RevokeForUserAsync(_credentialRevokers, session.UserId, "session-expired", _logger, cancellationToken);
 
             await _sessionManager.DeleteAsync(session, cancellationToken);
             count++;
