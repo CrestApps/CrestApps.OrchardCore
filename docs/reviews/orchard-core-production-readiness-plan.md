@@ -227,13 +227,17 @@ Because there is no capability gap and no beneficial targeted override to add, n
 
 ### OC-010 — No setup/bootstrap recipe for a 24-feature module set
 
-- **Priority:** Low (Enhancement) · **Status:** Not Started · **Category:** Recipes · **Effort:** M · **Risk:** Low · **Dependencies:** Follows OC-008
+- **Priority:** Low (Enhancement) · **Status:** Completed · **Category:** Recipes · **Effort:** M · **Risk:** Low · **Dependencies:** Follows OC-008
 
 **Problem.** The only `.recipe.json` in scope is `Migrations/agent-state-reason-codes.recipe.json`. There is no module-level recipe enabling a coherent feature set with seed configuration.
 
 **Why it matters.** First-run experience is a ~20-step manual checklist across 4 modules before a single call can route. All seven recipe steps needed already exist and are tested — they are simply not composed.
 
 **Recommended solution.** Ship "Contact Center — Inbound Voice" and "Contact Center — Outbound Dialer" recipes with a `feature` step plus the existing config steps and starter data.
+
+**Resolution.** Shipped two harvestable recipes in `src/Modules/CrestApps.OrchardCore.ContactCenter/Recipes/` — `contact-center-asterisk-ga-core.recipe.json` and `contact-center-dialpad-ga-core.recipe.json` — each with a `feature` step that enables, in one step, exactly the feature set of the matching authoritative support-matrix tenant profile (`ga-core-asterisk` / `ga-core-dialpad`). Because the module uses `OrchardCore.Module.Targets`, the `Recipes/` folder is embedded and harvested by `OrchardCore.Recipes`, so both appear under **Configuration → Recipes** and run on demand; Orchard Core resolves feature dependencies on enable. A ledger-bound test (`ContactCenterSetupRecipeTests`, 7 cases, all green) asserts each recipe is well-formed, references only registered step names, enables *exactly* its profile's feature set from `support-matrix.v1.json` (set equality, so a recipe cannot drift from the matrix or ship an unlisted combination), and that every supported tenant profile has a matching recipe.
+
+**Deviation from the recommendation (documented).** The recommended "Inbound Voice" / "Outbound Dialer" split does not map to a supported combination. The authoritative `support-matrix.v1.json` defines the certified sets as *provider* bundles (`ga-core-asterisk`, `ga-core-dialpad`), and each already includes both inbound voice and preview/manual dialing; there is no certified inbound-only or outbound-only profile, and the matrix's `prohibitedCombinations` explicitly forbids "unlisted feature, provider, database, or topology combinations." Shipping the literal split would therefore have shipped two unsupported recipes. Aligning the recipes to the two certified provider profiles delivers the same first-run value (collapsing the multi-module enablement checklist into one click) while staying inside the support envelope. Seed *starter data* (queues, skills, entry points, dialer profiles) was intentionally left out of the recipes: those entities reference environment-specific resources — a configured provider, its channel endpoints, and campaigns — that cannot be fixed in a shipped recipe, and the one environment-agnostic seed that already existed (agent state reason codes) is seeded at migration time. The existing per-entity recipe steps remain available for operators to compose their own configuration recipes, as documented in the deployment guide.
 
 ---
 
