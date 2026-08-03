@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Build, Test, Deploy
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         # The migration additive-only gate checks never-released justifications against stable release tags.
         fetch-depth: 0
@@ -27,11 +27,11 @@ jobs:
         Write-Output "Commits found in the last 24 hours: $hasCommitFromLastDay."
         $shouldPublish = ($hasCommitFromLastDay -and '${{ github.event_name }}' -eq 'schedule') -or ('${{ github.event_name }}' -eq 'workflow_dispatch')
         "should-publish=$($shouldPublish ? 'true' : 'false')" >> $Env:GITHUB_OUTPUT
-    - uses: actions/setup-node@v6
+    - uses: actions/setup-node@v7
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v5
+    - uses: actions/setup-dotnet@v6
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         dotnet-version: |

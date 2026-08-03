@@ -19,14 +19,14 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     name: Build & Test
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         # The migration additive-only gate checks never-released justifications against stable release tags.
         fetch-depth: 0
-    - uses: actions/setup-node@v6
+    - uses: actions/setup-node@v7
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v5
+    - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
           10.0.x
