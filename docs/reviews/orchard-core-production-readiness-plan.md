@@ -735,9 +735,11 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-047 — Reduce startup/type-count churn in the abstractions
 
-- **Priority:** Low · **Status:** Not Started · **Category:** API surface · **Effort:** M · **Risk:** Low · **Dependencies:** OC-013
+- **Priority:** Low · **Status:** Completed · **Category:** API surface · **Effort:** M · **Risk:** Low · **Dependencies:** OC-013
 
 Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep each navigable, alongside the public/internal split from OC-013.
+
+**Resolution:** `ContactCenterConstants` is now a `public static partial class` split across seven domain-scoped files in `CrestApps.OrchardCore.ContactCenter.Abstractions`: `ContactCenterConstants.cs` (class summary, `SystemActor`, `AggregateTypes`, `Components`), `.Features.cs`, `.HealthChecks.cs`, `.Recording.cs` (recording metadata + governance/erasure deny/reason groups), `.CallControl.cs` (command/transfer/conference/attended-transfer/telephony metadata), `.Events.cs`, and `.Settings.cs`. Because partial classes merge to identical metadata, the public API is byte-for-byte unchanged — all 15 nested groups and 120 constants are preserved, `PublicApiApprovalTests` passes with no baseline change, no consumer edits were required, and there is zero behavior change. Each file now stays small and navigable per the one-type-per-file convention (the `.<Domain>.cs` suffix is the accepted idiom for partial members of a single type).
 
 ---
 
