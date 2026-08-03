@@ -60,7 +60,7 @@ public sealed class TelephonyOAuthController : Controller
             return BuildCompletionPage(false, returnUrl);
         }
 
-        var authorizationRequest = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state);
+        var authorizationRequest = await _authenticationService.GetAuthorizationUrlAsync(redirectUri, state, HttpContext.RequestAborted);
 
         if (authorizationRequest is null || string.IsNullOrEmpty(authorizationRequest.Url))
         {
@@ -117,7 +117,7 @@ public sealed class TelephonyOAuthController : Controller
                         !string.IsNullOrEmpty(storedState) &&
                         string.Equals(storedState, state, StringComparison.Ordinal))
                     {
-                        var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier);
+                        var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier, HttpContext.RequestAborted);
                         success = result.Succeeded;
                     }
                 }
@@ -149,7 +149,7 @@ public sealed class TelephonyOAuthController : Controller
             return Forbid();
         }
 
-        var result = await _authenticationService.DisconnectAsync();
+        var result = await _authenticationService.DisconnectAsync(HttpContext.RequestAborted);
 
         if (result.Succeeded)
         {

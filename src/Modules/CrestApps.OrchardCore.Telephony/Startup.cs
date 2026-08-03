@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
 using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Navigation;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;

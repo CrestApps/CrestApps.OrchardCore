@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.Telephony.Navigation;
+namespace CrestApps.OrchardCore.Telephony.Services;
 
 /// <summary>
 /// Adds the telephony settings entry to the admin navigation.

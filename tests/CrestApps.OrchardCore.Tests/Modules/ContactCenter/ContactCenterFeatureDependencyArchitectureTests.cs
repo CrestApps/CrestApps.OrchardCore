@@ -1156,8 +1156,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         }
 
         var segments = rawToken.Split('.');
-        var constantsFile = FindSourceFile(repositoryRoot, segments[0] + ".cs");
-        var text = File.ReadAllText(constantsFile);
+        var text = ReadTypeSource(repositoryRoot, segments[0]);
         var scope = text;
 
         for (var i = 1; i < segments.Length - 1; i++)
@@ -1170,10 +1169,33 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         if (!match.Success)
         {
-            throw new InvalidOperationException($"Could not resolve manifest token '{rawToken}' using '{constantsFile}'.");
+            throw new InvalidOperationException($"Could not resolve manifest token '{rawToken}'.");
         }
 
         return match.Groups["value"].Value;
+    }
+
+    private static string ReadTypeSource(string repositoryRoot, string typeName)
+    {
+        var files = EnumerateSourceFiles(Path.Combine(repositoryRoot, "src"), typeName + "*.cs")
+            .Where(path => IsPartialSourceOf(path, typeName))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        if (files.Length == 0)
+        {
+            throw new InvalidOperationException($"Expected at least one source file for type '{typeName}' under 'src', but found none.");
+        }
+
+        return string.Join(Environment.NewLine, files.Select(File.ReadAllText));
+    }
+
+    private static bool IsPartialSourceOf(string path, string typeName)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(path);
+
+        return string.Equals(fileName, typeName, StringComparison.Ordinal)
+            || fileName.StartsWith(typeName + ".", StringComparison.Ordinal);
     }
 
     private static string ExtractNestedTypeBody(string text, string typeName)
@@ -1189,19 +1211,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var braceEnd = FindMatching(text, braceStart, '{', '}');
 
         return text.Substring(braceStart, braceEnd - braceStart + 1);
-    }
-
-    private static string FindSourceFile(string repositoryRoot, string fileName)
-    {
-        var matches = EnumerateSourceFiles(Path.Combine(repositoryRoot, "src"), fileName)
-            .ToArray();
-
-        if (matches.Length != 1)
-        {
-            throw new InvalidOperationException($"Expected exactly one source file named '{fileName}' under 'src', but found {matches.Length}.");
-        }
-
-        return matches[0];
     }
 
     private static IEnumerable<string> EnumerateSourceFiles(string sourceRoot, string fileName)

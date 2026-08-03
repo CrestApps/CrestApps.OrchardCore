@@ -490,7 +490,7 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
         var path = query is null
             ? relativePath
             : QueryHelpers.AddQueryString(relativePath, query);
-        var request = new HttpRequestMessage(method, path);
+        using var request = new HttpRequestMessage(method, path);
 
         return await client.SendAsync(request, cancellationToken);
     }

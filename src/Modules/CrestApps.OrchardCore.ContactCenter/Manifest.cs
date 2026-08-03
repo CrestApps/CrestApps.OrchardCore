@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
 
@@ -186,7 +187,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.Availability,
         ContactCenterConstants.Feature.RealTime,
         ContactCenterConstants.Feature.VoiceSoftPhone,
-        "CrestApps.OrchardCore.Omnichannel.Managements",
+        OmnichannelConstants.Features.Managements,
     ]
 )]
 
@@ -211,7 +212,7 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Queues,
         ContactCenterConstants.Feature.Availability,
-        "CrestApps.OrchardCore.SignalR",
+        SignalRConstants.Feature.Area,
     ]
 )]
 

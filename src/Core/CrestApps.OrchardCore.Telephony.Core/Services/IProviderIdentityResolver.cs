@@ -3,8 +3,8 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services;
 /// <summary>
 /// Resolves a provider technical name or alias to its canonical technical identity. Canonicalization
 /// runs before any inbox delivery, event, or call identity key is built so that provider-contributed
-/// aliases (for example <c>Default Asterisk</c>) collapse to a single stable identity (for example
-/// <c>Asterisk</c>).
+/// aliases (for example a display-named variant of a provider) collapse to a single stable technical
+/// identity.
 /// </summary>
 public interface IProviderIdentityResolver
 {

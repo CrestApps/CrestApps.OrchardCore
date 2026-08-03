@@ -708,7 +708,7 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-045 — Assorted hygiene
 
-- **Priority:** Low · **Status:** Not Started · **Category:** Hygiene · **Effort:** S · **Risk:** Low · **Dependencies:** None
+- **Priority:** Low · **Status:** Completed · **Category:** Hygiene · **Effort:** S · **Risk:** Low · **Dependencies:** None
 
 - `Manifest.cs:246,273`: feature dependencies declared as magic strings (`"CrestApps.OrchardCore.Omnichannel.Managements"`, `"CrestApps.OrchardCore.SignalR"`) though `OmnichannelConstants.Features.Managements` is already imported and used at lines 24/35.
 - Admin menus live in `Services/` in ContactCenter but `Navigation/` in Telephony — pick one.
@@ -716,6 +716,14 @@ Deeper investigation showed the central premise is factually wrong and the recom
 - `TelephonyOAuthController.cs:63,120,147` ignores `HttpContext.RequestAborted`.
 - `AsteriskContactCenterVoiceMediaProvider.cs:477-495` does not dispose the `HttpRequestMessage`.
 - `AsteriskContactCenterVoiceMediaSession.cs:118-151`: concurrent `StopAsync`/`DisposeAsync` can race semaphore disposal and leak the feature work lease.
+
+**Resolution:** All six items are fixed.
+- The two magic-string feature dependencies in the Contact Center `Manifest.cs` now use the already-imported `OmnichannelConstants.Features.Managements` and the newly-imported `SignalRConstants.Feature.Area`, so a rename of either feature id is a single-source change the compiler enforces.
+- The one outlier admin-menu file, `Telephony/Navigation/TelephonyAdminMenu.cs`, moved into `Telephony/Services/` (namespace updated to match) so every admin menu across the repository now lives under `Services/` — the dominant house convention (30 of 31 providers).
+- The three illustrative provider names were removed from the neutral `TelephonyConstants.AuthenticationSchemes.OAuth2` and `IProviderIdentityResolver` XML docs, which now describe behaviour in provider-agnostic terms.
+- `TelephonyOAuthController` now flows `HttpContext.RequestAborted` into all three authentication-service calls (`GetAuthorizationUrlAsync`, `CompleteAuthorizationAsync`, `DisconnectAsync`), which already accepted a `CancellationToken`.
+- `AsteriskContactCenterVoiceMediaProvider.SendAsync` now scopes the `HttpRequestMessage` with `using` so it is disposed after the send.
+- `AsteriskContactCenterVoiceMediaSession` now guards disposal with an interlocked `_disposed` flag so `DisposeAsync` is idempotent, and releases the feature work lease exactly once via an interlocked `_leaseReleased` flag. The two `SemaphoreSlim`s are intentionally never disposed — they never access `AvailableWaitHandle`, so they allocate no unmanaged handle, matching the sibling Asterisk primitives (`AsteriskChannelTenantBindingStore`, `AsteriskSupervisorEngagementLock`); this removes the teardown race entirely, since a concurrent `StopAsync` can no longer touch a disposed lock. `StopAsync` still releases the lease only after `_cleanupCompleted`, preserving the retry-on-cleanup-failure contract, while `DisposeAsync` guarantees the lease is released in its own `finally` (terminal teardown has no later retry), so a lease can neither leak nor be released twice. A manifest-token architecture test that read the single `ContactCenterConstants.cs` was also generalised to read every `ContactCenterConstants*.cs` partial file, keeping it correct after the OC-047 split.
 
 ---
 

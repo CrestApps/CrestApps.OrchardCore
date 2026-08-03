@@ -11,6 +11,11 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
     private readonly IPEndPoint _asteriskMediaEndpoint;
     private readonly IContactCenterFeatureWorkLease _workLease;
     private readonly Func<CancellationToken, Task> _stop;
+
+    // These semaphores are intentionally never disposed. Their AvailableWaitHandle is never accessed,
+    // so no unmanaged handle is allocated, and disposing them during teardown would race a concurrent
+    // StopAsync that still holds or is about to release the lock. Leaving them for the GC is safe and
+    // matches the pattern used by the other Asterisk synchronization primitives.
     private readonly SemaphoreSlim _stopLock = new(1, 1);
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly uint _synchronizationSource = unchecked((uint)Random.Shared.NextInt64());
@@ -18,6 +23,8 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
     private uint _timestamp;
     private int _cleanupCompleted;
     private int _stopped;
+    private int _leaseReleased;
+    private int _disposed;
 
     public AsteriskContactCenterVoiceMediaSession(
         string sessionId,
@@ -137,7 +144,8 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
         {
             _stopLock.Release();
 
-            if (Volatile.Read(ref _cleanupCompleted) != 0)
+            if (Volatile.Read(ref _cleanupCompleted) != 0
+                && Interlocked.Exchange(ref _leaseReleased, 1) == 0)
             {
                 _workLease.Dispose();
             }
@@ -146,9 +154,22 @@ internal sealed class AsteriskContactCenterVoiceMediaSession : IContactCenterVoi
 
     public async ValueTask DisposeAsync()
     {
-        await StopAsync();
-        _stopLock.Dispose();
-        _writeLock.Dispose();
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await StopAsync();
+        }
+        finally
+        {
+            if (Interlocked.Exchange(ref _leaseReleased, 1) == 0)
+            {
+                _workLease.Dispose();
+            }
+        }
     }
 
     private static ContactCenterVoiceMediaFormat CreateFormat()
