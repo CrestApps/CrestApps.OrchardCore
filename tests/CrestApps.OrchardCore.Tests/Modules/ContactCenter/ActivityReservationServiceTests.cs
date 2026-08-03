@@ -375,7 +375,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItem = new QueueItem { ItemId = "qi-1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
@@ -411,7 +411,7 @@ public sealed class ActivityReservationServiceTests
         var first = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var second = new ActivityReservation { ItemId = "r2", QueueItemId = "qi-2", AgentId = "a2", ActivityItemId = "act-2" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([first, second]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([first, second], null, 0));
 
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
@@ -442,6 +442,166 @@ public sealed class ActivityReservationServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task ExpireDueAsync_WhenBacklogSpansMultiplePages_DrainsEveryPage()
+    {
+        // Arrange
+        // A spike can leave far more reservations expired than a single query should materialize, so the sweep
+        // drains the backlog in bounded, oldest-first pages. A full page is followed by another fetch; a short
+        // page ends the drain.
+        const int pageSize = 100;
+        var firstPage = Enumerable
+            .Range(0, pageSize)
+            .Select(index => new ActivityReservation
+            {
+                ItemId = $"r{index}",
+                QueueItemId = "qi",
+                AgentId = "a",
+                ActivityItemId = "act",
+            }.RestorePersistedStatus(ReservationStatus.Pending))
+            .ToArray();
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager
+            .SetupSequence(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ExpiredReservationPage(firstPage, _now.AddMinutes(-1), 100))
+            .ReturnsAsync(new ExpiredReservationPage([], null, 0));
+        reservationManager
+            .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => new ActivityReservation
+            {
+                ItemId = id,
+                QueueItemId = "qi",
+                AgentId = "a",
+                ActivityItemId = "act",
+            }.RestorePersistedStatus(ReservationStatus.Pending));
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindByIdAsync("qi", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi" }.RestorePersistedStatus(QueueItemStatus.Reserved));
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByIdAsync("a", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a" });
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(m => m.FindByActivityIdAsync("act", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "i", ActivityItemId = "act", AgentId = "a" }.RestorePersistedStatus(InteractionStatus.Ringing));
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(m => m.FindByIdAsync("act", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act" });
+
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            interactionManager,
+            activityManager,
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>());
+
+        // Act
+        var count = await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(pageSize, count);
+        reservationManager.Verify(
+            m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ExpireDueAsync_WhenTheOldestPageIsLocked_StillDrainsTheReservationsBehindIt()
+    {
+        // Arrange
+        // A block of candidates at the front of the backlog being locked by another node must not starve the
+        // drainable reservations behind them: keyset paging advances the cursor past the locked candidates
+        // (which stay in the expired set) rather than re-fetching the same stuck oldest page, so a reservation
+        // behind a full locked page is still released this run.
+        const int pageSize = 100;
+        var cursorExpiresUtc = _now.AddMinutes(-1);
+        const long cursorDocumentId = 100L;
+        var lockedPage = Enumerable
+            .Range(0, pageSize)
+            .Select(index => new ActivityReservation
+            {
+                ItemId = $"r{index}",
+                QueueItemId = $"qi{index}",
+                AgentId = $"a{index}",
+                ActivityItemId = $"act{index}",
+            }.RestorePersistedStatus(ReservationStatus.Pending))
+            .ToArray();
+        var drainable = new ActivityReservation
+        {
+            ItemId = "r-drainable",
+            QueueItemId = "qi",
+            AgentId = "a",
+            ActivityItemId = "act",
+        }.RestorePersistedStatus(ReservationStatus.Pending);
+
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager
+            .Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DateTime _, DateTime? afterExpiresUtc, long _, int _, CancellationToken _) => afterExpiresUtc is null
+                ? new ExpiredReservationPage(lockedPage, cursorExpiresUtc, cursorDocumentId)
+                : new ExpiredReservationPage([drainable], null, 0));
+        reservationManager
+            .Setup(m => m.FindByIdAsync("r-drainable", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(drainable);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindByIdAsync("qi", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi" }.RestorePersistedStatus(QueueItemStatus.Reserved));
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByIdAsync("a", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a" });
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(m => m.FindByActivityIdAsync("act", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "i", ActivityItemId = "act", AgentId = "a" }.RestorePersistedStatus(InteractionStatus.Ringing));
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(m => m.FindByIdAsync("act", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity { ItemId = "act" });
+
+        // Every candidate in the oldest page is locked by another node; only the reservation behind them is free.
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, false));
+        distributedLock
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r-drainable", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, true));
+
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            interactionManager,
+            activityManager,
+            new Mock<IContactCenterEventPublisher>(),
+            new Mock<ITelephonyService>(),
+            distributedLock);
+
+        // Act
+        var count = await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, count);
+        Assert.Equal(ReservationStatus.Expired, drainable.Status);
+        reservationManager.Verify(
+            m => m.ListExpiredAsync(_now, cursorExpiresUtc, cursorDocumentId, It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Theory]
     [InlineData(InteractionStatus.Ended)]
     [InlineData(InteractionStatus.Failed)]
@@ -455,7 +615,7 @@ public sealed class ActivityReservationServiceTests
         // batch and would do so again on the next tick.
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItem = new QueueItem { ItemId = "qi-1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
@@ -503,7 +663,7 @@ public sealed class ActivityReservationServiceTests
             ExpiresUtc = candidate.ExpiresUtc,
         }.RestorePersistedStatus(ReservationStatus.Accepted);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([candidate]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([candidate], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(accepted);
         var queueItemManager = new Mock<IQueueItemManager>();
         var service = CreateService(
@@ -547,7 +707,7 @@ public sealed class ActivityReservationServiceTests
             ExpiresUtc = _now.AddSeconds(-1),
         }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r-old", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
         var queueItem = new QueueItem
@@ -611,7 +771,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
@@ -649,7 +809,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem { ItemId = "qi-1" }.RestorePersistedStatus(QueueItemStatus.Reserved));
@@ -678,7 +838,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem { ItemId = "qi-1" }.RestorePersistedStatus(QueueItemStatus.Reserved));
@@ -708,7 +868,7 @@ public sealed class ActivityReservationServiceTests
         var order = new List<string>();
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         reservationManager
             .Setup(m => m.UpdateAsync(
@@ -876,7 +1036,7 @@ public sealed class ActivityReservationServiceTests
         var order = new List<string>();
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         reservationManager
             .Setup(m => m.UpdateAsync(
@@ -1040,7 +1200,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
@@ -1117,7 +1277,7 @@ public sealed class ActivityReservationServiceTests
         // Arrange
         var reservation = new ActivityReservation { ItemId = "r1", QueueId = "q1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
-        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        reservationManager.Setup(m => m.ListExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();

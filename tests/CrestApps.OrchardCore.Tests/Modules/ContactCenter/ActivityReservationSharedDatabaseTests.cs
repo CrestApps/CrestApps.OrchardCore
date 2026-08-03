@@ -92,6 +92,50 @@ public sealed class ActivityReservationSharedDatabaseTests
         }
     }
 
+    [Fact]
+    public async Task ListExpiredAsync_WithKeysetCursor_PagesExpiredReservationsInStableOrder()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"contact-center-expired-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                await CreateExpiredReservationAsync(
+                    store,
+                    reservationId: $"reservation-{i:D2}",
+                    activityId: $"activity-{i:D2}",
+                    agentId: $"agent-{i:D2}",
+                    expiresUtc: _now.AddMinutes(-(5 - i)));
+            }
+
+            // A future-dated pending reservation must never be returned as expired.
+            await CreateReservationAsync(store, "reservation-future", "activity-future", "agent-future", ReservationStatus.Pending);
+
+            await using var session = store.CreateSession();
+            var reservationStore = new ActivityReservationStore(session);
+
+            // Act
+            var firstPage = await reservationStore.ListExpiredAsync(_now, afterExpiresUtc: null, afterDocumentId: 0, maxResults: 2, TestContext.Current.CancellationToken);
+            var secondPage = await reservationStore.ListExpiredAsync(_now, firstPage.NextAfterExpiresUtc, firstPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
+            var thirdPage = await reservationStore.ListExpiredAsync(_now, secondPage.NextAfterExpiresUtc, secondPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(["reservation-00", "reservation-01"], firstPage.Reservations.Select(reservation => reservation.ItemId));
+            Assert.True(firstPage.HasMore);
+            Assert.Equal(["reservation-02", "reservation-03"], secondPage.Reservations.Select(reservation => reservation.ItemId));
+            Assert.True(secondPage.HasMore);
+            Assert.Equal(["reservation-04"], thirdPage.Reservations.Select(reservation => reservation.ItemId));
+            Assert.False(thirdPage.HasMore);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static async Task<(ActivityReservation Reservation, Exception Exception)> CaptureReservationAttemptAsync(
         Task<ActivityReservation> reservationTask)
     {
@@ -263,6 +307,25 @@ public sealed class ActivityReservationSharedDatabaseTests
         reservation.AgentId = agentId;
         reservation.RestorePersistedStatus(status);
         reservation.ExpiresUtc = _now.AddMinutes(1);
+        await manager.CreateAsync(reservation, cancellationToken: TestContext.Current.CancellationToken);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task CreateExpiredReservationAsync(
+        IStore store,
+        string reservationId,
+        string activityId,
+        string agentId,
+        DateTime expiresUtc)
+    {
+        await using var session = store.CreateSession();
+        var manager = CreateReservationManager(session);
+        var reservation = await manager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
+        reservation.ItemId = reservationId;
+        reservation.ActivityItemId = activityId;
+        reservation.AgentId = agentId;
+        reservation.RestorePersistedStatus(ReservationStatus.Pending);
+        reservation.ExpiresUtc = expiresUtc;
         await manager.CreateAsync(reservation, cancellationToken: TestContext.Current.CancellationToken);
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }

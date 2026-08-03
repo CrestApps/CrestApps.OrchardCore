@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.Extensions.Options;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -23,6 +24,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly TimeSpan _maximumReportRange;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportingService"/> class.
@@ -34,6 +36,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// <param name="agentManager">The agent profile manager used to resolve agent names.</param>
     /// <param name="campaignManager">The campaign manager used to resolve campaign names.</param>
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaign reports.</param>
+    /// <param name="reportingOptions">The reporting options that bound the requested range.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueGroupManager queueGroupManager,
@@ -41,7 +44,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         IQueueItemManager queueItemManager,
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
-        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager)
+        ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
+        IOptions<ContactCenterReportingOptions> reportingOptions)
     {
         _session = session;
         _queueGroupManager = queueGroupManager;
@@ -50,6 +54,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         _agentManager = agentManager;
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
+        _maximumReportRange = reportingOptions.Value.MaximumReportRange;
     }
 
     /// <inheritdoc/>
@@ -712,6 +717,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
     private async Task<IReadOnlyList<Interaction>> QueryInteractionsAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
     {
+        EnsureRangeWithinLimit(fromUtc, toUtc);
+
         var interactions = await _session.Query<Interaction, InteractionIndex>(
             index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: ContactCenterConstants.CollectionName)
@@ -722,12 +729,44 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
 
     private async Task<IReadOnlyList<OmnichannelActivityIndex>> QueryActivityIndexesAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
     {
+        EnsureRangeWithinLimit(fromUtc, toUtc);
+
         var activities = await _session.QueryIndex<OmnichannelActivityIndex>(
             index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken);
 
         return activities.ToArray();
+    }
+
+    /// <summary>
+    /// Rejects a report request whose window is wider than the configured maximum, before any rows are
+    /// queried. Reports aggregate every interaction and activity in the window, so an unbounded range would
+    /// materialize an arbitrarily large result set; silently capping the rows would instead corrupt the
+    /// totals, so the request fails fast and the caller narrows the range.
+    /// </summary>
+    /// <param name="fromUtc">The inclusive start of the reporting window.</param>
+    /// <param name="toUtc">The inclusive end of the reporting window.</param>
+    private void EnsureRangeWithinLimit(DateTime fromUtc, DateTime toUtc)
+        => EnsureRangeWithinLimit(fromUtc, toUtc, _maximumReportRange);
+
+    /// <summary>
+    /// Rejects a report request whose window is wider than <paramref name="maximumRange"/>, before any rows
+    /// are queried. Shared by the reporting service and the enterprise report providers so every report path
+    /// enforces the same interactive range bound instead of each duplicating the limit.
+    /// </summary>
+    /// <param name="fromUtc">The inclusive start of the reporting window.</param>
+    /// <param name="toUtc">The inclusive end of the reporting window.</param>
+    /// <param name="maximumRange">The widest window a single report request may span.</param>
+    public static void EnsureRangeWithinLimit(DateTime fromUtc, DateTime toUtc, TimeSpan maximumRange)
+    {
+        var span = toUtc - fromUtc;
+
+        if (span > maximumRange)
+        {
+            throw new InvalidOperationException(
+                $"The requested reporting range of {span.TotalDays:N0} days exceeds the maximum of {maximumRange.TotalDays:N0} days. Narrow the range, or raise 'CrestApps_ContactCenter:Reporting:MaximumReportRange'.");
+        }
     }
 
     private async Task<IReadOnlyDictionary<string, long>> QueryCompletedActivitiesByUserAsync(

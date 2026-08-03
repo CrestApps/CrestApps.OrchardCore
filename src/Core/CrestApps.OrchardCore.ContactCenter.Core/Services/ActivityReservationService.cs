@@ -19,6 +19,12 @@ public sealed class ActivityReservationService : IActivityReservationService
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The maximum number of expired reservations materialized per drain page, so a large expiry backlog is
+    /// processed in bounded batches instead of being loaded in a single unbounded query.
+    /// </summary>
+    private const int ExpiryPageSize = 100;
+
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentProfileManager _agentManager;
@@ -479,40 +485,67 @@ public sealed class ActivityReservationService : IActivityReservationService
     public async Task<int> ExpireDueAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var expired = await _reservationManager.ListExpiredAsync(now, cancellationToken);
         var count = 0;
+        DateTime? afterExpiresUtc = null;
+        var afterDocumentId = 0L;
 
-        foreach (var candidate in expired)
+        // Drain the expiry backlog in bounded, oldest-first pages so a spike that leaves thousands of
+        // reservations expired at once is processed in fixed-size batches instead of being materialized in a
+        // single unbounded query. Paging is keyset (seek) based over the stable (ExpiresUtc, DocumentId)
+        // order: each page advances the cursor past the last row it observed, regardless of whether that row
+        // was expired here or is currently locked by another node. Because the cursor is an absolute position
+        // rather than a numeric offset, concurrent expirations or insertions elsewhere in the backlog never
+        // shift the window, so a live reservation is never skipped and a block of locked candidates at the
+        // front never starves the drainable ones behind them. Candidates that could not be processed this run
+        // (locked, or already changed) are simply retried on the next scheduled sweep, which restarts from the
+        // oldest expired reservation. The loop stops when a page is short (the backlog is exhausted) or when
+        // the run is cancelled.
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-                GetReservationLockKey(candidate.ItemId),
-                _lockTimeout,
-                _lockExpiration);
+            var page = await _reservationManager.ListExpiredAsync(now, afterExpiresUtc, afterDocumentId, ExpiryPageSize, cancellationToken);
 
-            if (!locked)
+            foreach (var candidate in page.Reservations)
             {
-                continue;
+                cancellationToken.ThrowIfCancellationRequested();
+
+                (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+                    GetReservationLockKey(candidate.ItemId),
+                    _lockTimeout,
+                    _lockExpiration);
+
+                if (!locked)
+                {
+                    continue;
+                }
+
+                await using var acquiredLock = locker;
+
+                var reservation = await _reservationManager.FindByIdAsync(candidate.ItemId, cancellationToken);
+
+                if (reservation is null ||
+                    reservation.Status != ReservationStatus.Pending ||
+                    reservation.ExpiresUtc > now)
+                {
+                    continue;
+                }
+
+                await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
+                await CommitTransitionAsync(
+                    reservation.ActivityItemId,
+                    reservation.AgentId,
+                    cancellationToken);
+                count++;
             }
 
-            await using var acquiredLock = locker;
-
-            var reservation = await _reservationManager.FindByIdAsync(candidate.ItemId, cancellationToken);
-
-            if (reservation is null ||
-                reservation.Status != ReservationStatus.Pending ||
-                reservation.ExpiresUtc > now)
+            if (!page.HasMore)
             {
-                continue;
+                break;
             }
 
-            await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
-            await CommitTransitionAsync(
-                reservation.ActivityItemId,
-                reservation.AgentId,
-                cancellationToken);
-            count++;
+            afterExpiresUtc = page.NextAfterExpiresUtc;
+            afterDocumentId = page.NextAfterDocumentId;
         }
 
         return count;

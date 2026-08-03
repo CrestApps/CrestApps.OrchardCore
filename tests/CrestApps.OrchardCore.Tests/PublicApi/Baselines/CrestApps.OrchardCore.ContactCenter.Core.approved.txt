@@ -983,6 +983,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool RequireExplicitConsent { get; set; }
         public int RetentionDays { get; set; }
     }
+    public sealed class ContactCenterReportingOptions
+    {
+        public ContactCenterReportingOptions() { }
+        public System.TimeSpan MaximumReportRange { get; set; }
+    }
     public sealed class ContactCenterRetentionOptions
     {
         public const int DefaultMaxPurgeBatchesPerCycle = 10000;
@@ -1157,6 +1162,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
         public bool ShouldQueue { get; set; }
         public string TargetQueueId { get; set; }
+    }
+    public sealed class ExpiredReservationPage
+    {
+        public ExpiredReservationPage(System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> reservations, System.DateTime? nextAfterExpiresUtc, long nextAfterDocumentId) { }
+        public bool HasMore { get; }
+        public long NextAfterDocumentId { get; }
+        public System.DateTime? NextAfterExpiresUtc { get; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> Reservations { get; }
     }
     public sealed class InboundVoiceRoutingResult
     {
@@ -1817,7 +1830,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListExpiredAsync(System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityReservationService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService
     {
@@ -1852,7 +1865,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListExpiredAsync(System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityRoutingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService
     {
@@ -2185,7 +2198,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterReportingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterReportingService
     {
-        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager) { }
+        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterReportingOptions> reportingOptions) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.CallInsightsReport> GetCallInsightsAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
@@ -2197,6 +2210,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.SubjectInventoryReport> GetSubjectInventoryAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.SubjectInventoryReport> GetSubjectInventoryAsync(System.DateTime fromUtc, System.DateTime toUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria, System.Threading.CancellationToken cancellationToken = default) { }
         public static void ApplyCurrentQueueGroupCriteria(CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> queues) { }
+        public static void EnsureRangeWithinLimit(System.DateTime fromUtc, System.DateTime toUtc, System.TimeSpan maximumRange) { }
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityIndex> FilterActivities(System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityIndex> activities, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria) { }
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FilterInteractions(System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> interactions, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria) { }
     }
@@ -2428,7 +2442,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListExpiredAsync(System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityReservationService
     {
@@ -2444,7 +2458,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListExpiredAsync(System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityRoutingService
     {

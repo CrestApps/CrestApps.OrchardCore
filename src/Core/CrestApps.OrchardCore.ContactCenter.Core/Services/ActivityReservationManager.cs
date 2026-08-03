@@ -27,16 +27,21 @@ public sealed class ActivityReservationManager : CatalogManager<ActivityReservat
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    public async Task<ExpiredReservationPage> ListExpiredAsync(
+        DateTime utcNow,
+        DateTime? afterExpiresUtc,
+        long afterDocumentId,
+        int maxResults,
+        CancellationToken cancellationToken = default)
     {
-        var reservations = await _store.ListExpiredAsync(utcNow, cancellationToken);
+        var page = await _store.ListExpiredAsync(utcNow, afterExpiresUtc, afterDocumentId, maxResults, cancellationToken);
 
-        foreach (var reservation in reservations)
+        foreach (var reservation in page.Reservations)
         {
             await LoadAsync(reservation, cancellationToken);
         }
 
-        return reservations;
+        return page;
     }
 
     /// <inheritdoc/>

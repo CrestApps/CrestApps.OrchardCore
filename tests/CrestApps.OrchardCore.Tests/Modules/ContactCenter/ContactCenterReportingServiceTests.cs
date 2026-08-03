@@ -43,6 +43,32 @@ public sealed class ContactCenterReportingServiceTests
     }
 
     [Fact]
+    public void EnsureRangeWithinLimit_WhenRangeIsWithinLimit_DoesNotThrow()
+    {
+        // Arrange
+        var fromUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var toUtc = fromUtc.AddDays(30);
+
+        // Act & Assert
+        ContactCenterReportingService.EnsureRangeWithinLimit(fromUtc, toUtc, TimeSpan.FromDays(400));
+    }
+
+    [Fact]
+    public void EnsureRangeWithinLimit_WhenRangeExceedsLimit_ThrowsInvalidOperation()
+    {
+        // Arrange
+        var fromUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var toUtc = fromUtc.AddDays(401);
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => ContactCenterReportingService.EnsureRangeWithinLimit(fromUtc, toUtc, TimeSpan.FromDays(400)));
+
+        // Assert
+        Assert.Contains("exceeds the maximum", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildCallInsights_GroupsDailyVolume()
     {
         // Arrange

@@ -10,9 +10,11 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.Environment.Shell.Configuration;
 using YesSql;
 using YesSql.Provider.Sqlite;
 
@@ -54,7 +56,9 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
         var services = new ServiceCollection();
 
         // Act
-        new AnalyticsStartup(new PassThroughStringLocalizer<AnalyticsStartup>()).ConfigureServices(services);
+        new AnalyticsStartup(
+            new EmptyShellConfiguration(),
+            new PassThroughStringLocalizer<AnalyticsStartup>()).ConfigureServices(services);
 
         // Assert
         var reportDescriptors = services
@@ -157,7 +161,8 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
             agentManager,
             definition,
             guard,
-            new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>());
+            new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
+            TimeSpan.FromDays(400));
     }
 
     private static void SetAgents(Mock<IAgentProfileManager> agentManager, params (string Id, string Name)[] agents)
@@ -240,5 +245,24 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
         {
             return new ReportDocument();
         }
+    }
+
+    private sealed class EmptyShellConfiguration : IShellConfiguration
+    {
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration = new ConfigurationBuilder().Build();
+
+        public string this[string key]
+        {
+            get => _configuration[key];
+            set => _configuration[key] = value;
+        }
+        public IEnumerable<IConfigurationSection> GetChildren()
+            => _configuration.GetChildren();
+
+        public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken()
+            => _configuration.GetReloadToken();
+
+        public IConfigurationSection GetSection(string key)
+            => _configuration.GetSection(key);
     }
 }

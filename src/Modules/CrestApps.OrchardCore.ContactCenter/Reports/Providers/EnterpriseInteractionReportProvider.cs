@@ -23,6 +23,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private readonly EnterpriseInteractionReportDefinition _definition;
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
+    private readonly TimeSpan _maximumReportRange;
     private Dictionary<string, string> _agentUserNames = [];
     private HashSet<string> _absentFeatureIds = [];
 
@@ -62,7 +63,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         IAgentProfileManager agentManager,
         EnterpriseInteractionReportDefinition definition,
         IContactCenterReportCapabilityGuard capabilityGuard,
-        IStringLocalizer stringLocalizer)
+        IStringLocalizer stringLocalizer,
+        TimeSpan maximumReportRange)
     {
         _session = session;
         _queueManager = queueManager;
@@ -70,6 +72,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         _definition = definition;
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
+        _maximumReportRange = maximumReportRange;
     }
 
     public string Name => _definition.Name;
@@ -101,6 +104,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         _absentFeatureIds = [.. await _capabilityGuard.GetMissingFeaturesAsync(
             [ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording],
             cancellationToken)];
+
+        ContactCenterReportingService.EnsureRangeWithinLimit(context.FromUtc, context.ToUtc, _maximumReportRange);
 
         var interactions = (await _session.Query<Interaction, InteractionIndex>(
             index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,

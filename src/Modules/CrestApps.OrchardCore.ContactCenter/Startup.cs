@@ -1219,10 +1219,14 @@ public sealed class SupervisionStartup : StartupBase
 [Feature(ContactCenterConstants.Feature.Analytics)]
 public sealed class AnalyticsStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
     private readonly IStringLocalizer S;
 
-    public AnalyticsStartup(IStringLocalizer<AnalyticsStartup> stringLocalizer)
+    public AnalyticsStartup(
+        IShellConfiguration shellConfiguration,
+        IStringLocalizer<AnalyticsStartup> stringLocalizer)
     {
+        _shellConfiguration = shellConfiguration;
         S = stringLocalizer;
     }
 
@@ -1231,6 +1235,14 @@ public sealed class AnalyticsStartup : StartupBase
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
         services.AddScoped<IContactCenterReportCapabilityGuard, ContactCenterReportCapabilityGuard>();
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
+
+        services
+            .AddOptions<ContactCenterReportingOptions>()
+            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Reporting"))
+            .Validate(
+                options => options.MaximumReportRange > TimeSpan.Zero,
+                "'CrestApps_ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
+            .ValidateOnStart();
 
         services
             .AddScoped<IReport, CallInsightsReportProvider>()
@@ -1319,7 +1331,8 @@ public sealed class AnalyticsStartup : StartupBase
             serviceProvider.GetRequiredService<IAgentProfileManager>(),
             definition,
             serviceProvider.GetRequiredService<IContactCenterReportCapabilityGuard>(),
-            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>()));
+            serviceProvider.GetRequiredService<IStringLocalizer<EnterpriseInteractionReportProvider>>(),
+            serviceProvider.GetRequiredService<IOptions<ContactCenterReportingOptions>>().Value.MaximumReportRange));
     }
 
     private static void AddWorkforceReport(

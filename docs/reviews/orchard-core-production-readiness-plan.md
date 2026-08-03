@@ -427,11 +427,19 @@ Deeper investigation showed the central premise is factually wrong and the recom
 
 ### OC-025 — Unbounded reporting and reservation-cleanup materialization
 
-- **Priority:** Medium · **Status:** Not Started · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting indexes
+- **Priority:** Medium · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting indexes
 
 **Problem.** Reporting materializes complete date-range result sets before in-memory grouping with no maximum range or pagination (`ContactCenterReportingService.cs:713-750`, `EnterpriseInteractionReportProvider.cs:105-108,1222-1225`). Expired-reservation cleanup loads every expired pending reservation before processing (`ActivityReservationStore.cs:28-35`).
 
 **Recommended solution.** Enforce an interactive range limit and aggregate indexes; page/stream exports. For cleanup, read bounded pages ordered by expiry and process to a deadline.
+
+**Resolution.** Both unbounded materializations are now bounded.
+
+*Reservation cleanup* — `IActivityReservationStore.ListExpiredAsync` / `IActivityReservationManager.ListExpiredAsync` now take a keyset cursor (`afterExpiresUtc`, `afterDocumentId`) plus a `maxResults` bound and return an `ExpiredReservationPage` (the page of reservations plus the cursor for the next page). The store queries the `ActivityReservationIndex` ordered by `ExpiresUtc` then `DocumentId` with the keyset predicate `ExpiresUtc > cursor || (ExpiresUtc == cursor && DocumentId > afterDocumentId)`, then loads the page documents by id — so a page is a fixed, oldest-first slice rather than the entire expiry backlog. `ActivityReservationService.ExpireDueAsync` drains in bounded `ExpiryPageSize` (100) pages using **keyset (seek) paging**: each page advances the cursor past the last row it observed, whether that row was expired here or is currently locked by another node. Because the cursor is an absolute position in the `(ExpiresUtc, DocumentId)` key space rather than a numeric offset, concurrent expirations or insertions elsewhere in the backlog never shift the window, so a live reservation is never skipped and a locked oldest page never starves the drainable reservations behind it. Candidates that could not be processed this run (locked, or already changed) are retried on the next scheduled sweep, which restarts from the oldest expired reservation. Draining stops on a short/empty page or cancellation. New unit tests cover multi-page draining and the anti-starvation case where the oldest page is fully locked, plus a real-store integration test asserting the keyset query pages in stable order against SQLite. Keyset was chosen over offset paging because offset paging over a concurrently-mutating set can still skip live rows when locked candidates are expired by their owner between pages.
+
+*Reporting* — silently trimming rows would corrupt the aggregate totals, so instead of a row cap the reporting paths now **fail fast** on an over-wide window. A new `ContactCenterReportingOptions.MaximumReportRange` (Options pattern, bound from `CrestApps_ContactCenter:Reporting`, default 400 days, `ValidateOnStart`) is enforced by the shared `ContactCenterReportingService.EnsureRangeWithinLimit(...)` guard at the top of every query helper (`QueryInteractionsAsync`, `QueryActivityIndexesAsync`) and in `EnterpriseInteractionReportProvider` before it queries, so every report path enforces the same bound before any rows are read. The 400-day default comfortably covers the built-in day/week/month/quarter/year presets. Tests cover the guard boundary.
+
+*Deferred (documented follow-up, not a regression of this item):* pre-aggregated rollup indexes and streaming/paged CSV export remain an enhancement — the fixes here bound worst-case materialization but still build the in-memory aggregates per request. `AgentWorkforceReportProvider` reads the event store up to `ToUtc` only (it ignores `FromUtc` as a lower bound); tightening that is a separate event-store concern tracked outside OC-025.
 
 ---
 
@@ -756,7 +764,7 @@ Strongly recommended before first release:
 - [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
 - [x] OC-019 — ContactCenter asset pipeline
 - [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
-- [x] OC-022 (done), OC-023 (done), OC-024 (done) — load-bearing performance items
+- [x] OC-022 (done), OC-023 (done), OC-024 (done), OC-025 (done) — load-bearing performance items
 - [x] OC-028 — scheduler lease correctness
 - [ ] OC-037 — module READMEs
 

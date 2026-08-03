@@ -25,15 +25,69 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    public async Task<ExpiredReservationPage> ListExpiredAsync(
+        DateTime utcNow,
+        DateTime? afterExpiresUtc,
+        long afterDocumentId,
+        int maxResults,
+        CancellationToken cancellationToken = default)
     {
-        var reservations = await Session.Query<ActivityReservation, ActivityReservationIndex>(
-            index => index.Status == ReservationStatus.Pending && index.ExpiresUtc <= utcNow,
-            collection: ContactCenterConstants.CollectionName)
-            .ListAsync(cancellationToken);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxResults);
 
-        return reservations.ToArray();
+        // Keyset (seek) paging over the stable (ExpiresUtc, DocumentId) order. Unlike offset paging, the
+        // cursor is an absolute position in the key space, so concurrent expirations or insertions elsewhere
+        // in the backlog never shift the window and cause a live reservation to be skipped. The index is
+        // queried (not the documents) because the keyset tiebreaker is the YesSql DocumentId, which the
+        // reservation document itself does not carry.
+        IQueryIndex<ActivityReservationIndex> indexQuery;
+
+        if (afterExpiresUtc.HasValue)
+        {
+            var cursorExpiresUtc = afterExpiresUtc.Value;
+
+            indexQuery = Session.QueryIndex<ActivityReservationIndex>(
+                index => index.Status == ReservationStatus.Pending
+                    && index.ExpiresUtc <= utcNow
+                    && (index.ExpiresUtc > cursorExpiresUtc
+                        || (index.ExpiresUtc == cursorExpiresUtc && index.DocumentId > afterDocumentId)),
+                collection: ContactCenterConstants.CollectionName);
+        }
+        else
+        {
+            indexQuery = Session.QueryIndex<ActivityReservationIndex>(
+                index => index.Status == ReservationStatus.Pending && index.ExpiresUtc <= utcNow,
+                collection: ContactCenterConstants.CollectionName);
+        }
+
+        var indexRows = (await indexQuery
+            .OrderBy(index => index.ExpiresUtc)
+            .ThenBy(index => index.DocumentId)
+            .Take(maxResults)
+            .ListAsync(cancellationToken)).ToArray();
+
+        if (indexRows.Length == 0)
+        {
+            return new ExpiredReservationPage([], null, 0);
+        }
+
+        var documentIds = indexRows.Select(index => index.DocumentId).ToArray();
+
+        var documents = await Session.GetAsync<ActivityReservation>(
+            documentIds,
+            collection: ContactCenterConstants.CollectionName,
+            cancellationToken);
+
+        // A full page means there may be more work behind it, so surface the cursor. A short page means the
+        // backlog is exhausted for this run; leaving the cursor null tells the caller to stop.
+        var hasMore = indexRows.Length == maxResults;
+        var lastRow = indexRows[indexRows.Length - 1];
+
+        return new ExpiredReservationPage(
+            documents.ToArray(),
+            hasMore ? lastRow.ExpiresUtc : null,
+            hasMore ? lastRow.DocumentId : 0);
     }
+
 
     /// <inheritdoc/>
     public async Task<ActivityReservation> FindPendingByAgentAsync(string agentId, CancellationToken cancellationToken = default)
