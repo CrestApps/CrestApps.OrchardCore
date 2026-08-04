@@ -29,6 +29,13 @@ public interface ISubjectFlowSettingsService
     Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the content type definitions that have the omnichannel subject part and match the specified direction.
+    /// </summary>
+    /// <param name="direction">The subject communication direction to filter by.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Determines whether the specified flow settings belong to a subject content type.
     /// </summary>
     /// <param name="flowSettings">The flow settings to evaluate.</param>
