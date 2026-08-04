@@ -12,6 +12,10 @@ description: Azure OpenAI integration for AI chat profiles, deployments, and con
 
 Provides AI services using Azure OpenAI models.
 
+The screencast below shows the Azure OpenAI provider connection and the chat, utility, and embedding deployments it exposes in the admin dashboard.
+
+![Screen cast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments](/img/docs/ai-provider-azure-openai.gif)
+
 ## Overview
 
 Enable this feature when you want Orchard Core to use Azure OpenAI for chat, utility, embedding, or image workloads.
