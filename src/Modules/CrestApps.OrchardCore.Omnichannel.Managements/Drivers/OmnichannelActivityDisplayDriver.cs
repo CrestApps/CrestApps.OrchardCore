@@ -94,6 +94,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     public override IDisplayResult Edit(OmnichannelActivity activity, BuildEditorContext context)
     {
         var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
+        var isCreatingOutbound = context.GroupId == OmnichannelConstants.CreateOutboundActivityGroup;
 
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
@@ -108,9 +109,19 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
 
-            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+            var configuredSubjectTypes = isCreatingOutbound
+                ? await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound)
+                : await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+
+            foreach (var contentType in configuredSubjectTypes)
             {
                 subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+            }
+
+            // When creating an outbound activity and there is exactly one outbound subject, auto-select it.
+            if (isCreatingOutbound && string.IsNullOrEmpty(model.SubjectContentType) && subjectContentTypes.Count == 1)
+            {
+                model.SubjectContentType = subjectContentTypes[0].Value;
             }
 
             await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);

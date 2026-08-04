@@ -5,7 +5,8 @@
 </zone>
 
 @{
-    var contentItemId = ViewContext.HttpContext.Request.RouteValues["id"];
+    var contentItemId = ViewContext.HttpContext.Request.RouteValues["id"] ?? ViewContext.HttpContext.Request.RouteValues["contentItemId"];
+    var hasOutboundSubjects = ViewData["HasOutboundSubjects"] as bool? ?? true;
 }
 
 @{
@@ -17,6 +18,17 @@
 }
 
 @await DisplayAsync(shape)
+
+@if (!hasOutboundSubjects)
+{
+    <div class="alert alert-warning">
+        @T["There is no configured outbound subject yet. You can't create a scheduled activity until an outbound subject flow is configured."]
+    </div>
+
+    <a class="btn btn-secondary" asp-action="List" asp-route-contentItemId="@contentItemId">@T["Back to activities"]</a>
+
+    return;
+}
 
 <form method="post" asp-route-contentItemId="@contentItemId" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()

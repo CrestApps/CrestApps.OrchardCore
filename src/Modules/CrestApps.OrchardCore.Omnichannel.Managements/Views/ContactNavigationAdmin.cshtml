@@ -35,7 +35,19 @@
 
             @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
             {
-                <a class="btn btn-secondary me-1" asp-action="Create" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["New Activity"]</a>
+                <div class="btn-group me-1">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        @T["Add Activity"]
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" asp-action="Create" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["Outbound Activity"]</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" asp-action="CreateInbound" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["Inbound Activity"]</a>
+                        </li>
+                    </ul>
+                </div>
             }
 
         </div>

@@ -114,6 +114,13 @@ When an activity is completed, the user selects a disposition and is shown a pre
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
+#### Logging activities from a contact
+
+On a contact's **Activities** page, the **Add Activity** button is a dropdown with two options that map to the subject direction:
+
+- **Outbound Activity** creates a *scheduled* activity, exactly like before. The subject selector lists **outbound** subjects only, and when a single outbound subject is configured it is auto-selected on page load. If no outbound subject is configured, a warning is shown and scheduling is blocked.
+- **Inbound Activity** logs a *completed* activity for work the contact initiated. The screen mirrors the complete-activity experience - contact information, the subject's fields, a disposition, notes, and the workflow-results preview - with an added subject selector that lists **inbound** subjects only. When a single inbound subject is configured it is auto-selected on page load; changing the selector reloads the screen so the correct subject fields and dispositions appear. The activity is stored as **completed by the current user**, and the subject flow runs immediately, so it may create a follow-up activity depending on the inbound subject's actions. If no inbound subject is configured, a warning is shown and inbound logging is blocked.
+
 ### Load Inventory
 A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 

@@ -13,6 +13,8 @@ public static class OmnichannelConstants
 
     public const string CompleteActivityGroup = "complete";
 
+    public const string CreateOutboundActivityGroup = "create-outbound";
+
     /// <summary>
     /// Represents the named parts.
     /// </summary>
