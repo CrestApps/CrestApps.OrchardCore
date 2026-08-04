@@ -47,6 +47,10 @@ In Orchard editors, prompt templates appear through a picker in the relevant AI 
 - compose reusable instructions for chat interactions
 - keep profile templates consistent across environments
 
+The screencast below enables the feature, opens an AI profile editor, and uses the prompt-template picker to attach reusable fragments — **Use Markdown Syntax** and **Chat Session Summarizer** — discovered from enabled modules.
+
+![Screen cast of attaching reusable prompt templates to an AI profile](/img/docs/ai-prompt-templates.gif)
+
 ## Core documentation
 
 The template engine itself is shared across hosts, so the detailed guidance is published in **CrestApps.Core**:
