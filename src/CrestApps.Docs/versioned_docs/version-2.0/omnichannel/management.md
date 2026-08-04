@@ -402,6 +402,10 @@ Activity rows display an urgency icon so managers can identify priority visually
 
 Use the **Bulk actions** card to choose an action and its scope:
 
+The screencast below shows a manager redistributing queued work: they select the activities, open the **Select an action** menu (which exposes Assign, Reschedule, Set Urgency Level, Change Subject, and more), reassign the activities to an agent, and execute the bulk action.
+
+![Screen cast of a manager reassigning activities in bulk](/img/docs/omni-manager-redistribute.gif)
+
 - Apply the action to the activities selected on the current page
 - Apply the action to **all matching activities** returned by the current filter
 
