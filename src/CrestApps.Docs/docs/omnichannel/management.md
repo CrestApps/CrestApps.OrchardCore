@@ -214,6 +214,12 @@ When the import file is not already using E.164 phone numbers, select the defaul
 3. Attach `OmnichannelSubjectPart` to mark the content type as an Omnichannel subject.
 4. Add any fields or parts you want the agent to capture during the interaction.
 
+A subject is just a content type marked with `OmnichannelSubjectPart`. Create one subject per interaction goal, such as `Lead Generation` for outbound prospecting. You can create additional subjects for other stages of the customer journey, for example `Lead Generation - 30 day follow-up` and `New Customer - Welcome`.
+
+The screencast below creates a `Lead Generation` subject and opens its flow settings:
+
+![Screen cast of creating a Lead Generation subject content type](/img/docs/omni-subject-leadgen.gif)
+
 The former `OmnichannelSubject` stereotype is no longer recognized. Existing subject content types must remove that stereotype and attach `OmnichannelSubjectPart`.
 
 Because subject content items are authored and completed through the omnichannel subject flow rather than the standard content workflow, the default content editor action buttons Orchard Core injects (**Publish**, **Save Draft**, and **Preview**) are automatically hidden on the editor of any content type that has `OmnichannelSubjectPart` attached. This applies as soon as the part is attached and is reverted automatically when the part is detached, without any placement configuration.
@@ -223,6 +229,10 @@ Because subject content items are authored and completed through the omnichannel
 1. Go to `Interaction Center` → `Management` → `Dispositions`.
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
+
+For a lead-conversion story, create outcomes such as `No answer`, `Call back`, `Follow up 30 days`, `Lead won`, and `Do not call`. The screencast below adds all five:
+
+![Screen cast of creating omnichannel dispositions](/img/docs/omni-dispositions.gif)
 
 ### 5) Create Campaign Groups and Campaigns
 
@@ -266,6 +276,10 @@ From the `Subject Flows` list, click **Manage Flow** next to a subject.
 | Sold | Finish | Completes the current workflow |
 
 Subjects without any actions show a **Missing flow** badge in the Subject Flows list so you can find incomplete setups quickly.
+
+The screencast below walks through a complete lead-generation flow. It assigns the `Spring Lead Drive` campaign to the subject, then maps four dispositions to actions that tell the story of converting a lead into a customer of the fictional *X Company*: **No answer** retries the call up to three times (**Try Again**), **Follow up 30 days** schedules a new activity against the *Lead Generation - 30 day follow-up* subject 720 hours out (**New Activity**), **Lead won** creates a *New Customer - Welcome* activity 72 hours (3 days) later, and **Do not call** finishes the interaction while setting the contact's Do-Not-Call preference (**Finish**).
+
+![Screen cast of configuring a subject flow with disposition actions](/img/docs/omni-subject-flow.gif)
 
 ### 8) Create and Load Inventory
 
