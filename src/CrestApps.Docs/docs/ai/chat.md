@@ -209,6 +209,10 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.
 :::
 
+The screencast below enables the **AI Chat Admin Widget** feature, creates a chat profile with **all tool capabilities selected**, points the widget at that profile in **Settings → Artificial Intelligence → Admin Widget**, and then opens the floating widget to ask the assistant a question it answers using its tools.
+
+![Screen cast of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant](/img/docs/ai-admin-widget.gif)
+
 ---
 
 ### Frontend Chat Widget
