@@ -359,6 +359,10 @@ The screencast below walks through a complete inbound scenario for a call center
 
 ![Screen cast of creating an inbound subject and logging an inbound call for an existing contact](/img/docs/omni-inbound-existing.gif)
 
+Sometimes an inbound caller is not in the system yet. The screencast below shows that variation: the agent searches Content Items with `phone:7025559999`, gets no match, creates a new `Contact` content item for the caller (capturing their name, time zone, and phone number), and then logs the inbound call under the new contact.
+
+![Screen cast of creating a new contact for an unknown inbound caller and logging the call](/img/docs/omni-inbound-new-contact.gif)
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.

@@ -140,6 +140,10 @@ The screencast below walks through a complete inbound scenario for a call center
 
 ![Screen cast of creating an inbound subject and logging an inbound call for an existing contact](/img/docs/omni-inbound-existing.gif)
 
+Sometimes an inbound caller is not in the system yet. The screencast below shows that variation: the agent searches Content Items with `phone:7025559999`, gets no match, creates a new `Contact` content item for the caller (capturing their name, time zone, and phone number), and then logs the inbound call under the new contact.
+
+![Screen cast of creating a new contact for an unknown inbound caller and logging the call](/img/docs/omni-inbound-new-contact.gif)
+
 ### Load Inventory
 A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 
