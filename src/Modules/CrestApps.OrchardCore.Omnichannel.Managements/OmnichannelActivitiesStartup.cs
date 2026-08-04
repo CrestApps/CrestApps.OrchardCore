@@ -92,8 +92,8 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
             .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
 
-        services.AddScoped<OmnichannelContentTypeProvider>();
-        services.AddScoped<IContentDefinitionEventHandler, OmnichannelContentTypeCacheInvalidator>();
+        services.AddSingleton<OmnichannelContentTypeProvider>();
+        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
 
         services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
 
