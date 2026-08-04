@@ -310,6 +310,12 @@ The scheduled activities list now includes a **Time zone** filter alongside the 
 
 Users with the **Purge activity** permission see a **Purge** button on each scheduled activity in a contact profile. Purging is irreversible, changes the activity status to `Purged`, records the UTC purge time and current user's identifier and username for auditing, and clears any reservation state while preserving assignment. The same permission is required for the bulk **Purge** action on the Manage Activities page; every activity in one bulk operation records the same purge time and actor, and **Manage activities** implies **Purge activity**.
 
+### Contacts list
+
+The `Interaction Center` → `Contacts` menu item opens the standard Orchard Core content list restricted to your Omnichannel contact content types. It links to the content `List` action and passes every content type that has `OmnichannelContactPart` attached as a comma-separated `contentTypeId`, so the resulting screen only shows contact items and only offers contact types when creating new content.
+
+The contact content types are read from the cached provider that tracks which types attach `OmnichannelContactPart`, so the menu stays in sync as you attach or detach the part without scanning every content definition on each request. The menu item is available to users with the **List content** permission.
+
 ### Phone number search
 
 Phone filters in **Load Inventory**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods.
