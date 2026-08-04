@@ -107,6 +107,10 @@ Navigate to **Interaction Center** -> **Local DNC Registry** to:
 
 After upload, the request returns immediately and the import continues in the background. The list grid shows whether a list is **Pending**, **Processing**, **Completed**, or **Failed**, together with row progress, success counts, and error counts.
 
+The screencast below uploads a suppression list to the Local DNC Registry and then turns on global enforcement. It opens **Local DNC Registry**, uploads a named CSV list for the United States, then visits **Settings** -> **Content Import** to enable **Enforce do-not-call registry checks globally** and select the **Local Do Not Call Registry** so every contact import automatically scrubs numbers that appear on the list.
+
+![Screen cast of uploading a local DNC list and enforcing it globally](/img/docs/omni-dnc-local.gif)
+
 ### CSV file format
 
 The CSV file should contain a single column with one phone number per row. If the file comes from a spreadsheet, keep the data on a single worksheet and export that worksheet as CSV.
