@@ -54,6 +54,14 @@ const config = {
               label: 'Latest',
               path: '',
             },
+            '2.0': {
+              label: '2.0',
+              path: '2.0',
+            },
+            '1.2': {
+              label: '1.2',
+              path: '1.2',
+            },
           },
         },
         blog: false,

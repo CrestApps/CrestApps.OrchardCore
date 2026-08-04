@@ -147,8 +147,8 @@ const sidebars = {
             label: 'Changelog',
             items: [
                 'changelog/index',
-                'changelog/v3.0.0',
-                'changelog/v2.0.0',
+                'changelog/3.0.0',
+                'changelog/2.0.0',
             ],
         },
     ],
