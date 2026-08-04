@@ -44,19 +44,9 @@ public sealed class Startup : StartupBase
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
             });
 
-        services.AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>();
-    }
-}
-
-/// <summary>
-/// Registers the DialPad provider settings driver only when Telephony administration is enabled.
-/// </summary>
-[RequireFeatures(TelephonyConstants.Feature.Admin)]
-public sealed class DialPadAdminStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
+        services
+            .AddTelephonyProviderOptionsConfiguration<DialPadProviderOptionsConfigurations>()
+            .AddSiteDisplayDriver<DialPadSettingsDisplayDriver>();
     }
 }
 

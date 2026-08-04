@@ -226,7 +226,6 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class Feature
         {
-            public const string Admin = "CrestApps.OrchardCore.Telephony.Admin";
             public const string Area = "CrestApps.OrchardCore.Telephony";
             public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
         }

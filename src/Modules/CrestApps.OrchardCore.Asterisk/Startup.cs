@@ -114,6 +114,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddTelephonyProviderOptionsConfiguration<AsteriskProviderOptionsConfigurations>()
+            .AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsConfiguration>()
             .AddTransient<IValidateOptions<DefaultAsteriskOptions>, DefaultAsteriskOptionsValidator>()
             .AddScoped<IAsteriskPjsipCredentialIssuer, AsteriskPjsipCredentialIssuer>()
@@ -137,18 +138,6 @@ public sealed class Startup : StartupBase
             .AddScoped<AsteriskRealtimeVoiceEventDispatcher>()
             .AddScoped<IAsteriskProviderStateReconciler, AsteriskTelephonyProviderStateReconciler>()
             .AddScoped<IModularTenantEvents, AsteriskRealtimeVoiceTenantEvents>();
-    }
-}
-
-/// <summary>
-/// Registers the Asterisk provider settings driver only when Telephony administration is enabled.
-/// </summary>
-[RequireFeatures(TelephonyConstants.Feature.Admin)]
-public sealed class AsteriskAdminStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>();
     }
 }
 

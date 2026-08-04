@@ -17,7 +17,7 @@ Enable `CrestApps.OrchardCore.ContactCenter` for the headless interaction lifecy
 
 ## Headless and administration features
 
-Screens are not part of a capability. Every capability feature registers services only. The screens those capabilities would otherwise register are folded into a single administration feature, `CrestApps.OrchardCore.ContactCenter.Admin`, and each capability's screens are gated on that capability being enabled. A deployment that drives the contact center through its own front end or an API can therefore enable every capability without activating a single administration page, and without pulling in the Omnichannel management experience.
+Screens are not part of a Contact Center capability. Every capability feature registers services only. The screens those capabilities would otherwise register are folded into a single administration feature, `CrestApps.OrchardCore.ContactCenter.Admin`, and each capability's screens are gated on that capability being enabled. A deployment that drives the contact center through its own front end or an API can therefore enable every capability without activating Contact Center or Omnichannel administration pages. The shared Telephony provider-configuration screen remains available because provider settings are part of the core Telephony feature.
 
 | Capability feature | Administration screens |
 | --- | --- |

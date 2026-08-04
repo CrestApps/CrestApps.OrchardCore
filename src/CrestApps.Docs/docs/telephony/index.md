@@ -9,7 +9,6 @@ description: Provider-agnostic soft phone, SignalR hub, and telephony provider m
 | --- | --- |
 | **Feature Name** | Telephony |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony` |
-| **Administration feature ID** | `CrestApps.OrchardCore.Telephony.Admin` |
 
 The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [DialPad](dialpad)).
 
@@ -17,7 +16,7 @@ In this module, **provider** means the configured **telephony backend adapter** 
 DialPad, or another PBX/carrier API integration), not the user's phone company in the business or
 billing sense.
 
-`CrestApps.OrchardCore.Telephony` registers services only. The telephony settings screen and its administration menu entry live in `CrestApps.OrchardCore.Telephony.Admin`, so a headless deployment - or a Contact Center tenant that only needs telephony services - can enable telephony without activating an administration surface. Enable `CrestApps.OrchardCore.Telephony.Admin` to configure the provider from the dashboard.
+`CrestApps.OrchardCore.Telephony` registers the provider-neutral runtime services and the **Settings → Communication → Telephony** configuration screen. Every provider feature depends on Telephony and contributes its settings tab directly, so enabling a provider always makes its configuration available. The floating widget remains optional and is registered only by `CrestApps.OrchardCore.Telephony.SoftPhone`.
 
 ## Architecture
 

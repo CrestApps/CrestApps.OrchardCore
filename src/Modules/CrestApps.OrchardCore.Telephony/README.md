@@ -8,8 +8,7 @@ This module does **not** provide an SMS abstraction. Use the Orchard Core SMS or
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Telephony | `CrestApps.OrchardCore.Telephony` | Provider resolver, call services, SignalR hub, OAuth connect/callback routes, and interaction (call-history) persistence. Depends on `OrchardCore.Users` and `CrestApps.OrchardCore.SignalR`. |
-| Telephony Administration | `CrestApps.OrchardCore.Telephony.Admin` | Adds the **Settings → Communication → Telephony** provider settings screen and its administration menu entry. |
+| Telephony | `CrestApps.OrchardCore.Telephony` | Provider resolver, call services, SignalR hub, OAuth connect/callback routes, interaction persistence, and the **Settings → Communication → Telephony** provider settings screen. Depends on `OrchardCore.Users` and `CrestApps.OrchardCore.SignalR`. |
 | Telephony Soft Phone | `CrestApps.OrchardCore.Telephony.SoftPhone` | Injects the floating soft phone into the admin dashboard, the front end, or both. |
 
 ## Installation
@@ -23,7 +22,6 @@ Install the package into the web/startup project and enable the features through
       "name": "Feature",
       "enable": [
         "CrestApps.OrchardCore.Telephony",
-        "CrestApps.OrchardCore.Telephony.Admin",
         "CrestApps.OrchardCore.Telephony.SoftPhone"
       ]
     }
@@ -35,7 +33,7 @@ The soft-phone feature is optional; omit it when only server-side call services 
 
 ## Configuration
 
-Enable the **Telephony Administration** feature, then enable and configure a provider feature under **Settings → Communication → Telephony**. Each provider contributes its own settings tab through a site display driver. The default provider is stored in `TelephonySettings.DefaultProviderName`; when a single configured provider is enabled it becomes the default automatically.
+Enable Telephony and a provider feature, then configure the provider under **Settings → Communication → Telephony**. Each provider contributes its own settings tab through a site display driver. The default provider is stored in `TelephonySettings.DefaultProviderName`; when a single configured provider is enabled it becomes the default automatically.
 
 Provider credentials and per-user OAuth tokens are always kept server-side and are protected by the tenant's data-protection configuration.
 

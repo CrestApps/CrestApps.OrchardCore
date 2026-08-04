@@ -1,5 +1,8 @@
 using System.Reflection;
 using System.Text;
+using CrestApps.OrchardCore.Asterisk;
+using CrestApps.OrchardCore.DialPad;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +15,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
 /// <summary>
-/// Proves that a Contact Center deployment can run headlessly - every capability enabled, no administration screen
-/// anywhere in the tenant.
+/// Proves that a Contact Center deployment can run headlessly with no capability-specific administration screens.
 /// </summary>
 /// <remarks>
 /// The capability features used to register their own screens, so enabling <c>Queues</c> transitively activated the
@@ -23,8 +25,8 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// <para>
 /// The oracle is structural rather than a list of feature identifiers. Administration surface is discovered by
 /// reflection - every navigation provider, every display driver, and every routed administration controller in the
-/// Contact Center, Telephony and Omnichannel assemblies - and the headless tenant is then required to resolve none of
-/// it. A screen added to a capability feature later fails this test without anyone remembering to extend it.
+/// Contact Center, Telephony, provider, and Omnichannel assemblies. The base Telephony provider-configuration screen
+/// is always available by design; capability-specific administration surface must remain absent.
 /// </para>
 /// <para>
 /// Controllers are part of that sweep because moving a driver without moving the controller that consumes it is worse
@@ -34,10 +36,18 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// </remarks>
 public sealed class ContactCenterHeadlessClosureTests
 {
+    private static readonly string[] _alwaysAvailableConfigurationSurface =
+    [
+        "CrestApps.OrchardCore.Telephony.Drivers.TelephonySettingsDisplayDriver",
+        "CrestApps.OrchardCore.Telephony.Services.TelephonyAdminMenu",
+    ];
+
     private static readonly string[] _surfaceAssemblyPrefixes =
     [
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
+        "CrestApps.OrchardCore.Asterisk",
+        "CrestApps.OrchardCore.DialPad",
         "CrestApps.OrchardCore.Omnichannel",
     ];
 
@@ -56,7 +66,7 @@ public sealed class ContactCenterHeadlessClosureTests
     ];
 
     [Fact]
-    public async Task TheFullHeadlessClosure_ActivatesWithoutAnyAdministrationSurface()
+    public async Task TheFullHeadlessClosure_ActivatesWithoutCapabilityAdministrationSurface()
     {
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
 
@@ -83,7 +93,9 @@ public sealed class ContactCenterHeadlessClosureTests
                 EnabledUserExperienceFeatures = _userExperienceFeatures
                     .Where(enabledFeatureIds.Contains)
                     .ToArray(),
-                Surface = FindAdministrationSurface(serviceProvider),
+                Surface = FindAdministrationSurface(serviceProvider)
+                    .Except(_alwaysAvailableConfigurationSurface, StringComparer.Ordinal)
+                    .ToArray(),
             };
         });
 
@@ -95,11 +107,47 @@ public sealed class ContactCenterHeadlessClosureTests
                 result.EnabledUserExperienceFeatures));
 
         Assert.True(
-            result.Surface.Count == 0,
+            result.Surface.Length == 0,
             Describe(
-                "A headless tenant registered administration surface.",
+                "A headless tenant registered capability-specific administration surface.",
                 "Move the registration out of the capability feature and into its '.Admin' feature.",
                 result.Surface));
+    }
+
+    [Fact]
+    public async Task TelephonyCore_RegistersProviderConfigurationSurface()
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var surface = await GetSurfaceAsync(
+            host,
+            "telephony-provider-configuration",
+            [TelephonyConstants.Feature.Area]);
+
+        Assert.True(
+            _alwaysAvailableConfigurationSurface.All(surface.Contains),
+            Describe(
+                "The Telephony core feature did not register its provider-configuration surface.",
+                "Register the Telephony settings display driver and administration menu from the core Telephony startup.",
+                _alwaysAvailableConfigurationSurface.Except(surface, StringComparer.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData(
+        AsteriskConstants.Feature.Area,
+        "CrestApps.OrchardCore.Asterisk.Drivers.AsteriskSettingsDisplayDriver")]
+    [InlineData(
+        DialPadConstants.Feature.Area,
+        "CrestApps.OrchardCore.DialPad.Drivers.DialPadSettingsDisplayDriver")]
+    public async Task TelephonyProviderFeature_RegistersItsSettingsSurface(
+        string featureId,
+        string settingsDriverType)
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var surface = await GetSurfaceAsync(host, featureId, [featureId]);
+
+        Assert.Contains(settingsDriverType, surface);
     }
 
     [Fact]
@@ -198,7 +246,9 @@ public sealed class ContactCenterHeadlessClosureTests
         {
             var surface = await GetSurfaceAsync(host, "headless-" + capabilityFeature, [capabilityFeature]);
 
-            if (surface.Any(IsContactCenterSurface))
+            if (surface
+                .Except(_alwaysAvailableConfigurationSurface, StringComparer.Ordinal)
+                .Any(IsContactCenterSurface))
             {
                 withSurface.Add(capabilityFeature);
             }

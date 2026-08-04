@@ -44,7 +44,7 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="channelTenantBindingStore">The channel tenant binding store used to detect live calls before an ARI identity change.</param>
+    /// <param name="channelTenantBindingStores">The optional channel tenant binding stores used to detect live Contact Center calls before an ARI identity change.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AsteriskSettingsDisplayDriver(
@@ -53,7 +53,7 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         INotifier notifier,
-        IAsteriskChannelTenantBindingStore channelTenantBindingStore,
+        IEnumerable<IAsteriskChannelTenantBindingStore> channelTenantBindingStores,
         IHtmlLocalizer<AsteriskSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<AsteriskSettingsDisplayDriver> stringLocalizer)
     {
@@ -62,7 +62,7 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _notifier = notifier;
-        _channelTenantBindingStore = channelTenantBindingStore;
+        _channelTenantBindingStore = channelTenantBindingStores.FirstOrDefault();
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -332,6 +332,7 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
         // refused so another tenant cannot claim the old identity and observe this tenant's in-flight channels.
         if (previousIsEnabled &&
             IsAriIdentityAbandoned(previousBaseUrl, previousApplicationName, settings) &&
+            _channelTenantBindingStore is not null &&
             await _channelTenantBindingStore.HasAnyAsync())
         {
             context.Updater.ModelState.AddModelError(

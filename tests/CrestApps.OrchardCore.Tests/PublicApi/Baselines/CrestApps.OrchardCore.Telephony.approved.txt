@@ -1,8 +1,6 @@
 [assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactory("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
     "ory, Microsoft.AspNetCore.Mvc.Razor")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
-        "CrestApps.OrchardCore.Telephony"}, Description="Adds the telephony provider settings screen and its administration menu entry.", Id="CrestApps.OrchardCore.Telephony.Admin", Name="Telephony Administration")]
-[assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
         "CrestApps.OrchardCore.Telephony"}, Description="Injects the floating soft phone experience into the admin dashboard, front end, o" +
     "r both.", Id="CrestApps.OrchardCore.Telephony.SoftPhone", Name="Telephony Soft Phone")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
@@ -282,12 +280,6 @@ namespace CrestApps.OrchardCore.Telephony
     {
         public Startup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
-        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-    }
-    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.Admin")]
-    public sealed class TelephonyAdminStartup : OrchardCore.Modules.StartupBase
-    {
-        public TelephonyAdminStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }

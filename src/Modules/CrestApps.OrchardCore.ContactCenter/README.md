@@ -6,7 +6,7 @@ Provides the **contact center orchestration layer** that turns the CrestApps CRM
 
 ## Features
 
-The module ships as many small, independently deployable, feature-gated capabilities so a tenant enables only what it licenses. Administration screens are separated from their runtime capability so a headless tenant can run without any admin UI.
+The module ships as many small, independently deployable, feature-gated capabilities so a tenant enables only what it licenses. Contact Center administration screens are separated from their runtime capability so a headless tenant can run without Contact Center or Omnichannel admin UI. The shared Telephony provider-configuration screen remains available when voice capabilities enable Telephony.
 
 ### Foundation
 
