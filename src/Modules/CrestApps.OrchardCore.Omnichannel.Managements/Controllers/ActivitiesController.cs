@@ -348,7 +348,7 @@ public sealed class ActivitiesController : Controller
         ViewData["Contact"] = contact;
         ViewData["HasOutboundSubjects"] = outboundSubjects.Count > 0;
 
-        var model = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CreateOutboundActivityGroup);
+        var model = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }
@@ -392,7 +392,7 @@ public sealed class ActivitiesController : Controller
         activity.CreatedByUsername = User.Identity?.Name;
         activity.CreatedUtc = _clock.UtcNow;
 
-        var model = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CreateOutboundActivityGroup);
+        var model = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (ModelState.IsValid)
         {

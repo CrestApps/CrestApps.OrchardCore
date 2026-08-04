@@ -94,7 +94,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     public override IDisplayResult Edit(OmnichannelActivity activity, BuildEditorContext context)
     {
         var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
-        var isCreatingOutbound = context.GroupId == OmnichannelConstants.CreateOutboundActivityGroup;
+        var isCreatingOutbound = context.IsNew && !isCompletingActivity;
 
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
