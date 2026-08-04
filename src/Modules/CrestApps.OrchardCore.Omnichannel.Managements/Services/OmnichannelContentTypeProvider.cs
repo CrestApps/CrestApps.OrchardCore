@@ -1,72 +1,127 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
+using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Maintains in-memory sets of the content types that have the <c>OmnichannelSubjectPart</c> or the
-/// <c>OmnichannelContactPart</c> attached so callers can answer that question, and build subject and contact
-/// content type drop downs, without scanning every content type definition on each request. The sets are warmed
-/// once from the content definitions and then kept in sync through the <see cref="IContentDefinitionEventHandler"/>
-/// notifications, so they always reflect the latest definitions without repeated enumeration.
+/// Reports the content types that have the <c>OmnichannelSubjectPart</c> or the <c>OmnichannelContactPart</c>
+/// attached, so callers can answer that question and build subject and contact content type drop downs without
+/// scanning every content type definition on each request. The membership sets are computed once and cached in
+/// the per-tenant <see cref="IMemoryCache"/>, then kept current through the <see cref="IContentDefinitionEventHandler"/>
+/// notifications so they always reflect the latest definitions without repeated enumeration.
 /// </summary>
 public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHandler
 {
-    private readonly Lock _lock = new();
+    private static readonly Lock _lock = new();
 
-    private volatile HashSet<string> _subjectContentTypes;
-    private volatile HashSet<string> _contactContentTypes;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IMemoryCache _memoryCache;
+    private readonly string _cacheKey;
+
+    private OmnichannelContentTypeSet _set;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelContentTypeProvider"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager used to read the type definitions.</param>
+    /// <param name="memoryCache">The per-tenant memory cache used to store the membership sets.</param>
+    /// <param name="shellSettings">The shell settings used to scope the cache entry to the current tenant.</param>
+    public OmnichannelContentTypeProvider(
+        IContentDefinitionManager contentDefinitionManager,
+        IMemoryCache memoryCache,
+        ShellSettings shellSettings)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+        _memoryCache = memoryCache;
+        _cacheKey = GetCacheKey(shellSettings);
+    }
+
+    /// <summary>
+    /// Builds the per-tenant memory cache key used to store the omnichannel content type membership sets.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings whose <see cref="ShellSettings.Name"/> scopes the entry.</param>
+    /// <returns>The cache key for the tenant.</returns>
+    internal static string GetCacheKey(ShellSettings shellSettings)
+        => $"OmnichannelContentTypes:{shellSettings.Name}";
 
     /// <summary>
     /// Determines whether the specified content type has the <c>OmnichannelSubjectPart</c> attached.
     /// </summary>
     /// <param name="contentType">The technical name of the content type to test.</param>
     /// <returns><see langword="true"/> when the content type is a subject; otherwise, <see langword="false"/>.</returns>
-    public bool IsSubjectContentType(string contentType)
-        => Contains(_subjectContentTypes, contentType);
+    public async ValueTask<bool> IsSubjectContentTypeAsync(string contentType)
+    {
+        if (string.IsNullOrEmpty(contentType))
+        {
+            return false;
+        }
+
+        var set = await EnsureInitializedAsync();
+
+        return set.SubjectContentTypes.Contains(contentType);
+    }
 
     /// <summary>
     /// Determines whether the specified content type has the <c>OmnichannelContactPart</c> attached.
     /// </summary>
     /// <param name="contentType">The technical name of the content type to test.</param>
     /// <returns><see langword="true"/> when the content type is a contact; otherwise, <see langword="false"/>.</returns>
-    public bool IsContactContentType(string contentType)
-        => Contains(_contactContentTypes, contentType);
+    public async ValueTask<bool> IsContactContentTypeAsync(string contentType)
+    {
+        if (string.IsNullOrEmpty(contentType))
+        {
+            return false;
+        }
+
+        var set = await EnsureInitializedAsync();
+
+        return set.ContactContentTypes.Contains(contentType);
+    }
 
     /// <summary>
     /// Gets the technical names of the content types that have the <c>OmnichannelSubjectPart</c> attached.
     /// </summary>
     /// <returns>A read-only snapshot of the subject content type names.</returns>
-    public IReadOnlyCollection<string> GetSubjectContentTypes()
-        => _subjectContentTypes ?? (IReadOnlyCollection<string>)[];
+    public async ValueTask<IReadOnlyCollection<string>> GetSubjectContentTypesAsync()
+    {
+        var set = await EnsureInitializedAsync();
+
+        return set.SubjectContentTypes;
+    }
 
     /// <summary>
     /// Gets the technical names of the content types that have the <c>OmnichannelContactPart</c> attached.
     /// </summary>
     /// <returns>A read-only snapshot of the contact content type names.</returns>
-    public IReadOnlyCollection<string> GetContactContentTypes()
-        => _contactContentTypes ?? (IReadOnlyCollection<string>)[];
-
-    /// <summary>
-    /// Warms the cached sets from the current content definitions the first time they are requested. Subsequent
-    /// calls are a no-op because the sets are afterward kept current through the content definition notifications.
-    /// </summary>
-    /// <param name="contentDefinitionManager">The content definition manager used to read the type definitions.</param>
-    public async Task EnsureInitializedAsync(IContentDefinitionManager contentDefinitionManager)
+    public async ValueTask<IReadOnlyCollection<string>> GetContactContentTypesAsync()
     {
-        if (_subjectContentTypes is not null && _contactContentTypes is not null)
+        var set = await EnsureInitializedAsync();
+
+        return set.ContactContentTypes;
+    }
+
+    private async ValueTask<OmnichannelContentTypeSet> EnsureInitializedAsync()
+    {
+        if (_set is not null)
         {
-            return;
+            return _set;
         }
 
-        var definitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
+        if (_memoryCache.TryGetValue<OmnichannelContentTypeSet>(_cacheKey, out var cached) && cached is not null)
+        {
+            _set = cached;
+
+            return cached;
+        }
 
         var subjectContentTypes = new HashSet<string>(StringComparer.Ordinal);
         var contactContentTypes = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var definition in definitions)
+        foreach (var definition in await _contentDefinitionManager.ListTypeDefinitionsAsync())
         {
             if (OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(definition))
             {
@@ -79,11 +134,23 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
             }
         }
 
+        var set = new OmnichannelContentTypeSet(subjectContentTypes, contactContentTypes);
+
         lock (_lock)
         {
-            _subjectContentTypes ??= subjectContentTypes;
-            _contactContentTypes ??= contactContentTypes;
+            if (_memoryCache.TryGetValue<OmnichannelContentTypeSet>(_cacheKey, out var existing) && existing is not null)
+            {
+                set = existing;
+            }
+            else
+            {
+                _memoryCache.Set(_cacheKey, set);
+            }
         }
+
+        _set = set;
+
+        return set;
     }
 
     /// <inheritdoc/>
@@ -103,8 +170,8 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     {
         var contentType = context.ContentTypeDefinition?.Name;
 
-        SetSubjectMembership(contentType, isMember: false);
-        SetContactMembership(contentType, isMember: false);
+        SetMembership(subject: true, contentType, isMember: false);
+        SetMembership(subject: false, contentType, isMember: false);
     }
 
     /// <inheritdoc/>
@@ -112,11 +179,11 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     {
         if (IsSubjectPart(context.ContentPartName))
         {
-            SetSubjectMembership(context.ContentTypeName, isMember: true);
+            SetMembership(subject: true, context.ContentTypeName, isMember: true);
         }
         else if (IsContactPart(context.ContentPartName))
         {
-            SetContactMembership(context.ContentTypeName, isMember: true);
+            SetMembership(subject: false, context.ContentTypeName, isMember: true);
         }
     }
 
@@ -125,11 +192,11 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     {
         if (IsSubjectPart(context.ContentPartName))
         {
-            SetSubjectMembership(context.ContentTypeName, isMember: false);
+            SetMembership(subject: true, context.ContentTypeName, isMember: false);
         }
         else if (IsContactPart(context.ContentPartName))
         {
-            SetContactMembership(context.ContentTypeName, isMember: false);
+            SetMembership(subject: false, context.ContentTypeName, isMember: false);
         }
     }
 
@@ -195,11 +262,11 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
             return;
         }
 
-        SetSubjectMembership(contentTypeDefinition.Name, OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentTypeDefinition));
-        SetContactMembership(contentTypeDefinition.Name, OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition));
+        SetMembership(subject: true, contentTypeDefinition.Name, OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentTypeDefinition));
+        SetMembership(subject: false, contentTypeDefinition.Name, OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition));
     }
 
-    private void SetSubjectMembership(string contentType, bool isMember)
+    private void SetMembership(bool subject, string contentType, bool isMember)
     {
         if (string.IsNullOrEmpty(contentType))
         {
@@ -208,59 +275,24 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
         lock (_lock)
         {
-            _subjectContentTypes = WithMembership(_subjectContentTypes, contentType, isMember);
+            // Skip incremental updates until the set has been warmed; the initial warm reads the current
+            // definitions and therefore already reflects any change that happened before it ran.
+            if (!_memoryCache.TryGetValue<OmnichannelContentTypeSet>(_cacheKey, out var current) || current is null)
+            {
+                _set = null;
+
+                return;
+            }
+
+            var updated = current.With(subject, contentType, isMember);
+
+            if (!ReferenceEquals(updated, current))
+            {
+                _memoryCache.Set(_cacheKey, updated);
+            }
+
+            _set = updated;
         }
-    }
-
-    private void SetContactMembership(string contentType, bool isMember)
-    {
-        if (string.IsNullOrEmpty(contentType))
-        {
-            return;
-        }
-
-        lock (_lock)
-        {
-            _contactContentTypes = WithMembership(_contactContentTypes, contentType, isMember);
-        }
-    }
-
-    private static HashSet<string> WithMembership(HashSet<string> contentTypes, string contentType, bool isMember)
-    {
-        // Skip incremental updates until the set has been warmed; the initial warm reads the current
-        // definitions and therefore already reflects any change that happened before it ran.
-        if (contentTypes is null)
-        {
-            return null;
-        }
-
-        if (isMember == contentTypes.Contains(contentType))
-        {
-            return contentTypes;
-        }
-
-        var updated = new HashSet<string>(contentTypes, StringComparer.Ordinal);
-
-        if (isMember)
-        {
-            updated.Add(contentType);
-        }
-        else
-        {
-            updated.Remove(contentType);
-        }
-
-        return updated;
-    }
-
-    private static bool Contains(HashSet<string> contentTypes, string contentType)
-    {
-        if (string.IsNullOrEmpty(contentType))
-        {
-            return false;
-        }
-
-        return contentTypes is not null && contentTypes.Contains(contentType);
     }
 
     private static bool IsSubjectPart(string partName)
