@@ -12,6 +12,10 @@ description: Ad-hoc AI chat interactions with configurable parameters, tool inte
 
 Provides ad-hoc AI chat interactions with configurable parameters without predefined profiles.
 
+The screencast below enables the feature, starts a new ad-hoc chat, picks the `gpt-4.1-mini` chat deployment, and gets a real answer from the model.
+
+![Screen cast of starting a new AI chat interaction and chatting with the model](/img/docs/ai-chat-interactions.gif)
+
 ## Overview
 
 This module provides ad-hoc AI chat interactions with configurable parameters, enabling users to chat with AI models without requiring predefined AI Profiles. The orchestrator manages all AI dependencies including tools, MCP connections, and document handling.
