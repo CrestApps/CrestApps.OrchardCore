@@ -54,6 +54,21 @@ The admin **Chat Interactions** list includes integrated search, multi-select, a
 
 When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions now follow the site-level **Allow document uploads** and **Allow image uploads** settings, and image formats only appear when a vision deployment is configured.
 
+### Chatting with an Uploaded PDF
+
+You can attach a document to a single interaction and ask questions about its contents. The uploaded file is chunked, embedded, and stored in an **AI Documents** knowledge base index, and the orchestrator retrieves the relevant passages to ground its answer.
+
+To enable this experience:
+
+1. Enable the **AI Documents (Elasticsearch)** (or **AI Documents (Azure AI Search)**) feature so a vector store is available.
+2. In **Search > Indexing**, add an **AI Documents** index that uses an embedding deployment.
+3. In **Settings > Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
+4. Start a new chat interaction, open the **Knowledge** tab, and upload your file.
+
+The screencast below uploads a short story PDF, waits for it to be indexed, then asks a question that can only be answered from the file. The assistant replies strictly from the document and renders the source file as a numbered citation.
+
+![Screencast of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file](/img/docs/ai-chat-attachments-pdf.gif)
+
 ## Orchestration
 
 Each chat interaction session is bound to an orchestrator that manages the execution pipeline. The orchestrator handles:
