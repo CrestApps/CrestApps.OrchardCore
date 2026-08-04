@@ -299,6 +299,10 @@ The screencast below walks through a complete lead-generation flow. It assigns t
    - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.
 
+The screencast below creates a **Manual** inventory load for the *Lead Generation* subject, targets the `Contact` content type on the phone channel, assigns the generated activities to an agent, and loads the call list for the `Spring Lead Drive` campaign.
+
+![Screen cast of creating a manual inventory load](/img/docs/omni-load-inventory-manual.gif)
+
 The inventory load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
 
 When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
@@ -325,6 +329,10 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 4. A preview appears showing what actions will execute (for example, `Try Again` with a schedule date or `New Activity` targeting another subject).
 5. Adjust the schedule dates if needed, and optionally add **Preparation notes** for any result. A note is stored as the instructions of the follow-up activity it generates.
 6. Click **Complete** to save and execute the subject actions.
+
+The screencast below shows an agent working their assigned queue. The first call is completed with **No answer**, which triggers the *Try Again* action: an inline **Schedule at** calendar and **Preparation notes** field appear so the agent can override the default next call time and leave a note for the retry. A second lead is completed with **Lead won**, and the *New Activity* action automatically schedules a *New Customer - Welcome* call three days out.
+
+![Screen cast of an agent completing activities with dispositions](/img/docs/omni-agent-activities.gif)
 
 ### Scheduled activities list
 
