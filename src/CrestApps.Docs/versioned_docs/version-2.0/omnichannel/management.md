@@ -351,6 +351,14 @@ Content Admin supports these named search terms:
 
 National-number searches can match contacts from more than one country. Use a leading `+` when the country calling code must be part of the search.
 
+## Inbound activities
+
+When a customer initiates contact, an agent logs a **completed** activity against the contact instead of scheduling outbound work. Inbound logging requires at least one subject whose flow uses the **Inbound** direction.
+
+The screencast below walks through a complete inbound scenario for a call center. It first creates an `Inbound` subject content type and configures its flow with the **Inbound** direction on the `Phone` channel (a basic flow that does not require a disposition so agents can log a call quickly). Then it simulates a customer calling in: the agent searches Content Items with `phone:7025556666`, finds the matching contact, opens the contact's **Activities** page, chooses **Inbound** from the **Add Activity** menu, selects the `Inbound` subject, adds a note about the call, and logs the completed activity.
+
+![Screen cast of creating an inbound subject and logging an inbound call for an existing contact](/img/docs/omni-inbound-existing.gif)
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.

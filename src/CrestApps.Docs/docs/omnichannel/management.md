@@ -136,6 +136,10 @@ On a contact's **Activities** page, the **Add Activity** button is a dropdown wi
 - The activity is stored as **completed by the current user**, and the subject flow runs immediately, so it may create a follow-up activity depending on the inbound subject's actions. The logged activity then appears in the contact's completed activities list.
 - If no inbound subject is configured, a warning is shown and inbound logging is blocked.
 
+The screencast below walks through a complete inbound scenario for a call center. It first creates an `Inbound` subject content type and configures its flow with the **Inbound** direction on the `Phone` channel (a basic flow that does not require a disposition so agents can log a call quickly). Then it simulates a customer calling in: the agent searches Content Items with `phone:7025556666`, finds the matching contact, opens the contact's **Activities** page, chooses **Inbound** from the **Add Activity** menu, selects the `Inbound` subject, adds a note about the call, and logs the completed activity.
+
+![Screen cast of creating an inbound subject and logging an inbound call for an existing contact](/img/docs/omni-inbound-existing.gif)
+
 ### Load Inventory
 A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 
