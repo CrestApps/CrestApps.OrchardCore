@@ -114,6 +114,24 @@ When an activity is completed, the user selects a disposition and is shown a pre
 
 Editing an already completed activity does **not** re-run workflow logic. Administrators can correct the saved disposition or notes without creating retry or follow-up activities.
 
+#### Logging activities from a contact
+
+On a contact's **Activities** page, the **Add Activity** button is a dropdown with two options that map to the subject direction:
+
+**Outbound** creates a *scheduled* activity, exactly like the previous **New Activity** behavior:
+
+- The subject selector lists **outbound** subjects only. When exactly one outbound subject is configured it is auto-selected on page load.
+- You set the activity owner, scheduled date, urgency, instructions, and any subject fields, then save the scheduled activity.
+- If no outbound subject is configured, a warning is shown and scheduling is blocked.
+
+**Inbound** logs a *completed* activity for work the contact initiated. The screen mirrors the complete-activity experience:
+
+- The subject selector lists **inbound** subjects only. When exactly one inbound subject is configured it is auto-selected on page load, and changing the selector reloads the screen so the correct subject fields, dispositions, and workflow appear.
+- The subject's editable fields are rendered as an edit view directly under the selector, so there is no separate subject-details card - the same fields the agent would fill while completing a scheduled activity.
+- You review the contact information, fill any subject fields, add notes, and select a disposition. The workflow-results preview shows the follow-up actions the disposition will run.
+- The activity is stored as **completed by the current user**, and the subject flow runs immediately, so it may create a follow-up activity depending on the inbound subject's actions. The logged activity then appears in the contact's completed activities list.
+- If no inbound subject is configured, a warning is shown and inbound logging is blocked.
+
 ### Load Inventory
 A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 

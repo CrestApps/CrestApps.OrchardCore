@@ -67,6 +67,17 @@ public sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+    {
+        var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
+
+        return contentTypes
+            .Where(contentType => HasOmnichannelSubjectPart(contentType) && GetDirection(contentType) == direction)
+            .OrderBy(contentType => contentType.DisplayName)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
     public bool IsConfigured(SubjectFlowSettings flowSettings)
     {
         return !string.IsNullOrWhiteSpace(flowSettings?.SubjectContentType);
@@ -76,6 +87,16 @@ public sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
     {
         return contentTypeDefinition?.Parts.Any(part =>
             part.Name == OmnichannelConstants.ContentParts.OmnichannelSubject) == true;
+    }
+
+    private static SubjectDirection GetDirection(ContentTypeDefinition contentTypeDefinition)
+    {
+        var partDefinition = contentTypeDefinition.Parts
+            .FirstOrDefault(part => part.Name == OmnichannelConstants.ContentParts.OmnichannelSubject);
+
+        return partDefinition is null
+            ? SubjectDirection.Outbound
+            : partDefinition.GetSettings<OmnichannelSubjectPartSettings>().Direction;
     }
 
     private static SubjectFlowSettings BuildFlowSettings(ContentTypeDefinition contentTypeDefinition)
