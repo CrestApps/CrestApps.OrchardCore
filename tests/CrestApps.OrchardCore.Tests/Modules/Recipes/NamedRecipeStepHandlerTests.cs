@@ -555,7 +555,7 @@ public sealed class NamedRecipeStepHandlerTests
     public async Task UpdateUserRecipeStepHandler_WhenNoEnabledUsersExist_ShouldNotSaveAnything()
     {
         // Arrange
-        var emptyBatch = Enumerable.Empty<User>();
+        IReadOnlyList<User> emptyBatch = [];
 
         var query = new Mock<IQuery<User, UserIndex>>();
         query.Setup(x => x.OrderBy(It.IsAny<Expression<Func<UserIndex, object>>>()))

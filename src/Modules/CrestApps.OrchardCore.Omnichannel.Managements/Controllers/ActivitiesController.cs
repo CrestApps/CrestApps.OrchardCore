@@ -314,7 +314,7 @@ public sealed class ActivitiesController : Controller
     }
 
     /// <summary>
-    /// Creates a new .
+    /// Creates a new outbound (scheduled) activity.
     /// </summary>
     /// <param name="contentItemId">The content item id.</param>
     [Admin("omnichannel/activities/create/{contentItemId}")]
@@ -332,6 +332,8 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
+        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
+
         var activity = new OmnichannelActivity()
         {
             ItemId = UniqueId.GenerateId(),
@@ -344,6 +346,7 @@ public sealed class ActivitiesController : Controller
         };
 
         ViewData["Contact"] = contact;
+        ViewData["HasOutboundSubjects"] = outboundSubjects.Count > 0;
 
         var model = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
 
@@ -351,7 +354,7 @@ public sealed class ActivitiesController : Controller
     }
 
     /// <summary>
-    /// Creates a new post.
+    /// Creates a new outbound (scheduled) activity.
     /// </summary>
     /// <param name="contentItemId">The content item id.</param>
     [HttpPost]
@@ -369,6 +372,15 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
         {
             return Forbid();
+        }
+
+        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
+
+        if (outboundSubjects.Count == 0)
+        {
+            await _notifier.WarningAsync(H["There is no configured outbound subject yet. You can't create a scheduled activity."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
         }
 
         var activity = await _omnichannelActivityManager.NewAsync();
@@ -391,8 +403,233 @@ public sealed class ActivitiesController : Controller
         }
 
         ViewData["Contact"] = contact;
+        ViewData["HasOutboundSubjects"] = true;
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Logs a completed inbound activity for the contact.
+    /// </summary>
+    /// <param name="contentItemId">The contact content item id.</param>
+    /// <param name="subjectContentType">The optional selected inbound subject content type.</param>
+    [Admin("omnichannel/activities/create-inbound/{contentItemId}")]
+    public async Task<IActionResult> CreateInbound(string contentItemId, string subjectContentType)
+    {
+        var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+        {
+            return Forbid();
+        }
+
+        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
+
+        var model = new CreateInboundActivityViewModel
+        {
+            ContactContentItem = contact,
+            HasInboundSubjects = inboundSubjects.Count > 0,
+            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray(),
+        };
+
+        if (!model.HasInboundSubjects)
+        {
+            return View(model);
+        }
+
+        var selectedSubjectContentType = ResolveInboundSubjectContentType(subjectContentType, inboundSubjects);
+        model.SubjectContentType = selectedSubjectContentType;
+
+        var activity = await BuildInboundActivityAsync(contact, selectedSubjectContentType);
+
+        var subject = string.IsNullOrEmpty(selectedSubjectContentType)
+            ? null
+            : await _contentManager.NewAsync(selectedSubjectContentType);
+
+        model.Subject = subject is null
+            ? null
+            : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        model.Container = new CompleteOmnichannelActivityContainer
+        {
+            ContactContentItem = contact,
+            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CompleteActivityGroup),
+        };
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Logs a completed inbound activity for the contact.
+    /// </summary>
+    /// <param name="contentItemId">The contact content item id.</param>
+    /// <param name="subjectContentType">The selected inbound subject content type.</param>
+    /// <param name="actionScheduleDates">The subject-action schedule dates submitted with the disposition.</param>
+    /// <param name="actionPreparationNotes">The subject-action preparation notes submitted with the disposition.</param>
+    [HttpPost]
+    [ActionName(nameof(CreateInbound))]
+    [Admin("omnichannel/activities/create-inbound/{contentItemId}")]
+    public async Task<IActionResult> CreateInboundPost(
+        string contentItemId,
+        string subjectContentType,
+        [Bind(Prefix = "ActionScheduleDates")] Dictionary<string, DateTime?> actionScheduleDates,
+        [Bind(Prefix = "ActionPreparationNotes")] Dictionary<string, string> actionPreparationNotes)
+    {
+        var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+        {
+            return Forbid();
+        }
+
+        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
+
+        if (inboundSubjects.Count == 0)
+        {
+            await _notifier.WarningAsync(H["There is no configured inbound subject yet. You can't log an inbound activity."]);
+
+            return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
+        }
+
+        var model = new CreateInboundActivityViewModel
+        {
+            ContactContentItem = contact,
+            HasInboundSubjects = true,
+            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray(),
+        };
+
+        var isValidSubject = !string.IsNullOrEmpty(subjectContentType) &&
+            inboundSubjects.Any(x => string.Equals(x.Name, subjectContentType, StringComparison.Ordinal));
+
+        if (!isValidSubject)
+        {
+            ModelState.AddModelError(nameof(model.SubjectContentType), S["Select an inbound subject before logging the activity."]);
+        }
+
+        var selectedSubjectContentType = isValidSubject
+            ? subjectContentType
+            : ResolveInboundSubjectContentType(subjectContentType, inboundSubjects);
+        model.SubjectContentType = selectedSubjectContentType;
+
+        var activity = await BuildInboundActivityAsync(contact, selectedSubjectContentType);
+
+        var subject = string.IsNullOrEmpty(selectedSubjectContentType)
+            ? null
+            : await _contentManager.NewAsync(selectedSubjectContentType);
+
+        var subjectEditor = subject is null
+            ? null
+            : await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true);
+        var activityEditor = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CompleteActivityGroup);
+
+        if (ModelState.IsValid)
+        {
+            if (subject is not null)
+            {
+                activity.Subject = subject;
+            }
+
+            await _omnichannelActivityManager.CreateAsync(activity);
+
+            var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest
+            {
+                Activity = activity,
+                DispositionId = activity.DispositionId,
+                ActionScheduleDates = actionScheduleDates,
+                ActionPreparationNotes = actionPreparationNotes,
+                Source = ActivityDispositionSource.Agent,
+                ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                ActorDisplayName = await GetCurrentUserDisplayNameAsync(),
+            });
+
+            if (result.Succeeded)
+            {
+                await _notifier.SuccessAsync(H["The inbound activity has been logged successfully."]);
+
+                return RedirectToAction(nameof(List), new { contentItemId = contact.ContentItemId });
+            }
+
+            await _notifier.ErrorAsync(H["A disposition is required to complete this activity."]);
+        }
+
+        model.Subject = subjectEditor;
+        model.Container = new CompleteOmnichannelActivityContainer
+        {
+            ContactContentItem = contact,
+            Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
+            Activity = activityEditor,
+        };
+
+        return View(model);
+    }
+
+    private static string ResolveInboundSubjectContentType(string requested, IReadOnlyList<ContentTypeDefinition> inboundSubjects)
+    {
+        if (!string.IsNullOrEmpty(requested) &&
+            inboundSubjects.Any(subject => string.Equals(subject.Name, requested, StringComparison.Ordinal)))
+        {
+            return requested;
+        }
+
+        return inboundSubjects.Count == 1
+            ? inboundSubjects[0].Name
+            : null;
+    }
+
+    private async Task<OmnichannelActivity> BuildInboundActivityAsync(ContentItem contact, string subjectContentType)
+    {
+        var now = _clock.UtcNow;
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var username = User.Identity?.Name;
+
+        var activity = await _omnichannelActivityManager.NewAsync();
+
+        activity.ContactContentItemId = contact.ContentItemId;
+        activity.ContactContentType = contact.ContentType;
+        activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+        activity.Source = ActivitySources.Inbound;
+        activity.Status = ActivityStatus.NotStated;
+        activity.InteractionType = ActivityInteractionType.Manual;
+        activity.CreatedById = userId;
+        activity.CreatedByUsername = username;
+        activity.CreatedUtc = now;
+        activity.AssignedToId = userId;
+        activity.AssignedToUsername = username;
+        activity.AssignedToUtc = now;
+        activity.ScheduledUtc = now;
+
+        if (!string.IsNullOrEmpty(subjectContentType))
+        {
+            activity.SubjectContentType = subjectContentType;
+
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
+
+            if (flowSettings is not null)
+            {
+                activity.CampaignId = flowSettings.CampaignId;
+                activity.Channel = flowSettings.Channel;
+                activity.InteractionType = flowSettings.InteractionType;
+                activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
+
+                if (!string.IsNullOrEmpty(flowSettings.Channel))
+                {
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+                }
+            }
+        }
+
+        return activity;
     }
 
     /// <summary>

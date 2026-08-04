@@ -2,15 +2,26 @@
 
 @model RolePickerPartSettingsViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
 <div class="ocat-wrapper" asp-validation-class-for="ExcludedRoles">
     <label asp-for="ExcludedRoles" class="ocat-label">@T["Exclude roles"]</label>
     <div class="ocat-end">
-        @await Component.InvokeAsync("SelectRoles",
-                new
-                {
-                    selectedRoles = Model.ExcludedRoles,
-                    htmlName = Html.NameFor(m => m.ExcludedRoles),
-                })
+        <select asp-for="ExcludedRoles"
+                asp-items="Model.AvailableRoles"
+                class="selectpicker show-tick"
+                multiple
+                data-live-search="true"
+                data-actions-box="true"
+                data-header="@T["Select roles to exclude"]"
+                data-width="100%"
+                data-selected-text-format="count > 2"
+                data-count-selected-text="@T["{0} roles excluded", "{0}"]"
+                data-none-selected-text="@T["No roles excluded"]"
+                data-style="btn-light"
+                title="@T["Exclude roles"]">
+        </select>
         <span asp-validation-for="ExcludedRoles"></span>
         <span class="hint">@T["Select the roles you want to exclude from the user's available options. Leave this blank to allow users to select any role."]</span>
     </div>
