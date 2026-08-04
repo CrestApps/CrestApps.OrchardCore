@@ -36,6 +36,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITelephonyAuthenticationService, DefaultTelephonyAuthenticationService>();
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
+        services.AddScoped<ITelephonyInteractionSynchronizationService, DefaultTelephonyInteractionSynchronizationService>();
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
 
