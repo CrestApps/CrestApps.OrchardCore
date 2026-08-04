@@ -1,4 +1,7 @@
-﻿namespace CrestApps.OrchardCore.Roles.ViewModels;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace CrestApps.OrchardCore.Roles.ViewModels;
 
 /// <summary>
 /// Represents the view model for role picker part settings.
@@ -24,4 +27,10 @@ public class RolePickerPartSettingsViewModel
     /// Gets or sets the hint.
     /// </summary>
     public string Hint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available roles.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> AvailableRoles { get; set; }
 }

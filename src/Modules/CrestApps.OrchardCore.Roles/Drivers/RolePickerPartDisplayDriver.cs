@@ -41,15 +41,12 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
             m.Settings = settings;
             m.Roles = part.RoleNames;
 
-            if (!settings.AllowSelectMultiple)
-            {
-                m.AvailableRoles = _roleManager.Roles
+            m.AvailableRoles = _roleManager.Roles
                 .Select(role => role.RoleName)
-                .Except(m.Settings.ExcludedRoles ?? [])
+                .Except(settings.ExcludedRoles ?? [])
                 .Order()
                 .Select(x => new SelectListItem(x, x))
                 .ToArray();
-            }
         });
     }
 
@@ -61,7 +58,7 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
 
         var settings = context.TypePartDefinition.GetSettings<RolePickerPartSettings>();
 
-        var selectedRoles = model.Roles.Except(settings.ExcludedRoles ?? []).ToArray();
+        var selectedRoles = (model.Roles ?? []).Except(settings.ExcludedRoles ?? []).ToArray();
 
         if (settings.Required && selectedRoles.Length == 0)
         {
