@@ -189,6 +189,10 @@ Use **Settings** -> **Content Import** to enforce DNC checks globally for import
 
 When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
 
+The screencast below shows both directions. It first exports the existing contacts as a CSV workbook through the **Export** panel (choose the CSV format and the `Contact` type, then **Export Data**), then imports a batch of new leads through **Content** -> **Import** -> **Contact**. During import it selects the lead country, enables **Ignore duplicate by phone number**, and turns on **Ignore numbers on national do-not-call registries** with the **Local Do Not Call Registry** selected, so any lead whose phone number is already on the DNC list is scrubbed automatically before contacts are created.
+
+![Screen cast of exporting contacts and importing leads with DNC auto-scrub](/img/docs/omni-contact-import-export.gif)
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
