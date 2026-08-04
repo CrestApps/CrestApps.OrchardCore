@@ -48,7 +48,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
             return;
         }
 
-        session.Save(new AsteriskRecordingIngestJob
+        await session.SaveAsync(new AsteriskRecordingIngestJob
         {
             InteractionId = interactionId,
             RecordingName = recordingName,
@@ -57,7 +57,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
             AttemptCount = 0,
             NextAttemptUtc = nowUtc,
             CreatedUtc = nowUtc,
-        });
+        }, cancellationToken: cancellationToken);
 
         await session.SaveChangesAsync(cancellationToken);
     }
@@ -99,7 +99,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
 
         if (tracked is null)
         {
-            session.Save(job);
+            await session.SaveAsync(job, cancellationToken: cancellationToken);
         }
         else
         {
@@ -112,7 +112,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
             tracked.MediaStored = job.MediaStored;
             tracked.LastError = job.LastError;
             tracked.ModifiedUtc = job.ModifiedUtc;
-            session.Save(tracked);
+            await session.SaveAsync(tracked, cancellationToken: cancellationToken);
         }
 
         await session.SaveChangesAsync(cancellationToken);

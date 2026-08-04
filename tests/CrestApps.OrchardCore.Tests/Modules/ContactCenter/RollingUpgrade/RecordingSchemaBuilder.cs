@@ -110,30 +110,6 @@ internal sealed class RecordingSchemaBuilder : ISchemaBuilder
         }
     }
 
-    public ISchemaBuilder CreateMapIndexTable(Type indexType, Action<ICreateTableCommand> table, string collection)
-    {
-        RecordCreate(indexType, table, collection);
-        _inner?.CreateMapIndexTable(indexType, table, collection);
-
-        return this;
-    }
-
-    public ISchemaBuilder CreateReduceIndexTable(Type indexType, Action<ICreateTableCommand> table, string collection)
-    {
-        RecordCreate(indexType, table, collection);
-        _inner?.CreateReduceIndexTable(indexType, table, collection);
-
-        return this;
-    }
-
-    public ISchemaBuilder AlterIndexTable(Type indexType, Action<IAlterTableCommand> table, string collection)
-    {
-        RecordAlter(indexType, table, collection);
-        _inner?.AlterIndexTable(indexType, table, collection);
-
-        return this;
-    }
-
     public Task AlterTableAsync(string name, Action<IAlterTableCommand> table)
         => _inner is null ? Task.CompletedTask : _inner.AlterTableAsync(name, table);
 
@@ -157,62 +133,6 @@ internal sealed class RecordingSchemaBuilder : ISchemaBuilder
 
     public Task CreateSchemaAsync(string schema)
         => _inner is null ? Task.CompletedTask : _inner.CreateSchemaAsync(schema);
-
-    public ISchemaBuilder AlterTable(string name, Action<IAlterTableCommand> table)
-    {
-        _inner?.AlterTable(name, table);
-
-        return this;
-    }
-
-    public ISchemaBuilder CreateTable(string name, Action<ICreateTableCommand> table)
-    {
-        _inner?.CreateTable(name, table);
-
-        return this;
-    }
-
-    public ISchemaBuilder CreateForeignKey(string name, string srcTable, string[] srcColumns, string destTable, string[] destColumns)
-    {
-        _inner?.CreateForeignKey(name, srcTable, srcColumns, destTable, destColumns);
-
-        return this;
-    }
-
-    public ISchemaBuilder DropForeignKey(string srcTable, string name)
-    {
-        _inner?.DropForeignKey(srcTable, name);
-
-        return this;
-    }
-
-    public ISchemaBuilder DropMapIndexTable(Type indexType, string collection)
-    {
-        _inner?.DropMapIndexTable(indexType, collection);
-
-        return this;
-    }
-
-    public ISchemaBuilder DropReduceIndexTable(Type indexType, string collection)
-    {
-        _inner?.DropReduceIndexTable(indexType, collection);
-
-        return this;
-    }
-
-    public ISchemaBuilder DropTable(string name)
-    {
-        _inner?.DropTable(name);
-
-        return this;
-    }
-
-    public ISchemaBuilder CreateSchema(string schema)
-    {
-        _inner?.CreateSchema(schema);
-
-        return this;
-    }
 
     private void RecordCreate(Type indexType, Action<ICreateTableCommand> table, string collection)
     {

@@ -146,7 +146,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
                         collection: OmnichannelConstants.CollectionName)
                     .ListAsync(TestContext.Current.CancellationToken);
 
-                Assert.Equal(poisonCount, poisonActivities.Count());
+                Assert.Equal(poisonCount, poisonActivities.Count);
 
                 foreach (var activity in poisonActivities)
                 {

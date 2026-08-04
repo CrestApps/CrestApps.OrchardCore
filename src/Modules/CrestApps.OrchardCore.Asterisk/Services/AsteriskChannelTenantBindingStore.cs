@@ -183,7 +183,7 @@ internal sealed class AsteriskChannelTenantBindingStore : IAsteriskChannelTenant
                 return false;
             }
 
-            session.Save(binding);
+            await session.SaveAsync(binding);
             await session.SaveChangesAsync();
 
             return true;

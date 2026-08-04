@@ -205,20 +205,20 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
 
         await using var session = store.CreateSession();
 
-        Save(session, "a-1", "agent-a", new DateTime(2026, 3, 10, 9, 0, 0, DateTimeKind.Utc));
-        Save(session, "a-2", "agent-a", new DateTime(2026, 3, 11, 9, 0, 0, DateTimeKind.Utc));
-        Save(session, "b-1", "agent-b", new DateTime(2026, 6, 10, 9, 0, 0, DateTimeKind.Utc));
-        Save(session, "b-2", "agent-b", new DateTime(2026, 6, 11, 9, 0, 0, DateTimeKind.Utc));
-        Save(session, "b-3", "agent-b", new DateTime(2026, 6, 12, 9, 0, 0, DateTimeKind.Utc));
+        await SaveAsync(session, "a-1", "agent-a", new DateTime(2026, 3, 10, 9, 0, 0, DateTimeKind.Utc));
+        await SaveAsync(session, "a-2", "agent-a", new DateTime(2026, 3, 11, 9, 0, 0, DateTimeKind.Utc));
+        await SaveAsync(session, "b-1", "agent-b", new DateTime(2026, 6, 10, 9, 0, 0, DateTimeKind.Utc));
+        await SaveAsync(session, "b-2", "agent-b", new DateTime(2026, 6, 11, 9, 0, 0, DateTimeKind.Utc));
+        await SaveAsync(session, "b-3", "agent-b", new DateTime(2026, 6, 12, 9, 0, 0, DateTimeKind.Utc));
 
         await session.SaveChangesAsync(cancellationToken);
 
         return (store, databasePath);
     }
 
-    private static void Save(ISession session, string itemId, string agentId, DateTime createdUtc)
+    private static Task SaveAsync(ISession session, string itemId, string agentId, DateTime createdUtc)
     {
-        session.Save(
+        return session.SaveAsync(
             new Interaction
             {
                 ItemId = itemId,

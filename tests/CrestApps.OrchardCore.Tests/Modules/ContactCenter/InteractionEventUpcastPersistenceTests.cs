@@ -371,7 +371,7 @@ public sealed class InteractionEventUpcastPersistenceTests
     {
         await using var session = store.CreateSession();
 
-        session.Save(
+        await session.SaveAsync(
             new InteractionEvent
             {
                 ItemId = SeededEventId,

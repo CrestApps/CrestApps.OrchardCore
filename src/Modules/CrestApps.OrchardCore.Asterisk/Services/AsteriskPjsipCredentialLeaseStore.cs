@@ -32,7 +32,7 @@ internal sealed class AsteriskPjsipCredentialLeaseStore : IAsteriskPjsipCredenti
         ArgumentNullException.ThrowIfNull(lease);
 
         await using var session = _store.CreateSession();
-        session.Save(lease);
+        await session.SaveAsync(lease, cancellationToken: cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
     }
 
@@ -54,7 +54,7 @@ internal sealed class AsteriskPjsipCredentialLeaseStore : IAsteriskPjsipCredenti
 
         if (tracked is null)
         {
-            session.Save(lease);
+            await session.SaveAsync(lease, cancellationToken: cancellationToken);
         }
         else
         {
@@ -66,7 +66,7 @@ internal sealed class AsteriskPjsipCredentialLeaseStore : IAsteriskPjsipCredenti
             tracked.ExpiresUtc = lease.ExpiresUtc;
             tracked.RevokedUtc = lease.RevokedUtc;
             tracked.RevocationReason = lease.RevocationReason;
-            session.Save(tracked);
+            await session.SaveAsync(tracked, cancellationToken: cancellationToken);
         }
 
         await session.SaveChangesAsync(cancellationToken);

@@ -207,7 +207,7 @@ public sealed class RecordingErasurePersistenceTests
     private static async Task SeedAsync(IStore store)
     {
         await using var session = store.CreateSession();
-        session.Save(
+        await session.SaveAsync(
             new Interaction
             {
                 ItemId = "interaction-1",
@@ -216,7 +216,7 @@ public sealed class RecordingErasurePersistenceTests
                 RecordingReference = "storage/interaction-1",
             },
             collection: ContactCenterStorage.CollectionName);
-        session.Save(
+        await session.SaveAsync(
             new CallSession
             {
                 ItemId = "call-session-1",

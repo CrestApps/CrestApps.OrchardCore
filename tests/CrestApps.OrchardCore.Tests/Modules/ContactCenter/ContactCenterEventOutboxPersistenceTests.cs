@@ -33,14 +33,15 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             await using (var session = store.CreateSession())
             {
                 var publisher = CreatePublisher(session);
-                session.Save(
+                await session.SaveAsync(
                     new QueueItem
                     {
                         ItemId = "queue-item-1",
                         ActivityItemId = "activity-1",
                         QueueId = "queue-1",
                     },
-                    collection: ContactCenterStorage.CollectionName);
+                    collection: ContactCenterStorage.CollectionName,
+                    cancellationToken: TestContext.Current.CancellationToken);
                 await publisher.PublishAsync(
                     CreateEvent(),
                     TestContext.Current.CancellationToken);
@@ -80,14 +81,15 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             await using (var session = store.CreateSession())
             {
                 var publisher = CreatePublisher(session);
-                session.Save(
+                await session.SaveAsync(
                     new QueueItem
                     {
                         ItemId = "queue-item-1",
                         ActivityItemId = "activity-1",
                         QueueId = "queue-1",
                     },
-                    collection: ContactCenterStorage.CollectionName);
+                    collection: ContactCenterStorage.CollectionName,
+                    cancellationToken: TestContext.Current.CancellationToken);
                 await publisher.PublishAsync(
                     CreateEvent(),
                     TestContext.Current.CancellationToken);
@@ -128,12 +130,14 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         {
             await using var firstSession = store.CreateSession();
             await using var secondSession = store.CreateSession();
-            firstSession.Save(
+            await firstSession.SaveAsync(
                 new QueueItem { ItemId = "queue-item-1", ActivityItemId = "activity-1", QueueId = "queue-1" },
-                collection: ContactCenterStorage.CollectionName);
-            secondSession.Save(
+                collection: ContactCenterStorage.CollectionName,
+                cancellationToken: TestContext.Current.CancellationToken);
+            await secondSession.SaveAsync(
                 new QueueItem { ItemId = "queue-item-2", ActivityItemId = "activity-2", QueueId = "queue-1" },
-                collection: ContactCenterStorage.CollectionName);
+                collection: ContactCenterStorage.CollectionName,
+                cancellationToken: TestContext.Current.CancellationToken);
             await StageEventAndOutboxAsync(firstSession, CreateEvent(), TestContext.Current.CancellationToken);
             await StageEventAndOutboxAsync(secondSession, CreateEvent(), TestContext.Current.CancellationToken);
 
