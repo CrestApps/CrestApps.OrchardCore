@@ -30,6 +30,11 @@ public class CreateInboundActivityViewModel
     public bool HasInboundSubjects { get; set; }
 
     /// <summary>
+    /// Gets or sets the rendered subject editor shown alongside the subject selector.
+    /// </summary>
+    public IShape Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the rendered completion container that holds the contact, subject, and activity shapes.
     /// </summary>
     public IShape Container { get; set; }

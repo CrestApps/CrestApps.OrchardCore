@@ -63,6 +63,11 @@
     <input type="hidden" name="subjectContentType" value="@Model.SubjectContentType" />
     @Html.ValidationSummary()
 
+    @if (Model.Subject is not null)
+    {
+        @await DisplayAsync(Model.Subject)
+    }
+
     @if (Model.Container is not null)
     {
         @await DisplayAsync(Model.Container)

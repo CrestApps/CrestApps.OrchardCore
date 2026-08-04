@@ -451,14 +451,15 @@ public sealed class ActivitiesController : Controller
             ? null
             : await _contentManager.NewAsync(selectedSubjectContentType);
 
+        model.Subject = subject is null
+            ? null
+            : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true);
+
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
             Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true, OmnichannelConstants.CompleteActivityGroup),
-            Subject = subject is null
-                ? null
-                : await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
@@ -562,12 +563,12 @@ public sealed class ActivitiesController : Controller
             await _notifier.ErrorAsync(H["A disposition is required to complete this activity."]);
         }
 
+        model.Subject = subjectEditor;
         model.Container = new CompleteOmnichannelActivityContainer
         {
             ContactContentItem = contact,
             Contact = await _contentItemDisplayManager.BuildDisplayAsync(contact, _updateModelAccessor.ModelUpdater, "Detail"),
             Activity = activityEditor,
-            Subject = subjectEditor,
         };
 
         return View(model);
