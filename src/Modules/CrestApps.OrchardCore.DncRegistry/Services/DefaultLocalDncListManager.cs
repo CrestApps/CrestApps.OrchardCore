@@ -141,7 +141,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             if (fileInfo == null || fileInfo.Length == 0)
             {
                 SaveListFailure(list, "The uploaded DNC file no longer exists.");
-                initSession.Save(list, collection: DncRegistryConstants.CollectionName);
+                await initSession.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await initSession.SaveChangesAsync(cancellationToken);
 
                 return;
@@ -169,7 +169,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 list.TotalRecords = await CountTotalRecordsAsync(countStream, cancellationToken);
             }
 
-            initSession.Save(list, collection: DncRegistryConstants.CollectionName);
+            await initSession.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
             await initSession.SaveChangesAsync(cancellationToken);
         }
         finally
@@ -208,7 +208,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                     trackedList.ProcessSaveUtc = list.ProcessSaveUtc;
                     trackedList.CompletedUtc = list.CompletedUtc;
 
-                    failSession.Save(trackedList, collection: DncRegistryConstants.CollectionName);
+                    await failSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
                 }
 
                 await failSession.SaveChangesAsync(cancellationToken);
@@ -255,7 +255,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 trackedList.ImportedCount = list.ImportedCount;
                 trackedList.ErrorMessages = list.ErrorMessages;
 
-                completeSession.Save(trackedList, collection: DncRegistryConstants.CollectionName);
+                await completeSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
             }
 
             await completeSession.SaveChangesAsync(cancellationToken);
@@ -363,7 +363,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         list.Error = "Import was paused by the user.";
         list.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(list, collection: DncRegistryConstants.CollectionName);
+        await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 
@@ -385,7 +385,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         list.Error = null;
         list.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(list, collection: DncRegistryConstants.CollectionName);
+        await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 
@@ -406,7 +406,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         list.Status = LocalDncListStatus.Deleting;
         list.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(list, collection: DncRegistryConstants.CollectionName);
+        await _session.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 
@@ -697,7 +697,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 trackedList.ProcessSaveUtc = list.ProcessSaveUtc;
                 trackedList.ErrorMessages = list.ErrorMessages;
 
-                batchSession.Save(trackedList, collection: DncRegistryConstants.CollectionName);
+                await batchSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await batchSession.SaveChangesAsync(cancellationToken);
 
                 // Sync the in-memory status so callers see the change.
@@ -713,7 +713,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             trackedList.ErrorMessages = list.ErrorMessages;
             trackedList.Status = list.Status;
 
-            batchSession.Save(trackedList, collection: DncRegistryConstants.CollectionName);
+            await batchSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
 
             foreach (var entry in entries)
             {

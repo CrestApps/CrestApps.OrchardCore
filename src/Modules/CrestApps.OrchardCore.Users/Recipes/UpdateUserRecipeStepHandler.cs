@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Users.Indexes;
@@ -64,22 +64,22 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
         }
     }
 
-    private Task<IEnumerable<User>> GetNextBatchAsync(UpdateUserRecipeStepModel step, int currentBatch)
+    private async Task<IEnumerable<User>> GetNextBatchAsync(UpdateUserRecipeStepModel step, int currentBatch)
     {
         if (step.IncludeDisabledUsers)
         {
-            return _session.Query<User, UserIndex>()
+            return await _session.Query<User, UserIndex>()
                 .OrderBy(u => u.DocumentId)
                 .Skip(currentBatch)
                 .Take(_batchSize)
-                .ListAsync();
+                .ListAsync(CancellationToken.None);
         }
 
-        return _session.Query<User, UserIndex>(u => u.IsEnabled)
+        return await _session.Query<User, UserIndex>(u => u.IsEnabled)
             .OrderBy(x => x.DocumentId)
             .Skip(currentBatch)
             .Take(_batchSize)
-            .ListAsync();
+            .ListAsync(CancellationToken.None);
     }
 
     private Task<int> GetTotalAsync(UpdateUserRecipeStepModel step)
