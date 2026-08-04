@@ -22,6 +22,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.FileStorage;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
@@ -37,6 +38,13 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Route uploaded files through Orchard Core's file creation pipeline so registered IFileEventHandler
+        // implementations (such as the ClamAV antivirus handler) can scan and reject files before storage.
+        // Registered before AddCoreAIDocumentProcessing() so it wins over the framework's NoOpUploadedFileScanner,
+        // which is added with TryAddSingleton.
+        services.TryAddTransient<FileCreationService>();
+        services.AddSingleton<IUploadedFileScanner, OrchardUploadedFileScanner>();
+
         services.AddCoreAIDocumentProcessing()
             .AddCoreAIDocumentReferenceDownloads()
             .AddCoreAIDocumentProcessingStoresYesSql()
