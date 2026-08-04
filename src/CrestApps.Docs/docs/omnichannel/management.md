@@ -153,6 +153,22 @@ The **Load Inventory** list is ordered by creation date with the newest inventor
 
 Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when no dialer contributor is enabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
 
+#### Loading Automated SMS Activities with an AI Profile
+
+When you choose the **Automatic** source for an inventory load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the inventory-load form lists only **Chat** profiles that have **Add initial prompt** enabled, because the initial prompt is what starts the automated conversation.
+
+To load automated SMS activities:
+
+1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
+2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach.
+3. In **Interaction Center → Channel Endpoints**, add an **SMS** endpoint for the number you send from.
+4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
+5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
+
+The screencast below creates an automatic SMS inventory load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
+
+![Screencast of creating an automatic SMS inventory load driven by an AI profile and loading it to generate automated activities](/img/docs/omni-load-automated-sms.gif)
+
 ## Getting started (recommended order)
 
 ### 1) Enable required features
