@@ -7,9 +7,7 @@
 @{
     var contentItemId = ViewContext.HttpContext.Request.RouteValues["id"] ?? ViewContext.HttpContext.Request.RouteValues["contentItemId"];
     var hasOutboundSubjects = ViewData["HasOutboundSubjects"] as bool? ?? true;
-}
 
-@{
     var shape = new ContactNavigationAdminShapeViewModel
     {
         ContactContentItem = ViewData["Contact"] as ContentItem,
