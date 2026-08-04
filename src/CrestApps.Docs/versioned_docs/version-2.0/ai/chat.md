@@ -234,14 +234,21 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 
 #### Adding the Frontend Widget
 
-1. Ensure the **Widgets** feature (`OrchardCore.Widgets`) is enabled.
-2. Go to **Design** > **Widgets** in the admin menu.
-3. Add a new **AI Chat Widget** to the desired zone (e.g., Footer, Content).
-4. Configure the widget by selecting the AI chat profile and optionally choosing a prompt template.
+To show the widget on every page of the site, place it in a layer whose rule always evaluates to `true`:
+
+1. Ensure the **Widgets** and **Layers** features are enabled.
+2. Create a dedicated AI chat profile (for example, a public-facing *Website Assistant* profile of type **Chat**).
+3. Go to **Design** > **Layers** and create a new layer (for example, *Global*).
+4. Edit the layer, add a **Boolean** rule, and keep its value set to **True** so the layer is always active.
+5. Back on the **Layers** screen, use the **Add Widget** menu on the target zone (for example, **Footer**) and add an **Artificial Intelligence Chat** widget.
+6. Select the *Global* layer and the AI chat profile you created, then publish the widget.
+7. Visit any public page and open the floating chat widget to talk to your assistant.
 
 #### Frontend Widget Screen Cast
 
-![Screen cast of the frontend widget](/img/docs/widget-ui-sample.gif)
+The following screen cast walks through creating a public-facing profile, adding an always-on layer with a Boolean rule, placing the AI Chat widget in the footer zone, and chatting with it from the site's home page.
+
+![Screen cast of adding the frontend widget with an always-on layer](/img/docs/ai-frontend-widget.gif)
 
 ---
 
