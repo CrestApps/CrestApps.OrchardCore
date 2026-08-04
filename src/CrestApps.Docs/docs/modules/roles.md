@@ -14,7 +14,7 @@ Provides a way to enhance the role management experience.
 
 ## RolePickerPart
 
-This adds a role-picker to any content type. You can use the Orchard Core content types UI to add it to any content type, or you can do it via code using a migration. For example:
+This adds a role-picker to any content type. The editor uses an enhanced dropdown (bootstrap-select) that lets editors search roles, and, when multiple selection is enabled, select or deselect all roles at once for a friendlier experience. You can use the Orchard Core content types UI to add it to any content type, or you can do it via code using a migration. For example:
 
 ```csharp
 internal sealed class CustomContentTypeMigrations : DataMigration
