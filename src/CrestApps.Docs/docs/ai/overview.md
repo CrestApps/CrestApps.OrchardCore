@@ -52,6 +52,10 @@ Once enabled, the main AI screens are available under **Artificial Intelligence*
 
 Site-wide settings are available under **Settings -> Artificial Intelligence**.
 
+The screencast below tours those admin surfaces in order — provider connections, the deployments they expose, and the AI profiles built on top of them.
+
+![Screen cast touring the AI provider connections, deployments, and profiles admin screens](/img/docs/ai-overview.gif)
+
 ## Common module combinations
 
 | Goal | Enable these areas |
