@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19098</OrchardCoreVersion>
-    <CrestAppsCoreVersion>1.1.0-preview.203</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.1.0-preview.205</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.0.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -178,7 +178,7 @@
     <PackageVersion Include="AngleSharp" Version="1.7.0" />
     <PackageVersion Include="MessagePack" Version="3.1.7" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
   </ItemGroup>
   <ItemGroup>
