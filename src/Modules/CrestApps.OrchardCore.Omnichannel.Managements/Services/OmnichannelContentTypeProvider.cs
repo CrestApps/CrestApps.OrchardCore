@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHandler
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private volatile HashSet<string> _subjectContentTypes;
     private volatile HashSet<string> _contactContentTypes;
@@ -40,14 +40,14 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     /// </summary>
     /// <returns>A read-only snapshot of the subject content type names.</returns>
     public IReadOnlyCollection<string> GetSubjectContentTypes()
-        => _subjectContentTypes ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+        => _subjectContentTypes ?? (IReadOnlyCollection<string>)[];
 
     /// <summary>
     /// Gets the technical names of the content types that have the <c>OmnichannelContactPart</c> attached.
     /// </summary>
     /// <returns>A read-only snapshot of the contact content type names.</returns>
     public IReadOnlyCollection<string> GetContactContentTypes()
-        => _contactContentTypes ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+        => _contactContentTypes ?? (IReadOnlyCollection<string>)[];
 
     /// <summary>
     /// Warms the cached sets from the current content definitions the first time they are requested. Subsequent
