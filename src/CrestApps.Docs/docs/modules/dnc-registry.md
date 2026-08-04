@@ -12,6 +12,10 @@ description: Configure national do-not-call registry providers and global import
 
 The **DNC Registry** module provides a shared compliance layer for Omnichannel contact imports. It lets site owners configure national do-not-call registry providers, enforce registry checks globally, and expose additional registry choices during bulk imports.
 
+The screencast below enables the **Local Do Not Call Registry** feature, opens it from the **Interaction Center** menu, and uploads a CSV list of phone numbers for a country.
+
+![Screen cast of enabling the Local Do Not Call Registry and uploading a CSV list](/img/docs/dnc-registry.gif)
+
 ## Built-in registry integrations
 
 The module currently ships with these provider features:
