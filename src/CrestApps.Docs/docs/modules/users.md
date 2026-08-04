@@ -31,6 +31,10 @@ The screencast below enables **User Display Name**, selects the *First Middle La
 
 ![Screen cast of enabling User Display Name, choosing a format, and editing a user](/img/docs/users.gif)
 
+The next screencast shows the full effect end to end. It configures the *First Middle Last name* format with **First name** and **Last name** set to **Required**, edits the current user's own profile to set those names, then opens the **Content Items** list where the author badge that previously showed only the username now shows the user's full name.
+
+![Screen cast of configuring the display name, setting a profile, and the content item author badge showing the full name](/img/docs/users-display-name.gif)
+
 If you want to display the user display name in your project via code, you may do so by using the `IDisplayNameProvider` interface.
 
 ### Liquid Support
