@@ -146,6 +146,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CompleteAsync(string id, string returnUrl, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create(string contentItemId) { }
+        [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInbound(string contentItemId, string subjectContentType) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("CreateInbound")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/activities/create-inbound/{contentItemId}", null)]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> CreateInboundPost(string contentItemId, string subjectContentType, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionScheduleDates")] System.Collections.Generic.Dictionary<string, System.DateTime?> actionScheduleDates, [Microsoft.AspNetCore.Mvc.Bind(new string[0], Prefix="ActionPreparationNotes")] System.Collections.Generic.Dictionary<string, string> actionPreparationNotes) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("omnichannel/activities/create/{contentItemId}", null)]
@@ -774,6 +780,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public OrchardCore.ContentManagement.ContentItem ContactContentItem { get; set; }
         public OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition ContactContentTypeDefinition { get; set; }
         public bool ShowEdit { get; set; }
+    }
+    public class CreateInboundActivityViewModel
+    {
+        public CreateInboundActivityViewModel() { }
+        public OrchardCore.ContentManagement.ContentItem ContactContentItem { get; set; }
+        public OrchardCore.DisplayManagement.IShape Container { get; set; }
+        public bool HasInboundSubjects { get; set; }
+        public OrchardCore.DisplayManagement.IShape Subject { get; set; }
+        public string SubjectContentType { get; set; }
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SubjectContentTypes { get; set; }
     }
     public class EditOmnichannelActivity
     {

@@ -413,6 +413,9 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
 
+        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => false;
     }
@@ -433,6 +436,9 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
             => Task.FromResult(_settings.FirstOrDefault(settings => string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.Ordinal)));
 
         public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+
+        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
