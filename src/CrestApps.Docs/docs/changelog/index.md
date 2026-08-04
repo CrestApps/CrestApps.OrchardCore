@@ -12,4 +12,4 @@ This section contains release notes and version highlights for **CrestApps.Orcha
 | Version | Highlights |
 | --- | --- |
 | [3.0.0](v3.0.0) | Contact Center orchestration layer, expanded Telephony and voice stack, new Asterisk provider, new report providers, and production-readiness hardening |
-| [2.0.0](v2.0.0) | Major release — new modules, orchestrator architecture, Omnichannel Communications, MCP protocol support |
+| [2.0.0](v2.0.0) | Complete rewrite of the `v1.x` line — new modules, orchestrator architecture, Omnichannel Communications, MCP protocol support, and the launch of the official documentation site |
