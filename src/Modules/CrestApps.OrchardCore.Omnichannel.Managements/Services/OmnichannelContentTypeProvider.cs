@@ -1,8 +1,5 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
-using OrchardCore.ContentTypes.Events;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -11,13 +8,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// Reports the content types that have the <c>OmnichannelSubjectPart</c> or the <c>OmnichannelContactPart</c>
 /// attached, so callers can answer that question and build subject and contact content type drop downs without
 /// scanning every content type definition on each request. The membership sets are computed once and cached in
-/// the per-tenant <see cref="IMemoryCache"/>, then kept current through the <see cref="IContentDefinitionEventHandler"/>
-/// notifications so they always reflect the latest definitions without repeated enumeration.
+/// the per-tenant <see cref="IMemoryCache"/>. The cache entry is invalidated by
+/// <c>OmnichannelContentTypeCacheInvalidator</c> when a content definition changes, so the next read recomputes
+/// fresh sets that reflect the latest definitions.
 /// </summary>
-public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHandler
+public sealed class OmnichannelContentTypeProvider
 {
-    private static readonly Lock _lock = new();
-
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IMemoryCache _memoryCache;
     private readonly string _cacheKey;
@@ -136,168 +132,9 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
         var set = new OmnichannelContentTypeSet(subjectContentTypes, contactContentTypes);
 
-        lock (_lock)
-        {
-            if (_memoryCache.TryGetValue<OmnichannelContentTypeSet>(_cacheKey, out var existing) && existing is not null)
-            {
-                set = existing;
-            }
-            else
-            {
-                _memoryCache.Set(_cacheKey, set);
-            }
-        }
-
+        _memoryCache.Set(_cacheKey, set);
         _set = set;
 
         return set;
     }
-
-    /// <inheritdoc/>
-    public void ContentTypeCreated(ContentTypeCreatedContext context)
-        => Apply(context.ContentTypeDefinition);
-
-    /// <inheritdoc/>
-    public void ContentTypeUpdated(ContentTypeUpdatedContext context)
-        => Apply(context.ContentTypeDefinition);
-
-    /// <inheritdoc/>
-    public void ContentTypeImported(ContentTypeImportedContext context)
-        => Apply(context.ContentTypeDefinition);
-
-    /// <inheritdoc/>
-    public void ContentTypeRemoved(ContentTypeRemovedContext context)
-    {
-        var contentType = context.ContentTypeDefinition?.Name;
-
-        SetMembership(subject: true, contentType, isMember: false);
-        SetMembership(subject: false, contentType, isMember: false);
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartAttached(ContentPartAttachedContext context)
-    {
-        if (IsSubjectPart(context.ContentPartName))
-        {
-            SetMembership(subject: true, context.ContentTypeName, isMember: true);
-        }
-        else if (IsContactPart(context.ContentPartName))
-        {
-            SetMembership(subject: false, context.ContentTypeName, isMember: true);
-        }
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartDetached(ContentPartDetachedContext context)
-    {
-        if (IsSubjectPart(context.ContentPartName))
-        {
-            SetMembership(subject: true, context.ContentTypeName, isMember: false);
-        }
-        else if (IsContactPart(context.ContentPartName))
-        {
-            SetMembership(subject: false, context.ContentTypeName, isMember: false);
-        }
-    }
-
-    /// <inheritdoc/>
-    public void ContentTypeImporting(ContentTypeImportingContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartCreated(ContentPartCreatedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartUpdated(ContentPartUpdatedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartRemoved(ContentPartRemovedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartImporting(ContentPartImportingContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartImported(ContentPartImportedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentTypePartUpdated(ContentTypePartUpdatedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentFieldAttached(ContentFieldAttachedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentFieldUpdated(ContentFieldUpdatedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentFieldDetached(ContentFieldDetachedContext context)
-    {
-    }
-
-    /// <inheritdoc/>
-    public void ContentPartFieldUpdated(ContentPartFieldUpdatedContext context)
-    {
-    }
-
-    private void Apply(ContentTypeDefinition contentTypeDefinition)
-    {
-        if (contentTypeDefinition is null)
-        {
-            return;
-        }
-
-        SetMembership(subject: true, contentTypeDefinition.Name, OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(contentTypeDefinition));
-        SetMembership(subject: false, contentTypeDefinition.Name, OmnichannelContactDefinitionService.HasOmnichannelContactPart(contentTypeDefinition));
-    }
-
-    private void SetMembership(bool subject, string contentType, bool isMember)
-    {
-        if (string.IsNullOrEmpty(contentType))
-        {
-            return;
-        }
-
-        lock (_lock)
-        {
-            // Skip incremental updates until the set has been warmed; the initial warm reads the current
-            // definitions and therefore already reflects any change that happened before it ran.
-            if (!_memoryCache.TryGetValue<OmnichannelContentTypeSet>(_cacheKey, out var current) || current is null)
-            {
-                _set = null;
-
-                return;
-            }
-
-            var updated = current.With(subject, contentType, isMember);
-
-            if (!ReferenceEquals(updated, current))
-            {
-                _memoryCache.Set(_cacheKey, updated);
-            }
-
-            _set = updated;
-        }
-    }
-
-    private static bool IsSubjectPart(string partName)
-        => string.Equals(partName, OmnichannelConstants.ContentParts.OmnichannelSubject, StringComparison.Ordinal);
-
-    private static bool IsContactPart(string partName)
-        => string.Equals(partName, OmnichannelConstants.ContentParts.OmnichannelContact, StringComparison.Ordinal);
 }
