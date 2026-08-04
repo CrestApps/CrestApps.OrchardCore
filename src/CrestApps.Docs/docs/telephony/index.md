@@ -204,6 +204,18 @@ provider** — the data remains even if the provider integration is later remove
 
 Interaction updates use optimistic concurrency. If two callers update the same interaction from stale copies, the later save fails instead of silently overwriting the first caller's state.
 
+`ITelephonyInteractionSynchronizationService` reconciles persisted interactions against
+provider-authoritative call state. When the soft phone reconnects it calls the hub's `GetActiveCall`
+and `GetActiveCalls` methods, which route through this service. For each in-progress interaction the
+service resolves the owning provider by its technical name and, when that provider implements
+`ITelephonyCallStateProvider`, queries the current call state: interactions the provider still
+reports as active are surfaced, interactions the provider reports as ended are finalized (outcome,
+end time, and duration), and interactions the provider no longer recognizes are treated as orphans
+and removed. When the provider is absent or cannot report call state, the persisted interaction is
+surfaced unchanged so history and the soft phone view remain available. The service also exposes
+`ReconcileActiveInteractionsAsync` and `ReconcileProviderInteractionsAsync` for sweeping stale
+in-progress interactions across all providers or a single provider.
+
 The soft phone reads this history through the hub's `GetInteractions` method to render its history
 panel. Outbound calls placed from the soft phone are recorded automatically. Inbound and missed
 calls are fully modeled (direction and outcome), but populating them requires the provider module to
