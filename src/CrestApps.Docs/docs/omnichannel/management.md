@@ -165,6 +165,12 @@ In Orchard Core Admin:
 4. Add any fields/parts you need (phone number, email, lead status, custom fields, etc.).
 5. Create/import contact items.
 
+Typically a single contact content type is all you need for the CRM record that represents your customer or contact. You can create more than one when you want to manage different kinds of contacts separately (for example, `Customer` versus `Employee`). The content type can carry any parts and fields your business needs, so model it around the data your agents capture.
+
+The screencast below creates a `Contact` type, attaches `OmnichannelContactPart`, and then logs a new lead with a time zone and a cell phone number:
+
+![Screen cast of creating a Contact content type and a contact item](/img/docs/omni-contact-type.gif)
+
 If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (from `CrestApps.OrchardCore.ContentFields`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
 
 When a content type includes `OmnichannelContactPart`, the module now enforces two code-controlled omnichannel surfaces:
