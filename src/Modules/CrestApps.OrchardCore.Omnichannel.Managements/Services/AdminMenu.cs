@@ -1,24 +1,41 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Contents;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 internal sealed class AdminMenu : AdminNavigationProvider
 {
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminMenu"/> class.
     /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager used to warm the contact content type cache.</param>
+    /// <param name="contentTypeProvider">The provider that exposes the cached omnichannel contact content types.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AdminMenu(IStringLocalizer<AdminMenu> stringLocalizer)
+    public AdminMenu(
+        IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IStringLocalizer<AdminMenu> stringLocalizer)
     {
+        _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
     }
 
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
+        var contactContentTypes = _contentTypeProvider.GetContactContentTypes();
+
         builder
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
@@ -30,6 +47,26 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )
+                .Add(S["Contacts"], "0", contacts =>
+                {
+                    contacts
+                        .AddClass("contacts")
+                        .Id("contacts");
+
+                    if (contactContentTypes.Count > 0)
+                    {
+                        contacts
+                            .Action("List", "Admin", new RouteValueDictionary
+                            {
+                                { "area", "OrchardCore.Contents" },
+                                { "contentTypeId", string.Join(',', contactContentTypes) },
+                            });
+                    }
+
+                    contacts
+                        .Permission(CommonPermissions.ListContent)
+                        .LocalNav();
+                })
                 .Add(S["Management"], "100", management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
@@ -76,7 +113,5 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
                         .LocalNav())),
                 priority: 1);
-
-        return ValueTask.CompletedTask;
     }
 }
