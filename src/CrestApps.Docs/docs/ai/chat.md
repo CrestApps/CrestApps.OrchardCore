@@ -12,6 +12,10 @@ description: AI chat capabilities for Orchard Core with admin and frontend chat 
 
 Provides UI to interact with AI models using the profiles.
 
+The screencast below creates a chat-type AI profile on the `gpt-4.1-mini` deployment, shows it on the admin menu, and then opens its chat to ask the model a question — all starting from the admin dashboard.
+
+![Screen cast of creating a chat AI profile and chatting with the model](/img/docs/ai-chat.gif)
+
 ## AI Chat Feature
 
 The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu.
