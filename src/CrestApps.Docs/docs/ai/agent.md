@@ -14,6 +14,12 @@ description: Orchard Core module guidance for agent profiles and agent-enabled A
 
 The Orchard agent module surfaces agent profiles inside Orchard Core so they can participate in module-driven AI experiences such as profile-based chat, A2A hosting, and other Orchard-managed orchestration flows.
 
+The screencast below enables the feature, creates an Agent-type AI profile on the `gpt-4.1-mini` deployment, and grants it Orchard-aware tool categories from the profile's Capabilities tab.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Agents and creating an agent profile with Orchard-aware tools">
+  <source src="/img/docs/ai-agent.mp4" type="video/mp4" />
+</video>
+
 ## What this module adds in Orchard Core
 
 - Orchard-aware AI tools for system, recipe, tenant, content, role, user, workflow, analytics, and communication scenarios

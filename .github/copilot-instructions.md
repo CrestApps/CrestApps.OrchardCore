@@ -326,6 +326,12 @@ Whenever code is modified, you MUST update the documentation project located at 
 2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 3. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
 
+### Documentation Screencasts
+
+- **Only produce screencasts when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
+- When asked to record documentation screencasts, capture them **full-screen at 1600×1000** resolution to match the existing docs videos.
+- Deliver screencasts as **MP4** (`H.264`, even width/height, `-pix_fmt yuv420p`) stored under `src/CrestApps.Docs/static/img/docs/`, and embed them with an HTML `<video controls preload="metadata" width="100%">` player rather than a GIF.
+
 ## Documentation expectations
 
 When a change affects public behavior, configuration, setup, or project guidance:

@@ -12,6 +12,12 @@ description: AI chat capabilities for Orchard Core with admin and frontend chat 
 
 Provides UI to interact with AI models using the profiles.
 
+The screencast below creates a chat-type AI profile on the `gpt-4.1-mini` deployment, shows it on the admin menu, and then opens its chat to ask the model a question — all starting from the admin dashboard.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a chat AI profile and chatting with the model">
+  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
+</video>
+
 ## AI Chat Feature
 
 The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu.
@@ -158,7 +164,9 @@ This linked citation rendering now applies consistently across the admin chat UI
 
 ### Admin Chat User Interface
 
-![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
+<video controls preload="metadata" width="100%" aria-label="Screen cast of the admin chat">
+  <source src="/img/docs/admin-ui-sample.mp4" type="video/mp4" />
+</video>
 
 ### Invoking Utility and Agent Profiles
 
@@ -205,6 +213,12 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.
 :::
 
+The screencast below enables the **AI Chat Admin Widget** feature, creates a chat profile with **all tool capabilities selected**, points the widget at that profile in **Settings → Artificial Intelligence → Admin Widget**, and then opens the floating widget to ask the assistant a question it answers using its tools.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant">
+  <source src="/img/docs/ai-admin-widget.mp4" type="video/mp4" />
+</video>
+
 ---
 
 ### Frontend Chat Widget
@@ -226,14 +240,23 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 
 #### Adding the Frontend Widget
 
-1. Ensure the **Widgets** feature (`OrchardCore.Widgets`) is enabled.
-2. Go to **Design** > **Widgets** in the admin menu.
-3. Add a new **AI Chat Widget** to the desired zone (e.g., Footer, Content).
-4. Configure the widget by selecting the AI chat profile and optionally choosing a prompt template.
+To show the widget on every page of the site, place it in a layer whose rule always evaluates to `true`:
+
+1. Ensure the **Widgets** and **Layers** features are enabled.
+2. Create a dedicated AI chat profile (for example, a public-facing *Website Assistant* profile of type **Chat**).
+3. Go to **Design** > **Layers** and create a new layer (for example, *Global*).
+4. Edit the layer, add a **Boolean** rule, and keep its value set to **True** so the layer is always active.
+5. Back on the **Layers** screen, use the **Add Widget** menu on the target zone (for example, **Footer**) and add an **Artificial Intelligence Chat** widget.
+6. Select the *Global* layer and the AI chat profile you created, then publish the widget.
+7. Visit any public page and open the floating chat widget to talk to your assistant.
 
 #### Frontend Widget Screen Cast
 
-![Screen cast of the frontend widget](/img/docs/widget-ui-sample.gif)
+The following screen cast walks through creating a public-facing profile, adding an always-on layer with a Boolean rule, placing the AI Chat widget in the footer zone, and chatting with it from the site's home page.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of adding the frontend widget with an always-on layer">
+  <source src="/img/docs/ai-frontend-widget.mp4" type="video/mp4" />
+</video>
 
 ---
 

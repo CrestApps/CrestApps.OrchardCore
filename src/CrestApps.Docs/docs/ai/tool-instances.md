@@ -19,6 +19,12 @@ This is the difference between a tool and a tool instance:
 
 Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). It depends on the **AI Services** feature and adds the **Artificial Intelligence → Tool Instances** admin menu entry.
 
+The screencast below enables the feature, then creates an HTTP API Request tool instance named **Order Lookup API** — the function name the AI model calls is derived automatically from that name.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Tool Instances and creating an HTTP API Request instance">
+  <source src="/img/docs/ai-tool-instances.mp4" type="video/mp4" />
+</video>
+
 ## Managing tool instances
 
 Navigate to **Artificial Intelligence → Tool Instances**.
