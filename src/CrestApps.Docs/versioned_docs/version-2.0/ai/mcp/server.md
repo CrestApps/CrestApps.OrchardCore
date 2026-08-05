@@ -342,6 +342,8 @@ Resources can be exported and imported via recipes:
 }
 ```
 
+### Example
+
 The screencast below shows the admin chat UI interacting with content and tools through the MCP server integration.
 
 <video controls preload="metadata" width="100%" aria-label="Screen cast of the admin chat">

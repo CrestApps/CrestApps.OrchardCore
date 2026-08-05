@@ -162,7 +162,7 @@ When a chat response includes document markers such as `[doc:1]`, the AI Chat UI
 
 This linked citation rendering now applies consistently across the admin chat UI, the admin widget, and the frontend widget.
 
-The screencast below shows the admin chat user interface in action.
+### Admin Chat User Interface
 
 <video controls preload="metadata" width="100%" aria-label="Screen cast of the admin chat">
   <source src="/img/docs/admin-ui-sample.mp4" type="video/mp4" />
