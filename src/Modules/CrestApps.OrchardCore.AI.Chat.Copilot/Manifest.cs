@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
     Id = "CrestApps.OrchardCore.AI.Chat.Copilot",
     Name = "AI Copilot Orchestrator",
     Description = "Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Orchestrators",
     Dependencies =
     [
         AIConstants.Feature.Area,
