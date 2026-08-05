@@ -255,6 +255,8 @@ This makes the configuration-backed provider available immediately for local ten
 1. The **Asterisk** module is enabled.
 2. The tenant selects **Default Asterisk** as its default telephony provider.
 
+The `CrestApps.OrchardCore.Cms.Web` launch profile injects the same **Default Asterisk** environment variables, so running the CMS host directly with `dotnet run` (or from the IDE) also exposes the configuration-backed provider without starting the full Aspire host. These are local-only development values and expect the Asterisk container to be reachable on `http://localhost:8088/ari/`.
+
 The Aspire host supplies its local-only ARI connection values at runtime. The standalone Asterisk Web sample intentionally keeps ARI credentials out of committed configuration; use user secrets or environment variables as described above. Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. The `/ari/` endpoint can be used to verify that the local ARI service is reachable.
 
 The Asterisk container generates its self-signed WebRTC certificate in its entrypoint rather than in a `RUN` layer, so no private key is baked into the image. The key is created on first start under `/etc/asterisk/keys` and is unique per container.
