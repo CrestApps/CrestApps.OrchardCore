@@ -1,39 +1,69 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Contents;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 internal sealed class AdminMenu : AdminNavigationProvider
 {
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminMenu"/> class.
     /// </summary>
+    /// <param name="contentTypeProvider">The provider that exposes the cached omnichannel contact content types.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AdminMenu(IStringLocalizer<AdminMenu> stringLocalizer)
+    public AdminMenu(
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IStringLocalizer<AdminMenu> stringLocalizer)
     {
+        _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
     }
 
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
+        var contactContentTypes = await _contentTypeProvider.GetContactContentTypesAsync();
+
         builder
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Activities"], "-1", activities => activities
+                .Add(S["Activities"], S["Activities"].PrefixPosition(), activities => activities
                     .AddClass("activities")
                     .Id("activities")
                     .Action("Activities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )
-                .Add(S["Management"], "100", management => management
+                .Add(S["Contacts"], S["Contacts"].PrefixPosition(), contacts =>
+                {
+                    contacts
+                        .AddClass("contacts")
+                        .Id("contacts");
+
+                    if (contactContentTypes.Count > 0)
+                    {
+                        contacts
+                            .Action("List", "Admin", new RouteValueDictionary
+                            {
+                                { "area", "OrchardCore.Contents" },
+                                { "contentTypeId", string.Join(',', contactContentTypes) },
+                            });
+                    }
+
+                    contacts
+                        .Permission(CommonPermissions.ListContent)
+                        .LocalNav();
+                })
+                .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
-                    .Add(S["Manage Activities"], S["Manage Activities"].PrefixPosition("3"), manageActivities => manageActivities
+                    .Add(S["Manage Activities"], S["Manage Activities"].PrefixPosition(), manageActivities => manageActivities
                         .AddClass("manage-activities")
                         .Id("manageActivities")
                         .Action("ManageActivities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
@@ -74,9 +104,9 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Id("channelEndpoints")
                         .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
-                        .LocalNav())),
+                        .LocalNav()
+                    )
+                ),
                 priority: 1);
-
-        return ValueTask.CompletedTask;
     }
 }

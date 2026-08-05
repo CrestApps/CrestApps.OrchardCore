@@ -1,6 +1,7 @@
 using System.Data;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -197,7 +198,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                         entry.ProcessSaveUtc = clock.UtcNow;
                         entry.Put(progressPart);
 
-                        session.Save(entry);
+                        await session.SaveAsync(entry, false, collection: null, cancellationToken);
                         await session.SaveChangesAsync(cancellationToken);
 
                         page++;
@@ -216,7 +217,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 entry.Status = ContentTransferEntryStatus.Completed;
                 entry.Put(progressPart);
 
-                session.Save(entry);
+                await session.SaveAsync(entry, false, collection: null, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
 
                 // Send notification if the Notifications module is enabled.
@@ -249,7 +250,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         entry.Error = error;
         entry.CompletedUtc = clock.UtcNow;
 
-        session.Save(entry);
+        await session.SaveAsync(entry, false, collection: null);
         await session.SaveChangesAsync();
     }
 

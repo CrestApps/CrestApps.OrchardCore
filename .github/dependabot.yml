@@ -4,6 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
     # Version update PRs are enabled so patched versions arrive before an advisory is published.
     # NuGetAudit fails the build on a known advisory, so a dependency left to drift becomes a hard
     # stop rather than a warning. OrchardCore packages stay pinned via the ignore list below.
@@ -28,6 +30,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 5
     groups:
       non-major-dependencies:
@@ -39,6 +43,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
     # Action versions are part of the supply chain: a stale action is an unpatched dependency that runs
     # with repository credentials.
     open-pull-requests-limit: 5

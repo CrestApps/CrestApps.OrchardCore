@@ -49,6 +49,18 @@ This tenant-specific path is enforced by the AI Documents module so local upload
 
 If you want uploaded files stored in Azure Blob Storage instead of the local file system, enable the optional [`AI Documents - Azure Blob Storage`](./azure-blob-storage.md) feature and configure `OrchardCore:CrestApps:AI:AzureDocuments`.
 
+## File upload security scanning
+
+Every file uploaded through the AI document endpoints (chat interactions, profiles, chat sessions, and widgets) is passed through the CrestApps.Core file-upload scanning extensibility point (`IUploadedFileScanner.ScanAsync`) **before** it is stored or processed. If the scan returns anything other than `Clean`, the upload is rejected.
+
+When this module is enabled, it registers an Orchard Core-backed scanner (`OrchardUploadedFileScanner`) that routes each uploaded file through Orchard Core's shared [`FileCreationService`](https://docs.orchardcore.net/en/latest/reference/core/file-upload-security/) pre-storage pipeline. This means every uploaded file is inspected by the same registered `IFileEventHandler` implementations that protect Orchard Core's own media flow — including the **ClamAV antivirus** handler from `OrchardCore.Antivirus` when that module is enabled.
+
+- If a handler rejects the file (for example, the antivirus handler detects an infected file), the upload is rejected and the rejection reason is logged at `Warning` level.
+- If the scan itself fails, the upload is rejected (fail-closed).
+- If no handler rejects the file, the upload proceeds.
+
+This scanner takes precedence over the framework's default no-op scanner. To plug in antivirus scanning, enable the `OrchardCore.Antivirus` feature and configure ClamAV. You can also register your own `IFileEventHandler` implementations to add custom file inspection, content validation, or file-type policies to the upload pipeline.
+
 ## AI Documents for Chat Interactions
 
 | | |
