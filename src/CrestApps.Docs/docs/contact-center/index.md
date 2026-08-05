@@ -16,7 +16,7 @@ Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, dura
 
 ## Feature and administration model
 
-Each Contact Center capability owns both its runtime services and the administration screens required to configure it. There is no separate Contact Center Administration feature to discover or enable. Enabling **Contact Center Dialer**, for example, registers the Dialer Profiles manager, controller, display driver, and menu together; **Contact Center Automated Dialer** depends on the base Dialer, so Power and Progressive dialing always have access to the same profile UI.
+Each Contact Center capability owns both its runtime services and the administration screens required to configure it. There is no separate Contact Center Administration feature to discover or enable. Enabling **Contact Center Outbound Dialer**, for example, registers the Dialer Profiles manager, controller, display driver, and menu together; **Contact Center Automated Dialer** depends on the base Dialer, so Power and Progressive dialing always have access to the same profile UI.
 
 | Capability feature | Included administration screens |
 | --- | --- |
@@ -107,7 +107,7 @@ The practical setup sequence is: create channel endpoints and campaigns in Omnic
 
 The Contact Center publishes its own real-time event stream over SignalR for agent desktops, supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-phone hub for routing, queue, or supervisor data; voice call state continues to flow through Telephony and is projected into the interaction.
 
-The **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`, depends on **Queues**, **Availability**, and the **SignalR** module) adds:
+The **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`, depends on **Work Distribution** and the **SignalR** module) is enabled by dependency only: it is not a feature you toggle directly but is switched on automatically whenever the **Agent Desktop**, **Supervision & Live Dashboard**, or **Voice Soft Phone** capability is enabled. It adds:
 
 - **`ContactCenterHub`** - a SignalR hub mapped through the SignalR module's `HubRouteManager`. Agents connect with the `ContactCenterSignIntoQueues` permission and join their own user group plus a group per signed-in queue; supervisors connect with the new `MonitorContactCenter` permission and join the supervisor group. Every user, queue, and supervisor destination is qualified by the immutable Orchard shell name before it reaches the SignalR backplane, preventing equal user or queue identifiers in different tenants from receiving each other's events. Supervisors can also call `WatchQueue`/`UnwatchQueue` to subscribe to a single queue's group for a wallboard.
 - **Live agent sessions** - a volatile `AgentSession` aggregate, separate from the administrator-owned `AgentProfile`, that tracks an agent's open SignalR connections and last heartbeat. Splitting live state from configuration means a closed browser no longer leaves an agent `Available`.
@@ -229,9 +229,9 @@ For the Asterisk provider, a recording captures the **mixed audio of the convers
 
 ## Inbound voice
 
-> **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice`
+> **Feature ID** `CrestApps.OrchardCore.ContactCenter.Voice` (enabled by dependency only)
 
-The **Contact Center Voice** feature adds the server-side Voice Contact Center Call Router for inbound and outbound voice work. It depends on the Queues feature and provider-agnostic [Telephony](../telephony/index.md), so provider routing and webhook processing can run without the Telephony soft-phone UI or the Contact Center real-time experience.
+The **Contact Center Voice** feature adds the server-side Voice Contact Center Call Router for inbound and outbound voice work. It depends on the Work Distribution feature and provider-agnostic [Telephony](../telephony/index.md), so provider routing and webhook processing can run without the Telephony soft-phone UI or the Contact Center real-time experience. You do not enable it directly: it is turned on automatically as a dependency whenever you enable a voice-facing capability such as Entry Points, the Dialer, Recording, Supervision, the soft phone, or a provider adapter.
 
 Enable `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` when agents should receive Contact Center call-state projections in the Telephony soft phone. That integration feature explicitly enables Contact Center Real-Time and `CrestApps.OrchardCore.Telephony.SoftPhone`, and exclusively owns the Contact Center soft-phone display driver, resources, and agent endpoints.
 

@@ -102,14 +102,11 @@
       "topology": "single-node-distributed",
       "features": [
         "CrestApps.OrchardCore.ContactCenter",
-        "CrestApps.OrchardCore.ContactCenter.Availability",
+        "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Queues",
-        "CrestApps.OrchardCore.ContactCenter.Routing",
-        "CrestApps.OrchardCore.ContactCenter.Voice",
         "CrestApps.OrchardCore.ContactCenter.EntryPoints",
         "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
         "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
-        "CrestApps.OrchardCore.ContactCenter.RealTime",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.Asterisk",
         "CrestApps.OrchardCore.Asterisk.ContactCenterVoice"
@@ -122,14 +119,11 @@
       "topology": "single-node-distributed",
       "features": [
         "CrestApps.OrchardCore.ContactCenter",
-        "CrestApps.OrchardCore.ContactCenter.Availability",
+        "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Queues",
-        "CrestApps.OrchardCore.ContactCenter.Routing",
-        "CrestApps.OrchardCore.ContactCenter.Voice",
         "CrestApps.OrchardCore.ContactCenter.EntryPoints",
         "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
         "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
-        "CrestApps.OrchardCore.ContactCenter.RealTime",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.DialPad",
         "CrestApps.OrchardCore.DialPad.ContactCenterVoice"

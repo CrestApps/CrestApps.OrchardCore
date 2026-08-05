@@ -32,7 +32,7 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | Queue group | Contact Center Queue Groups | `ContactCenterQueueGroup` | `QueueGroups` |
 | Business hours calendar | Contact Center Business Hours Calendars | `ContactCenterBusinessHoursCalendar` | `Calendars` |
 | Queue | Contact Center Queues | `ContactCenterQueue` | `Queues` |
-| Entry point | Contact Center Entry Points | `ContactCenterEntryPoint` | `EntryPoints` |
+| Entry point | Contact Center Inbound Voice | `ContactCenterEntryPoint` | `EntryPoints` |
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
 | Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |

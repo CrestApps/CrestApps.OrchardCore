@@ -9,7 +9,7 @@ Asterisk-specific concepts stay inside this module; the shared Telephony and Con
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Asterisk | `CrestApps.OrchardCore.Asterisk` | Provides the Asterisk telephony provider and its settings. Depends on `CrestApps.OrchardCore.Telephony`. |
-| Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Adapts Asterisk call execution and real-time call events to Contact Center voice orchestration. |
+| Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Enables the Asterisk provider to handle real-time phone-call events and call execution for the Contact Center. |
 | Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Adds bidirectional RTP media sessions for active Asterisk Contact Center calls. Enabled by dependency only. |
 
 ## Installation

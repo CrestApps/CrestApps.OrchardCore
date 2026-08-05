@@ -34,7 +34,7 @@
       "activeWorkStatus": "deferred-follow-up"
     },
     {
-      "featureId": "CrestApps.OrchardCore.ContactCenter.Availability",
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Agents",
       "component": "AgentSessionCleanupBackgroundTask",
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
@@ -44,7 +44,7 @@
       "activeWorkStatus": "deferred-follow-up"
     },
     {
-      "featureId": "CrestApps.OrchardCore.ContactCenter.Availability",
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Agents",
       "component": "AgentAvailabilityRecoveryBackgroundTask",
       "kind": "background-task",
       "quiesce": "Orchard stops scheduling the feature-owned task after the tenant shell reloads.",
@@ -54,12 +54,12 @@
       "activeWorkStatus": "deferred-follow-up"
     },
     {
-      "featureId": "CrestApps.OrchardCore.ContactCenter.Routing",
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Queues",
       "component": "ReservationExpiryBackgroundTask",
       "kind": "background-task",
-      "quiesce": "The Routing lifecycle participant closes admission before descriptor mutation; new reservation-and-assignment passes return without claiming work.",
+      "quiesce": "The Work Distribution lifecycle participant closes admission before descriptor mutation; new reservation-and-assignment passes return without claiming work.",
       "drain": "Disable waits up to the configured tenant drain timeout for the admitted reservation-and-assignment pass.",
-      "reEnable": "The fresh shell reopens Routing admission and the scheduled pass resumes.",
+      "reEnable": "The fresh shell reopens Work Distribution admission and the scheduled pass resumes.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "implemented-r3"
     },

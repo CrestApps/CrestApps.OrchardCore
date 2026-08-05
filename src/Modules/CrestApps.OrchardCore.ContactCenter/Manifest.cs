@@ -18,7 +18,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Area,
     Name = "Contact Center",
-    Description = "Provides the interaction lifecycle, durable domain event log, baseline permissions, settings, and administration menu.",
+    Description = "Provides the core infrastructure and services for the contact center: the interaction lifecycle and history log, the durable domain-event log, baseline permissions, settings, and the administration menu. Enable this first, then add the capabilities you need.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -28,8 +28,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Agents,
-    Name = "Contact Center Agents",
-    Description = "Adds agent profiles, presence, capacity, skills, queue/campaign sign-in, and agent administration screens.",
+    Name = "Contact Center Workforce",
+    Description = "Adds agent profiles, skills, queue/campaign sign-in, and the durable agent availability, presence, heartbeat, and after-call recovery that track who is working, together with their administration screens.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -39,19 +39,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Queues,
-    Name = "Contact Center Queues",
-    Description = "Adds work queues, queue items, reservations, availability-based activity assignment, and queue administration screens.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Availability,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.Availability,
-    Name = "Contact Center Availability",
-    Description = "Adds canonical agent availability, durable sessions, heartbeat state, and after-call recovery without requiring real-time transport.",
+    Name = "Contact Center Work Distribution",
+    Description = "Adds work queues, queue items, reservations, business hours, and the policy-based routing strategies and activity assignment that distribute work to available agents, together with their administration screens.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -61,20 +50,20 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Dialer,
-    Name = "Contact Center Dialer",
-    Description = "Adds outbound dialing profiles and their administration UI, mandatory compliance screening, callbacks, and Manual or Preview activity batches that route calls through Contact Center Voice providers.",
+    Name = "Contact Center Outbound Dialer",
+    Description = "Adds outbound calling over CRM activities: dialing profiles and their administration, mandatory compliance screening, callbacks, and Manual or Preview activity batches placed through the contact center's voice provider.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
-        ContactCenterConstants.Feature.Routing,
+        ContactCenterConstants.Feature.Queues,
     ]
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.DialerAutomated,
     Name = "Contact Center Automated Dialer",
-    Description = "Adds Power and Progressive dialing strategies and scheduled pacing. The base Dialer dependency provides mandatory compliance and the dialing profile UI.",
+    Description = "Adds automated Power and Progressive dialing with scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -87,22 +76,23 @@ using OrchardCore.Modules.Manifest;
     Name = "Contact Center Voice",
     Description = "Routes inbound and outbound voice calls through the Voice Contact Center Call Router while Telephony providers execute media operations.",
     Category = "Contact Center",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
-        ContactCenterConstants.Feature.Routing,
+        ContactCenterConstants.Feature.Queues,
         TelephonyConstants.Feature.Area,
     ]
 )]
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.EntryPoints,
-    Name = "Contact Center Entry Points",
-    Description = "Adds inbound voice entry-point administration screens, qualification, business-hours decisions, and queue ingress.",
+    Name = "Contact Center Inbound Voice",
+    Description = "Adds inbound voice front doors that map dialed numbers to queues, qualify callers, apply business-hours decisions, set priority, and handle closed-hours calls.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
-        ContactCenterConstants.Feature.Routing,
+        ContactCenterConstants.Feature.Queues,
     ]
 )]
 
@@ -120,23 +110,12 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Recording,
-    Name = "Contact Center Recording",
-    Description = "Adds provider-capability-gated recording orchestration, recording-state events, and recording settings screens for voice interactions.",
+    Name = "Contact Center Call Recording",
+    Description = "Adds provider-gated call-recording orchestration, recording-state events, and recording settings for voice interactions.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.Routing,
-    Name = "Contact Center Routing",
-    Description = "Adds policy-based routing strategies and activity assignment orchestration over Contact Center queues.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Queues,
     ]
 )]
 
@@ -160,7 +139,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Contact Center",
     Dependencies =
     [
-        ContactCenterConstants.Feature.Availability,
+        ContactCenterConstants.Feature.Agents,
         ContactCenterConstants.Feature.RealTime,
         ContactCenterConstants.Feature.VoiceSoftPhone,
         OmnichannelConstants.Features.Managements,
@@ -169,8 +148,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Supervision,
-    Name = "Contact Center Supervision",
-    Description = "Adds the real-time supervisor dashboard and provider-capability-gated monitoring actions.",
+    Name = "Contact Center Supervision & Live Dashboard",
+    Description = "Adds the real-time supervisor dashboard with live queue and agent monitoring, plus provider-gated monitor, whisper, and barge actions.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -182,12 +161,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.RealTime,
     Name = "Contact Center Real-Time",
-    Description = "Adds the shared SignalR hub and real-time presence, offer, and queue broadcasts consumed by optional user experiences.",
+    Description = "Adds the shared SignalR hub and real-time presence, offer, and queue broadcasts consumed by the agent desktop, supervision, and soft-phone experiences. Enabled automatically as a dependency of those capabilities.",
     Category = "Contact Center",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
-        ContactCenterConstants.Feature.Availability,
         SignalRConstants.Feature.Area,
     ]
 )]

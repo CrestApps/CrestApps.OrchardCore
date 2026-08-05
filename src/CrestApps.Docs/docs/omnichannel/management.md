@@ -139,7 +139,7 @@ The loader runs as a background process to avoid overloading the system and to a
 
 The **Load Inventory** list is ordered by creation date with the newest inventory loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
 
-Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
 
 ## Getting started (recommended order)
 

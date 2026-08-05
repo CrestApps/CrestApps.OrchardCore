@@ -18,30 +18,29 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in. |
-| Contact Center Availability | `CrestApps.OrchardCore.ContactCenter.Availability` | Canonical availability, durable sessions, heartbeat state, and after-call recovery without requiring real-time transport. |
-| Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Work queues, queue items, reservations, and availability-based activity assignment. |
-| Contact Center Routing | `CrestApps.OrchardCore.ContactCenter.Routing` | Policy-based routing strategies and activity-assignment orchestration. |
+| Contact Center Workforce | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in, plus canonical availability, durable sessions, heartbeat state, and after-call recovery without requiring real-time transport. |
+| Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Work queues, queue items, reservations, and policy-based routing strategies with availability-based activity assignment. |
 
 ### Voice and dialing
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center Voice | `CrestApps.OrchardCore.ContactCenter.Voice` | Routes inbound/outbound voice through the Voice Contact Center Call Router while Telephony providers execute media. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Executable bidirectional media-provider resolution for active calls (enabled by dependency only). |
-| Contact Center Entry Points | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound entry-point administration, qualification, business-hours decisions, and queue ingress. |
-| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialing profiles, callbacks, Manual/Preview activity batches, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
+| Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound entry-point administration, qualification, business-hours decisions, and queue ingress. |
+| Contact Center Outbound Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialing profiles, callbacks, Manual/Preview activity batches, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
 | Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Power and Progressive dialing strategies with scheduled pacing over the compliant base Dialer. |
-| Contact Center Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Provider-capability-gated recording orchestration and recording-state events. |
+| Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Provider-gated recording orchestration and recording-state events. |
+
+> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, Outbound Dialer, Call Recording, Supervision, the soft phone, and provider adapters, so it is not listed as a separately selectable feature.
 
 ### Real-time experiences and reporting
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts. |
+| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts (enabled by dependency only). |
 | Contact Center Voice - Soft Phone | `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` | Projects voice state into the Telephony soft phone and real-time agent experience. |
 | Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. |
-| Contact Center Supervision | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-capability-gated monitoring actions. |
+| Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
 | Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
 
@@ -57,10 +56,7 @@ Install the package into the web/startup project and enable the capabilities you
       "enable": [
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Agents",
-        "CrestApps.OrchardCore.ContactCenter.Availability",
         "CrestApps.OrchardCore.ContactCenter.Queues",
-        "CrestApps.OrchardCore.ContactCenter.Routing",
-        "CrestApps.OrchardCore.ContactCenter.Voice",
         "CrestApps.OrchardCore.ContactCenter.EntryPoints"
       ]
     }
@@ -77,7 +73,7 @@ Configure each enabled capability from its Contact Center or Interaction Center 
 ## Usage
 
 - Business code interacts with the interaction lifecycle and domain-event log; voice execution is delegated to Telephony providers through the Voice Contact Center Call Router.
-- Real-time experiences (agent desktop, supervisor dashboard, soft phone projection) consume the shared SignalR hub exposed by the Real-Time feature.
+- Real-time experiences (agent desktop, supervisor dashboard, soft phone projection) consume the shared SignalR hub exposed by the Real-Time feature, which is enabled automatically as a dependency of those experiences.
 - Domain events can be observed through the Workflows bridge for custom automation.
 
 ## Dependencies

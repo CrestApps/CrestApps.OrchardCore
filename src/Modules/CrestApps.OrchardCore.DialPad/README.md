@@ -9,7 +9,7 @@ DialPad-specific concepts stay inside this module; the shared Telephony and Cont
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | DialPad | `CrestApps.OrchardCore.DialPad` | Provides the DialPad telephony provider and its settings. Depends on `CrestApps.OrchardCore.Telephony`. |
-| DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.ContactCenterVoice` | Implements the Contact Center voice provider boundary over DialPad so the Voice Contact Center Call Router can place outbound calls through DialPad. |
+| DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.ContactCenterVoice` | Enables the DialPad provider to place outbound contact center calls and handle their real-time call events. |
 
 ## Installation
 

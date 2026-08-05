@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Availability feature are enabled so the required presence service is always resolvable.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Workflows)]
-[RequireFeatures(ContactCenterConstants.Feature.Availability)]
+[RequireFeatures(ContactCenterConstants.Feature.Agents)]
 public sealed class ContactCenterAvailabilityWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

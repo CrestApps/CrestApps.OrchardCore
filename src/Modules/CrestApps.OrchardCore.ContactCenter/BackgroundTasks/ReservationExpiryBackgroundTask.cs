@@ -49,7 +49,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Routing);
+        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Queues);
 
         if (workLease is null)
         {

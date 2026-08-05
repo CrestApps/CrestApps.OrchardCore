@@ -95,14 +95,12 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
             public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";
-            public const string Availability = "CrestApps.OrchardCore.ContactCenter.Availability";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerAutomated = "CrestApps.OrchardCore.ContactCenter.Dialer.Automated";
             public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
             public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
             public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
-            public const string Routing = "CrestApps.OrchardCore.ContactCenter.Routing";
             public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
             public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
             public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";

@@ -13,24 +13,14 @@ public static partial class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
-        /// The identifier of the agent, presence, and queue-membership feature.
+        /// The identifier of the workforce feature that adds agent profiles, skills, availability, presence, and durable agent sessions.
         /// </summary>
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
 
         /// <summary>
-        /// The identifier of the agent availability, presence, and durable session feature.
-        /// </summary>
-        public const string Availability = "CrestApps.OrchardCore.ContactCenter.Availability";
-
-        /// <summary>
-        /// The identifier of the queue and reservation feature.
+        /// The identifier of the work-distribution feature that adds queues, reservations, and routing strategies.
         /// </summary>
         public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
-
-        /// <summary>
-        /// The identifier of the routing strategy and assignment orchestration feature.
-        /// </summary>
-        public const string Routing = "CrestApps.OrchardCore.ContactCenter.Routing";
 
         /// <summary>
         /// The identifier of the outbound dialer feature.

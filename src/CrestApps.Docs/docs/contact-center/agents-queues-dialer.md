@@ -11,22 +11,22 @@ This phase adds the operational core of the Contact Center: agent presence, work
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, reason codes, skills, and administrator-owned queue/campaign entitlements. |
-| Contact Center Availability | `CrestApps.OrchardCore.ContactCenter.Availability` | Canonical routing availability, durable sessions, heartbeat tracking, capacity projection, after-call recovery, and logout synchronization without requiring SignalR. |
-| Contact Center Queues | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, and reservations. |
-| Contact Center Routing | `CrestApps.OrchardCore.ContactCenter.Routing` | Policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
-| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, Manual or Preview inventory loads routed through Contact Center Voice, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
+| Contact Center Workforce | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, reason codes, skills, and administrator-owned queue/campaign entitlements, plus canonical routing availability, durable sessions, heartbeat tracking, capacity projection, after-call recovery, and logout synchronization without requiring SignalR. |
+| Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Managed skills, business-hours calendars, work queues, queue items, and reservations, plus policy-based routing strategies and availability-based activity assignment over Contact Center queues. |
+| Contact Center Outbound Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound profiles, callbacks, Manual or Preview inventory loads routed through Contact Center Voice, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
 | Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Compliance-gated Power and Progressive strategies, automated batch source, and scheduled pacing. Its base Dialer dependency includes the Dialer Profiles UI. |
-| Contact Center Entry Points | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
-| Contact Center Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
+| Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
+| Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
-| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the Availability state. |
+| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by the agent desktop, supervision, and soft phone). |
 | Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated workspace, navigation, presence controls, offers, active interaction context, and recent work for agents. |
-| Contact Center Supervision | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
+| Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Enterprise report catalog under the shared Reports area, including executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports. |
 | Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Asterisk implementation of the Contact Center voice provider boundary. |
 | Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Dependency-only Asterisk RTP development foundation; unavailable in approved GA-Core profiles. |
 | DialPad Contact Center Voice | `CrestApps.OrchardCore.DialPad.ContactCenterVoice` | DialPad implementation of the Contact Center voice provider boundary. |
+
+> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Entry Points, Dialer, Recording, Supervision, the soft phone, and provider adapters, so it is not a separately selectable feature.
 
 ## Agents and presence
 
@@ -36,7 +36,7 @@ Agents sign in from the floating Telephony soft phone. When the Contact Center q
 
 Presence is a dropdown in the soft-phone header so agents can change availability without switching tabs. **Request break** is system-approved: if no assignment is in progress, the request is granted immediately and the agent enters `Break`; if a route/reservation is already in progress, the request is kept pending while the call continues, and the system grants `Break` automatically when that in-flight work is released. Agents in `RequestBreak` or `Break` are not eligible for new routing decisions.
 
-Routing never treats the profile presence value by itself as proof that an agent can receive work. The Availability feature computes a canonical projection by joining an `Available` profile and queue entitlement with the agent's selected session queue, online connection state, fresh heartbeat, and remaining interaction capacity. The last connection disconnect therefore removes the agent from routing immediately without destroying the profile's requested presence during a transient reconnect; stale-session cleanup later performs the durable sign-out. Reservation creation repeats the canonical check while it holds the activity and agent transition locks, closing the race where a client disconnects after candidate selection.
+Routing never treats the profile presence value by itself as proof that an agent can receive work. The Workforce feature computes a canonical projection by joining an `Available` profile and queue entitlement with the agent's selected session queue, online connection state, fresh heartbeat, and remaining interaction capacity. The last connection disconnect therefore removes the agent from routing immediately without destroying the profile's requested presence during a transient reconnect; stale-session cleanup later performs the durable sign-out. Reservation creation repeats the canonical check while it holds the activity and agent transition locks, closing the race where a client disconnects after candidate selection.
 
 Queue membership is normalized into a query-aligned index. Each agent profile projects one membership row per queue it is both entitled to and signed in to (the intersection of live sign-in and the administrator-owned allow-list), so selecting the candidate agents for a queue is a single indexed lookup by queue and `Available` presence rather than a tenant-wide scan of every available agent. The index stores queue identifiers lower-cased for portable, case-insensitive matching and preserves the fail-closed entitlement rule: an agent with no matching allow-list entry is never a member.
 
@@ -82,7 +82,7 @@ Administrators define **reason codes** from **Interaction Center → Management 
 
 When reason codes are configured, the soft-phone presence dropdown lists them (ordered by sort order) in place of the fixed not-ready states; selecting one sets the agent's presence to the reason's `AppliesTo` state and records the reason on the agent profile and the `AgentPresenceChanged` event. If no reason codes exist, the dropdown falls back to the built-in not-ready states.
 
-The Agents feature seeds a standard set of reason codes at setup (short break, lunch, away from desk, team meeting, training, coaching, and system issue) by running the `agent-state-reason-codes` module recipe. Reason codes are also importable through the `AgentStateReasonCode` recipe step so they can be seeded or moved between tenants in deployment recipes.
+The Workforce feature seeds a standard set of reason codes at setup (short break, lunch, away from desk, team meeting, training, coaching, and system issue) by running the `agent-state-reason-codes` module recipe. Reason codes are also importable through the `AgentStateReasonCode` recipe step so they can be seeded or moved between tenants in deployment recipes.
 
 ## Skills
 
@@ -136,7 +136,7 @@ Inbound offers are local atomic transitions. Assignment does not synchronously q
 
 ## Dialer
 
-A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, inventory definitions, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Mandatory outbound compliance is part of the base **Contact Center Dialer**, so Manual, Preview, Power, and Progressive attempts cannot run without the eligibility and suppression gates. Enable **Contact Center Automated Dialer** for Power and Progressive profiles; it inherits the **Dialer Profiles** screen and compliance services from the base Dialer feature and runs its pacing cycle each minute. Manual and Preview profiles remain agent-driven. Dialer inventory loads create **unassigned** activities and enqueue automated work immediately so the selected profile can reserve it without a separate operator enqueue step.
+A **dialer profile** is an execution policy, not the source of CRM work. Activities, campaigns, subjects, inventory definitions, dispositions, and contact context still come from Omnichannel. The profile tells the Contact Center how a specific outbound campaign should be dialed: which queue supplies agents, which dialing mode is used, which Contact Center voice provider places calls, how pacing works, and how attempts/retries and compliance are bounded. Mandatory outbound compliance is part of the base **Contact Center Outbound Dialer**, so Manual, Preview, Power, and Progressive attempts cannot run without the eligibility and suppression gates. Enable **Contact Center Automated Dialer** for Power and Progressive profiles; it inherits the **Dialer Profiles** screen and compliance services from the base Dialer feature and runs its pacing cycle each minute. Manual and Preview profiles remain agent-driven. Dialer inventory loads create **unassigned** activities and enqueue automated work immediately so the selected profile can reserve it without a separate operator enqueue step.
 
 ### Dialing modes and safety
 
@@ -150,7 +150,7 @@ Each automated mode is implemented as a dedicated `IDialerStrategy`, so unsuppor
 | `Progressive` | Places one call per available agent as agents become available. Requires the **Contact Center Automated Dialer** feature. |
 | `Predictive` | **Disabled.** The editor hides it, saving it is rejected, and the dialer refuses to run it until answer-rate forecasting exists. |
 
-The Power and Progressive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Automated Dialer** feature, which depends on the base **Contact Center Dialer**. The base Dialer owns the dialer-profile editor and mandatory compliance services together with its runtime services, so enabling Automated Dialer exposes a complete configuration and execution surface while Orchard resolves the rest of the dependency graph. When that feature is disabled, the dialer-profile editor only offers Manual and Preview, and saving a Power or Progressive profile is rejected so a profile can never silently fail to pace. Manual and Preview remain on the base **Contact Center Dialer** feature.
+The Power and Progressive automated pacing modes, their strategies, scheduled pacing task, and automated batch source live in the **Contact Center Automated Dialer** feature, which depends on the base **Contact Center Outbound Dialer**. The base Dialer owns the dialer-profile editor and mandatory compliance services together with its runtime services, so enabling Automated Dialer exposes a complete configuration and execution surface while Orchard resolves the rest of the dependency graph. When that feature is disabled, the dialer-profile editor only offers Manual and Preview, and saving a Power or Progressive profile is rejected so a profile can never silently fail to pace. Manual and Preview remain on the base **Contact Center Outbound Dialer** feature.
 
 ### Outbound compliance gate
 
@@ -174,7 +174,7 @@ Do-not-call, registry, missing-destination, and maximum-attempt suppressions are
 
 The campaign gate above governs the automated and preview dialer paths. Agent-initiated soft-phone dials placed directly through the telephony hub do not flow through a dialer profile, so they are screened by a separate, provider-agnostic extension point. The Telephony module exposes `IOutboundCallScreener`; `DefaultTelephonyService` runs every registered screener before dispatching any origination and fails the dial closed if any screener denies it. Standalone Telephony with no screener registered dials as before.
 
-The base **Contact Center Dialer** registers a manual-call screener that applies the same do-not-call and calling-window rules to soft-phone dials. The screener resolves the destination to E.164, looks up the matching contact, and suppresses the dial when the contact has opted out, when the destination is on a national do-not-call registry, or when *Enforce a calling window* is enabled and the destination's calendar reports closed. A destination that cannot be parsed fails closed while do-not-call enforcement is on. Every suppression publishes a `ManualDialSuppressed` audit event so manual originations carry the same suppression trail as campaign attempts.
+The base **Contact Center Outbound Dialer** registers a manual-call screener that applies the same do-not-call and calling-window rules to soft-phone dials. The screener resolves the destination to E.164, looks up the matching contact, and suppresses the dial when the contact has opted out, when the destination is on a national do-not-call registry, or when *Enforce a calling window* is enabled and the destination's calendar reports closed. A destination that cannot be parsed fails closed while do-not-call enforcement is on. Every suppression publishes a `ManualDialSuppressed` audit event so manual originations carry the same suppression trail as campaign attempts.
 
 Manual screening is configured under `CrestApps_ContactCenter:Compliance:ManualDialing`:
 
@@ -205,7 +205,7 @@ Voice providers that support contact-center orchestration beyond soft-phone call
 
 Contact Center management entries live under **Interaction Center**. Queue groups, skills, queues, business-hours calendars, and dialer profile CRUD screens match the Omnichannel Campaigns UI: searchable list pages render summary shapes, and create/edit screens render display-driver editor shapes with the required root edit wrapper templates. Agent sign-in and presence are injected into the Telephony soft phone through `DisplayDriver<SoftPhoneWidget>`, so the operational controls stay with the phone while management screens remain catalog-focused.
 
-Agent state reason codes are a catalog-backed admin surface (**Interaction Center → Management → Agent states**), not a provider-specific dialer setting. The Agents feature seeds standard reason codes during tenant setup by executing the `agent-state-reason-codes` module recipe, and the `AgentStateReasonCode` recipe step lets reason codes be imported or moved between tenants. A dedicated deployment-plan step is a planned follow-up.
+Agent state reason codes are a catalog-backed admin surface (**Interaction Center → Management → Agent states**), not a provider-specific dialer setting. The Workforce feature seeds standard reason codes during tenant setup by executing the `agent-state-reason-codes` module recipe, and the `AgentStateReasonCode` recipe step lets reason codes be imported or moved between tenants. A dedicated deployment-plan step is a planned follow-up.
 
 ## Enable via recipe
 
@@ -219,7 +219,6 @@ Agent state reason codes are a catalog-backed admin surface (**Interaction Cente
         "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
-        "CrestApps.OrchardCore.ContactCenter.RealTime",
         "CrestApps.OrchardCore.ContactCenter.Analytics",
         "CrestApps.OrchardCore.DialPad.ContactCenterVoice"
       ]

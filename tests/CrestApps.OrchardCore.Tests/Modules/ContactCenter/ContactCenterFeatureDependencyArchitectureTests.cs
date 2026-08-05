@@ -119,9 +119,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 StringComparison.Ordinal));
 
         // Assert
+        Assert.True(features["CrestApps.OrchardCore.ContactCenter.Voice"].EnabledByDependencyOnly);
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.ContactCenter.Routing",
+                "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);
@@ -249,7 +250,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void AvailabilityFeature_OwnsPresenceAndDurableAgentSessions()
+    public void WorkforceFeature_OwnsPresenceAndDurableAgentSessions()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -261,8 +262,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
-        var availabilityDependencies = features["CrestApps.OrchardCore.ContactCenter.Availability"].Dependencies
-            .Order(StringComparer.Ordinal);
         var queueDependencies = features["CrestApps.OrchardCore.ContactCenter.Queues"].Dependencies
             .Order(StringComparer.Ordinal);
         var realTimeDependencies = features["CrestApps.OrchardCore.ContactCenter.RealTime"].Dependencies
@@ -281,18 +280,15 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 StringComparison.Ordinal));
 
         // Assert
-        Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Agents"],
-            availabilityDependencies);
-        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Availability", queueDependencies);
-        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Availability", realTimeDependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", presenceOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", sessionOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Availability", cleanupOwner.FeatureId);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Agents", queueDependencies);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Queues", realTimeDependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Agents", presenceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Agents", sessionOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Agents", cleanupOwner.FeatureId);
     }
 
     [Fact]
-    public void RoutingFeature_OwnsStrategiesAndAssignment()
+    public void WorkDistributionFeature_OwnsStrategiesAndAssignment()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -304,8 +300,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
-        var routingDependencies = features["CrestApps.OrchardCore.ContactCenter.Routing"].Dependencies
-            .Order(StringComparer.Ordinal);
         var voiceDependencies = features["CrestApps.OrchardCore.ContactCenter.Voice"].Dependencies
             .Order(StringComparer.Ordinal);
         var routingServiceOwner = startupClasses.Single(startup =>
@@ -322,13 +316,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 StringComparison.Ordinal));
 
         // Assert
-        Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Queues"],
-            routingDependencies);
-        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Routing", voiceDependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", routingServiceOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", assignmentOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Routing", assignmentTaskOwner.FeatureId);
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Queues", voiceDependencies);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Queues", routingServiceOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Queues", assignmentOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Queues", assignmentTaskOwner.FeatureId);
     }
 
     [Fact]
@@ -364,7 +355,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // Assert
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.ContactCenter.Availability",
+                "CrestApps.OrchardCore.ContactCenter.Agents",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
                 "CrestApps.OrchardCore.Omnichannel.Managements",
@@ -499,7 +490,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // Assert
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.ContactCenter.Routing",
+                "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
             ],
             dependencies);

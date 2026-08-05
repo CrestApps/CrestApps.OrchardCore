@@ -16,7 +16,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AsteriskConstants.Feature.ContactCenterVoice,
     Name = "Asterisk Contact Center Voice",
-    Description = "Adapts Asterisk call execution and real-time call events to Contact Center voice orchestration.",
+    Description = "Enables the Asterisk provider to handle real-time phone-call events and call execution for the Contact Center.",
     Category = "Contact Center",
     Dependencies =
     [

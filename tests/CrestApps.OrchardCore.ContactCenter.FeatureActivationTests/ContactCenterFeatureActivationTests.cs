@@ -77,16 +77,18 @@ public sealed class ContactCenterFeatureActivationTests
     }
 
     [Fact]
-    public async Task FreshTenant_VoiceFeatureAlone_ActivatesProviderCommandServices()
+    public async Task FreshTenant_VoiceDependentFeature_ActivatesProviderCommandServices()
     {
         // Arrange
+        // Voice is dependency-only and is reached through a Voice-dependent feature such as Entry Points, which is
+        // the canonical inbound-voice consumer every voice deployment enables.
         var profile = new ContactCenterTenantProfile
         {
-            Id = "voice-only",
+            Id = "voice-via-entry-points",
             ProviderProfile = "none",
             Features =
             [
-                "CrestApps.OrchardCore.ContactCenter.Voice",
+                "CrestApps.OrchardCore.ContactCenter.EntryPoints",
             ],
         };
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();

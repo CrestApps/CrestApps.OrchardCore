@@ -9,9 +9,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers policy-based routing strategies and activity assignment orchestration.
+/// Registers policy-based routing strategies and activity assignment orchestration as part of the
+/// Contact Center Work Distribution feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Routing)]
+[Feature(ContactCenterConstants.Feature.Queues)]
 public sealed class RoutingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -28,7 +29,7 @@ public sealed class RoutingStartup : StartupBase
 
         services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
             new ContactCenterFeatureWorkLifecycleParticipant(
-                ContactCenterConstants.Feature.Routing,
+                ContactCenterConstants.Feature.Queues,
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 

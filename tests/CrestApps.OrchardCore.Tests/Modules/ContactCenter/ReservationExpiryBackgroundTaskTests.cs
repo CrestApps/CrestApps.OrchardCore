@@ -261,11 +261,11 @@ public sealed class ReservationExpiryBackgroundTaskTests
     public async Task DoWorkAsync_WhenRoutingFeatureIsQuiescing_DoesNoWork()
     {
         // Arrange
-        // A node that is draining the Routing feature must not admit new reservation/assignment work. The task
+        // A node that is draining the Work Distribution feature must not admit new reservation/assignment work. The task
         // resolves the work manager first and returns immediately when the lease is denied, so no queue, voice, or
         // assignment work runs on a quiescing node.
         var workManager = new TestContactCenterFeatureWorkManager();
-        workManager.Quiesce(ContactCenterConstants.Feature.Routing);
+        workManager.Quiesce(ContactCenterConstants.Feature.Queues);
 
         var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
         var assignmentService = new Mock<IActivityAssignmentService>(MockBehavior.Strict);

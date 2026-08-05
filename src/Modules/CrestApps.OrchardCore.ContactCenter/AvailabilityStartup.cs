@@ -17,9 +17,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers durable agent presence, availability sessions, heartbeat recovery, and logout synchronization.
+/// Registers durable agent presence, availability sessions, heartbeat recovery, and logout synchronization
+/// as part of the Contact Center Workforce feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Availability)]
+[Feature(ContactCenterConstants.Feature.Agents)]
 public sealed class AvailabilityStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
