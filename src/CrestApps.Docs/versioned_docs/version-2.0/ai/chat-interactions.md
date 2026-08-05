@@ -12,6 +12,12 @@ description: Ad-hoc AI chat interactions with configurable parameters, tool inte
 
 Provides ad-hoc AI chat interactions with configurable parameters without predefined profiles.
 
+The screencast below enables the feature, starts a new ad-hoc chat, picks the `gpt-4.1-mini` chat deployment, and gets a real answer from the model.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of starting a new AI chat interaction and chatting with the model">
+  <source src="/img/docs/ai-chat-interactions.mp4" type="video/mp4" />
+</video>
+
 ## Overview
 
 This module provides ad-hoc AI chat interactions with configurable parameters, enabling users to chat with AI models without requiring predefined AI Profiles. The orchestrator manages all AI dependencies including tools, MCP connections, and document handling.
@@ -49,6 +55,23 @@ When a response cites uploaded or indexed content, the interaction UI renders `[
 The admin **Chat Interactions** list includes integrated search, multi-select, and bulk actions through the shared list management resource used across CrestApps admin catalogs.
 
 When the **AI Documents** feature is enabled, the **Knowledge** tab shows the current supported upload formats directly under the file picker. The visible extensions now follow the site-level **Allow document uploads** and **Allow image uploads** settings, and image formats only appear when a vision deployment is configured.
+
+### Chatting with an Uploaded PDF
+
+You can attach a document to a single interaction and ask questions about its contents. The uploaded file is chunked, embedded, and stored in an **AI Documents** knowledge base index, and the orchestrator retrieves the relevant passages to ground its answer.
+
+To enable this experience:
+
+1. Enable the **AI Documents (Elasticsearch)** (or **AI Documents (Azure AI Search)**) feature so a vector store is available.
+2. In **Search > Indexing**, add an **AI Documents** index that uses an embedding deployment.
+3. In **Settings > Artificial Intelligence**, select that index profile under the document settings, choose a **Document retrieval mode**, and enable **Allow document uploads in chat interactions**.
+4. Start a new chat interaction, open the **Knowledge** tab, and upload your file.
+
+The screencast below uploads a short story PDF, waits for it to be indexed, then asks a question that can only be answered from the file. The assistant replies strictly from the document and renders the source file as a numbered citation.
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file">
+  <source src="/img/docs/ai-chat-attachments-pdf.mp4" type="video/mp4" />
+</video>
 
 ## Orchestration
 
