@@ -596,28 +596,73 @@
         return (hasInternationalPrefix ? '+' : '') + digits;
     }
 
+    function formatNanpNumber(digits, international) {
+        var national = international ? digits.substring(1) : digits;
+        var formatted = '';
+
+        if (international) {
+            formatted = '+1';
+        }
+
+        if (national.length > 0) {
+            formatted += (international ? ' ' : '') + '(' + national.substring(0, 3);
+        }
+
+        if (national.length >= 3) {
+            formatted += ')';
+        }
+
+        if (national.length > 3) {
+            formatted += ' ' + national.substring(3, 6);
+        }
+
+        if (national.length > 6) {
+            formatted += '-' + national.substring(6, 10);
+        }
+
+        return formatted;
+    }
+
+    function formatInternationalNumber(digits) {
+        if (!digits) {
+            return '+';
+        }
+
+        var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
+        var countryCode = digits.substring(0, countryCodeLength);
+        var national = digits.substring(countryCodeLength);
+        var groups = [];
+
+        while (national.length > 4) {
+            groups.push(national.substring(0, 3));
+            national = national.substring(3);
+        }
+
+        if (national) {
+            groups.push(national);
+        }
+
+        return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
+    }
+
+    // Formats a number for display only (call history and active-call rows). This is deliberately
+    // independent of intl-tel-input, which only enhances the editable keypad input; the display
+    // formatter must work even where the phone-field library is not loaded.
     function formatPhoneNumber(value) {
-        var raw = String(value || '').trim();
+        var normalized = normalizeDialNumber(value);
+        var international = normalized.charAt(0) === '+';
+        var digits = normalized.replace(/\D/g, '');
 
-        if (!raw) {
-            return raw;
+        if (!international && digits.length < 7) {
+            return digits;
         }
 
-        var telInput = window.intlTelInput;
-
-        if (telInput && telInput.utils && typeof telInput.utils.formatNumber === 'function') {
-            try {
-                var formatted = telInput.utils.formatNumber(raw, null, 'INTERNATIONAL');
-
-                if (formatted) {
-                    return formatted;
-                }
-            } catch (error) {
-                // Fall back to the raw value when the number cannot be formatted for display.
-            }
+        if ((!international && digits.length <= 10) ||
+            (international && digits.charAt(0) === '1' && digits.length <= 11)) {
+            return formatNanpNumber(digits, international);
         }
 
-        return raw;
+        return international ? formatInternationalNumber(digits) : digits;
     }
 
     function createSoftPhone(rootElement, options) {
@@ -726,6 +771,31 @@
             }
 
             telInput = window.intlTelInput(dom.number, telInputOptions);
+
+            preventCountryDropdownScroll();
+        }
+
+        // The country dropdown is detached to document.body so it can escape the panel's bounded,
+        // scrollable area. Because that detached list sits outside the normal flow, the browser scrolls
+        // the page to the search input the first time intl-tel-input focuses it. Capture the scroll
+        // position when the flag is clicked and restore it before the next paint so the page does not jump.
+        function preventCountryDropdownScroll() {
+            var flagButton = rootElement.querySelector('.iti__selected-country');
+
+            if (!flagButton) {
+                return;
+            }
+
+            flagButton.addEventListener('click', function () {
+                var scrollX = window.scrollX;
+                var scrollY = window.scrollY;
+
+                window.requestAnimationFrame(function () {
+                    if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+                        window.scrollTo(scrollX, scrollY);
+                    }
+                });
+            });
         }
 
         function resolveInitialCountry() {
@@ -780,11 +850,9 @@
                 return;
             }
 
-            if (telInput && value && typeof telInput.setNumber === 'function') {
-                telInput.setNumber(value);
-            } else {
-                dom.number.value = value || '';
-            }
+            // This shows the active call's number in the disabled field for display only, so it is
+            // formatted for readability rather than routed through the intl-tel-input editor.
+            dom.number.value = value ? formatPhoneNumber(value) : '';
         }
 
         function clearNumberInput() {
