@@ -14,7 +14,7 @@ using OrchardCore.Modules.Manifest;
     Id = ChatInteractionsConstants.Feature.ChatDocuments,
     Name = "AI Documents",
     Description = "Provides the foundation for document processing, text extraction, and Retrieval-Augmented Generation (RAG) capabilities.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     EnabledByDependencyOnly = true,
     Dependencies =
     [
@@ -27,7 +27,7 @@ using OrchardCore.Modules.Manifest;
     Id = ChatInteractionsConstants.Feature.ChatInteractionDocuments,
     Name = "AI Documents for Chat Interactions",
     Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Interactions.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatDocuments,
@@ -38,7 +38,7 @@ using OrchardCore.Modules.Manifest;
     Id = AIConstants.Feature.ProfileDocuments,
     Name = "AI Documents for Profiles",
     Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Profiles.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatDocuments,
@@ -50,7 +50,7 @@ using OrchardCore.Modules.Manifest;
     Id = AIConstants.Feature.ChatSessionDocuments,
     Name = "AI Documents for Chat Sessions",
     Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Sessions and Widgets.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     Dependencies =
     [
         ChatInteractionsConstants.Feature.ChatDocuments,

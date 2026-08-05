@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
     Id = "CrestApps.OrchardCore.AI.Chat.Claude",
     Name = "AI Claude Orchestrator",
     Description = "Provides a Claude-based orchestrator for AI chat sessions.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Orchestrators",
     Dependencies =
     [
         AIConstants.Feature.Area,

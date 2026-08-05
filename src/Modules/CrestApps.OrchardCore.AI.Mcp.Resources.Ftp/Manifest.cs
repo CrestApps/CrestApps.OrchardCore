@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
     Id = "CrestApps.OrchardCore.AI.Mcp.Resources.Ftp",
     Name = "Model Context Protocol (MCP) FTP Resource",
     Description = "Provides FTP/FTPS resource support for the MCP Server, allowing remote files to be exposed as MCP resources.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - MCP",
     Dependencies =
     [
         McpPermissions.Feature.Server,

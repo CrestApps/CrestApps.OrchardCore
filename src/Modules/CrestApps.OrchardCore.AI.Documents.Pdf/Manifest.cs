@@ -7,7 +7,7 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Extends the 'AI Documents' feature by allowing PDF file.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     Dependencies =
     [
         // Don't add dependencies to the base Documents module to allow optional installation

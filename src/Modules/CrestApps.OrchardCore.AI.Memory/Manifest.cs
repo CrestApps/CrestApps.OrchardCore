@@ -14,7 +14,7 @@ using OrchardCore.Modules.Manifest;
     Id = MemoryConstants.Feature.Memory,
     Name = "AI Memory",
     Description = "Provides persistent, user-scoped AI memory for AI profiles and chat interactions.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     EnabledByDependencyOnly = true,
     Dependencies =
     [
