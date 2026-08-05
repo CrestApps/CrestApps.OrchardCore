@@ -71,7 +71,7 @@ public sealed class AsteriskRealtimeVoiceTenantEventsTests
         Assert.True(listener.WasStarted);
         Assert.NotNull(listener.StartedWith);
         var started = Assert.Single(listener.StartedWith);
-        Assert.Equal("contact-center", started.ApplicationName);
+        Assert.Equal("contact-center-Default", started.ApplicationName);
     }
 
     private static DefaultAsteriskOptions CreateValidOptions()

@@ -36,9 +36,11 @@ public sealed class AsteriskProviderOptionsConfigurations : IConfigureOptions<Te
     {
         ConfigureTenantProvider(options);
 
-        // Only the default shell may expose the host-level default provider; otherwise a non-default tenant could
-        // originate into the shared host ARI application and cross tenant boundaries.
-        if (_defaultOptions.IsEnabled && _shellSettings.IsDefaultShell())
+        // A host-configured default Asterisk connection is a shared provider that every tenant may select, so it is
+        // registered for all shells (not just the default shell) when the host configuration is present and complete.
+        // Each shell resolves the connection under a unique per-tenant ARI application name (see
+        // AsteriskSettingsUtilities.BuildHostDefaultApplicationName), which keeps their Stasis event streams isolated.
+        if (_defaultOptions.IsEnabled)
         {
             ConfigureDefaultProvider(options);
         }

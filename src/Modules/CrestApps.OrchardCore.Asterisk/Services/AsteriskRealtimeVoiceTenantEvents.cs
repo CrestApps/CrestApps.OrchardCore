@@ -107,12 +107,12 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
                 VoicemailPriority = tenantSettings.VoicemailPriority,
             };
         }
-        else if (_defaultOptions.IsEnabled && _shellSettings.IsDefaultShell())
+        else if (_defaultOptions.IsEnabled)
         {
-            // The host-level default Asterisk connection is a single shared server credential, so only the default
-            // shell may start a listener against it. A non-default tenant sharing the same ARI application would
-            // cross-deliver Stasis events between tenants, so non-default tenants must configure their own Asterisk
-            // settings (with a unique application name) or no listener starts.
+            // The host-level default Asterisk connection is shared across tenants. Each tenant resolves it under a
+            // unique per-tenant ARI application name so every shell listens on its own Stasis application and never
+            // cross-delivers events with another tenant. Inbound isolation additionally requires the operator to
+            // route each tenant's numbers to the matching Stasis application in the Asterisk dialplan.
             resolved = new AsteriskResolvedSettings
             {
                 IsEnabled = true,
@@ -120,7 +120,7 @@ internal sealed class AsteriskRealtimeVoiceTenantEvents : ModularTenantEvents
                 BaseUrl = _defaultOptions.BaseUrl,
                 UserName = _defaultOptions.UserName,
                 Password = _defaultOptions.Password,
-                ApplicationName = _defaultOptions.ApplicationName,
+                ApplicationName = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(_defaultOptions.ApplicationName, _shellSettings.Name),
                 EndpointTemplate = _defaultOptions.EndpointTemplate,
                 OutboundCallerId = _defaultOptions.OutboundCallerId,
                 TimeoutSeconds = _defaultOptions.TimeoutSeconds,

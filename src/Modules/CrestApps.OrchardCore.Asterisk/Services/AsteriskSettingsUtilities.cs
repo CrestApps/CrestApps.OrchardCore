@@ -83,6 +83,29 @@ internal static class AsteriskSettingsUtilities
         settings.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix?.Trim();
     }
 
+    /// <summary>
+    /// Builds the effective ARI application name for the host-configured default Asterisk connection on a given
+    /// shell. The configured application name is suffixed with the shell name so each tenant subscribes to and
+    /// originates into a unique Stasis application on the shared PBX (for example, "crestapps-telephony" becomes
+    /// "crestapps-telephony-Default"). This keeps the shared host default connection isolated per tenant so
+    /// several tenants can use it without cross-delivering each other's Stasis events. Inbound isolation
+    /// additionally requires the operator to route each tenant's numbers to the matching Stasis application in
+    /// the Asterisk dialplan.
+    /// </summary>
+    /// <param name="configuredApplicationName">The host default application name from configuration.</param>
+    /// <param name="shellName">The current tenant shell name used as the uniqueness suffix.</param>
+    public static string BuildHostDefaultApplicationName(string configuredApplicationName, string shellName)
+    {
+        var applicationName = configuredApplicationName?.Trim();
+
+        if (string.IsNullOrWhiteSpace(applicationName) || string.IsNullOrWhiteSpace(shellName))
+        {
+            return applicationName;
+        }
+
+        return $"{applicationName}-{shellName.Trim()}";
+    }
+
     public static bool HasRequiredConfiguration(AsteriskConnectionSettings settings, string password)
         => !string.IsNullOrWhiteSpace(settings.BaseUrl) &&
             !string.IsNullOrWhiteSpace(settings.UserName) &&

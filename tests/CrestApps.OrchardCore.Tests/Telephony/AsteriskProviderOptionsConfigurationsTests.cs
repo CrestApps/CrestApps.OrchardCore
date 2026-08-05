@@ -82,17 +82,36 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
     }
 
     [Fact]
-    public void Configure_WhenDefaultAsteriskIsConfiguredOnNonDefaultShell_DoesNotRegisterDefaultProvider()
+    public void Configure_WhenDefaultAsteriskIsConfiguredOnNonDefaultShell_RegistersDefaultProvider()
     {
         // Arrange
-        // The host-level default connection is a single shared ARI application. Registering it in a non-default
-        // tenant would let that tenant borrow the shared connection and cross-deliver Stasis events, so the default
-        // provider must only ever be registered on the default shell.
+        // A host-configured default connection is a shared provider that every tenant may select. Each shell resolves
+        // it under a unique per-tenant ARI application name at runtime, so registering it on a non-default shell does
+        // not cross-deliver Stasis events between tenants.
         var siteService = SiteServiceFactory.Create(new AsteriskSettings());
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
             Options.Create(new DefaultAsteriskOptions { IsEnabled = true }),
             new ShellSettings { Name = "TenantA" });
+        var options = new TelephonyProviderOptions();
+
+        // Act
+        configuration.Configure(options);
+
+        // Assert
+        Assert.True(options.Providers.ContainsKey(AsteriskConstants.DefaultProviderTechnicalName));
+        Assert.True(options.Providers[AsteriskConstants.DefaultProviderTechnicalName].IsEnabled);
+    }
+
+    [Fact]
+    public void Configure_WhenDefaultAsteriskIsNotConfigured_DoesNotRegisterDefaultProvider()
+    {
+        // Arrange
+        var siteService = SiteServiceFactory.Create(new AsteriskSettings());
+        var configuration = new AsteriskProviderOptionsConfigurations(
+            siteService,
+            Options.Create(new DefaultAsteriskOptions { IsEnabled = false }),
+            new ShellSettings { Name = "Default" });
         var options = new TelephonyProviderOptions();
 
         // Act

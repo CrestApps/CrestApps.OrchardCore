@@ -14,12 +14,12 @@ public sealed class AsteriskAriClientDefaultShellFallbackTests
     private const string BaseUrl = "http://asterisk.example/ari/";
 
     [Fact]
-    public async Task ResolveSettings_WhenNonDefaultTenantHasNoSettings_DoesNotFallBackToTheSharedHostDefault()
+    public async Task ResolveSettings_WhenNonDefaultTenantHasNoSettings_FallsBackToTheSharedHostDefaultUnderUniqueApplicationName()
     {
         // Arrange
-        // A non-default tenant with no Asterisk settings of its own must NOT borrow the host-level default
-        // connection. Sharing that single ARI application across tenants would cross-deliver Stasis events between
-        // tenants, so the provider must fail closed instead.
+        // A non-default tenant with no Asterisk settings of its own falls back to the shared host-level default
+        // connection. Each shell resolves it under a unique per-tenant ARI application name, so the fallback succeeds
+        // without cross-delivering Stasis events with another tenant.
         var handler = new StubHttpMessageHandler(HttpStatusCode.NoContent);
         var client = CreateClientWithHostDefault(handler, shellName: "TenantA");
 
@@ -28,15 +28,15 @@ public sealed class AsteriskAriClientDefaultShellFallbackTests
             client.AddChannelToBridgeAsync("bridge-1", "channel-1", TestContext.Current.CancellationToken));
 
         // Assert
-        Assert.IsType<AsteriskAriException>(exception);
+        Assert.Null(exception);
     }
 
     [Fact]
     public async Task ResolveSettings_WhenDefaultShellHasNoTenantSettings_UsesTheSharedHostDefault()
     {
         // Arrange
-        // Only the default shell may fall back to the single shared host connection, so a configured host default
-        // resolves and the operation reaches Asterisk.
+        // The default shell also falls back to the shared host connection, resolved under its own per-tenant ARI
+        // application name, so a configured host default resolves and the operation reaches Asterisk.
         var handler = new StubHttpMessageHandler(HttpStatusCode.NoContent);
         var client = CreateClientWithHostDefault(handler, shellName: "Default");
 

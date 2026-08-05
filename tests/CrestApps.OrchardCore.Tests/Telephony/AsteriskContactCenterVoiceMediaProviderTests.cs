@@ -280,23 +280,27 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
     }
 
     [Fact]
-    public async Task OpenSessionAsync_OnNonDefaultShellWithoutTenantSettings_ThrowsInvalidOperationException()
+    public async Task OpenSessionAsync_OnNonDefaultShellWithoutTenantSettings_FallsBackToHostDefaultUnderUniqueApplicationName()
     {
         // Arrange
-        // A non-default tenant with no Asterisk settings of its own must not borrow the shared host-default ARI
-        // application. The media provider resolves as disabled, so opening a session fails closed instead of
-        // crossing tenant boundaries through the shared connection.
-        var provider = CreateProviderWithoutTenantSettings(
-            new StubHttpMessageHandler(HttpStatusCode.OK),
-            shellName: "TenantA");
-        var request = CreateRequest();
+        // A non-default tenant with no Asterisk settings of its own falls back to the shared host-default connection,
+        // resolved under a unique per-tenant ARI application name (crestapps-telephony-TenantA) so its Stasis events
+        // never cross into another tenant's application.
+        using var asteriskRtp = BindLoopback();
+        var handler = CreateSuccessfulHandler(LocalEndpoint(asteriskRtp), "[]");
+        var provider = CreateProviderWithoutTenantSettings(handler, shellName: "TenantA");
 
         // Act
-        var exception = await Record.ExceptionAsync(() =>
-            provider.OpenSessionAsync(request, TestContext.Current.CancellationToken));
+        await using var session = await provider.OpenSessionAsync(
+            CreateRequest(),
+            TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.IsType<InvalidOperationException>(exception);
+        var request = Assert.Single(handler.Requests, item =>
+            item.Method == HttpMethod.Post &&
+            item.RequestUri.AbsolutePath.EndsWith("/channels/externalMedia", StringComparison.Ordinal));
+
+        Assert.Contains("app=crestapps-telephony-TenantA", request.RequestUri.Query, StringComparison.Ordinal);
     }
 
     [Fact]

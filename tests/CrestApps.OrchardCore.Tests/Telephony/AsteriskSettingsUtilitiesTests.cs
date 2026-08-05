@@ -362,4 +362,46 @@ public sealed class AsteriskSettingsUtilitiesTests
         // Assert
         Assert.True(collides);
     }
+
+    [Theory]
+    [InlineData("crestapps-telephony", "TenantA", "crestapps-telephony-TenantA")]
+    [InlineData("crestapps-telephony", "Default", "crestapps-telephony-Default")]
+    [InlineData("  crestapps-telephony  ", "  TenantA  ", "crestapps-telephony-TenantA")]
+    public void BuildHostDefaultApplicationName_WhenApplicationAndShellProvided_SuffixesWithShellName(
+        string applicationName,
+        string shellName,
+        string expected)
+    {
+        // Act
+        var result = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(applicationName, shellName);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BuildHostDefaultApplicationName_WhenShellNameMissing_ReturnsTrimmedApplicationName(string shellName)
+    {
+        // Act
+        var result = AsteriskSettingsUtilities.BuildHostDefaultApplicationName("  crestapps-telephony  ", shellName);
+
+        // Assert
+        Assert.Equal("crestapps-telephony", result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BuildHostDefaultApplicationName_WhenApplicationNameMissing_ReturnsApplicationNameUnsuffixed(string applicationName)
+    {
+        // Act
+        var result = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(applicationName, "TenantA");
+
+        // Assert
+        Assert.True(string.IsNullOrWhiteSpace(result));
+    }
 }

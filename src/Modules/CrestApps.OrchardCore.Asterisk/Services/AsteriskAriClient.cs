@@ -828,15 +828,10 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
             return EnsureConfigured(settings, operation);
         }
 
-        // The host-level default Asterisk connection is a single shared server credential, so only the default shell
-        // may fall back to it. Allowing non-default tenants to share the same ARI application would cross-deliver
-        // Stasis events between tenants, so each non-default tenant must configure its own Asterisk settings (with a
-        // unique application name) or the provider stays unavailable by construction.
-        if (!_shellSettings.IsDefaultShell())
-        {
-            throw new AsteriskAriException(operation, null, "The Asterisk provider is not configured.");
-        }
-
+        // The host-level default Asterisk connection is shared across tenants, but each shell resolves it under a
+        // unique per-tenant ARI application name so tenants never share a Stasis application and cannot cross-deliver
+        // each other's events. The ownership registry still enforces a single owner per resolved (BaseUrl, application)
+        // pair on this node.
         var defaultSettings = new AsteriskResolvedSettings
         {
             IsEnabled = _defaultOptions.IsEnabled,
@@ -844,7 +839,7 @@ internal sealed class AsteriskAriClient : IAsteriskAriClient
             BaseUrl = _defaultOptions.BaseUrl,
             UserName = _defaultOptions.UserName,
             Password = _defaultOptions.Password,
-            ApplicationName = _defaultOptions.ApplicationName,
+            ApplicationName = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(_defaultOptions.ApplicationName, _shellSettings.Name),
             TimeoutSeconds = _defaultOptions.TimeoutSeconds,
         };
 

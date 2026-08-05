@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -18,6 +19,7 @@ internal sealed class AsteriskPjsipDialogTerminator : IAsteriskPjsipDialogTermin
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly DefaultAsteriskOptions _defaultOptions;
+    private readonly ShellSettings _shellSettings;
     private readonly ILogger<AsteriskPjsipDialogTerminator> _logger;
 
     public AsteriskPjsipDialogTerminator(
@@ -25,12 +27,14 @@ internal sealed class AsteriskPjsipDialogTerminator : IAsteriskPjsipDialogTermin
         IDataProtectionProvider dataProtectionProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<DefaultAsteriskOptions> defaultOptions,
+        ShellSettings shellSettings,
         ILogger<AsteriskPjsipDialogTerminator> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _httpClientFactory = httpClientFactory;
         _defaultOptions = defaultOptions.Value;
+        _shellSettings = shellSettings;
         _logger = logger;
     }
 
@@ -116,7 +120,7 @@ internal sealed class AsteriskPjsipDialogTerminator : IAsteriskPjsipDialogTermin
             BaseUrl = _defaultOptions.BaseUrl,
             UserName = _defaultOptions.UserName,
             Password = _defaultOptions.Password,
-            ApplicationName = _defaultOptions.ApplicationName,
+            ApplicationName = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(_defaultOptions.ApplicationName, _shellSettings.Name),
         };
     }
 

@@ -214,17 +214,8 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
             return settings;
         }
 
-        // The host-level default ARI application is shared by the host, so non-default tenants without their own
-        // Asterisk settings must remain unavailable instead of crossing tenant boundaries through the default app.
-        if (!_shellSettings.IsDefaultShell())
-        {
-            return new AsteriskResolvedSettings
-            {
-                IsEnabled = false,
-                ProviderName = AsteriskConstants.ProviderTechnicalName,
-            };
-        }
-
+        // The host-level default ARI application is shared across tenants, but each shell resolves it under a unique
+        // per-tenant ARI application name so a non-default tenant never crosses into another tenant's Stasis events.
         var defaultSettings = new AsteriskResolvedSettings
         {
             IsEnabled = _defaultOptions.IsEnabled,
@@ -232,7 +223,7 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
             BaseUrl = _defaultOptions.BaseUrl,
             UserName = _defaultOptions.UserName,
             Password = _defaultOptions.Password,
-            ApplicationName = _defaultOptions.ApplicationName,
+            ApplicationName = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(_defaultOptions.ApplicationName, _shellSettings.Name),
             TimeoutSeconds = _defaultOptions.TimeoutSeconds,
         };
 
