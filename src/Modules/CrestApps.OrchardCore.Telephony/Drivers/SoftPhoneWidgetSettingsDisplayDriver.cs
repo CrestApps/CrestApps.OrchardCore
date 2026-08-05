@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -51,6 +53,8 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
             model.RecentCallsCount = settings.RecentCallsCount is >= 1 and <= 200
                 ? settings.RecentCallsCount
                 : SoftPhoneWidgetSettings.DefaultRecentCallsCount;
+            model.DefaultCountryCode = settings.DefaultCountryCode;
+            model.Countries = BuildCountries();
         }).Location("Content:5#Soft Phone")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
         .OnGroup(SettingsGroupId);
@@ -75,7 +79,29 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
             ? SoftPhoneWidgetSettings.DefaultAccentColor
             : model.AccentColor.Trim();
         settings.RecentCallsCount = Math.Clamp(model.RecentCallsCount, 1, 200);
+        settings.DefaultCountryCode = string.IsNullOrWhiteSpace(model.DefaultCountryCode)
+            ? null
+            : model.DefaultCountryCode.Trim().ToLowerInvariant();
 
         return Edit(site, settings, context);
+    }
+
+    private List<SelectListItem> BuildCountries()
+    {
+        var items = new List<SelectListItem>
+        {
+            new() { Value = string.Empty, Text = S["Automatic (based on the current culture)"] },
+        };
+
+        foreach (var country in SoftPhoneCountries.All)
+        {
+            items.Add(new SelectListItem
+            {
+                Value = country.Code,
+                Text = $"{country.Name} ({country.Code.ToUpperInvariant()})",
+            });
+        }
+
+        return items;
     }
 }

@@ -9,7 +9,7 @@ This module does **not** provide an SMS abstraction. Use the Orchard Core SMS or
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Telephony | `CrestApps.OrchardCore.Telephony` | Provider resolver, call services, SignalR hub, OAuth connect/callback routes, interaction persistence, and the **Settings → Communication → Telephony** provider settings screen. Depends on `OrchardCore.Users` and `CrestApps.OrchardCore.SignalR`. |
-| Telephony Soft Phone | `CrestApps.OrchardCore.Telephony.SoftPhone` | Injects the floating soft phone into the admin dashboard, the front end, or both. |
+| Telephony Soft Phone | `CrestApps.OrchardCore.Telephony.SoftPhone` | Injects the floating soft phone into the admin dashboard, the front end, or both. Its country-aware keypad uses the `intl-tel-input` resource, so it depends on `CrestApps.OrchardCore.Resources`. |
 
 ## Installation
 

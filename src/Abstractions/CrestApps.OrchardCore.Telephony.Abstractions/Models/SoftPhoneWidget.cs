@@ -34,4 +34,10 @@ public sealed class SoftPhoneWidget
     /// Gets or sets the browser media adapter name when browser audio is active.
     /// </summary>
     public string BrowserMediaAdapterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default ISO 3166-1 alpha-2 country code, in lower case, the phone number input
+    /// selects initially so a national number can be normalized to E.164.
+    /// </summary>
+    public string DefaultCountryCode { get; set; }
 }

@@ -34,4 +34,11 @@ public sealed class SoftPhoneWidgetSettings
     /// Gets or sets the maximum number of calls shown in the recent-calls history.
     /// </summary>
     public int RecentCallsCount { get; set; } = DefaultRecentCallsCount;
+
+    /// <summary>
+    /// Gets or sets the default ISO 3166-1 alpha-2 country code the soft phone's phone number input
+    /// selects initially, so a national number can be normalized to E.164. When empty, the country is
+    /// derived from the current request culture.
+    /// </summary>
+    public string DefaultCountryCode { get; set; }
 }

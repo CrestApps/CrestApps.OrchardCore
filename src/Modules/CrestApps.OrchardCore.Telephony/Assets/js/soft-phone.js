@@ -596,70 +596,28 @@
         return (hasInternationalPrefix ? '+' : '') + digits;
     }
 
-    function formatNanpNumber(digits, international) {
-        var national = international ? digits.substring(1) : digits;
-        var formatted = '';
-
-        if (international) {
-            formatted = '+1';
-        }
-
-        if (national.length > 0) {
-            formatted += (international ? ' ' : '') + '(' + national.substring(0, 3);
-        }
-
-        if (national.length >= 3) {
-            formatted += ')';
-        }
-
-        if (national.length > 3) {
-            formatted += ' ' + national.substring(3, 6);
-        }
-
-        if (national.length > 6) {
-            formatted += '-' + national.substring(6, 10);
-        }
-
-        return formatted;
-    }
-
-    function formatInternationalNumber(digits) {
-        if (!digits) {
-            return '+';
-        }
-
-        var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
-        var countryCode = digits.substring(0, countryCodeLength);
-        var national = digits.substring(countryCodeLength);
-        var groups = [];
-
-        while (national.length > 4) {
-            groups.push(national.substring(0, 3));
-            national = national.substring(3);
-        }
-
-        if (national) {
-            groups.push(national);
-        }
-
-        return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
-    }
-
     function formatPhoneNumber(value) {
-        var normalized = normalizeDialNumber(value);
-        var international = normalized.charAt(0) === '+';
-        var digits = normalized.replace(/\D/g, '');
+        var raw = String(value || '').trim();
 
-        if (!international && digits.length < 7) {
-            return digits;
+        if (!raw) {
+            return raw;
         }
 
-        if ((!international && digits.length <= 10) ||
-            (international && digits.charAt(0) === '1' && digits.length <= 11)) {
-            return formatNanpNumber(digits, international);
+        var telInput = window.intlTelInput;
+
+        if (telInput && telInput.utils && typeof telInput.utils.formatNumber === 'function') {
+            try {
+                var formatted = telInput.utils.formatNumber(raw, null, 'INTERNATIONAL');
+
+                if (formatted) {
+                    return formatted;
+                }
+            } catch (error) {
+                // Fall back to the raw value when the number cannot be formatted for display.
+            }
         }
 
-        return international ? formatInternationalNumber(digits) : digits;
+        return raw;
     }
 
     function createSoftPhone(rootElement, options) {
@@ -746,6 +704,57 @@
         var browserAudioPromise = null;
         var browserAudioSession = null;
         var localAudioStream = null;
+
+        // The phone number input is enhanced with intl-tel-input so a national number entered on the
+        // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
+        var telInput = null;
+
+        if (dom.number && typeof window.intlTelInput === 'function') {
+            var telInputOptions = {
+                containerClass: 'telephony-soft-phone__number-iti',
+                dropdownParent: document.body
+            };
+
+            if (config.defaultCountryCode) {
+                telInputOptions.initialCountry = config.defaultCountryCode;
+            }
+
+            telInput = window.intlTelInput(dom.number, telInputOptions);
+        }
+
+        function getDialNumber() {
+            if (telInput && typeof telInput.getNumber === 'function') {
+                var e164 = telInput.getNumber();
+
+                if (e164) {
+                    return e164;
+                }
+            }
+
+            return dom.number ? normalizeDialNumber(dom.number.value) : '';
+        }
+
+        function setNumberDisplay(value) {
+            if (!dom.number) {
+                return;
+            }
+
+            if (telInput && value && typeof telInput.setNumber === 'function') {
+                telInput.setNumber(value);
+            } else {
+                dom.number.value = value || '';
+            }
+        }
+
+        function clearNumberInput() {
+            if (dom.number) {
+                dom.number.value = '';
+            }
+
+            if (telInput && config.defaultCountryCode && typeof telInput.setCountry === 'function') {
+                telInput.setCountry(config.defaultCountryCode);
+            }
+        }
 
         function has(capability) {
             return (capabilities & capability) === capability;
@@ -1533,11 +1542,11 @@
                 var peerNumber = getPeerNumber(currentCall);
 
                 if (peerNumber) {
-                    dom.number.value = formatPhoneNumber(peerNumber);
+                    setNumberDisplay(peerNumber);
                     numberIsCallDisplay = true;
                 }
             } else if (dom.number && canDial && numberIsCallDisplay) {
-                dom.number.value = '';
+                clearNumberInput();
                 numberIsCallDisplay = false;
             }
 
@@ -1559,7 +1568,13 @@
             show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
 
             if (dom.number) {
-                dom.number.disabled = !canDial || !!activeCommand;
+                var numberDisabled = !canDial || !!activeCommand;
+
+                if (telInput && typeof telInput.setDisabled === 'function') {
+                    telInput.setDisabled(numberDisabled);
+                } else {
+                    dom.number.disabled = numberDisabled;
+                }
             }
 
             [
@@ -1698,7 +1713,7 @@
         }
 
         function dial() {
-            var number = dom.number ? normalizeDialNumber(dom.number.value) : '';
+            var number = getDialNumber();
 
             if (!number) {
                 showError(strings.invalidNumber || 'Enter a phone number to call.');
@@ -1706,10 +1721,8 @@
                 return;
             }
 
-            if (dom.number) {
-                dom.number.value = '';
-                numberIsCallDisplay = false;
-            }
+            clearNumberInput();
+            numberIsCallDisplay = false;
 
             invokeWithBrowserAudio('Dial', { to: number });
         }
@@ -1722,10 +1735,8 @@
             setActiveTab('keypad');
             togglePanel(true);
 
-            if (dom.number) {
-                dom.number.value = '';
-                numberIsCallDisplay = false;
-            }
+            clearNumberInput();
+            numberIsCallDisplay = false;
 
             invokeWithBrowserAudio('Dial', { to: normalizeDialNumber(number) });
         }
@@ -1909,7 +1920,7 @@
             if (stateName === 'Connected' && has(CAPABILITIES.SendDigits)) {
                 invoke('SendDigits', { callId: currentCallId(), digits: value });
             } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
-                dom.number.value = formatPhoneNumber(dom.number.value + value);
+                dom.number.value = dom.number.value + value;
             }
         }
 
@@ -2602,7 +2613,6 @@
             if (dom.number) {
                 dom.number.addEventListener('input', function () {
                     numberIsCallDisplay = false;
-                    dom.number.value = formatPhoneNumber(dom.number.value);
                 });
                 dom.number.addEventListener('focus', function () {
                     if (currentCall && normalizeState(currentCall.state) === 'OnHold') {

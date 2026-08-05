@@ -31,5 +31,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
+        "CrestApps.OrchardCore.Resources",
     ]
 )]

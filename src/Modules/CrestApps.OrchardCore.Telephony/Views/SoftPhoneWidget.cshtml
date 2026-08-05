@@ -19,6 +19,7 @@
         ? (int)configuredAudioMode
         : 0;
     var browserMediaAdapterName = Model.BrowserMediaAdapterName as string;
+    var defaultCountryCode = Model.DefaultCountryCode as string ?? string.Empty;
 
     if (Model.Capabilities is TelephonyCapabilities caps)
     {
@@ -43,6 +44,7 @@
         ["connectUrl"] = connectUrl,
         ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
+        ["defaultCountryCode"] = defaultCountryCode,
         ["strings"] = new Dictionary<string, string>
         {
             ["idle"] = T["Ready"].Value,

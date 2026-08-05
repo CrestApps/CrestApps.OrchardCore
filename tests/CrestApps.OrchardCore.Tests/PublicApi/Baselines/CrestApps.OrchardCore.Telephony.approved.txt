@@ -1,7 +1,8 @@
 [assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactory("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
     "ory, Microsoft.AspNetCore.Mvc.Razor")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
-        "CrestApps.OrchardCore.Telephony"}, Description="Injects the floating soft phone experience into the admin dashboard, front end, o" +
+        "CrestApps.OrchardCore.Telephony",
+        "CrestApps.OrchardCore.Resources"}, Description="Injects the floating soft phone experience into the admin dashboard, front end, o" +
     "r both.", Id="CrestApps.OrchardCore.Telephony.SoftPhone", Name="Telephony Soft Phone")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
         "OrchardCore.Users",
@@ -122,6 +123,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public const int DefaultRecentCallsCount = 30;
         public SoftPhoneWidgetSettings() { }
         public string AccentColor { get; set; }
+        public string DefaultCountryCode { get; set; }
         public bool DisplayOnAdmin { get; set; }
         public bool DisplayOnFrontend { get; set; }
         public int RecentCallsCount { get; set; }
@@ -289,6 +291,8 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
     {
         public SoftPhoneWidgetSettingsViewModel() { }
         public string AccentColor { get; set; }
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Countries { get; set; }
+        public string DefaultCountryCode { get; set; }
         public bool DisplayOnAdmin { get; set; }
         public bool DisplayOnFrontend { get; set; }
         public int RecentCallsCount { get; set; }

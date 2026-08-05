@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -106,6 +107,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
                 audioProvider.ConfiguredAudioMode,
                 audioProvider.BrowserMediaAdapterName);
 
+        _resourceManager.RegisterResource("stylesheet", "intl-tel-input").AtHead();
         _resourceManager.RegisterResource("stylesheet", "telephony-soft-phone").AtHead();
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();
         _resourceManager.RegisterResource("script", "telephony-phone-field").AtFoot();
@@ -122,6 +124,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
             RecentCallsCount = settings.RecentCallsCount is >= 1 and <= 200
                 ? settings.RecentCallsCount
                 : SoftPhoneWidgetSettings.DefaultRecentCallsCount,
+            DefaultCountryCode = SoftPhoneCountries.ResolveDefaultCountryCode(settings.DefaultCountryCode),
         };
 
         var shape = await _displayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");
@@ -131,6 +134,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         shape.Properties["AudioMode"] = (int)widget.AudioMode;
         shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
         shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
+        shape.Properties["DefaultCountryCode"] = widget.DefaultCountryCode;
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 

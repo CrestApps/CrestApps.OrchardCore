@@ -271,6 +271,15 @@
         }
     }
 
+    &__number-iti {
+        display: block;
+        width: 100%;
+
+        .telephony-soft-phone__number {
+            width: 100%;
+        }
+    }
+
     &__connect {
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);

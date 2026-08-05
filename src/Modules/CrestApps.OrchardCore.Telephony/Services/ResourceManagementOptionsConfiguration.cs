@@ -26,7 +26,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Telephony/scripts/soft-phone.min.js",
                 "~/CrestApps.OrchardCore.Telephony/scripts/soft-phone.js")
-            .SetDependencies("signalr", "telephony-client")
+            .SetDependencies("signalr", "telephony-client", "intl-tel-input")
             .SetVersion("1.0.0");
 
         _manifest

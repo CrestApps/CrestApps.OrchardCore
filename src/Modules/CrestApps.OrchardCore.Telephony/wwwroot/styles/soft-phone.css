@@ -231,6 +231,13 @@
   background-color: var(--bs-secondary-bg, #e9ecef);
   opacity: 1;
 }
+.telephony-soft-phone__number-iti {
+  display: block;
+  width: 100%;
+}
+.telephony-soft-phone__number-iti .telephony-soft-phone__number {
+  width: 100%;
+}
 .telephony-soft-phone__connect {
   min-height: var(--telephony-view-height);
   max-height: var(--telephony-view-height);

@@ -510,6 +510,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public CrestApps.OrchardCore.Telephony.Models.TelephonyAudioMode AudioMode { get; set; }
         public string BrowserMediaAdapterName { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities Capabilities { get; set; }
+        public string DefaultCountryCode { get; set; }
         public int RecentCallsCount { get; set; }
     }
     [System.Flags]
