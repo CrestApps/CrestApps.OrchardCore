@@ -25,6 +25,12 @@ After enabling the base AI module, Orchard adds:
 
 This screen is backed by the Orchard profile-template manager and related display drivers contributed by enabled AI features.
 
+The screencast below adds a Profile template and captures reusable defaults — profile type, the `gpt-4.1-mini` deployment, and a welcome message — that new profiles can be stamped from.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating an AI profile template with reusable defaults">
+  <source src="/img/docs/ai-profile-templates.mp4" type="video/mp4" />
+</video>
+
 ## What can be templated in Orchard
 
 Depending on the enabled features, profile templates can carry Orchard-managed defaults for items such as:
