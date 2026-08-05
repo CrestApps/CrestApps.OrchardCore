@@ -13,7 +13,7 @@ public static partial class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
-        /// The identifier of the workforce feature that adds agent profiles, skills, availability, presence, and durable agent sessions.
+        /// The identifier of the agents feature that adds agent profiles, skills, availability, presence, and durable agent sessions.
         /// </summary>
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
 
@@ -28,9 +28,9 @@ public static partial class ContactCenterConstants
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
 
         /// <summary>
-        /// The identifier of automated power and progressive dialing feature.
+        /// The identifier of the paced Power and Progressive dialing feature.
         /// </summary>
-        public const string DialerAutomated = "CrestApps.OrchardCore.ContactCenter.Dialer.Automated";
+        public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
 
         /// <summary>
         /// The identifier of the inbound voice integration feature.
@@ -43,19 +43,14 @@ public static partial class ContactCenterConstants
         public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
 
         /// <summary>
-        /// The identifier of the inbound voice entry-point qualification feature.
+        /// The identifier of the inbound voice front-door feature that qualifies callers through entry points.
         /// </summary>
-        public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";
+        public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
 
         /// <summary>
         /// The identifier of the Contact Center recording orchestration feature.
         /// </summary>
         public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
-
-        /// <summary>
-        /// The identifier of the Contact Center soft-phone integration feature.
-        /// </summary>
-        public const string VoiceSoftPhone = "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone";
 
         /// <summary>
         /// The identifier of the CRM-integrated agent desktop feature.

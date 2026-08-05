@@ -134,7 +134,7 @@ Configure where it appears on the **Soft Phone** tab of the telephony settings:
   by default.
 - **Show the soft phone on the front end** displays the widget on the website.
 - **Recent calls to display** controls how many interactions appear on the **Recent** tab (default `30`, maximum `200`).
-- **Default country** selects the country the phone number input uses by default so a national number is normalized to E.164 before it is dialed or screened. Leave it on **Automatic** to derive the country from the current request culture.
+- **Default country** selects the country the phone number input uses by default so a national number is normalized to E.164 before it is dialed or screened. Leave it on **Automatic** to derive the country from the current request culture; when the culture does not identify a region, the widget falls back to the browser's locale and finally to the United States, so a country is always selected and national numbers can still be normalized.
 - **Accent color** controls the widget's button and control colors.
 - **Recent calls count** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
 
@@ -142,7 +142,7 @@ You can enable the soft phone on the admin, the front end, or both. The widget i
 surface is enabled and the current user has the `Use the telephony soft phone` permission, so the
 soft phone only appears for authorized users.
 
-The keypad's phone number field is a country-aware input backed by the [intl-tel-input](https://intl-tel-input.com/) library (provided by `CrestApps.OrchardCore.Resources`). Agents can pick a country from the flag selector, and a national number typed on the keypad is converted to canonical E.164 (for example `7024993350` with the United States selected becomes `+17024993350`) before it is dialed. This lets outbound compliance screening (do-not-call and calling-window checks) canonicalize the destination reliably instead of rejecting a bare national number.
+The keypad's phone number field is a country-aware input backed by the [intl-tel-input](https://intl-tel-input.com/) library (provided by `CrestApps.OrchardCore.Resources`). Agents can pick a country from the flag selector, and a national number typed on the keypad is converted to canonical E.164 (for example `7024993350` with the United States selected becomes `+17024993350`) before it is dialed. Only valid phone numbers are normalized this way; short internal extensions and other non-number entries are dialed exactly as typed instead of being turned into an invalid international number. This lets outbound compliance screening (do-not-call and calling-window checks) canonicalize a real destination reliably instead of rejecting a bare national number, while still allowing extension dialing.
 
 Modules can contribute display-driver tabs and views to the widget by registering a
 `DisplayDriver<SoftPhoneWidget>`. Contact Center uses this extension point to add a **Work** tab for

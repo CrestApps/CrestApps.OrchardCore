@@ -599,3 +599,7 @@
 .telephony-incoming__actions .telephony-incoming__btn {
   flex: 1 1 0;
 }
+
+.iti--detached-country-selector {
+  z-index: 1100;
+}

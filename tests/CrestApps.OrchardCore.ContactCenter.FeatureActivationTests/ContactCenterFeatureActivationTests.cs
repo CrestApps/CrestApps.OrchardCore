@@ -32,7 +32,7 @@ public sealed class ContactCenterFeatureActivationTests
         // Act
         var automatedProfiles = matrix.TenantProfiles
             .Where(profile => profile.Features.Contains(
-                "CrestApps.OrchardCore.ContactCenter.Dialer.Automated",
+                "CrestApps.OrchardCore.ContactCenter.Dialer.Paced",
                 StringComparer.Ordinal))
             .Select(profile => profile.Id)
             .ToArray();
@@ -50,7 +50,7 @@ public sealed class ContactCenterFeatureActivationTests
         // Act
         var profilesWithoutEntryPoints = matrix.TenantProfiles
             .Where(profile => !profile.Features.Contains(
-                ContactCenterConstants.Feature.EntryPoints,
+                ContactCenterConstants.Feature.InboundVoice,
                 StringComparer.Ordinal))
             .Select(profile => profile.Id)
             .ToArray();
@@ -88,7 +88,7 @@ public sealed class ContactCenterFeatureActivationTests
             ProviderProfile = "none",
             Features =
             [
-                "CrestApps.OrchardCore.ContactCenter.EntryPoints",
+                "CrestApps.OrchardCore.ContactCenter.InboundVoice",
             ],
         };
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();

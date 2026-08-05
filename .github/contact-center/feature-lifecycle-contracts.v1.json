@@ -74,10 +74,10 @@
       "activeWorkStatus": "implemented-r3"
     },
     {
-      "featureId": "CrestApps.OrchardCore.ContactCenter.Dialer.Automated",
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Dialer.Paced",
       "component": "DialerPacingBackgroundTask",
       "kind": "background-task",
-      "quiesce": "The Automated Dialer lifecycle participant closes admission before descriptor mutation; new pacing cycles return without starting attempts.",
+      "quiesce": "The Paced Dialing lifecycle participant closes admission before descriptor mutation; new pacing cycles return without starting attempts.",
       "drain": "Disable waits up to the configured tenant drain timeout for admitted pacing cycles.",
       "reEnable": "The fresh shell reopens admission and durable campaign work resumes.",
       "idleStatus": "verified-idle",

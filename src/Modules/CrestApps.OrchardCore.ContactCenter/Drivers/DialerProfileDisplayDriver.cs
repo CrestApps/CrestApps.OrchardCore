@@ -75,7 +75,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 
         await _optionsProvider.PopulateDialerProfileEditorAsync(viewModel);
 
-        var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerAutomated);
+        var automatedDialerEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced);
 
         return Initialize<DialerProfileViewModel>("DialerProfileFields_Edit", model =>
         {

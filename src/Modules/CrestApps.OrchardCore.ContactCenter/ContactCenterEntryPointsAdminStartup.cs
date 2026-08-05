@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the inbound entry-point administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[Feature(ContactCenterConstants.Feature.InboundVoice)]
 public sealed class ContactCenterEntryPointsAdminStartup : StartupBase
 {
     /// <inheritdoc/>

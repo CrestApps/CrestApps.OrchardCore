@@ -51,7 +51,7 @@ public sealed class DialerService : IDialerService
             return 0;
         }
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.DialerAutomated);
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.DialerPaced);
 
         if (workLease is null)
         {

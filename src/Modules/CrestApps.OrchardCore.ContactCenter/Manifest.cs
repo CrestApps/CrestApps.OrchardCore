@@ -28,7 +28,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Agents,
-    Name = "Contact Center Workforce",
+    Name = "Contact Center Agents",
     Description = "Adds agent profiles, skills, queue/campaign sign-in, and the durable agent availability, presence, heartbeat, and after-call recovery that track who is working, together with their administration screens.",
     Category = "Contact Center",
     Dependencies =
@@ -61,9 +61,9 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.DialerAutomated,
-    Name = "Contact Center Automated Dialer",
-    Description = "Adds automated Power and Progressive dialing with scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
+    Id = ContactCenterConstants.Feature.DialerPaced,
+    Name = "Contact Center Paced Dialing",
+    Description = "Adds Power and Progressive paced dialing that automatically dials for available agents, layering scheduled pacing on top of the Outbound Dialer, which already provides mandatory compliance screening and the dialing-profile administration.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -85,7 +85,7 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.EntryPoints,
+    Id = ContactCenterConstants.Feature.InboundVoice,
     Name = "Contact Center Inbound Voice",
     Description = "Adds inbound voice front doors that map dialed numbers to queues, qualify callers, apply business-hours decisions, set priority, and handle closed-hours calls.",
     Category = "Contact Center",
@@ -120,28 +120,16 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.VoiceSoftPhone,
-    Name = "Contact Center Voice - Soft Phone",
-    Description = "Gives soft-phone agents their live Contact Center call state, presence, and work offers directly inside the Telephony soft phone. Enable this for agents who work from the soft phone; the Agent Desktop builds on it to add the full CRM workspace.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Voice,
-        ContactCenterConstants.Feature.RealTime,
-        TelephonyConstants.Feature.SoftPhone,
-    ]
-)]
-
-[assembly: Feature(
     Id = ContactCenterConstants.Feature.AgentDesktop,
     Name = "Contact Center Agent Desktop",
-    Description = "Adds the full CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. This is the complete-desktop tier and builds on the Voice - Soft Phone experience.",
+    Description = "Adds the full CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. This is the complete-desktop tier; it surfaces the soft-phone call-state projection whenever the Telephony soft phone is enabled.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Agents,
         ContactCenterConstants.Feature.RealTime,
-        ContactCenterConstants.Feature.VoiceSoftPhone,
+        ContactCenterConstants.Feature.Voice,
+        TelephonyConstants.Feature.SoftPhone,
         OmnichannelConstants.Features.Managements,
     ]
 )]

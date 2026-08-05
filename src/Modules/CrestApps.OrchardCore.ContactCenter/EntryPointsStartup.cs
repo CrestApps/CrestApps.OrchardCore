@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers inbound voice entry-point administration, qualification, and queue ingress.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[Feature(ContactCenterConstants.Feature.InboundVoice)]
 public sealed class EntryPointsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

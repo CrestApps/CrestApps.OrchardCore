@@ -226,7 +226,7 @@ public class DialerProfileHandlerValidationTests
         {
             var feature = new Mock<IFeatureInfo>();
 
-            feature.SetupGet(x => x.Id).Returns(ContactCenterConstants.Feature.DialerAutomated);
+            feature.SetupGet(x => x.Id).Returns(ContactCenterConstants.Feature.DialerPaced);
             features.Add(feature.Object);
         }
 

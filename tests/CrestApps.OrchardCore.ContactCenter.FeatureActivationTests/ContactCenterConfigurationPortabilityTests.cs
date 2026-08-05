@@ -62,7 +62,7 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [
         ContactCenterConstants.Feature.Agents,
         ContactCenterConstants.Feature.Queues,
-        ContactCenterConstants.Feature.EntryPoints,
+        ContactCenterConstants.Feature.InboundVoice,
         ContactCenterConstants.Feature.Dialer,
         DeploymentFeatureId,
         RecipesFeatureId,

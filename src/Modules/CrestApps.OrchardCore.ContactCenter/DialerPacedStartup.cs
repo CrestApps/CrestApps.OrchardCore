@@ -11,18 +11,18 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers compliance-gated Power and Progressive dialing strategies and scheduled pacing.
+/// Registers compliance-gated Power and Progressive paced dialing strategies and scheduled pacing.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.DialerAutomated)]
-public sealed class DialerAutomatedStartup : StartupBase
+[Feature(ContactCenterConstants.Feature.DialerPaced)]
+public sealed class DialerPacedStartup : StartupBase
 {
     private readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DialerAutomatedStartup"/> class.
+    /// Initializes a new instance of the <see cref="DialerPacedStartup"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public DialerAutomatedStartup(IStringLocalizer<DialerAutomatedStartup> stringLocalizer)
+    public DialerPacedStartup(IStringLocalizer<DialerPacedStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -34,7 +34,7 @@ public sealed class DialerAutomatedStartup : StartupBase
             .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
-                    ContactCenterConstants.Feature.DialerAutomated,
+                    ContactCenterConstants.Feature.DialerPaced,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 

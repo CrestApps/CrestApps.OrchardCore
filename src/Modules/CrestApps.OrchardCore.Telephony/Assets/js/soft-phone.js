@@ -707,7 +707,10 @@
 
         // The phone number input is enhanced with intl-tel-input so a national number entered on the
         // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
+        // A country must always be selected, otherwise intl-tel-input cannot resolve a national number
+        // to E.164 and getNumber() echoes the raw digits, which the server then rejects as not dialable.
         var telInput = null;
+        var initialCountry = resolveInitialCountry();
 
         if (dom.number && typeof window.intlTelInput === 'function') {
             var telInputOptions = {
@@ -715,23 +718,52 @@
                 dropdownParent: document.body
             };
 
-            if (config.defaultCountryCode) {
-                telInputOptions.initialCountry = config.defaultCountryCode;
+            if (initialCountry) {
+                telInputOptions.initialCountry = initialCountry;
             }
 
             telInput = window.intlTelInput(dom.number, telInputOptions);
         }
 
-        function getDialNumber() {
-            if (telInput && typeof telInput.getNumber === 'function') {
-                var e164 = telInput.getNumber();
+        function resolveInitialCountry() {
+            if (config.defaultCountryCode) {
+                return config.defaultCountryCode;
+            }
 
-                if (e164) {
-                    return e164;
+            var candidates = (navigator.languages && navigator.languages.length)
+                ? navigator.languages
+                : (navigator.language ? [navigator.language] : []);
+
+            for (var i = 0; i < candidates.length; i++) {
+                var match = /[-_]([A-Za-z]{2})(?:$|[-_])/.exec(candidates[i] || '');
+
+                if (match) {
+                    return match[1].toLowerCase();
                 }
             }
 
-            return dom.number ? normalizeDialNumber(dom.number.value) : '';
+            return 'us';
+        }
+
+        function getDialNumber() {
+            var raw = dom.number ? normalizeDialNumber(dom.number.value) : '';
+
+            if (telInput && typeof telInput.getNumber === 'function') {
+                // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
+                // strings such as internal extensions are not valid numbers, so they are dialed
+                // verbatim instead of being turned into a bogus "+1101" style destination.
+                var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
+
+                if (isValid) {
+                    var e164 = telInput.getNumber();
+
+                    if (e164 && e164.charAt(0) === '+') {
+                        return e164;
+                    }
+                }
+            }
+
+            return raw;
         }
 
         function setNumberDisplay(value) {
@@ -751,8 +783,8 @@
                 dom.number.value = '';
             }
 
-            if (telInput && config.defaultCountryCode && typeof telInput.setCountry === 'function') {
-                telInput.setCountry(config.defaultCountryCode);
+            if (telInput && initialCountry && typeof telInput.setSelectedCountry === 'function') {
+                telInput.setSelectedCountry(initialCountry);
             }
         }
 

@@ -25,10 +25,10 @@ public sealed class DialerModeExtensionsTests
     [InlineData(DialerMode.Power, true)]
     [InlineData(DialerMode.Progressive, true)]
     [InlineData(DialerMode.Predictive, false)]
-    public void RequiresAutomatedDialerFeature_IdentifiesGatedModes(DialerMode mode, bool expected)
+    public void RequiresPacedDialerFeature_IdentifiesGatedModes(DialerMode mode, bool expected)
     {
         // Act
-        var requiresFeature = mode.RequiresAutomatedDialerFeature();
+        var requiresFeature = mode.RequiresPacedDialerFeature();
 
         // Assert
         Assert.Equal(expected, requiresFeature);

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the recipe steps that import the entry points owned by the entry points feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[Feature(ContactCenterConstants.Feature.InboundVoice)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class EntryPointsRecipesStartup : StartupBase
 {

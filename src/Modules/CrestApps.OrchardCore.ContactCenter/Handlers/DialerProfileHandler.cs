@@ -74,10 +74,10 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
         {
             context.Result.Fail(new ValidationResult(S["Predictive dialing is not available yet. Choose Manual, Preview, Power, or Progressive."], [nameof(DialerProfile.Mode)]));
         }
-        else if (profile.Mode.RequiresAutomatedDialerFeature() &&
-            !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerAutomated))
+        else if (profile.Mode.RequiresPacedDialerFeature() &&
+            !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced))
         {
-            context.Result.Fail(new ValidationResult(S["Enable the Contact Center Automated Dialer feature before using Power or Progressive dialing."], [nameof(DialerProfile.Mode)]));
+            context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power or Progressive dialing."], [nameof(DialerProfile.Mode)]));
         }
 
         if (profile.CallsPerAgent < 1 || profile.CallsPerAgent > PowerDialerStrategy.MaxCallsPerAgent)

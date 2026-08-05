@@ -712,3 +712,11 @@
         }
     }
 }
+
+// intl-tel-input detaches the country dropdown to <body> (class .iti--detached-country-selector,
+// z-index 1060 by default), but the floating soft phone panel sits at z-index 1080. Without this
+// override the country list opens behind the panel and appears to be missing. Lift it above the
+// panel and the incoming-call overlay so the country selector is always visible.
+.iti--detached-country-selector {
+    z-index: 1100;
+}

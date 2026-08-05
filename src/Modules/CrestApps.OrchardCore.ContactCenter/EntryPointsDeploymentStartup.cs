@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the deployment steps that export the entry points owned by the entry points feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.EntryPoints)]
+[Feature(ContactCenterConstants.Feature.InboundVoice)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class EntryPointsDeploymentStartup : StartupBase
 {

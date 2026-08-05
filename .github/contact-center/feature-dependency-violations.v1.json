@@ -18,9 +18,9 @@
       "reason": "Server-side voice orchestration intentionally uses provider-agnostic Telephony services without requiring the soft-phone UI."
     },
     {
-      "feature": "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
+      "feature": "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
       "dependsOn": "CrestApps.OrchardCore.Telephony.SoftPhone",
-      "reason": "The independently selectable soft-phone projection integrates Contact Center voice and real-time state with the Telephony widget."
+      "reason": "The agent desktop surfaces the soft-phone call-state projection, so it directly requires the Telephony soft phone; the projection itself is integration glue that activates when Contact Center Voice, Real-Time, and the Telephony soft phone are all enabled."
     },
     {
       "feature": "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
@@ -120,7 +120,7 @@
       "OrchardCore.Flows",
       "OrchardCore.Users"
     ],
-    "CrestApps.OrchardCore.ContactCenter.Dialer.Automated": [
+    "CrestApps.OrchardCore.ContactCenter.Dialer.Paced": [
       "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Dialer",
@@ -160,7 +160,7 @@
       "OrchardCore.Flows",
       "OrchardCore.Users"
     ],
-    "CrestApps.OrchardCore.ContactCenter.EntryPoints": [
+    "CrestApps.OrchardCore.ContactCenter.InboundVoice": [
       "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
@@ -220,35 +220,12 @@
       "OrchardCore.Flows",
       "OrchardCore.Users"
     ],
-    "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone": [
-      "CrestApps.OrchardCore.ContactCenter",
-      "CrestApps.OrchardCore.ContactCenter.Agents",
-      "CrestApps.OrchardCore.ContactCenter.Queues",
-      "CrestApps.OrchardCore.ContactCenter.RealTime",
-      "CrestApps.OrchardCore.ContactCenter.Voice",
-      "CrestApps.OrchardCore.ContentFields",
-      "CrestApps.OrchardCore.Omnichannel",
-      "CrestApps.OrchardCore.Omnichannel.Activities",
-      "CrestApps.OrchardCore.Omnichannel.Managements",
-      "CrestApps.OrchardCore.PhoneNumbers",
-      "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
-      "CrestApps.OrchardCore.Telephony",
-      "CrestApps.OrchardCore.Telephony.SoftPhone",
-      "CrestApps.OrchardCore.TimeZones",
-      "CrestApps.OrchardCore.Users",
-      "OrchardCore.ContentTypes",
-      "OrchardCore.Contents",
-      "OrchardCore.Flows",
-      "OrchardCore.Users"
-    ],
     "CrestApps.OrchardCore.ContactCenter.AgentDesktop": [
       "CrestApps.OrchardCore.ContactCenter",
       "CrestApps.OrchardCore.ContactCenter.Agents",
       "CrestApps.OrchardCore.ContactCenter.Queues",
       "CrestApps.OrchardCore.ContactCenter.RealTime",
       "CrestApps.OrchardCore.ContactCenter.Voice",
-      "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
       "CrestApps.OrchardCore.ContentFields",
       "CrestApps.OrchardCore.Omnichannel",
       "CrestApps.OrchardCore.Omnichannel.Activities",

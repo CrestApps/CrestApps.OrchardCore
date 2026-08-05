@@ -87,13 +87,13 @@ public sealed class ContactCenterAdministrationSurfaceTests
         ContactCenterConstants.Feature.Dialer,
         "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
     [InlineData(
-        ContactCenterConstants.Feature.DialerAutomated,
+        ContactCenterConstants.Feature.DialerPaced,
         "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
     [InlineData(
         ContactCenterConstants.Feature.Recording,
         "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterRecordingSettingsDisplayDriver")]
     [InlineData(
-        ContactCenterConstants.Feature.EntryPoints,
+        ContactCenterConstants.Feature.InboundVoice,
         "CrestApps.OrchardCore.ContactCenter.Controllers.EntryPointsController")]
     public async Task ConfigurableCapability_RegistersItsAdministrationSurface(
         string featureId,

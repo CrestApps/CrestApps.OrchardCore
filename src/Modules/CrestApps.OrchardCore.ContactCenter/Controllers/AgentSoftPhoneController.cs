@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides Contact Center agent work actions used by the soft phone widget.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.VoiceSoftPhone)]
+[RequireFeatures(
+    ContactCenterConstants.Feature.Voice,
+    ContactCenterConstants.Feature.RealTime,
+    TelephonyConstants.Feature.SoftPhone)]
 public sealed class AgentSoftPhoneController : Controller
 {
     private readonly IAgentPresenceManager _presenceManager;
