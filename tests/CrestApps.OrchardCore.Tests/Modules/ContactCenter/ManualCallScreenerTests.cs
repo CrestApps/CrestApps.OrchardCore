@@ -144,6 +144,29 @@ public sealed class ManualCallScreenerTests
     }
 
     [Fact]
+    public async Task ScreenAsync_WhenDestinationIsExtension_AllowsWithoutScreening()
+    {
+        // Arrange: an unparseable internal extension that would otherwise fail closed.
+        var harness = new Harness();
+        harness.Options.EnforceCallingWindow = true;
+        harness.Options.CallingCalendarId = "manual-calendar";
+
+        // Act
+        var result = await harness.ScreenAsync("1001", isExtension: true);
+
+        // Assert
+        Assert.True(result.IsAllowed);
+        Assert.Empty(harness.PublishedEvents);
+        harness.BusinessHoursService.Verify(
+            service => service.EvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DialThroughTelephonyService_WhenComplianceScreenerRegistered_BlocksADoNotCallDestinationAndRecordsAudit()
     {
         // Arrange: the real compliance screener, aggregator, and telephony service composed exactly as the
@@ -222,14 +245,14 @@ public sealed class ManualCallScreenerTests
                 .ReturnsAsync([]);
         }
 
-        public Task<OutboundCallScreeningResult> ScreenAsync(string destination)
+        public Task<OutboundCallScreeningResult> ScreenAsync(string destination, bool isExtension = false)
         {
             var screener = BuildScreener();
 
             return screener.ScreenAsync(
                 new OutboundCallScreeningContext
                 {
-                    Request = new DialRequest { To = destination },
+                    Request = new DialRequest { To = destination, IsExtension = isExtension },
                     Origin = OutboundCallOrigin.SoftPhone,
                 },
                 CancellationToken.None);

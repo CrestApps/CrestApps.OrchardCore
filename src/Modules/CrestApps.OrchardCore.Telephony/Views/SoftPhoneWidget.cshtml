@@ -60,6 +60,12 @@
             ["notConfigured"] = T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."].Value,
             ["notConnected"] = T["Not connected"].Value,
             ["invalidNumber"] = T["Enter a phone number to call."].Value,
+            ["dialExtension"] = T["Dial extension"].Value,
+            ["dialPhoneNumber"] = T["Dial phone number"].Value,
+            ["numberPlaceholder"] = T["Enter a number"].Value,
+            ["extensionPlaceholder"] = T["Enter an extension"].Value,
+            ["numberLabel"] = T["Phone number"].Value,
+            ["extensionLabel"] = T["Extension"].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
             ["transferTitle"] = T["Transfer call"].Value,
             ["transferDestination"] = T["Number or extension"].Value,
@@ -140,6 +146,14 @@
                            data-telephony-number
                            placeholder="@T["Enter a number"]"
                            aria-label="@T["Phone number"]" />
+                    <button type="button"
+                            class="telephony-soft-phone__dial-mode"
+                            data-telephony-dial-mode-toggle
+                            aria-pressed="false"
+                            title="@T["Switch between dialing a phone number and an internal extension."]">
+                        <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
+                        <span data-telephony-dial-mode-label>@T["Dial extension"]</span>
+                    </button>
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>

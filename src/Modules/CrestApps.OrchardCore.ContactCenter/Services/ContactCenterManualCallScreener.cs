@@ -78,6 +78,14 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        if (context.Request?.IsExtension == true)
+        {
+            // An internal extension routes to a colleague on the same telephone system, not to a consumer.
+            // Do-not-call and calling-window rules govern outbound consumer contact, so they do not apply,
+            // and an extension cannot be canonicalized to E.164 to be screened in the first place.
+            return OutboundCallScreeningResult.Allow();
+        }
+
         var options = _options.Value;
 
         if (!options.RespectDoNotCall && !options.EnforceCallingWindow)

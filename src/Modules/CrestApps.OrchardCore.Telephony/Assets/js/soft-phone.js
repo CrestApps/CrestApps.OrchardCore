@@ -639,6 +639,8 @@
             close: rootElement.querySelector('[data-telephony-close]'),
             status: rootElement.querySelector('[data-telephony-status]'),
             number: rootElement.querySelector('[data-telephony-number]'),
+            dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
+            dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
             error: rootElement.querySelector('[data-telephony-error]'),
             activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
             activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
@@ -711,6 +713,7 @@
         // to E.164 and getNumber() echoes the raw digits, which the server then rejects as not dialable.
         var telInput = null;
         var initialCountry = resolveInitialCountry();
+        var extensionMode = false;
 
         if (dom.number && typeof window.intlTelInput === 'function') {
             var telInputOptions = {
@@ -747,6 +750,12 @@
 
         function getDialNumber() {
             var raw = dom.number ? normalizeDialNumber(dom.number.value) : '';
+
+            // In extension mode the destination is an internal extension, not a dialable phone number,
+            // so it is sent verbatim and the country selector is ignored.
+            if (extensionMode) {
+                return raw;
+            }
 
             if (telInput && typeof telInput.getNumber === 'function') {
                 // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
@@ -786,6 +795,41 @@
             if (telInput && initialCountry && typeof telInput.setSelectedCountry === 'function') {
                 telInput.setSelectedCountry(initialCountry);
             }
+        }
+
+        function setDialMode(isExtension) {
+            extensionMode = !!isExtension;
+
+            rootElement.classList.toggle('telephony-soft-phone--extension', extensionMode);
+
+            if (dom.dialModeToggle) {
+                dom.dialModeToggle.setAttribute('aria-pressed', extensionMode ? 'true' : 'false');
+            }
+
+            if (dom.dialModeLabel) {
+                dom.dialModeLabel.textContent = extensionMode
+                    ? (strings.dialPhoneNumber || 'Dial phone number')
+                    : (strings.dialExtension || 'Dial extension');
+            }
+
+            if (dom.number) {
+                dom.number.setAttribute('placeholder', extensionMode
+                    ? (strings.extensionPlaceholder || 'Enter an extension')
+                    : (strings.numberPlaceholder || 'Enter a number'));
+                dom.number.setAttribute('aria-label', extensionMode
+                    ? (strings.extensionLabel || 'Extension')
+                    : (strings.numberLabel || 'Phone number'));
+            }
+
+            clearNumberInput();
+
+            if (dom.number) {
+                dom.number.focus();
+            }
+        }
+
+        function toggleDialMode() {
+            setDialMode(!extensionMode);
         }
 
         function has(capability) {
@@ -1607,6 +1651,10 @@
                 } else {
                     dom.number.disabled = numberDisabled;
                 }
+
+                if (dom.dialModeToggle) {
+                    dom.dialModeToggle.disabled = numberDisabled;
+                }
             }
 
             [
@@ -1756,7 +1804,7 @@
             clearNumberInput();
             numberIsCallDisplay = false;
 
-            invokeWithBrowserAudio('Dial', { to: number });
+            invokeWithBrowserAudio('Dial', { to: number, isExtension: extensionMode });
         }
 
         function dialNumber(number) {
@@ -2640,6 +2688,10 @@
 
             if (dom.dial) {
                 dom.dial.addEventListener('click', dial);
+            }
+
+            if (dom.dialModeToggle) {
+                dom.dialModeToggle.addEventListener('click', toggleDialMode);
             }
 
             if (dom.number) {
