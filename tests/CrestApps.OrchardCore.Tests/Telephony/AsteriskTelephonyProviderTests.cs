@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -141,8 +140,7 @@ public sealed class AsteriskTelephonyProviderTests
         var shellSettings = new ShellSettings { Name = "TenantB" };
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            Options.Create(new DefaultAsteriskOptions()));
+            shellSettings);
 
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\":\"call-1\"}");
         var provider = new AsteriskTelephonyProvider(
@@ -651,8 +649,7 @@ public sealed class AsteriskTelephonyProviderTests
         var shellSettings = new ShellSettings { Name = "Default" };
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            Options.Create(new DefaultAsteriskOptions()));
+            shellSettings);
 
         return new AsteriskTelephonyProvider(
             SiteServiceFactory.Create(settings),

@@ -334,8 +334,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var options = Options.Create(new DefaultAsteriskOptions());
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            options);
+            shellSettings);
 
         var provider = new AsteriskContactCenterVoiceMediaProvider(
             SiteServiceFactory.Create(settings),
@@ -375,8 +374,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var options = Options.Create(new DefaultAsteriskOptions());
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            options);
+            shellSettings);
 
         return new AsteriskContactCenterVoiceMediaProvider(
             SiteServiceFactory.Create(settings),
@@ -405,8 +403,7 @@ public sealed class AsteriskContactCenterVoiceMediaProviderTests
         var options = Options.Create(defaultOptions);
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            options);
+            shellSettings);
 
         return new AsteriskContactCenterVoiceMediaProvider(
             SiteServiceFactory.Create(new AsteriskSettings()),

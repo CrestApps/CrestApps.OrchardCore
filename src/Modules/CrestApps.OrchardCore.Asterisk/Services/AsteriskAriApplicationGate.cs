@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk.Models;
-using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Environment.Shell;
 
@@ -16,23 +15,19 @@ internal sealed class AsteriskAriApplicationGate : IAsteriskAriApplicationGate
 {
     private readonly IAsteriskAriApplicationOwnershipRegistry _ownershipRegistry;
     private readonly ShellSettings _shellSettings;
-    private readonly DefaultAsteriskOptions _defaultOptions;
     private readonly string _ownershipToken = IdGenerator.GenerateId();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AsteriskAriApplicationGate"/> class.
     /// </summary>
     /// <param name="ownershipRegistry">The process-wide registry that tracks ARI application ownership.</param>
-    /// <param name="shellSettings">The current tenant shell settings used to scope the host-default check.</param>
-    /// <param name="defaultOptions">The configuration-backed default Asterisk options.</param>
+    /// <param name="shellSettings">The current tenant shell settings used to scope the ownership claim.</param>
     public AsteriskAriApplicationGate(
         IAsteriskAriApplicationOwnershipRegistry ownershipRegistry,
-        ShellSettings shellSettings,
-        IOptions<DefaultAsteriskOptions> defaultOptions)
+        ShellSettings shellSettings)
     {
         _ownershipRegistry = ownershipRegistry;
         _shellSettings = shellSettings;
-        _defaultOptions = defaultOptions.Value;
     }
 
     /// <inheritdoc/>
@@ -41,12 +36,6 @@ internal sealed class AsteriskAriApplicationGate : IAsteriskAriApplicationGate
         if (settings is null)
         {
             return true;
-        }
-
-        if (!_shellSettings.IsDefaultShell() &&
-            AsteriskSettingsUtilities.CollidesWithHostDefaultApplication(settings, _defaultOptions))
-        {
-            return false;
         }
 
         return _ownershipRegistry.TryClaim(
@@ -62,12 +51,6 @@ internal sealed class AsteriskAriApplicationGate : IAsteriskAriApplicationGate
         if (settings is null)
         {
             return true;
-        }
-
-        if (!_shellSettings.IsDefaultShell() &&
-            AsteriskSettingsUtilities.CollidesWithHostDefaultApplication(settings, _defaultOptions))
-        {
-            return false;
         }
 
         return !_ownershipRegistry.IsOwnedByAnotherTenant(

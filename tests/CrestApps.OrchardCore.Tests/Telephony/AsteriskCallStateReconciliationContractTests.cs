@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -142,8 +141,7 @@ public sealed class AsteriskCallStateReconciliationContractTests
         var shellSettings = new ShellSettings { Name = "Default" };
         var gate = new AsteriskAriApplicationGate(
             new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance),
-            shellSettings,
-            Options.Create(new DefaultAsteriskOptions()));
+            shellSettings);
 
         return new AsteriskTelephonyProvider(
             SiteServiceFactory.Create(settings),

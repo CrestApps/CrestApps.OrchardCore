@@ -4,6 +4,7 @@ using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -14,11 +15,13 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProviderBase
 {
     private readonly DefaultAsteriskOptions _options;
+    private readonly ShellSettings _shellSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAsteriskTelephonyProvider"/> class.
     /// </summary>
     /// <param name="options">The configuration-backed default Asterisk options.</param>
+    /// <param name="shellSettings">The current tenant shell settings used to scope the ARI application name.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
@@ -26,6 +29,7 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultAsteriskTelephonyProvider(
         IOptions<DefaultAsteriskOptions> options,
+        ShellSettings shellSettings,
         IHttpClientFactory httpClientFactory,
         IClock clock,
         IRedactorProvider redactorProvider,
@@ -34,6 +38,7 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
         : base(httpClientFactory, clock, redactorProvider, logger, stringLocalizer)
     {
         _options = options.Value;
+        _shellSettings = shellSettings;
     }
 
     /// <inheritdoc/>
@@ -72,7 +77,7 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
             BaseUrl = _options.BaseUrl,
             UserName = _options.UserName,
             Password = _options.Password,
-            ApplicationName = _options.ApplicationName,
+            ApplicationName = AsteriskSettingsUtilities.BuildHostDefaultApplicationName(_options.ApplicationName, _shellSettings.Name),
             EndpointTemplate = _options.EndpointTemplate,
             OutboundCallerId = _options.OutboundCallerId,
             TimeoutSeconds = _options.TimeoutSeconds,

@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -26,8 +25,7 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
         });
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
-            Options.Create(new DefaultAsteriskOptions()),
-            new ShellSettings { Name = "Default" });
+            Options.Create(new DefaultAsteriskOptions()));
         var options = new TelephonyProviderOptions();
 
         // Act
@@ -48,8 +46,7 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
         var siteService = SiteServiceFactory.Create(new AsteriskSettings { IsEnabled = true });
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
-            Options.Create(new DefaultAsteriskOptions()),
-            new ShellSettings { Name = "Default" });
+            Options.Create(new DefaultAsteriskOptions()));
         var options = new TelephonyProviderOptions();
 
         // Act
@@ -66,8 +63,7 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
         var siteService = SiteServiceFactory.Create(new AsteriskSettings());
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
-            Options.Create(new DefaultAsteriskOptions { IsEnabled = true }),
-            new ShellSettings { Name = "Default" });
+            Options.Create(new DefaultAsteriskOptions { IsEnabled = true }));
         var options = new TelephonyProviderOptions();
 
         // Act
@@ -82,36 +78,13 @@ public sealed class AsteriskProviderOptionsConfigurationsTests
     }
 
     [Fact]
-    public void Configure_WhenDefaultAsteriskIsConfiguredOnNonDefaultShell_RegistersDefaultProvider()
-    {
-        // Arrange
-        // A host-configured default connection is a shared provider that every tenant may select. Each shell resolves
-        // it under a unique per-tenant ARI application name at runtime, so registering it on a non-default shell does
-        // not cross-deliver Stasis events between tenants.
-        var siteService = SiteServiceFactory.Create(new AsteriskSettings());
-        var configuration = new AsteriskProviderOptionsConfigurations(
-            siteService,
-            Options.Create(new DefaultAsteriskOptions { IsEnabled = true }),
-            new ShellSettings { Name = "TenantA" });
-        var options = new TelephonyProviderOptions();
-
-        // Act
-        configuration.Configure(options);
-
-        // Assert
-        Assert.True(options.Providers.ContainsKey(AsteriskConstants.DefaultProviderTechnicalName));
-        Assert.True(options.Providers[AsteriskConstants.DefaultProviderTechnicalName].IsEnabled);
-    }
-
-    [Fact]
     public void Configure_WhenDefaultAsteriskIsNotConfigured_DoesNotRegisterDefaultProvider()
     {
         // Arrange
         var siteService = SiteServiceFactory.Create(new AsteriskSettings());
         var configuration = new AsteriskProviderOptionsConfigurations(
             siteService,
-            Options.Create(new DefaultAsteriskOptions { IsEnabled = false }),
-            new ShellSettings { Name = "Default" });
+            Options.Create(new DefaultAsteriskOptions { IsEnabled = false }));
         var options = new TelephonyProviderOptions();
 
         // Act

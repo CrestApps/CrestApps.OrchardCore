@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -49,49 +48,6 @@ public sealed class AsteriskAriApplicationGateTests
 
         // Act
         var acquired = gate.TryAcquire(null);
-
-        // Assert
-        Assert.True(acquired);
-    }
-
-    [Fact]
-    public void TryAcquire_WhenNonDefaultTenantCollidesWithHostDefaultApplication_ReturnsFalse()
-    {
-        // Arrange
-        // A non-default tenant that resolves to the same base URL and application name as the enabled host default
-        // would cross-deliver Stasis events with the default shell's listener, so the gate must deny it.
-        var baseUrl = UniqueBaseUrl();
-        const string applicationName = "host-default-app";
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "TenantA", new DefaultAsteriskOptions
-        {
-            IsEnabled = true,
-            BaseUrl = baseUrl,
-            ApplicationName = applicationName,
-        });
-
-        // Act
-        var acquired = gate.TryAcquire(CreateSettings(baseUrl, applicationName));
-
-        // Assert
-        Assert.False(acquired);
-    }
-
-    [Fact]
-    public void TryAcquire_WhenDefaultShellUsesHostDefaultApplication_ReturnsTrue()
-    {
-        // Arrange
-        // The default shell owns the host-default application, so resolving to it is not a cross-tenant collision.
-        var baseUrl = UniqueBaseUrl();
-        const string applicationName = "host-default-app";
-        var gate = CreateGate(new AsteriskAriApplicationOwnershipRegistry(NullLogger<AsteriskAriApplicationOwnershipRegistry>.Instance), "Default", new DefaultAsteriskOptions
-        {
-            IsEnabled = true,
-            BaseUrl = baseUrl,
-            ApplicationName = applicationName,
-        });
-
-        // Act
-        var acquired = gate.TryAcquire(CreateSettings(baseUrl, applicationName));
 
         // Assert
         Assert.True(acquired);
@@ -179,13 +135,11 @@ public sealed class AsteriskAriApplicationGateTests
 
     private static AsteriskAriApplicationGate CreateGate(
         IAsteriskAriApplicationOwnershipRegistry registry,
-        string shellName,
-        DefaultAsteriskOptions defaultOptions = null)
+        string shellName)
     {
         return new AsteriskAriApplicationGate(
             registry,
-            new ShellSettings { Name = shellName },
-            Options.Create(defaultOptions ?? new DefaultAsteriskOptions()));
+            new ShellSettings { Name = shellName });
     }
 
     private static AsteriskResolvedSettings CreateSettings()
