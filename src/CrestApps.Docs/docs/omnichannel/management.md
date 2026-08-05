@@ -13,6 +13,12 @@ description: Customer Relationship Management (CRM) tools for contacts, subject 
 
 Provides way to manage Omnichannel Contacts.
 
+The screencast below enables **Omnichannel Management**, opens the **Management** area from the **Interaction Center** menu, and adds a couple of **dispositions** (activity outcomes) to the CRM catalog.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Omnichannel Management and adding dispositions">
+  <source src="/img/docs/omnichannel-management.mp4" type="video/mp4" />
+</video>
+
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 
 The split exists so that a headless consumer of the activity model, such as the [Contact Center](../contact-center/index.md), can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
@@ -132,6 +138,18 @@ On a contact's **Activities** page, the **Add Activity** button is a dropdown wi
 - The activity is stored as **completed by the current user**, and the subject flow runs immediately, so it may create a follow-up activity depending on the inbound subject's actions. The logged activity then appears in the contact's completed activities list.
 - If no inbound subject is configured, a warning is shown and inbound logging is blocked.
 
+The screencast below walks through a complete inbound scenario for a call center. It first creates an `Inbound` subject content type and configures its flow with the **Inbound** direction on the `Phone` channel (a basic flow that does not require a disposition so agents can log a call quickly). Then it simulates a customer calling in: the agent searches Content Items with `phone:7025556666`, finds the matching contact, opens the contact's **Activities** page, chooses **Inbound** from the **Add Activity** menu, selects the `Inbound` subject, adds a note about the call, and logs the completed activity.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating an inbound subject and logging an inbound call for an existing contact">
+  <source src="/img/docs/omni-inbound-existing.mp4" type="video/mp4" />
+</video>
+
+Sometimes an inbound caller is not in the system yet. The screencast below shows that variation: the agent searches Content Items with `phone:7025559999`, gets no match, creates a new `Contact` content item for the caller (capturing their name, time zone, and phone number), and then logs the inbound call under the new contact.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a new contact for an unknown inbound caller and logging the call">
+  <source src="/img/docs/omni-inbound-new-contact.mp4" type="video/mp4" />
+</video>
+
 ### Load Inventory
 A **Load Inventory** definition stores filters to find contacts and then **loads activities in the background**.
 
@@ -140,6 +158,24 @@ The loader runs as a background process to avoid overloading the system and to a
 The **Load Inventory** list is ordered by creation date with the newest inventory loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
 
 Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+
+#### Loading Automated SMS Activities with an AI Profile
+
+When you choose the **Automatic** source for an inventory load, the batch can dispatch work through a channel processor (such as SMS) and drive each conversation with an AI profile. The **AI profile** selector on the inventory-load form lists only **Chat** profiles that have **Add initial prompt** enabled, because the initial prompt is what starts the automated conversation.
+
+To load automated SMS activities:
+
+1. Enable the **SMS Omnichannel Automation** feature so the SMS channel processor is available.
+2. Create an **AI profile** (type **Chat**) with **Add initial prompt** enabled and an initial prompt written for your outreach.
+3. In **Interaction Center → Channel Endpoints**, add an **SMS** endpoint for the number you send from.
+4. In **Load Inventory**, click **Add Inventory Load → Automatic**, then select the subject, the AI profile, the **SMS** channel, the SMS channel endpoint, and the contact type.
+5. Save the load, then open its **Actions → Load batch** menu to generate the activities in the background.
+
+The screencast below creates an automatic SMS inventory load for the *New Customer - Welcome* subject powered by the *SMS Outreach Assistant* profile, then loads the batch to generate the automated activities.
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS inventory load driven by an AI profile and loading it to generate automated activities">
+  <source src="/img/docs/omni-load-automated-sms.mp4" type="video/mp4" />
+</video>
 
 ## Getting started (recommended order)
 
@@ -160,6 +196,14 @@ In Orchard Core Admin:
 3. Attach `OmnichannelContactPart`.
 4. Add any fields/parts you need (phone number, email, lead status, custom fields, etc.).
 5. Create/import contact items.
+
+Typically a single contact content type is all you need for the CRM record that represents your customer or contact. You can create more than one when you want to manage different kinds of contacts separately (for example, `Customer` versus `Employee`). The content type can carry any parts and fields your business needs, so model it around the data your agents capture.
+
+The screencast below creates a `Contact` type, attaches `OmnichannelContactPart`, and then logs a new lead with a time zone and a cell phone number:
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a Contact content type and a contact item">
+  <source src="/img/docs/omni-contact-type.mp4" type="video/mp4" />
+</video>
 
 If you use the built-in `PhoneNumberInfoPart`, the `Number` field is a `PhoneField` (from `CrestApps.OrchardCore.ContentFields`) that stores the phone number in E.164 format alongside the ISO country code, so the correct country flag is always displayed when the field is edited again.
 
@@ -197,12 +241,26 @@ Use **Settings** -> **Content Import** to enforce DNC checks globally for import
 
 When the import file is not already using E.164 phone numbers, select the default country represented by that file in the import UI. Files for content types with `OmnichannelContactPart` should contain leads from one country per file unless every phone number is already expressed in E.164. The picker mirrors the Local DNC country list, shows each option as `Country (+calling code)`, and is required before the import can start so phone normalization always has region context.
 
+The screencast below shows both directions. It first exports the existing contacts as a CSV workbook through the **Export** panel (choose the CSV format and the `Contact` type, then **Export Data**), then imports a batch of new leads through **Content** -> **Import** -> **Contact**. During import it selects the lead country, enables **Ignore duplicate by phone number**, and turns on **Ignore numbers on national do-not-call registries** with the **Local Do Not Call Registry** selected, so any lead whose phone number is already on the DNC list is scrubbed automatically before contacts are created.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of exporting contacts and importing leads with DNC auto-scrub">
+  <source src="/img/docs/omni-contact-import-export.mp4" type="video/mp4" />
+</video>
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
 2. Create a new content type or edit an existing one.
 3. Attach `OmnichannelSubjectPart` to mark the content type as an Omnichannel subject.
 4. Add any fields or parts you want the agent to capture during the interaction.
+
+A subject is just a content type marked with `OmnichannelSubjectPart`. Create one subject per interaction goal, such as `Lead Generation` for outbound prospecting. You can create additional subjects for other stages of the customer journey, for example `Lead Generation - 30 day follow-up` and `New Customer - Welcome`.
+
+The screencast below creates a `Lead Generation` subject and opens its flow settings:
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a Lead Generation subject content type">
+  <source src="/img/docs/omni-subject-leadgen.mp4" type="video/mp4" />
+</video>
 
 The former `OmnichannelSubject` stereotype is no longer recognized. Existing subject content types must remove that stereotype and attach `OmnichannelSubjectPart`.
 
@@ -213,6 +271,12 @@ Because subject content items are authored and completed through the omnichannel
 1. Go to `Interaction Center` → `Management` → `Dispositions`.
 2. Create dispositions that represent outcomes (e.g. `Follow up`, `Not interested`, `Sold`).
 3. After a disposition is created, you can still change its description, but its name remains read-only.
+
+For a lead-conversion story, create outcomes such as `No answer`, `Call back`, `Follow up 30 days`, `Lead won`, and `Do not call`. The screencast below adds all five:
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating omnichannel dispositions">
+  <source src="/img/docs/omni-dispositions.mp4" type="video/mp4" />
+</video>
 
 ### 5) Create Campaign Groups and Campaigns
 
@@ -257,6 +321,12 @@ From the `Subject Flows` list, click **Manage Flow** next to a subject.
 
 Subjects without any actions show a **Missing flow** badge in the Subject Flows list so you can find incomplete setups quickly.
 
+The screencast below walks through a complete lead-generation flow. It assigns the `Spring Lead Drive` campaign to the subject, then maps four dispositions to actions that tell the story of converting a lead into a customer of the fictional *X Company*: **No answer** retries the call up to three times (**Try Again**), **Follow up 30 days** schedules a new activity against the *Lead Generation - 30 day follow-up* subject 720 hours out (**New Activity**), **Lead won** creates a *New Customer - Welcome* activity 72 hours (3 days) later, and **Do not call** finishes the interaction while setting the contact's Do-Not-Call preference (**Finish**).
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of configuring a subject flow with disposition actions">
+  <source src="/img/docs/omni-subject-flow.mp4" type="video/mp4" />
+</video>
+
 ### 8) Create and Load Inventory
 
 1. Go to `Interaction Center` → `Management` → `Load Inventory`.
@@ -274,6 +344,12 @@ Subjects without any actions show a **Missing flow** badge in the Subject Flows 
    - Assign users when the selected source requires assignment.
    - Optionally set contact created range, phone number, time zone, and last activity filters
 4. Click `Load`.
+
+The screencast below creates a **Manual** inventory load for the *Lead Generation* subject, targets the `Contact` content type on the phone channel, assigns the generated activities to an agent, and loads the call list for the `Spring Lead Drive` campaign.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a manual inventory load">
+  <source src="/img/docs/omni-load-inventory-manual.mp4" type="video/mp4" />
+</video>
 
 The inventory load runs in the background and loads activities incrementally. Each created activity resolves its campaign, channel, channel endpoint, and interaction type from the batch selections, falling back to the subject's part settings. The interaction type is derived from the source: the **Automatic** source creates **Automated** activities, while other sources create **Manual** activities. Manual inventory loads assign each created activity to a selected user. Dialer inventory loads use the phone channel, leave activities unassigned with assignment status `Available`, and apply the selected dialer profile so the created activities inherit the profile's dialing mode and campaign before dialers reserve them later.
 
@@ -301,6 +377,12 @@ When an inventory load is started, the `IActivityBatchLoadCoordinator` transitio
 4. A preview appears showing what actions will execute (for example, `Try Again` with a schedule date or `New Activity` targeting another subject).
 5. Adjust the schedule dates if needed, and optionally add **Preparation notes** for any result. A note is stored as the instructions of the follow-up activity it generates.
 6. Click **Complete** to save and execute the subject actions.
+
+The screencast below shows an agent working their assigned queue. The first call is completed with **No answer**, which triggers the *Try Again* action: an inline **Schedule at** calendar and **Preparation notes** field appear so the agent can override the default next call time and leave a note for the retry. A second lead is completed with **Lead won**, and the *New Activity* action automatically schedules a *New Customer - Welcome* call three days out.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of an agent completing activities with dispositions">
+  <source src="/img/docs/omni-agent-activities.mp4" type="video/mp4" />
+</video>
 
 ### Scheduled activities list
 
@@ -393,6 +475,12 @@ Activity rows display an urgency icon so managers can identify priority visually
 ### Bulk Actions
 
 Use the **Bulk actions** card to choose an action and its scope:
+
+The screencast below shows a manager redistributing queued work: they select the activities, open the **Select an action** menu (which exposes Assign, Reschedule, Set Urgency Level, Change Subject, and more), reassign the activities to an agent, and execute the bulk action.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of a manager reassigning activities in bulk">
+  <source src="/img/docs/omni-manager-redistribute.mp4" type="video/mp4" />
+</video>
 
 - Apply the action to the activities selected on the current page
 - Apply the action to **all matching activities** returned by the current filter

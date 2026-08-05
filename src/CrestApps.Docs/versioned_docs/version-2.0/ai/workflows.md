@@ -23,6 +23,12 @@ For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can ac
 
 To prevent naming conflicts with other workflow tasks, it's recommended to prefix your **Result Property Name** with `AI-`.
 
+The screencast below enables the **Workflows** feature, creates a workflow, adds the **AI Completion using Profile** task, and binds it to the `Demo Assistant` profile with the result property `AI-CrestApps-Step1`.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of adding an AI Completion using Profile task to a workflow">
+  <source src="/img/docs/ai-workflows.mp4" type="video/mp4" />
+</video>
+
 ## AI Completion using Direct Config Task
 
 This activity allows you to request AI completions by defining the configuration directly within the workflow, without relying on a predefined AI Profile.

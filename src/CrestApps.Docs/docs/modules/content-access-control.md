@@ -14,6 +14,12 @@ Provides a way to control who can access content items.
 
 ## Overview
 
+The screencast below shows the **Restrict content?** setting on the *Page* content type's **Role Picker** part, then creates a page and uses the improved role selector — a searchable multi-select with **Select All / Deselect All** actions and tick indicators — to grant access to specific roles before publishing.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of the Restrict content setting and the improved role selector picking roles on a page">
+  <source src="/img/docs/content-access-control.mp4" type="video/mp4" />
+</video>
+
 This feature allows you to restrict access to content items based on user roles. Once enabled, you can add the `RolePickerPart` to any content type. This part lets you specify one or more roles required to access the content item. You can attach the part using the content definitions user interface or by adding a migration, as shown below:
 
 > Note: You must set the `Restrict content?` setting to `true` to enable the access control feature. This is part of the `RolePickerPart` settings, which can be configured via the user interface or through a migration.

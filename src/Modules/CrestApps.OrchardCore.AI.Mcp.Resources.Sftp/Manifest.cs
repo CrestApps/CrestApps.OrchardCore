@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
     Id = "CrestApps.OrchardCore.AI.Mcp.Resources.Sftp",
     Name = "Model Context Protocol (MCP) SFTP Resource",
     Description = "Provides SFTP resource support for the MCP Server, allowing remote files to be exposed as MCP resources using sftp:// URIs.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - MCP",
     Dependencies =
     [
         McpPermissions.Feature.Server,
