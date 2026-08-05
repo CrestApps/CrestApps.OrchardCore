@@ -22,8 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center inbound entry points.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.EntryPoints)]
+[Feature(ContactCenterConstants.Feature.EntryPoints)]
 public sealed class EntryPointsController : ContactCenterCatalogController<ContactCenterEntryPoint>
 {
     /// <summary>

@@ -11,8 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the outbound dialer administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterConstants.Feature.Dialer)]
 public sealed class ContactCenterDialerAdminStartup : StartupBase
 {
     /// <inheritdoc/>

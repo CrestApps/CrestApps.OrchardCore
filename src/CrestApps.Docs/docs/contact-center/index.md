@@ -8,32 +8,27 @@ description: Provider-agnostic contact center orchestration for Orchard Core - i
 | | |
 | --- | --- |
 | **Feature Name** | Contact Center |
-| **Headless feature ID** | `CrestApps.OrchardCore.ContactCenter` |
-| **Administration feature ID** | `CrestApps.OrchardCore.ContactCenter.Admin` |
+| **Feature ID** | `CrestApps.OrchardCore.ContactCenter` |
 
 The **Contact Center** module set turns the CRM into a full contact center that agents and supervisors operate without leaving Orchard Core. It extends the [Omnichannel](../omnichannel/index.md) CRM instead of introducing a second work model, and it sits between the CRM and the [Telephony](../telephony/index.md) soft phone: the CRM owns business work data, the Contact Center owns orchestration, and Telephony owns media execution.
 
-Enable `CrestApps.OrchardCore.ContactCenter` for the headless interaction lifecycle, durable event log, and baseline permissions.
+Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
-## Headless and administration features
+## Feature and administration model
 
-Screens are not part of a Contact Center capability. Every capability feature registers services only. The screens those capabilities would otherwise register are folded into a single administration feature, `CrestApps.OrchardCore.ContactCenter.Admin`, and each capability's screens are gated on that capability being enabled. A deployment that drives the contact center through its own front end or an API can therefore enable every capability without activating Contact Center or Omnichannel administration pages. The shared Telephony provider-configuration screen remains available because provider settings are part of the core Telephony feature.
+Each Contact Center capability owns both its runtime services and the administration screens required to configure it. There is no separate Contact Center Administration feature to discover or enable. Enabling **Contact Center Dialer**, for example, registers the Dialer Profiles manager, controller, display driver, and menu together; **Contact Center Automated Dialer** depends on the base Dialer, so Power and Progressive dialing always have access to the same profile UI.
 
-| Capability feature | Administration screens |
+| Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings and the administration menu (always shown when Administration is enabled) |
+| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings and administration menu |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profile, presence, and reason-code screens |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, skill, business-hours, and agent-entitlement screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | Recording and monitoring settings screens |
 | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound entry-point screens |
 
-`CrestApps.OrchardCore.ContactCenter.Admin` is the single administration feature: it adds the Contact Center settings screens and the administration menu, declares the `CrestApps.OrchardCore.Omnichannel.Managements` dependency, and carries the screens for every capability. Each capability's screens appear only when both `CrestApps.OrchardCore.ContactCenter.Admin` and that capability are enabled, so enabling administration restores exactly the screens for the capabilities the tenant runs — there is no separate administration feature to enable per capability.
-
-The remaining features - the agent desktop, soft phone, supervision, analytics, and maintenance screens - are user experiences in their own right and are not split, because nothing would be left behind if they were.
-
 :::note
-Enabling a capability does not show its screens on its own. Enable `CrestApps.OrchardCore.ContactCenter.Admin` to administer the capabilities you run through the dashboard; the screens for each enabled capability appear automatically.
+Enable the outcome you need and let Orchard resolve its dependencies. For automated outbound calling, enable `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` plus a supported voice-provider adapter; the base Dialer (including mandatory compliance screening), queues, routing, voice services, and Dialer Profiles UI are enabled transitively.
 :::
 
 The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations. The [Public API surface](public-api-surface.md) page describes which assemblies have a recorded public surface, why the set is derived from the project graph rather than listed, and how to accept a deliberate surface change. The [Single-Node Completion Roadmap](single-node-completion.md) describes the phased plan to make a single node fully functional first - real browser audio, inbound routing, supervisor monitoring, and recording - with multi-node hardening following as a secondary phase.

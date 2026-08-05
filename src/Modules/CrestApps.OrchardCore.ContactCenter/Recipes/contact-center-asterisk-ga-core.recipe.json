@@ -1,7 +1,7 @@
 {
   "name": "ContactCenterAsteriskGaCore",
   "displayName": "Contact Center — Asterisk (GA-Core)",
-  "description": "Enables the supported GA-Core Contact Center feature set for the Asterisk voice provider in one step: base orchestration, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the Asterisk Contact Center voice adapter. This is the coherent, certified feature combination for the 'ga-core-asterisk' tenant profile; configure an Asterisk provider and your queues, skills, and entry points afterward to route calls.",
+  "description": "Enables the supported GA-Core Contact Center feature set for the Asterisk voice provider in one step: base orchestration and administration, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the Asterisk Contact Center voice adapter. This is the coherent, certified feature combination for the 'ga-core-asterisk' tenant profile; configure an Asterisk provider and your queues, skills, and entry points afterward to route calls.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -17,6 +17,7 @@
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.Routing",
         "CrestApps.OrchardCore.ContactCenter.Voice",
+        "CrestApps.OrchardCore.ContactCenter.EntryPoints",
         "CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone",
         "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
         "CrestApps.OrchardCore.ContactCenter.RealTime",

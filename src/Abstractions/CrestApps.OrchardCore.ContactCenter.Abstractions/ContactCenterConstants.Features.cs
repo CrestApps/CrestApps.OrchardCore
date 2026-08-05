@@ -13,12 +13,6 @@ public static partial class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
-        /// The identifier of the Contact Center administration feature, which enables every enabled capability's
-        /// administration screens together.
-        /// </summary>
-        public const string Admin = "CrestApps.OrchardCore.ContactCenter.Admin";
-
-        /// <summary>
         /// The identifier of the agent, presence, and queue-membership feature.
         /// </summary>
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
@@ -42,11 +36,6 @@ public static partial class ContactCenterConstants
         /// The identifier of the outbound dialer feature.
         /// </summary>
         public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
-
-        /// <summary>
-        /// The identifier of the outbound dialing compliance feature.
-        /// </summary>
-        public const string Compliance = "CrestApps.OrchardCore.ContactCenter.Compliance";
 
         /// <summary>
         /// The identifier of automated power and progressive dialing feature.

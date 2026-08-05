@@ -8,8 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the recording and monitoring settings screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Recording)]
+[Feature(ContactCenterConstants.Feature.Recording)]
 public sealed class ContactCenterRecordingAdminStartup : StartupBase
 {
     /// <inheritdoc/>

@@ -22,8 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center queues.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.Queues)]
 public sealed class QueuesController : ContactCenterCatalogController<ActivityQueue>
 {
     /// <summary>

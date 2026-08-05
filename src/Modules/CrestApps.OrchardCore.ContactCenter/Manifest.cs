@@ -18,22 +18,10 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Area,
     Name = "Contact Center",
-    Description = "Provides the headless interaction lifecycle, durable domain event log, and baseline permissions.",
+    Description = "Provides the interaction lifecycle, durable domain event log, baseline permissions, settings, and administration menu.",
     Category = "Contact Center",
     Dependencies =
     [
-        OmnichannelConstants.Features.Activities,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.Admin,
-    Name = "Contact Center Administration",
-    Description = "Adds the Contact Center settings screens and every capability's administration screens for the capabilities that are enabled on the tenant.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Area,
         OmnichannelConstants.Features.Managements,
     ]
 )]
@@ -41,7 +29,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Agents,
     Name = "Contact Center Agents",
-    Description = "Adds agent profiles, presence, capacity, skills, and queue/campaign sign-in.",
+    Description = "Adds agent profiles, presence, capacity, skills, queue/campaign sign-in, and agent administration screens.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -52,7 +40,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Queues,
     Name = "Contact Center Queues",
-    Description = "Adds work queues, queue items, reservations, and availability-based activity assignment.",
+    Description = "Adds work queues, queue items, reservations, availability-based activity assignment, and queue administration screens.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -74,7 +62,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Dialer,
     Name = "Contact Center Dialer",
-    Description = "Adds outbound dialing profiles, callbacks, and Manual or Preview activity batches that route calls through Contact Center Voice providers.",
+    Description = "Adds outbound dialing profiles and their administration UI, mandatory compliance screening, callbacks, and Manual or Preview activity batches that route calls through Contact Center Voice providers.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -84,25 +72,13 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.Compliance,
-    Name = "Contact Center Outbound Compliance",
-    Description = "Adds the mandatory outbound eligibility gate, suppression auditing, retry limits, and calling-window enforcement.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Dialer,
-    ]
-)]
-
-[assembly: Feature(
     Id = ContactCenterConstants.Feature.DialerAutomated,
     Name = "Contact Center Automated Dialer",
-    Description = "Adds compliance-gated Power and Progressive dialing strategies and scheduled pacing.",
+    Description = "Adds Power and Progressive dialing strategies and scheduled pacing. The base Dialer dependency provides mandatory compliance and the dialing profile UI.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Dialer,
-        ContactCenterConstants.Feature.Compliance,
     ]
 )]
 
@@ -121,7 +97,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.EntryPoints,
     Name = "Contact Center Entry Points",
-    Description = "Adds inbound voice entry-point administration, qualification, business-hours decisions, and queue ingress.",
+    Description = "Adds inbound voice entry-point administration screens, qualification, business-hours decisions, and queue ingress.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -145,7 +121,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.Recording,
     Name = "Contact Center Recording",
-    Description = "Adds provider-capability-gated recording orchestration and recording-state events for voice interactions.",
+    Description = "Adds provider-capability-gated recording orchestration, recording-state events, and recording settings screens for voice interactions.",
     Category = "Contact Center",
     Dependencies =
     [

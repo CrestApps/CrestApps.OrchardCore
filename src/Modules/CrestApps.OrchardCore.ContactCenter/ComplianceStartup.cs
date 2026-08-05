@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the mandatory eligibility and suppression gate evaluated before outbound dialing attempts.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Compliance)]
+[Feature(ContactCenterConstants.Feature.Dialer)]
 public sealed class ComplianceStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;

@@ -212,9 +212,9 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();
 
         // Routing owns assignment and reservation state in its own document so that a routing transition never
-        // contends with a CRM edit of the same activity row. The work state itself is a Contact Center document
-        // with no CRM dependency; the projection onto the CRM activity is registered by the Administration
-        // feature, which is what declares the dependency on CRM activity management.
+        // contends with a CRM edit of the same activity row. The work state itself is a Contact Center document;
+        // the base feature composes Omnichannel Management so its CRM activity projection and administration
+        // surfaces are available together.
         services
             .AddScoped<IContactCenterWorkStateStore, ContactCenterWorkStateStore>()
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()

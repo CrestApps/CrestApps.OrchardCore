@@ -91,13 +91,11 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class Feature
         {
-            public const string Admin = "CrestApps.OrchardCore.ContactCenter.Admin";
             public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
             public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";
             public const string Availability = "CrestApps.OrchardCore.ContactCenter.Availability";
-            public const string Compliance = "CrestApps.OrchardCore.ContactCenter.Compliance";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerAutomated = "CrestApps.OrchardCore.ContactCenter.Dialer.Automated";
             public const string EntryPoints = "CrestApps.OrchardCore.ContactCenter.EntryPoints";

@@ -22,8 +22,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center agent state reason codes.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterConstants.Feature.Agents)]
 public sealed class AgentStateReasonCodesController : ContactCenterCatalogController<AgentStateReasonCode>
 {
     /// <summary>

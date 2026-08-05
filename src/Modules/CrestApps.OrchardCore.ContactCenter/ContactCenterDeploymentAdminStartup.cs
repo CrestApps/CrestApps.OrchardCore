@@ -7,11 +7,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers the editors for the Contact Center configuration deployment steps. The steps themselves are headless, so
-/// a tenant that runs without an administration surface can still be exported by a script; only the screens that add
-/// the steps to a plan need the administration feature.
+/// Registers the editors for the Contact Center configuration deployment steps when Orchard Deployment is enabled.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Admin)]
+[Feature(ContactCenterConstants.Feature.Area)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class ContactCenterDeploymentAdminStartup : StartupBase
 {

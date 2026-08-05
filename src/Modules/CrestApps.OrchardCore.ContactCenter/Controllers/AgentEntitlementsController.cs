@@ -20,8 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of manager-owned agent queue and campaign entitlements.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.Queues)]
 public sealed class AgentEntitlementsController : Controller
 {
     private readonly IAgentProfileManager _agentManager;

@@ -79,7 +79,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void BaseFeature_IsHeadless_AndAdminOwnsOmnichannelManagement()
+    public void BaseFeature_ComposesOmnichannelManagementForItsAdministrationSurface()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -89,19 +89,11 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // Act
         var baseDependencies = features["CrestApps.OrchardCore.ContactCenter"].Dependencies
             .Order(StringComparer.Ordinal);
-        var adminDependencies = features["CrestApps.OrchardCore.ContactCenter.Admin"].Dependencies
-            .Order(StringComparer.Ordinal);
 
         // Assert
         Assert.Equal(
-            ["CrestApps.OrchardCore.Omnichannel.Activities"],
+            ["CrestApps.OrchardCore.Omnichannel.Managements"],
             baseDependencies);
-        Assert.Equal(
-            [
-                "CrestApps.OrchardCore.ContactCenter",
-                "CrestApps.OrchardCore.Omnichannel.Managements",
-            ],
-            adminDependencies);
     }
 
     [Fact]
@@ -420,20 +412,16 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void ComplianceFeature_OwnsOutboundEligibilityAndAttempts()
+    public void DialerFeature_OwnsMandatoryOutboundEligibilityAndAttempts()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
-        var features = ParseManifestFeatures(repositoryRoot, ContactCenterManifestPath)
-            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
         var startupClasses = ParseStartupClassesInDirectory(
             repositoryRoot,
             ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
-        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Compliance"].Dependencies
-            .Order(StringComparer.Ordinal);
         var eligibilityOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IDialerEligibilityService, DefaultDialerEligibilityService>()",
@@ -444,11 +432,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 StringComparison.Ordinal));
 
         // Assert
-        Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Dialer"],
-            dependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Compliance", eligibilityOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Compliance", attemptOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer", eligibilityOwner.FeatureId);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer", attemptOwner.FeatureId);
     }
 
     [Fact]
@@ -477,10 +462,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Assert
         Assert.Equal(
-            [
-                "CrestApps.OrchardCore.ContactCenter.Compliance",
-                "CrestApps.OrchardCore.ContactCenter.Dialer",
-            ],
+            ["CrestApps.OrchardCore.ContactCenter.Dialer"],
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Automated", strategyOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Dialer.Automated", pacingOwner.FeatureId);
@@ -523,8 +505,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", resolverOwner.FeatureId);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", ingressOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Admin", navigationOwner.FeatureId);
-        Assert.Contains("CrestApps.OrchardCore.ContactCenter.EntryPoints", navigationOwner.RequiredFeatureIds);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter.EntryPoints", navigationOwner.FeatureId);
+        Assert.Empty(navigationOwner.RequiredFeatureIds);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", inboundServiceOwner.FeatureId);
     }
 

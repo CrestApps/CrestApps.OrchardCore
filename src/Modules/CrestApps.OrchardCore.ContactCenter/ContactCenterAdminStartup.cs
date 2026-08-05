@@ -8,14 +8,13 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers the Contact Center settings screens and the administration menu every capability screen hangs off.
+/// Registers the Contact Center settings screens and administration menu.
 /// </summary>
 /// <remarks>
-/// This is the root of the administration surface rather than a marker. Each capability's screens live in its own
-/// <c>.Admin</c> feature, and every one of them depends on this feature for the menu they attach to, so enabling a
-/// capability alone leaves a deployment headless.
+/// Each capability owns its administration screens so enabling a capability provides a complete management
+/// experience without requiring another feature toggle.
 /// </remarks>
-[Feature(ContactCenterConstants.Feature.Admin)]
+[Feature(ContactCenterConstants.Feature.Area)]
 public sealed class ContactCenterAdminStartup : StartupBase
 {
     /// <inheritdoc/>

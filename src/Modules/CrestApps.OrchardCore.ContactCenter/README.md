@@ -1,19 +1,18 @@
 # CrestApps.OrchardCore.ContactCenter
 
-Provides the **contact center orchestration layer** that turns the CrestApps CRM (Omnichannel) into a full contact center. It owns the orchestration boundary between the CRM (which owns business work data) and Telephony providers (which execute media): the headless interaction lifecycle, a durable domain-event log, agent presence and availability, work queues and routing, an outbound dialer with compliance, recording orchestration, real-time experiences, and analytics.
+Provides the **contact center orchestration layer** that turns the CrestApps CRM (Omnichannel) into a full contact center. It owns the orchestration boundary between the CRM (which owns business work data) and Telephony providers (which execute media): the interaction lifecycle, a durable domain-event log, agent presence and availability, work queues and routing, an outbound dialer with compliance, recording orchestration, administration, real-time experiences, and analytics.
 
 `OmnichannelActivity` remains the universal work item; a Contact Center `Interaction` is the communication history for a single attempt and never owns workflow or disposition.
 
 ## Features
 
-The module ships as many small, independently deployable, feature-gated capabilities so a tenant enables only what it licenses. Contact Center administration screens are separated from their runtime capability so a headless tenant can run without Contact Center or Omnichannel admin UI. The shared Telephony provider-configuration screen remains available when voice capabilities enable Telephony.
+The module ships as feature-gated capabilities so a tenant enables only what it needs. Each capability includes its own administration screens; no separate administration feature is required.
 
 ### Foundation
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| Contact Center | `CrestApps.OrchardCore.ContactCenter` | Headless interaction lifecycle, durable domain event log, and baseline permissions. Depends on Omnichannel Activities. |
-| Contact Center Administration | `CrestApps.OrchardCore.ContactCenter.Admin` | Settings screens and the administration screens for every enabled capability. |
+| Contact Center | `CrestApps.OrchardCore.ContactCenter` | Interaction lifecycle, durable domain event log, baseline permissions, settings, and administration menu. Depends on Omnichannel Management. |
 
 ### Agents, queues, and routing
 
@@ -31,9 +30,8 @@ The module ships as many small, independently deployable, feature-gated capabili
 | Contact Center Voice | `CrestApps.OrchardCore.ContactCenter.Voice` | Routes inbound/outbound voice through the Voice Contact Center Call Router while Telephony providers execute media. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Executable bidirectional media-provider resolution for active calls (enabled by dependency only). |
 | Contact Center Entry Points | `CrestApps.OrchardCore.ContactCenter.EntryPoints` | Inbound entry-point administration, qualification, business-hours decisions, and queue ingress. |
-| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialing profiles, callbacks, and Manual/Preview activity batches. |
-| Contact Center Outbound Compliance | `CrestApps.OrchardCore.ContactCenter.Compliance` | Mandatory outbound eligibility gate, suppression auditing, retry limits, and calling-window enforcement. |
-| Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Compliance-gated Power and Progressive dialing strategies with scheduled pacing. |
+| Contact Center Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialing profiles, callbacks, Manual/Preview activity batches, and mandatory eligibility, suppression, retry, do-not-call, and calling-window enforcement. |
+| Contact Center Automated Dialer | `CrestApps.OrchardCore.ContactCenter.Dialer.Automated` | Power and Progressive dialing strategies with scheduled pacing over the compliant base Dialer. |
 | Contact Center Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Provider-capability-gated recording orchestration and recording-state events. |
 
 ### Real-time experiences and reporting
@@ -47,11 +45,9 @@ The module ships as many small, independently deployable, feature-gated capabili
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
 | Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
 
-The single **Contact Center Administration** feature (`CrestApps.OrchardCore.ContactCenter.Admin`) carries every capability's administration screens. Each capability's screens — Agents, Queues, Dialer, Recording, and Entry Points — appear only when both this feature and the matching capability are enabled, so enabling administration restores exactly the screens for the capabilities the tenant runs. There is no separate `.Admin` feature to enable per capability.
-
 ## Installation
 
-Install the package into the web/startup project and enable the capabilities you need, together with the **Contact Center Administration** feature for the screens you want to configure. A minimal inbound-voice contact center, for example:
+Install the package into the web/startup project and enable the capabilities you need. Their administration screens are enabled with them. A minimal inbound-voice contact center, for example:
 
 ```json
 {
@@ -60,7 +56,6 @@ Install the package into the web/startup project and enable the capabilities you
       "name": "Feature",
       "enable": [
         "CrestApps.OrchardCore.ContactCenter",
-        "CrestApps.OrchardCore.ContactCenter.Admin",
         "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Availability",
         "CrestApps.OrchardCore.ContactCenter.Queues",
@@ -77,11 +72,11 @@ A Telephony provider (for example Asterisk or DialPad) and its Contact Center Vo
 
 ## Configuration
 
-Enable the **Contact Center Administration** feature and configure each capability under its **Contact Center** settings screen. Compliance, business hours, calling windows, routing policies, and dialer profiles are all configured per tenant and enforced server-side.
+Configure each enabled capability from its Contact Center or Interaction Center administration screen. Compliance, business hours, calling windows, routing policies, and dialer profiles are all configured per tenant and enforced server-side.
 
 ## Usage
 
-- Business code interacts with the headless interaction lifecycle and domain-event log; voice execution is delegated to Telephony providers through the Voice Contact Center Call Router.
+- Business code interacts with the interaction lifecycle and domain-event log; voice execution is delegated to Telephony providers through the Voice Contact Center Call Router.
 - Real-time experiences (agent desktop, supervisor dashboard, soft phone projection) consume the shared SignalR hub exposed by the Real-Time feature.
 - Domain events can be observed through the Workflows bridge for custom automation.
 

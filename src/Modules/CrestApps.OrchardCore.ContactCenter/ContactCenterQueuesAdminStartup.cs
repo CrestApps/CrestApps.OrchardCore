@@ -11,8 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the queue, skill, business-hours, and agent-entitlement administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Admin)]
-[RequireFeatures(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterConstants.Feature.Queues)]
 public sealed class ContactCenterQueuesAdminStartup : StartupBase
 {
     /// <inheritdoc/>

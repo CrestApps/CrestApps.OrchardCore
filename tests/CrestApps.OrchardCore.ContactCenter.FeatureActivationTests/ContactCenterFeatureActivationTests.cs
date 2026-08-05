@@ -41,6 +41,24 @@ public sealed class ContactCenterFeatureActivationTests
         Assert.Empty(automatedProfiles);
     }
 
+    [Fact]
+    public async Task SupportMatrix_GaCoreProfiles_EnableEntryPointsForInboundVoice()
+    {
+        // Arrange
+        var matrix = await ContactCenterSupportMatrix.LoadAsync();
+
+        // Act
+        var profilesWithoutEntryPoints = matrix.TenantProfiles
+            .Where(profile => !profile.Features.Contains(
+                ContactCenterConstants.Feature.EntryPoints,
+                StringComparer.Ordinal))
+            .Select(profile => profile.Id)
+            .ToArray();
+
+        // Assert
+        Assert.Empty(profilesWithoutEntryPoints);
+    }
+
     [Theory]
     [InlineData("ga-core-asterisk")]
     [InlineData("ga-core-dialpad")]
