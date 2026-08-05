@@ -85,12 +85,14 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__ExposeAgentsAsSkill", "false");
 
         // Configure the configuration-backed default Asterisk telephony provider.
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__BaseUrl", "http://localhost:8088/ari/");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__UserName", "crestapps");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__Password", "crestapps-dev");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__ApplicationName", "crestapps-telephony");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate", "Local/{number}@default");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds", "30");
+        // The Cms.Web launch profile also injects these keys, and Aspire applies the launch profile
+        // before this callback runs, so assign by indexer instead of Add to avoid a duplicate-key crash.
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__BaseUrl"] = "http://localhost:8088/ari/";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__UserName"] = "crestapps";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__Password"] = "crestapps-dev";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__ApplicationName"] = "crestapps-telephony";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate"] = "Local/{number}@default";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds"] = "30";
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
