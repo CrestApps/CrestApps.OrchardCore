@@ -12,6 +12,13 @@ This guide covers the two day-to-day Contact Center surfaces:
 
 Both build on the [real-time SignalR layer](index.md#real-time-experience) and the [Telephony](../telephony/index.md) soft phone. The CRM still owns the work (activities, contacts, subjects, dispositions), the Contact Center orchestrates it, and Telephony executes the media.
 
+## Choosing the agent experience
+
+There are two agent tiers, so enable the one that matches how your agents work:
+
+- **Soft-phone agents** - enable only **Contact Center Voice - Soft Phone** (`CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone`). Agents get live Contact Center call state, presence, and work offers inside the Telephony soft phone, without the full-screen workspace.
+- **Full-desktop agents** - enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`), which builds on the soft-phone tier and adds the CRM-integrated Agent Workspace. Enabling it pulls in the soft-phone experience automatically, so you do not enable both.
+
 ## Enabling the surfaces
 
 Enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`) for **My workspace**. It explicitly composes Workforce, Real-Time, Voice Soft Phone, and Omnichannel Management so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [DialPad](../telephony/dialpad.md) for voice work.

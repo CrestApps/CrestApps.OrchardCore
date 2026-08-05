@@ -122,7 +122,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.VoiceSoftPhone,
     Name = "Contact Center Voice - Soft Phone",
-    Description = "Projects Contact Center voice state into the Telephony soft phone and real-time agent experience.",
+    Description = "Gives soft-phone agents their live Contact Center call state, presence, and work offers directly inside the Telephony soft phone. Enable this for agents who work from the soft phone; the Agent Desktop builds on it to add the full CRM workspace.",
     Category = "Contact Center",
     Dependencies =
     [
@@ -135,7 +135,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.AgentDesktop,
     Name = "Contact Center Agent Desktop",
-    Description = "Adds the CRM-integrated real-time workspace where agents manage presence, offers, active interactions, and recent work.",
+    Description = "Adds the full CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. This is the complete-desktop tier and builds on the Voice - Soft Phone experience.",
     Category = "Contact Center",
     Dependencies =
     [

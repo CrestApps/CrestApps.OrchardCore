@@ -38,8 +38,8 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts (enabled by dependency only). |
-| Contact Center Voice - Soft Phone | `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` | Projects voice state into the Telephony soft phone and real-time agent experience. |
-| Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. |
+| Contact Center Voice - Soft Phone | `CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone` | Lightweight soft-phone agent tier: live call state, presence, and offers inside the Telephony soft phone. |
+| Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | Full CRM-integrated agent workspace for presence, offers, active interactions, and recent work. Builds on the soft-phone tier. |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
 | Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
