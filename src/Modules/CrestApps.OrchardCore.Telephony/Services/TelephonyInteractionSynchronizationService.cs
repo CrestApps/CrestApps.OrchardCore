@@ -207,6 +207,15 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
         if (provider is null)
         {
+            // The interaction is correlated under a canonical provider identity, so the exact technical name
+            // may not resolve when the call was placed through the configuration-backed default provider (whose
+            // registered name differs from the canonical identity). Fall back to the tenant's default provider,
+            // which owns the shared connection, before treating the interaction as orphaned.
+            provider = await _providerResolver.GetAsync();
+        }
+
+        if (provider is null)
+        {
             await RemoveOrphanAsync(
                 interaction,
                 notifyOrphanRemoval,

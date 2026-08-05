@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
@@ -14,22 +15,35 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
 
     private readonly ISession _session;
     private readonly IStore _store;
+    private readonly IProviderIdentityResolver _providerIdentityResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyInteractionStore"/> class.
     /// </summary>
     /// <param name="session">The ambient YesSql session used for reads and creates.</param>
     /// <param name="store">The YesSql store used to open the short isolated sessions that concurrency retries require.</param>
-    public DefaultTelephonyInteractionStore(ISession session, IStore store)
+    /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases so a provider and its configuration-backed default variant correlate under a single identity.</param>
+    public DefaultTelephonyInteractionStore(
+        ISession session,
+        IStore store,
+        IProviderIdentityResolver providerIdentityResolver)
     {
         _session = session;
         _store = store;
+        _providerIdentityResolver = providerIdentityResolver;
     }
 
     /// <inheritdoc/>
     public Task CreateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interaction);
+
+        // Canonicalize the provider identity before the interaction is persisted so a call placed through a
+        // configuration-backed default provider (for example "Default Asterisk") is stored under the same
+        // stable identity ("Asterisk") that the real-time voice event stream projects. Without this, the
+        // real-time CallStateChanged projection could never match the interaction and the soft phone would
+        // only reflect provider state after a manual refresh.
+        interaction.ProviderName = _providerIdentityResolver.Canonicalize(interaction.ProviderName);
 
         return _session.SaveAsync(interaction, cancellationToken: cancellationToken);
     }
@@ -70,9 +84,11 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         ArgumentException.ThrowIfNullOrEmpty(callId);
         ArgumentNullException.ThrowIfNull(mutate);
 
+        var canonicalProviderName = _providerIdentityResolver.Canonicalize(providerName);
+
         return MutateWithRetryAsync(
             session => session
-                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == providerName && x.CallId == callId)
+                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == canonicalProviderName && x.CallId == callId)
                 .FirstOrDefaultAsync(cancellationToken),
             mutate,
             cancellationToken);
@@ -151,8 +167,10 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
             return null;
         }
 
+        var canonicalProviderName = _providerIdentityResolver.Canonicalize(providerName);
+
         return await _session
-            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == providerName && x.CallId == callId)
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.ProviderName == canonicalProviderName && x.CallId == callId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -213,10 +231,11 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
+        var canonicalProviderName = _providerIdentityResolver.Canonicalize(providerName);
         var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
         var interactions = await _session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
-                x.ProviderName == providerName &&
+                x.ProviderName == canonicalProviderName &&
                 x.Outcome == CallOutcome.InProgress)
             .OrderBy(x => x.StartedUtc)
             .Take(take)
