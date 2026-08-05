@@ -14,7 +14,7 @@ using OrchardCore.Modules.Manifest;
     Id = A2AConstants.Feature.Area,
     Name = "Agent-to-Agent (A2A) Client",
     Description = "Provides a user interface for connecting to remote Agent-to-Agent (A2A) hosts, enabling AI profiles to leverage external agents for multi-agent orchestration.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - A2A",
     Dependencies =
     [
         AIConstants.Feature.Area,
@@ -26,7 +26,7 @@ using OrchardCore.Modules.Manifest;
     Id = A2AConstants.Feature.Host,
     Name = "Agent-to-Agent (A2A) Host",
     Description = "Exposes all AI Agent profiles through the A2A protocol, enabling external agents and clients to discover and communicate with locally hosted agents.",
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - A2A",
     Dependencies =
     [
         AIConstants.Feature.Area,
