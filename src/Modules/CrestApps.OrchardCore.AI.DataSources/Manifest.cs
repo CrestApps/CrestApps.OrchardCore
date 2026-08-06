@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
-    Category = "Artificial Intelligence",
+    Category = "Artificial Intelligence - Knowledgebase",
     EnabledByDependencyOnly = true,
     Dependencies =
     [
