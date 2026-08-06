@@ -87,7 +87,7 @@ Use `TenantSignalRGroupName.ForUser(shellSettings.Name, userId)` for user destin
 
 ## Redis backplane
 
-Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange SignalR messages across application nodes. The feature depends on `OrchardCore.Redis` and uses its `OrchardCore_Redis` connection settings, but creates a dedicated SignalR Redis connection so stopping a hub lifetime manager cannot dispose Orchard's shared cache, bus, or lock connection.
+Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange SignalR messages across application nodes. This feature ships in its own module and NuGet package (`CrestApps.OrchardCore.SignalR.Redis`), so the base SignalR module carries no Redis dependency; installing the Redis backplane package brings in the base module automatically. The feature depends on `OrchardCore.Redis` and uses its `OrchardCore_Redis` connection settings, but creates a dedicated SignalR Redis connection so stopping a hub lifetime manager cannot dispose Orchard's shared cache, bus, or lock connection.
 
 The backplane channel prefix includes both `InstancePrefix` and the immutable Orchard shell name. Two nodes serving the same tenant therefore share one channel namespace, while different tenants never share hub control channels even when they use the same Redis deployment. Application destinations must still use `TenantSignalRGroupName`; channel isolation is defense in depth rather than permission enforcement.
 

@@ -86,6 +86,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.SignalR.Redis/CrestApps.OrchardCore.SignalR.Redis.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
