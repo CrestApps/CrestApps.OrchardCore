@@ -5,14 +5,14 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.SignalR;
+namespace CrestApps.OrchardCore.SignalR.Azure;
 
 /// <summary>
 /// Registers the Azure SignalR Service backplane, using the connection string configured under the
 /// <c>CrestApps:SignalR:Azure:ConnectionString</c> key.
 /// </summary>
 [Feature(SignalRConstants.Feature.AzureBackplane)]
-public sealed class AzureBackplaneStartup : StartupBase
+public sealed class Startup : StartupBase
 {
     private const string ConfigurationSection = "CrestApps:SignalR:Azure";
 
@@ -20,13 +20,13 @@ public sealed class AzureBackplaneStartup : StartupBase
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AzureBackplaneStartup"/> class.
+    /// Initializes a new instance of the <see cref="Startup"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The shell configuration.</param>
     /// <param name="logger">The logger.</param>
-    public AzureBackplaneStartup(
+    public Startup(
         IShellConfiguration shellConfiguration,
-        ILogger<AzureBackplaneStartup> logger)
+        ILogger<Startup> logger)
     {
         _shellConfiguration = shellConfiguration;
         _logger = logger;

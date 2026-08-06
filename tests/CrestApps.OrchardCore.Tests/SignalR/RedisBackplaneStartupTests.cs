@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Redis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Redis;
 using SignalRRedisOptions = Microsoft.AspNetCore.SignalR.StackExchangeRedis.RedisOptions;
+using SignalRRedisStartup = CrestApps.OrchardCore.SignalR.Redis.Startup;
 
 namespace CrestApps.OrchardCore.Tests.SignalR;
 
@@ -14,7 +15,7 @@ public sealed class RedisBackplaneStartupTests
     {
         // Arrange
         var services = new ServiceCollection();
-        var startup = new RedisBackplaneStartup();
+        var startup = new SignalRRedisStartup();
 
         // Act
         startup.ConfigureServices(services);
@@ -33,7 +34,7 @@ public sealed class RedisBackplaneStartupTests
         var services = new ServiceCollection();
         services.AddSingleton(Mock.Of<IRedisService>());
 
-        var startup = new RedisBackplaneStartup();
+        var startup = new SignalRRedisStartup();
 
         // Act
         startup.ConfigureServices(services);

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore SignalR Azure Backplane Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Routes SignalR messages across application nodes through the Azure SignalR Service, keeping the base SignalR module free of Azure dependencies.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS SignalR Azure</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="Microsoft.Azure.SignalR" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

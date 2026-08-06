@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,9 +14,9 @@ public sealed class AzureBackplaneStartupTests
     {
         // Arrange
         var services = new ServiceCollection();
-        var startup = new AzureBackplaneStartup(
+        var startup = new Startup(
             BuildShellConfiguration(connectionString: null),
-            NullLogger<AzureBackplaneStartup>.Instance);
+            NullLogger<Startup>.Instance);
 
         // Act
         startup.ConfigureServices(services);
@@ -30,9 +30,9 @@ public sealed class AzureBackplaneStartupTests
     {
         // Arrange
         var services = new ServiceCollection();
-        var startup = new AzureBackplaneStartup(
+        var startup = new Startup(
             BuildShellConfiguration("Endpoint=https://tenant.service.signalr.net;AccessKey=abc123;Version=1.0;"),
-            NullLogger<AzureBackplaneStartup>.Instance);
+            NullLogger<Startup>.Instance);
 
         // Act
         startup.ConfigureServices(services);

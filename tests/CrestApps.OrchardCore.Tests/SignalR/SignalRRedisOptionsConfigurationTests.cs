@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Redis;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Redis;

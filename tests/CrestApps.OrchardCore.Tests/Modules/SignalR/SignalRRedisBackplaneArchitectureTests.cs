@@ -18,7 +18,7 @@ public sealed class SignalRRedisBackplaneArchitectureTests
             "src",
             "Modules",
             "CrestApps.OrchardCore.SignalR.Redis",
-            "RedisBackplaneStartup.cs"));
+            "Startup.cs"));
 
         // Act & Assert
         Assert.Contains("SignalRConstants.Feature.Area", manifest, StringComparison.Ordinal);
@@ -29,10 +29,34 @@ public sealed class SignalRRedisBackplaneArchitectureTests
     }
 
     [Fact]
-    public void BaseSignalRModule_HasNoRedisPackageDependencies()
+    public void AzureBackplane_IsAnExplicitTenantQualifiedFeature()
     {
-        // The Redis backplane lives in its own module so the base SignalR module stays free of
-        // Redis dependencies. Guard that separation so it is not accidentally reintroduced.
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var manifest = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Modules",
+            "CrestApps.OrchardCore.SignalR.Azure",
+            "Manifest.cs"));
+        var startup = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "Modules",
+            "CrestApps.OrchardCore.SignalR.Azure",
+            "Startup.cs"));
+
+        // Act & Assert
+        Assert.Contains("SignalRConstants.Feature.Area", manifest, StringComparison.Ordinal);
+        Assert.Contains("SignalRConstants.Feature.AzureBackplane", startup, StringComparison.Ordinal);
+        Assert.Contains("AddAzureSignalR(", startup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BaseSignalRModule_HasNoBackplanePackageDependencies()
+    {
+        // The Redis and Azure backplanes live in their own modules so the base SignalR module stays
+        // free of their dependencies. Guard that separation so it is not accidentally reintroduced.
 
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -46,6 +70,7 @@ public sealed class SignalRRedisBackplaneArchitectureTests
         // Act & Assert
         Assert.DoesNotContain("OrchardCore.Redis", project, StringComparison.Ordinal);
         Assert.DoesNotContain("Microsoft.AspNetCore.SignalR.StackExchangeRedis", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.Azure.SignalR", project, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

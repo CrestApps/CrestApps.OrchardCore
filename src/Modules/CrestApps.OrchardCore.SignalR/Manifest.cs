@@ -18,13 +18,3 @@ using OrchardCore.Modules.Manifest;
     Category = "Communication"
 )]
 
-[assembly: Feature(
-    Id = SignalRConstants.Feature.AzureBackplane,
-    Name = "SignalR Azure Backplane",
-    Description = "Routes SignalR messages across application nodes through the Azure SignalR Service.",
-    Category = "Communication",
-    Dependencies =
-    [
-        SignalRConstants.Feature.Area,
-    ]
-)]

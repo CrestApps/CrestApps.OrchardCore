@@ -108,7 +108,7 @@ For multi-node deployments, also enable `OrchardCore.Redis.Lock` when features r
 
 ## Azure SignalR Service backplane
 
-Enable `CrestApps.OrchardCore.SignalR.Azure` to route SignalR traffic through the [Azure SignalR Service](https://learn.microsoft.com/azure/azure-signalr/signalr-overview) instead of hosting the backplane yourself. This offloads connection management and fan-out to Azure and is a convenient scale-out option when Redis infrastructure is not available. The feature depends only on the base SignalR feature.
+Enable `CrestApps.OrchardCore.SignalR.Azure` to route SignalR traffic through the [Azure SignalR Service](https://learn.microsoft.com/azure/azure-signalr/signalr-overview) instead of hosting the backplane yourself. This offloads connection management and fan-out to Azure and is a convenient scale-out option when Redis infrastructure is not available. This feature ships in its own module and NuGet package (`CrestApps.OrchardCore.SignalR.Azure`), so the base SignalR module carries no Azure dependency; installing the Azure backplane package brings in the base module automatically. The feature depends only on the base SignalR feature.
 
 Provide the Azure SignalR Service connection string under the `CrestApps:SignalR:Azure:ConnectionString` key:
 
