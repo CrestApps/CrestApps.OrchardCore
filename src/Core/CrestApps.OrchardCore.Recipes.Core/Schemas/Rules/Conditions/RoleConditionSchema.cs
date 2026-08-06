@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 
 /// <summary>
@@ -19,4 +21,7 @@ public sealed class RoleConditionSchema : OperandConditionSchemaDefinitionBase
 
     /// <inheritdoc />
     protected override string ValueDescription => "The role value the operator compares the current user's roles against, for example Administrator.";
+
+    /// <inheritdoc />
+    protected override IEnumerable<string> GetValueExamples(RecipeSchemaExamples examples) => examples.RoleNames;
 }

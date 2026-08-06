@@ -28,6 +28,7 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<RecipeExecutionService>();
         services.AddScoped<RecipeSchemaService>();
+        services.AddScoped<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
         services.AddScoped<IContentItemSchemaService, ContentItemSchemaService>();
         services.AddSingleton<IViewLocationExpanderProvider, DeploymentJsonViewLocationExpander>();
 

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 
 /// <summary>
@@ -19,4 +21,7 @@ public sealed class ContentTypeConditionSchema : OperandConditionSchemaDefinitio
 
     /// <inheritdoc />
     protected override string ValueDescription => "The content type value the operator compares the currently displayed content type against, for example Article.";
+
+    /// <inheritdoc />
+    protected override IEnumerable<string> GetValueExamples(RecipeSchemaExamples examples) => examples.ContentTypeNames;
 }

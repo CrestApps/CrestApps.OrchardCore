@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
@@ -20,6 +21,43 @@ public sealed class RuleSchemaServiceTests
         Assert.Contains(descriptors, descriptor => descriptor.Name == "UrlCondition");
         Assert.Contains(descriptors, descriptor => descriptor.Name == "AnyConditionGroup" && descriptor.IsGroup);
         Assert.Contains(descriptors, descriptor => descriptor.Name == "AllConditionGroup" && descriptor.IsGroup);
+    }
+
+    [Fact]
+    public async Task GetConditionDescriptorsAsync_SurfacesTenantValuesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            ContentTypeNames = ["Article", "BlogPost"],
+            CultureNames = ["en-US", "fr-FR"],
+            RoleNames = ["Administrator", "Editor"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetConditionDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        AssertValueExamples(descriptors, "ContentTypeCondition", examples.ContentTypeNames);
+        AssertValueExamples(descriptors, "CultureCondition", examples.CultureNames);
+        AssertValueExamples(descriptors, "RoleCondition", examples.RoleNames);
+    }
+
+    private static void AssertValueExamples(
+        IReadOnlyList<RuleConditionDescriptor> descriptors,
+        string conditionName,
+        IReadOnlyList<string> expected)
+    {
+        var descriptor = Assert.Single(descriptors, descriptor => descriptor.Name == conditionName);
+        var value = Assert.Single(descriptor.Properties, property => property.Name == "Value");
+
+        var schemaNode = JsonSerializer.SerializeToNode(value.Schema.Build());
+        var examples = schemaNode?["examples"]?.AsArray();
+
+        Assert.NotNull(examples);
+        Assert.Equal(expected, examples.Select(example => example.GetValue<string>()).ToArray());
     }
 
     [Fact]
@@ -201,6 +239,9 @@ public sealed class RuleSchemaServiceTests
     }
 
     private static RuleSchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static RuleSchemaService CreateService(RecipeSchemaExamples examples)
     {
         var conditions = new IRuleConditionSchemaDefinition[]
         {
@@ -229,6 +270,6 @@ public sealed class RuleSchemaServiceTests
             new StringStartsWithOperatorSchema(),
         };
 
-        return new RuleSchemaService(conditions, operators);
+        return new RuleSchemaService(conditions, operators, new FakeRecipeSchemaExampleService(examples));
     }
 }

@@ -295,6 +295,7 @@ internal sealed class Program
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateRoleService());
         services.AddSingleton(CreateActivityLibrary());
+        services.AddSingleton<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
         services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
         RegisterWorkflowActivitySchemaDefinitions(services);
 

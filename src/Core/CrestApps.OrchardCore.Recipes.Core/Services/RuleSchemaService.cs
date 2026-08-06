@@ -19,6 +19,7 @@ public sealed class RuleSchemaService : IRuleSchemaService
 
     private readonly IEnumerable<IRuleConditionSchemaDefinition> _conditionDefinitions;
     private readonly IEnumerable<IRuleConditionOperatorSchemaDefinition> _operatorDefinitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<RuleConditionDescriptor> _cachedConditionDescriptors;
     private IReadOnlyList<RuleConditionOperatorDescriptor> _cachedOperatorDescriptors;
@@ -30,12 +31,15 @@ public sealed class RuleSchemaService : IRuleSchemaService
     /// </summary>
     /// <param name="conditionDefinitions">The registered rule condition schema definitions.</param>
     /// <param name="operatorDefinitions">The registered rule condition operator schema definitions.</param>
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
     public RuleSchemaService(
         IEnumerable<IRuleConditionSchemaDefinition> conditionDefinitions,
-        IEnumerable<IRuleConditionOperatorSchemaDefinition> operatorDefinitions)
+        IEnumerable<IRuleConditionOperatorSchemaDefinition> operatorDefinitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _conditionDefinitions = conditionDefinitions;
         _operatorDefinitions = operatorDefinitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -93,6 +97,7 @@ public sealed class RuleSchemaService : IRuleSchemaService
         var context = new RuleConditionSchemaContext
         {
             OperatorSchema = await GetOperatorSchemaAsync(cancellationToken),
+            Examples = await _exampleService.GetExamplesAsync(cancellationToken),
         };
 
         var descriptors = new List<RuleConditionDescriptor>();

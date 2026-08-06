@@ -144,7 +144,7 @@ public sealed class BuiltInRecipeStepTests
             new StringStartsWithOperatorSchema(),
         };
 
-        return new RuleSchemaService(conditions, operators);
+        return new RuleSchemaService(conditions, operators, new FakeRecipeSchemaExampleService());
     }
 
     private static SitemapSchemaService CreateSitemapSchemaService()

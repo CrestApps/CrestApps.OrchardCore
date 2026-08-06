@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 
 /// <summary>
@@ -19,4 +21,7 @@ public sealed class CultureConditionSchema : OperandConditionSchemaDefinitionBas
 
     /// <inheritdoc />
     protected override string ValueDescription => "The culture value the operator compares the current UI culture against, for example en-US.";
+
+    /// <inheritdoc />
+    protected override IEnumerable<string> GetValueExamples(RecipeSchemaExamples examples) => examples.CultureNames;
 }

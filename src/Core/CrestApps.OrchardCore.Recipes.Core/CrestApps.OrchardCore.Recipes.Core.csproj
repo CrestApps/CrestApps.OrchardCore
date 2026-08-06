@@ -13,9 +13,11 @@
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.AI" />
     <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="OrchardCore.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Indexing.Abstractions" />
     <PackageReference Include="OrchardCore.Roles.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
   </ItemGroup>
