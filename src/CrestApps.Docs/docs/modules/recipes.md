@@ -423,6 +423,10 @@ The `deployment` step composes its schema from per-step contributions, so every 
 
 The `AdminMenu` step composes its schema from per-node contributions, so every admin menu node can describe its own members. See [Admin Menu Node Schemas](./admin-menu-node-schemas.md) for the full contract and for how to describe a custom admin menu node.
 
+## Extending query source schemas
+
+The `Queries` step composes its schema from per-source contributions, so every query source can describe its own members. See [Query Source Schemas](./query-source-schemas.md) for the full contract and for how to describe a custom query source.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.

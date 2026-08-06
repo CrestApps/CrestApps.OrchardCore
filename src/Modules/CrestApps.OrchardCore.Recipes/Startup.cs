@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
@@ -429,7 +430,45 @@ public sealed class QueriesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IQuerySchemaService, QuerySchemaService>();
+
         services.AddScoped<IRecipeStep, QueriesRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the SQL queries feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Queries.Sql")]
+public sealed class QueriesSqlRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<SqlQuerySourceSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the Lucene feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Lucene")]
+public sealed class QueriesLuceneRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<LuceneQuerySourceSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the Elasticsearch feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Elasticsearch")]
+public sealed class QueriesElasticsearchRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<ElasticsearchQuerySourceSchema>();
     }
 }
 

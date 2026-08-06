@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
@@ -167,6 +168,18 @@ public sealed class BuiltInRecipeStepTests
         };
 
         return new AdminMenuSchemaService(nodes);
+    }
+
+    private static QuerySchemaService CreateQuerySchemaService()
+    {
+        var sources = new IQuerySourceSchemaDefinition[]
+        {
+            new SqlQuerySourceSchema(),
+            new LuceneQuerySourceSchema(),
+            new ElasticsearchQuerySourceSchema(),
+        };
+
+        return new QuerySchemaService(sources);
     }
 
     private static DeploymentSchemaService CreateDeploymentSchemaService()
@@ -336,6 +349,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(DeploymentRecipeStep))
         {
             return new DeploymentRecipeStep(CreateDeploymentSchemaService());
+        }
+
+        if (stepType == typeof(QueriesRecipeStep))
+        {
+            return new QueriesRecipeStep(CreateQuerySchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
