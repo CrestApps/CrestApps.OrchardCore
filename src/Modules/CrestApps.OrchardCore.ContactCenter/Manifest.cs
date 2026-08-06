@@ -23,7 +23,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Managements,
-        "OrchardCore.Resources",
     ]
 )]
 
