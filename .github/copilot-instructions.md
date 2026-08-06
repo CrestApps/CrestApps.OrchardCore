@@ -174,6 +174,7 @@ dotnet run
 
 * Treat all warnings as errors and resolve every warning.
 * Continuously evolve and update `copilot-instructions.md` with newly established preferences and patterns.
+* Use ASD-STE100 Simplified Technical English for all responses.
 
 ### Validation Scenarios
 
