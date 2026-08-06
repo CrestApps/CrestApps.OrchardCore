@@ -13,5 +13,7 @@ public static class SignalRConstants
         public const string Area = "CrestApps.OrchardCore.SignalR";
 
         public const string RedisBackplane = "CrestApps.OrchardCore.SignalR.Redis";
+
+        public const string AzureBackplane = "CrestApps.OrchardCore.SignalR.Azure";
     }
 }

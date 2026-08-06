@@ -10,6 +10,7 @@ description: Seamless SignalR integration within Orchard Core for real-time comm
 | **Feature Name** | SignalR |
 | **Feature ID** | `CrestApps.OrchardCore.SignalR` |
 | **Redis backplane feature ID** | `CrestApps.OrchardCore.SignalR.Redis` |
+| **Azure backplane feature ID** | `CrestApps.OrchardCore.SignalR.Azure` |
 
 Provides real-time messaging capabilities using SignalR.
 
@@ -104,6 +105,30 @@ The backplane channel prefix includes both `InstancePrefix` and the immutable Or
 Use a deployment-unique `InstancePrefix` that identifies the application, environment, and region whenever Redis infrastructure is shared. Reusing an empty or generic prefix across deployments can merge the backplane channels of tenants with the same shell name.
 
 For multi-node deployments, also enable `OrchardCore.Redis.Lock` when features rely on distributed critical sections, because they require the Redis lock implementation independently of the SignalR backplane.
+
+## Azure SignalR Service backplane
+
+Enable `CrestApps.OrchardCore.SignalR.Azure` to route SignalR traffic through the [Azure SignalR Service](https://learn.microsoft.com/azure/azure-signalr/signalr-overview) instead of hosting the backplane yourself. This offloads connection management and fan-out to Azure and is a convenient scale-out option when Redis infrastructure is not available. The feature depends only on the base SignalR feature.
+
+Provide the Azure SignalR Service connection string under the `CrestApps:SignalR:Azure:ConnectionString` key:
+
+```json
+{
+  "CrestApps": {
+    "SignalR": {
+      "Azure": {
+        "ConnectionString": "Endpoint=https://<name>.service.signalr.net;AccessKey=<key>;Version=1.0;"
+      }
+    }
+  }
+}
+```
+
+Store the connection string as a secret (for example in environment variables, user secrets, or a key vault) rather than in a committed `appsettings.json`. When the feature is enabled but no connection string is configured, the backplane is not registered and a warning is written to the log, so the tenant keeps working with the default in-memory backplane instead of failing to start.
+
+Azure SignalR routes each hub through its own service, so hubs mapped with `HubRouteManager` continue to carry the tenant request prefix. Continue to use `TenantSignalRGroupName` for user and application group destinations; it keeps equal identifiers isolated across shells regardless of which backplane is active.
+
+Enable only one backplane per tenant. `CrestApps.OrchardCore.SignalR.Redis` and `CrestApps.OrchardCore.SignalR.Azure` are alternative scale-out providers and are not meant to run together.
 
 ## Authenticating with access tokens
 
