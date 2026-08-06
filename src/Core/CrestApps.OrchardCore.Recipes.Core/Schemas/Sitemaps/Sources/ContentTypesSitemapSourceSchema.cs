@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
@@ -22,6 +23,8 @@ public sealed class ContentTypesSitemapSourceSchema : SitemapSourceSchemaDefinit
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(SitemapSourceSchemaContext context)
     {
+        var contentTypeNames = context.Examples.ContentTypeNames;
+
         yield return ("IndexAll", new JsonSchemaBuilder()
             .Type(SchemaValueType.Boolean)
             .Description("When true, every indexable content type is added to the sitemap. When false, only the content types listed in 'ContentTypes' are added."));
@@ -36,30 +39,32 @@ public sealed class ContentTypesSitemapSourceSchema : SitemapSourceSchemaDefinit
 
         yield return ("ContentTypes", new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
-            .Items(BuildEntrySchema())
+            .Items(BuildEntrySchema(contentTypeNames))
             .Description("The content types to add when 'IndexAll' is false."));
 
-        yield return ("LimitedContentType", BuildLimitedEntrySchema());
+        yield return ("LimitedContentType", BuildLimitedEntrySchema(contentTypeNames));
     }
 
-    private static JsonSchemaBuilder BuildEntrySchema()
+    private static JsonSchemaBuilder BuildEntrySchema(IReadOnlyList<string> contentTypeNames)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ContentTypeName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
+                    .WithSuggestions(contentTypeNames)
                     .Description("The technical name of the content type to add.")),
                 ("ChangeFrequency", SitemapSchemaBuilders.ChangeFrequency("The change frequency reported for this content type's entries.")),
                 ("Priority", SitemapSchemaBuilders.Priority("The priority reported for this content type's entries, from 0 to 10.")))
             .AdditionalProperties(true)
             .Description("A content type entry contributed to the sitemap.");
 
-    private static JsonSchemaBuilder BuildLimitedEntrySchema()
+    private static JsonSchemaBuilder BuildLimitedEntrySchema(IReadOnlyList<string> contentTypeNames)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("ContentTypeName", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
+                    .WithSuggestions(contentTypeNames)
                     .Description("The technical name of the single content type indexed when 'LimitItems' is true.")),
                 ("ChangeFrequency", SitemapSchemaBuilders.ChangeFrequency("The change frequency reported for the limited content type's entries.")),
                 ("Priority", SitemapSchemaBuilders.Priority("The priority reported for the limited content type's entries, from 0 to 10.")),

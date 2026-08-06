@@ -156,7 +156,7 @@ public sealed class BuiltInRecipeStepTests
             new SitemapIndexSourceSchema(),
         };
 
-        return new SitemapSchemaService(sources);
+        return new SitemapSchemaService(sources, new FakeRecipeSchemaExampleService());
     }
 
     private static AdminMenuSchemaService CreateAdminMenuSchemaService()

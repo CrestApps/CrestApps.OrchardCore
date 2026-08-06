@@ -17,6 +17,7 @@ public sealed class SitemapSchemaService : ISitemapSchemaService
     ];
 
     private readonly IEnumerable<ISitemapSourceSchemaDefinition> _sourceDefinitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<SitemapSourceDescriptor> _cachedSourceDescriptors;
     private JsonSchemaBuilder _cachedSourceSchema;
@@ -26,9 +27,13 @@ public sealed class SitemapSchemaService : ISitemapSchemaService
     /// Initializes a new instance of the <see cref="SitemapSchemaService"/> class.
     /// </summary>
     /// <param name="sourceDefinitions">The registered sitemap source schema definitions.</param>
-    public SitemapSchemaService(IEnumerable<ISitemapSourceSchemaDefinition> sourceDefinitions)
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
+    public SitemapSchemaService(
+        IEnumerable<ISitemapSourceSchemaDefinition> sourceDefinitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _sourceDefinitions = sourceDefinitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -46,11 +51,14 @@ public sealed class SitemapSchemaService : ISitemapSchemaService
 
         var descriptors = new List<SitemapSourceDescriptor>();
 
+        var examples = await _exampleService.GetExamplesAsync(cancellationToken);
+
         foreach (var definition in definitions.Values.OrderBy(definition => definition.Name, StringComparer.Ordinal))
         {
             var context = new SitemapSourceSchemaContext
             {
                 SourceName = definition.Name,
+                Examples = examples,
             };
 
             var schema = await definition.GetSourceSchemaAsync(context, cancellationToken);

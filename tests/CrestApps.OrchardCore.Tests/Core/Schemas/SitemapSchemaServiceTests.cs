@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -19,6 +20,31 @@ public sealed class SitemapSchemaServiceTests
         Assert.Contains(descriptors, descriptor => descriptor.Name == "ContentTypesSitemapSource");
         Assert.Contains(descriptors, descriptor => descriptor.Name == "CustomPathSitemapSource");
         Assert.Contains(descriptors, descriptor => descriptor.Name == "SitemapIndexSource");
+    }
+
+    [Fact]
+    public async Task GetSourceDescriptorsAsync_SurfacesContentTypesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            ContentTypeNames = ["Article", "BlogPost"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetSourceDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var source = Assert.Single(descriptors, descriptor => descriptor.Name == "ContentTypesSitemapSource");
+        var contentTypes = Assert.Single(source.Properties, property => property.Name == "ContentTypes");
+
+        var itemNode = JsonSerializer.SerializeToNode(contentTypes.Schema.Build());
+        var examplesNode = itemNode?["items"]?["properties"]?["ContentTypeName"]?["examples"]?.AsArray();
+
+        Assert.NotNull(examplesNode);
+        Assert.Equal(examples.ContentTypeNames, examplesNode.Select(example => example.GetValue<string>()).ToArray());
     }
 
     [Fact]
@@ -160,6 +186,9 @@ public sealed class SitemapSchemaServiceTests
     }
 
     private static SitemapSchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static SitemapSchemaService CreateService(RecipeSchemaExamples examples)
     {
         var sources = new ISitemapSourceSchemaDefinition[]
         {
@@ -168,6 +197,6 @@ public sealed class SitemapSchemaServiceTests
             new SitemapIndexSourceSchema(),
         };
 
-        return new SitemapSchemaService(sources);
+        return new SitemapSchemaService(sources, new FakeRecipeSchemaExampleService(examples));
     }
 }
