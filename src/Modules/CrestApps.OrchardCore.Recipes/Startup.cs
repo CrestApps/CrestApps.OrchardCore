@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Placements.Filters;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
@@ -506,7 +507,24 @@ public sealed class PlacementsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IPlacementSchemaService, PlacementSchemaService>();
+
+        services.AddPlacementNodeFilterSchema<PathPlacementNodeFilterSchema>();
+
         services.AddScoped<IRecipeStep, PlacementsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the placement node filters contributed by the content features.
+/// </summary>
+[RequireFeatures("OrchardCore.Placements", "OrchardCore.Contents")]
+public sealed class PlacementsContentsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPlacementNodeFilterSchema<ContentTypePlacementNodeFilterSchema>();
+        services.AddPlacementNodeFilterSchema<ContentPartPlacementNodeFilterSchema>();
     }
 }
 

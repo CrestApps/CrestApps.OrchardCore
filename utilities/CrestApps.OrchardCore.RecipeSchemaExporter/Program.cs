@@ -314,6 +314,9 @@ internal sealed class Program
         services.AddSingleton<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
         RegisterRewriteRuleSourceSchemaDefinitions(services);
 
+        services.AddSingleton<IPlacementSchemaService, PlacementSchemaService>();
+        RegisterPlacementNodeFilterSchemaDefinitions(services);
+
         foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
         {
             services.AddSingleton(deploymentStepFactory);
@@ -450,6 +453,19 @@ internal sealed class Program
     private static void RegisterRewriteRuleSourceSchemaDefinitions(IServiceCollection services)
     {
         var definitionType = typeof(IRewriteRuleSourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterPlacementNodeFilterSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IPlacementNodeFilterSchemaDefinition);
         var implementations = definitionType.Assembly
             .GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));

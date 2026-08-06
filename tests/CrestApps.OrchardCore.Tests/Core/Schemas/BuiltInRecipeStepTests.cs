@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Placements.Filters;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
@@ -194,6 +195,18 @@ public sealed class BuiltInRecipeStepTests
         return new RewriteRuleSchemaService(sources);
     }
 
+    private static PlacementSchemaService CreatePlacementSchemaService()
+    {
+        var filters = new IPlacementNodeFilterSchemaDefinition[]
+        {
+            new PathPlacementNodeFilterSchema(),
+            new ContentTypePlacementNodeFilterSchema(),
+            new ContentPartPlacementNodeFilterSchema(),
+        };
+
+        return new PlacementSchemaService(filters);
+    }
+
     private static DeploymentSchemaService CreateDeploymentSchemaService()
     {
         var definitions = new IDeploymentStepSchemaDefinition[]
@@ -371,6 +384,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(UrlRewritingRecipeStep))
         {
             return new UrlRewritingRecipeStep(CreateRewriteRuleSchemaService());
+        }
+
+        if (stepType == typeof(PlacementsRecipeStep))
+        {
+            return new PlacementsRecipeStep(CreatePlacementSchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);

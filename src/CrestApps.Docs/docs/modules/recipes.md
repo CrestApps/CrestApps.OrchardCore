@@ -431,6 +431,10 @@ The `Queries` step composes its schema from per-source contributions, so every q
 
 The `UrlRewriting` step composes its schema from per-source contributions, so every rewrite rule source can describe its own members. See [URL Rewrite Rule Schemas](./url-rewrite-rule-schemas.md) for the full contract and for how to describe a custom rewrite rule source.
 
+## Extending placement node filter schemas
+
+The `Placements` step composes its placement node schema from per-filter contributions, so every placement node filter can describe its own value. See [Placement Node Filter Schemas](./placement-node-filter-schemas.md) for the full contract and for how to describe a custom placement node filter.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.
