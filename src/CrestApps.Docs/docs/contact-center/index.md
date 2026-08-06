@@ -14,6 +14,10 @@ The **Contact Center** module set turns the CRM into a full contact center that 
 
 Enable `CrestApps.OrchardCore.ContactCenter` for the interaction lifecycle, durable event log, baseline permissions, settings, and administration menu.
 
+:::tip Operating the Contact Center day to day
+If you just need to *do* something — sign in to a queue, accept a call, request a break, create a queue, load dialer inventory, or monitor and whisper to an agent — go to the task-oriented [Agent & Supervisor User Manual](user-manual.md). Each action has its own searchable how-to and screencast.
+:::
+
 ## Feature and administration model
 
 Each Contact Center capability owns both its runtime services and the administration screens required to configure it. There is no separate Contact Center Administration feature to discover or enable. Enabling **Contact Center Outbound Dialer**, for example, registers the Dialer Profiles manager, controller, display driver, and menu together; **Contact Center Paced Dialing** depends on the base Dialer, so Power and Progressive dialing always have access to the same profile UI.

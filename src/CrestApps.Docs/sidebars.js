@@ -101,7 +101,9 @@ const sidebars = {
             label: 'Telephony',
             items: [
                 'telephony/index',
+                'telephony/asterisk',
                 'telephony/dialpad',
+                'telephony/custom-providers',
             ],
         },
         {
@@ -110,6 +112,18 @@ const sidebars = {
             items: [
                 'contact-center/index',
                 'contact-center/single-node-completion',
+                'contact-center/agents-queues-dialer',
+                'contact-center/agent-desktop',
+                'contact-center/user-manual',
+                'contact-center/routing-work-state',
+                'contact-center/voice-routing',
+                'contact-center/live-call-topology',
+                'contact-center/workflows',
+                'contact-center/report-catalog',
+                'contact-center/configuration-deployment',
+                'contact-center/runbooks',
+                'contact-center/production-support',
+                'contact-center/public-api-surface',
             ],
         },
         {
