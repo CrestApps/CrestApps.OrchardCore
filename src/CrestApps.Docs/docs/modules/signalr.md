@@ -89,6 +89,12 @@ Use `TenantSignalRGroupName.ForUser(shellSettings.Name, userId)` for user destin
 
 Enable `CrestApps.OrchardCore.SignalR.Redis` on every tenant that must exchange SignalR messages across application nodes. This feature ships in its own module and NuGet package (`CrestApps.OrchardCore.SignalR.Redis`), so the base SignalR module carries no Redis dependency; installing the Redis backplane package brings in the base module automatically. The feature depends on `OrchardCore.Redis` and uses its `OrchardCore_Redis` connection settings, but creates a dedicated SignalR Redis connection so stopping a hub lifetime manager cannot dispose Orchard's shared cache, bus, or lock connection.
 
+Because the Redis backplane is a separate package, add the reference before enabling the feature:
+
+```bash
+dotnet add package CrestApps.OrchardCore.SignalR.Redis
+```
+
 The backplane channel prefix includes both `InstancePrefix` and the immutable Orchard shell name. Two nodes serving the same tenant therefore share one channel namespace, while different tenants never share hub control channels even when they use the same Redis deployment. Application destinations must still use `TenantSignalRGroupName`; channel isolation is defense in depth rather than permission enforcement.
 
 ```json
@@ -109,6 +115,12 @@ For multi-node deployments, also enable `OrchardCore.Redis.Lock` when features r
 ## Azure SignalR Service backplane
 
 Enable `CrestApps.OrchardCore.SignalR.Azure` to route SignalR traffic through the [Azure SignalR Service](https://learn.microsoft.com/azure/azure-signalr/signalr-overview) instead of hosting the backplane yourself. This offloads connection management and fan-out to Azure and is a convenient scale-out option when Redis infrastructure is not available. This feature ships in its own module and NuGet package (`CrestApps.OrchardCore.SignalR.Azure`), so the base SignalR module carries no Azure dependency; installing the Azure backplane package brings in the base module automatically. The feature depends only on the base SignalR feature.
+
+Because the Azure backplane is a separate package, add the reference before enabling the feature:
+
+```bash
+dotnet add package CrestApps.OrchardCore.SignalR.Azure
+```
 
 Provide the Azure SignalR Service connection string under the `CrestApps:SignalR:Azure:ConnectionString` key:
 
