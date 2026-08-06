@@ -427,6 +427,10 @@ The `AdminMenu` step composes its schema from per-node contributions, so every a
 
 The `Queries` step composes its schema from per-source contributions, so every query source can describe its own members. See [Query Source Schemas](./query-source-schemas.md) for the full contract and for how to describe a custom query source.
 
+## Extending URL rewrite rule schemas
+
+The `UrlRewriting` step composes its schema from per-source contributions, so every rewrite rule source can describe its own members. See [URL Rewrite Rule Schemas](./url-rewrite-rule-schemas.md) for the full contract and for how to describe a custom rewrite rule source.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.

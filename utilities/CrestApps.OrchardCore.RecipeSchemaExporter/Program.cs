@@ -311,6 +311,9 @@ internal sealed class Program
         services.AddSingleton<IQuerySchemaService, QuerySchemaService>();
         RegisterQuerySourceSchemaDefinitions(services);
 
+        services.AddSingleton<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
+        RegisterRewriteRuleSourceSchemaDefinitions(services);
+
         foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
         {
             services.AddSingleton(deploymentStepFactory);
@@ -434,6 +437,19 @@ internal sealed class Program
     private static void RegisterQuerySourceSchemaDefinitions(IServiceCollection services)
     {
         var definitionType = typeof(IQuerySourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRewriteRuleSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRewriteRuleSourceSchemaDefinition);
         var implementations = definitionType.Assembly
             .GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));

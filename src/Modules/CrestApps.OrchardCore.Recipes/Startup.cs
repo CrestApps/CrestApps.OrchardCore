@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.UrlRewriting.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -624,6 +625,11 @@ public sealed class UrlRewritingRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
+
+        services.AddRewriteRuleSourceSchema<UrlRedirectRuleSourceSchema>();
+        services.AddRewriteRuleSourceSchema<UrlRewriteRuleSourceSchema>();
+
         services.AddScoped<IRecipeStep, UrlRewritingRecipeStep>();
     }
 }

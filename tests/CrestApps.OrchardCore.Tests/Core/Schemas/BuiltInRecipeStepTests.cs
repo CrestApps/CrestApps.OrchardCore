@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.UrlRewriting.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Options;
@@ -180,6 +181,17 @@ public sealed class BuiltInRecipeStepTests
         };
 
         return new QuerySchemaService(sources);
+    }
+
+    private static RewriteRuleSchemaService CreateRewriteRuleSchemaService()
+    {
+        var sources = new IRewriteRuleSourceSchemaDefinition[]
+        {
+            new UrlRedirectRuleSourceSchema(),
+            new UrlRewriteRuleSourceSchema(),
+        };
+
+        return new RewriteRuleSchemaService(sources);
     }
 
     private static DeploymentSchemaService CreateDeploymentSchemaService()
@@ -354,6 +366,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(QueriesRecipeStep))
         {
             return new QueriesRecipeStep(CreateQuerySchemaService());
+        }
+
+        if (stepType == typeof(UrlRewritingRecipeStep))
+        {
+            return new UrlRewritingRecipeStep(CreateRewriteRuleSchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
