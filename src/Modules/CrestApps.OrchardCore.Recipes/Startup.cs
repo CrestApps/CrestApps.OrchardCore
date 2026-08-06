@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
@@ -488,6 +489,40 @@ public sealed class DeploymentRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IDeploymentSchemaService, DeploymentSchemaService>();
+
+        services.AddDeploymentStepSchema<AllContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentItemDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ReplaceContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<DeleteContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomFileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<RecipeFileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<JsonRecipeDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<DeploymentPlanDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<MediaDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomUserSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<QueryBasedContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllTemplatesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllAdminTemplatesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllFeaturesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<SiteSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<TranslationsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<IndexProfileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ResetIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<RebuildIndexDeploymentStepSchema>();
+
         services.AddScoped<IRecipeStep, DeploymentRecipeStep>();
     }
 }

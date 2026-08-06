@@ -1,27 +1,41 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
 /// <summary>
-/// Schema for the "deployment" recipe step — configures deployment plans and targets.
+/// Schema for the "deployment" recipe step — creates or updates deployment plans and their steps.
 /// </summary>
 public sealed class DeploymentRecipeStep : IRecipeStep
 {
+    private readonly IDeploymentSchemaService _deploymentSchemaService;
+
     private JsonSchema _cached;
-    public string Name => "deployment";
 
     /// <summary>
-    /// Retrieves the schema async.
+    /// Initializes a new instance of the <see cref="DeploymentRecipeStep"/> class.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    /// <param name="deploymentSchemaService">The service that composes the available deployment step schemas.</param>
+    public DeploymentRecipeStep(IDeploymentSchemaService deploymentSchemaService)
     {
-        _cached ??= CreateSchema();
-
-        return ValueTask.FromResult(_cached);
+        _deploymentSchemaService = deploymentSchemaService;
     }
 
-    private static JsonSchema CreateSchema()
+    /// <inheritdoc />
+    public string Name => "deployment";
+
+    /// <inheritdoc />
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
+        _cached ??= await CreateSchemaAsync(cancellationToken);
+
+        return _cached;
+    }
+
+    private async ValueTask<JsonSchema> CreateSchemaAsync(CancellationToken cancellationToken)
+    {
+        var stepSchema = await _deploymentSchemaService.GetStepSchemaAsync(cancellationToken);
+
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
@@ -34,13 +48,7 @@ public sealed class DeploymentRecipeStep : IRecipeStep
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment plan name.")),
                             ("Steps", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder()
-                                    .Type(SchemaValueType.Object)
-                                    .Properties(
-                                        ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment step type identifier.")),
-                                        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Raw deployment step payload passed to the step serializer.")))
-                                    .Required("Type", "Step")
-                                    .AdditionalProperties(true))
+                                .Items(stepSchema)
                                 .Description("Deployment steps that belong to the plan.")))
                         .Required("Name")
                         .AdditionalProperties(true))

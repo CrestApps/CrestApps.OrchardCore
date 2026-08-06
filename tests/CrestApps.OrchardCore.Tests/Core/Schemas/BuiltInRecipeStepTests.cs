@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
@@ -17,6 +19,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
@@ -150,6 +153,32 @@ public sealed class BuiltInRecipeStepTests
         };
 
         return new SitemapSchemaService(sources);
+    }
+
+    private static DeploymentSchemaService CreateDeploymentSchemaService()
+    {
+        var definitions = new IDeploymentStepSchemaDefinition[]
+        {
+            new ContentDeploymentStepSchema(),
+            new CustomFileDeploymentStepSchema(),
+            new MediaDeploymentStepSchema(),
+        };
+
+        var factories = new[]
+        {
+            "ContentDeploymentStep",
+            "CustomFileDeploymentStep",
+            "MediaDeploymentStep",
+            "AllRolesDeploymentStep",
+        }.Select(name =>
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(name);
+
+            return factory.Object;
+        });
+
+        return new DeploymentSchemaService(factories, definitions);
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
@@ -295,6 +324,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(SitemapsRecipeStep))
         {
             return new SitemapsRecipeStep(CreateSitemapSchemaService());
+        }
+
+        if (stepType == typeof(DeploymentRecipeStep))
+        {
+            return new DeploymentRecipeStep(CreateDeploymentSchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);

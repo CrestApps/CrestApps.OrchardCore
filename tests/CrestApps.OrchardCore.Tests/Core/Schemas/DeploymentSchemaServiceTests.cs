@@ -1,0 +1,166 @@
+using System.Text.Json;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Services;
+using Json.Schema;
+using Moq;
+using OrchardCore.Deployment;
+
+namespace CrestApps.OrchardCore.Tests.Core.Schemas;
+
+public sealed class DeploymentSchemaServiceTests
+{
+    [Fact]
+    public async Task GetStepDescriptorsAsync_IncludesEveryAvailableStep()
+    {
+        var service = CreateService();
+
+        var descriptors = await service.GetStepDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, descriptors.Count);
+        Assert.Contains(descriptors, descriptor => descriptor.StepType == "ContentDeploymentStep" && descriptor.HasSchemaDefinition);
+        Assert.Contains(descriptors, descriptor => descriptor.StepType == "CustomFileDeploymentStep" && descriptor.HasSchemaDefinition);
+        Assert.Contains(descriptors, descriptor => descriptor.StepType == "MediaDeploymentStep" && descriptor.HasSchemaDefinition);
+        Assert.Contains(descriptors, descriptor => descriptor.StepType == "AllRolesDeploymentStep" && !descriptor.HasSchemaDefinition);
+    }
+
+    [Fact]
+    public async Task GetStepSchemaAsync_CachesResult()
+    {
+        var service = CreateService();
+
+        var first = await service.GetStepSchemaAsync(TestContext.Current.CancellationToken);
+        var second = await service.GetStepSchemaAsync(TestContext.Current.CancellationToken);
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public async Task GetStepSchemaAsync_ValidatesADescribedStep()
+    {
+        // Arrange
+        var schema = await CreateStepSchemaAsync();
+
+        var json = """
+        {
+          "Type": "ContentDeploymentStep",
+          "Step": {
+            "ContentTypes": [ "BlogPost" ],
+            "ExportAsSetupRecipe": true
+          }
+        }
+        """;
+
+        // Act
+        var result = Evaluate(schema, json);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task GetStepSchemaAsync_ValidatesAMarkerStep()
+    {
+        // Arrange
+        var schema = await CreateStepSchemaAsync();
+
+        var json = """
+        {
+          "Type": "AllRolesDeploymentStep",
+          "Step": {}
+        }
+        """;
+
+        // Act
+        var result = Evaluate(schema, json);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task GetStepSchemaAsync_AcceptsAnUnknownCustomStep()
+    {
+        // Arrange
+        var schema = await CreateStepSchemaAsync();
+
+        var json = """
+        {
+          "Type": "My.Custom.WeatherDeploymentStep",
+          "Step": {
+            "City": "Ottawa"
+          }
+        }
+        """;
+
+        // Act
+        var result = Evaluate(schema, json);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task GetStepSchemaAsync_RejectsAStepWithoutAType()
+    {
+        // Arrange
+        var schema = await CreateStepSchemaAsync();
+
+        var json = """
+        {
+          "Step": {}
+        }
+        """;
+
+        // Act
+        var result = Evaluate(schema, json);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    private static async Task<JsonSchema> CreateStepSchemaAsync()
+    {
+        var builder = await CreateService().GetStepSchemaAsync(TestContext.Current.CancellationToken);
+
+        return builder.Build();
+    }
+
+    private static bool Evaluate(JsonSchema schema, string json)
+    {
+        using var document = JsonDocument.Parse(json);
+
+        var result = schema.Evaluate(document.RootElement, new EvaluationOptions
+        {
+            OutputFormat = OutputFormat.Flag,
+        });
+
+        return result.IsValid;
+    }
+
+    private static DeploymentSchemaService CreateService()
+    {
+        var definitions = new IDeploymentStepSchemaDefinition[]
+        {
+            new ContentDeploymentStepSchema(),
+            new CustomFileDeploymentStepSchema(),
+            new MediaDeploymentStepSchema(),
+        };
+
+        var factories = new[]
+        {
+            "ContentDeploymentStep",
+            "CustomFileDeploymentStep",
+            "MediaDeploymentStep",
+            "AllRolesDeploymentStep",
+        }.Select(name =>
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(name);
+
+            return factory.Object;
+        });
+
+        return new DeploymentSchemaService(factories, definitions);
+    }
+}

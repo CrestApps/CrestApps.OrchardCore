@@ -415,6 +415,10 @@ The `Layers` step composes its `LayerRule` schema from per-condition and per-ope
 
 The `Sitemaps` step composes its schema from per-source contributions, so every sitemap source can describe its own members. See [Sitemap Source Schemas](./sitemap-source-schemas.md) for the full contract and for how to describe a custom source.
 
+## Extending deployment step schemas
+
+The `deployment` step composes its schema from per-step contributions, so every deployment step can describe its own `Step` payload. See [Deployment Step Schemas](./deployment-step-schemas.md) for the full contract and for how to describe a custom deployment step.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.

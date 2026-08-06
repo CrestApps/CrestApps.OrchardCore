@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
@@ -304,6 +305,14 @@ internal sealed class Program
         services.AddSingleton<ISitemapSchemaService, SitemapSchemaService>();
         RegisterSitemapSourceSchemaDefinitions(services);
 
+        foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
+        {
+            services.AddSingleton(deploymentStepFactory);
+        }
+
+        services.AddSingleton<IDeploymentSchemaService, DeploymentSchemaService>();
+        RegisterDeploymentStepSchemaDefinitions(services);
+
         foreach (var schemaDefinition in schemaDefinitions)
         {
             services.AddSingleton<IContentSchemaDefinition>(schemaDefinition);
@@ -388,6 +397,41 @@ internal sealed class Program
         {
             services.AddSingleton(definitionType, implementation);
         }
+    }
+
+    private static void RegisterDeploymentStepSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static IEnumerable<IDeploymentStepFactory> CreateDeploymentStepFactories()
+    {
+        foreach (var stepType in GetDeploymentStepDefinitionNames())
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(stepType);
+            yield return factory.Object;
+        }
+    }
+
+    private static IEnumerable<string> GetDeploymentStepDefinitionNames()
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IDeploymentStepSchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.StepType)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
     }
 
     private static IActivityLibrary CreateActivityLibrary()
