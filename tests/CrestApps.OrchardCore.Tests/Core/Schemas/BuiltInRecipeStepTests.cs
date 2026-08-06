@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
@@ -155,6 +156,19 @@ public sealed class BuiltInRecipeStepTests
         return new SitemapSchemaService(sources);
     }
 
+    private static AdminMenuSchemaService CreateAdminMenuSchemaService()
+    {
+        var nodes = new IAdminNodeSchemaDefinition[]
+        {
+            new LinkAdminNodeSchema(),
+            new PlaceholderAdminNodeSchema(),
+            new ContentTypesAdminNodeSchema(),
+            new ListsAdminNodeSchema(),
+        };
+
+        return new AdminMenuSchemaService(nodes);
+    }
+
     private static DeploymentSchemaService CreateDeploymentSchemaService()
     {
         var definitions = new IDeploymentStepSchemaDefinition[]
@@ -283,14 +297,7 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(AdminMenuRecipeStep))
         {
-            var schemaService = new Mock<IContentItemSchemaService>();
-            schemaService
-                .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
-
-            return new AdminMenuRecipeStep(schemaService.Object);
+            return new AdminMenuRecipeStep(CreateAdminMenuSchemaService());
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
@@ -798,17 +805,10 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task AdminMenuRecipeStep_SchemaContainsMenuItems()
     {
-        var schemaService = new Mock<IContentItemSchemaService>();
-        schemaService
-            .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
-
-        var step = new AdminMenuRecipeStep(schemaService.Object);
+        var step = new AdminMenuRecipeStep(CreateAdminMenuSchemaService());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"MenuItems\"", json);
-        Assert.Contains("\"ContentType\"", json);
+        Assert.Contains("LinkAdminNode", json);
     }
 
     [Fact]

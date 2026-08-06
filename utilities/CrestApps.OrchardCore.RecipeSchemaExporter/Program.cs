@@ -305,6 +305,9 @@ internal sealed class Program
         services.AddSingleton<ISitemapSchemaService, SitemapSchemaService>();
         RegisterSitemapSourceSchemaDefinitions(services);
 
+        services.AddSingleton<IAdminMenuSchemaService, AdminMenuSchemaService>();
+        RegisterAdminNodeSchemaDefinitions(services);
+
         foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
         {
             services.AddSingleton(deploymentStepFactory);
@@ -402,6 +405,19 @@ internal sealed class Program
     private static void RegisterDeploymentStepSchemaDefinitions(IServiceCollection services)
     {
         var definitionType = typeof(IDeploymentStepSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterAdminNodeSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IAdminNodeSchemaDefinition);
         var implementations = definitionType.Assembly
             .GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));

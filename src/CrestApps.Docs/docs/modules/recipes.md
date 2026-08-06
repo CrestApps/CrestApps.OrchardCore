@@ -419,6 +419,10 @@ The `Sitemaps` step composes its schema from per-source contributions, so every 
 
 The `deployment` step composes its schema from per-step contributions, so every deployment step can describe its own `Step` payload. See [Deployment Step Schemas](./deployment-step-schemas.md) for the full contract and for how to describe a custom deployment step.
 
+## Extending admin menu node schemas
+
+The `AdminMenu` step composes its schema from per-node contributions, so every admin menu node can describe its own members. See [Admin Menu Node Schemas](./admin-menu-node-schemas.md) for the full contract and for how to describe a custom admin menu node.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.

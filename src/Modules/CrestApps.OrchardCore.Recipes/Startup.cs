@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
@@ -477,7 +478,37 @@ public sealed class AdminMenuRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAdminMenuSchemaService, AdminMenuSchemaService>();
+
+        services
+            .AddAdminNodeSchema<LinkAdminNodeSchema>()
+            .AddAdminNodeSchema<PlaceholderAdminNodeSchema>();
+
         services.AddScoped<IRecipeStep, AdminMenuRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the admin menu node schema contributed by the content types feature.
+/// </summary>
+[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Contents")]
+public sealed class AdminMenuContentsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAdminNodeSchema<ContentTypesAdminNodeSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the admin menu node schema contributed by the lists feature.
+/// </summary>
+[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Lists")]
+public sealed class AdminMenuListsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAdminNodeSchema<ListsAdminNodeSchema>();
     }
 }
 
