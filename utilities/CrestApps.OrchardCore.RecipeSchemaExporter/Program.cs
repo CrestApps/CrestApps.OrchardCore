@@ -297,6 +297,10 @@ internal sealed class Program
         services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
         RegisterWorkflowActivitySchemaDefinitions(services);
 
+        services.AddSingleton<IRuleSchemaService, RuleSchemaService>();
+        RegisterRuleConditionSchemaDefinitions(services);
+        RegisterRuleConditionOperatorSchemaDefinitions(services);
+
         foreach (var schemaDefinition in schemaDefinitions)
         {
             services.AddSingleton<IContentSchemaDefinition>(schemaDefinition);
@@ -334,6 +338,32 @@ internal sealed class Program
     private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
     {
         var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRuleConditionSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRuleConditionOperatorSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionOperatorSchemaDefinition);
         var implementations = definitionType.Assembly
             .GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));

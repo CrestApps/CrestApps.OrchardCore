@@ -5,6 +5,9 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -102,6 +105,38 @@ public sealed class BuiltInRecipeStepTests
         options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
 
         return Options.Create(options);
+    }
+
+    private static RuleSchemaService CreateRuleSchemaService()
+    {
+        var conditions = new IRuleConditionSchemaDefinition[]
+        {
+            new AllConditionGroupSchema(),
+            new AnyConditionGroupSchema(),
+            new BooleanConditionSchema(),
+            new ContentTypeConditionSchema(),
+            new CultureConditionSchema(),
+            new HomepageConditionSchema(),
+            new IsAnonymousConditionSchema(),
+            new IsAuthenticatedConditionSchema(),
+            new JavascriptConditionSchema(),
+            new RoleConditionSchema(),
+            new UrlConditionSchema(),
+        };
+
+        var operators = new IRuleConditionOperatorSchemaDefinition[]
+        {
+            new StringContainsOperatorSchema(),
+            new StringEndsWithOperatorSchema(),
+            new StringEqualsOperatorSchema(),
+            new StringNotContainsOperatorSchema(),
+            new StringNotEndsWithOperatorSchema(),
+            new StringNotEqualsOperatorSchema(),
+            new StringNotStartsWithOperatorSchema(),
+            new StringStartsWithOperatorSchema(),
+        };
+
+        return new RuleSchemaService(conditions, operators);
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
@@ -237,6 +272,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(AIDataSourceRecipeStep))
         {
             return new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions());
+        }
+
+        if (stepType == typeof(LayersRecipeStep))
+        {
+            return new LayersRecipeStep(CreateRuleSchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);

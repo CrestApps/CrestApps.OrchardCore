@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
@@ -7,21 +8,34 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 /// </summary>
 public sealed class LayersRecipeStep : IRecipeStep
 {
+    private readonly IRuleSchemaService _ruleSchemaService;
+
     private JsonSchema _cached;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LayersRecipeStep"/> class.
+    /// </summary>
+    /// <param name="ruleSchemaService">The rule schema service used to describe the layer rule and its conditions.</param>
+    public LayersRecipeStep(IRuleSchemaService ruleSchemaService)
+    {
+        _ruleSchemaService = ruleSchemaService;
+    }
+
     public string Name => "Layers";
 
     /// <summary>
     /// Retrieves the schema async.
     /// </summary>
-    public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
-        _cached ??= CreateSchema();
+        if (_cached is not null)
+        {
+            return _cached;
+        }
 
-        return ValueTask.FromResult(_cached);
-    }
+        var layerRuleSchema = await _ruleSchemaService.GetLayerRuleSchemaAsync(cancellationToken);
 
-    private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+        _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Layers").Description("Recipe step discriminator. Must be 'Layers'.")),
@@ -30,25 +44,19 @@ public sealed class LayersRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Layer name.")),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Administrative description of when the layer should be used.")),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Layer name. Re-running the recipe with the same name updates the existing layer instead of creating a duplicate.")),
+                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Administrative description of when the layer should be used.")),
                             ("Rule", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.String)
-                                .Description("A JavaScript rule expression, e.g. isHomepage().")),
-                            ("LayerRule", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.Object)
-                                .Properties(
-                                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Rule name shown in the layer editor.")),
-                                    ("ConditionId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Condition provider identifier used to evaluate the rule.")),
-                                    ("Conditions", new JsonSchemaBuilder()
-                                        .Type(SchemaValueType.Array)
-                                        .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
-                                .AdditionalProperties(true)
-                                .Description("Structured layer rule object.")))
+                                .Type(SchemaValueType.String | SchemaValueType.Null)
+                                .Description("A legacy JavaScript rule expression, for example isHomepage(). Prefer 'LayerRule' for new layers; this is only used when 'LayerRule' is not supplied.")),
+                            ("LayerRule", layerRuleSchema))
                         .Required("Name")
                         .AdditionalProperties(true))
                     .Description("Layers to create or update.")))
             .Required("name", "Layers")
             .AdditionalProperties(true)
             .Build();
+
+        return _cached;
+    }
 }

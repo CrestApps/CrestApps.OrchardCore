@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
@@ -387,6 +389,31 @@ public sealed class LayersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IRuleSchemaService, RuleSchemaService>();
+
+        services
+            .AddRuleConditionSchema<AllConditionGroupSchema>()
+            .AddRuleConditionSchema<AnyConditionGroupSchema>()
+            .AddRuleConditionSchema<BooleanConditionSchema>()
+            .AddRuleConditionSchema<ContentTypeConditionSchema>()
+            .AddRuleConditionSchema<CultureConditionSchema>()
+            .AddRuleConditionSchema<HomepageConditionSchema>()
+            .AddRuleConditionSchema<IsAnonymousConditionSchema>()
+            .AddRuleConditionSchema<IsAuthenticatedConditionSchema>()
+            .AddRuleConditionSchema<JavascriptConditionSchema>()
+            .AddRuleConditionSchema<RoleConditionSchema>()
+            .AddRuleConditionSchema<UrlConditionSchema>();
+
+        services
+            .AddRuleConditionOperatorSchema<StringContainsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringEndsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringEqualsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotContainsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotEndsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotEqualsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotStartsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringStartsWithOperatorSchema>();
+
         services.AddScoped<IRecipeStep, LayersRecipeStep>();
     }
 }
