@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -137,6 +138,18 @@ public sealed class BuiltInRecipeStepTests
         };
 
         return new RuleSchemaService(conditions, operators);
+    }
+
+    private static SitemapSchemaService CreateSitemapSchemaService()
+    {
+        var sources = new ISitemapSourceSchemaDefinition[]
+        {
+            new ContentTypesSitemapSourceSchema(),
+            new CustomPathSitemapSourceSchema(),
+            new SitemapIndexSourceSchema(),
+        };
+
+        return new SitemapSchemaService(sources);
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
@@ -277,6 +290,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(LayersRecipeStep))
         {
             return new LayersRecipeStep(CreateRuleSchemaService());
+        }
+
+        if (stepType == typeof(SitemapsRecipeStep))
+        {
+            return new SitemapsRecipeStep(CreateSitemapSchemaService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);

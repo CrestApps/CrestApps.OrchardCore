@@ -411,6 +411,10 @@ The `WorkflowType` step composes its schema from per-activity contributions, so 
 
 The `Layers` step composes its `LayerRule` schema from per-condition and per-operator contributions, so every rule condition and operator can describe its own members. See [Rule Condition Schemas](./rule-condition-schemas.md) for the full contract and for how to describe a custom condition or operator.
 
+## Extending sitemap source schemas
+
+The `Sitemaps` step composes its schema from per-source contributions, so every sitemap source can describe its own members. See [Sitemap Source Schemas](./sitemap-source-schemas.md) for the full contract and for how to describe a custom source.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.

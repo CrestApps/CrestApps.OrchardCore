@@ -301,6 +301,9 @@ internal sealed class Program
         RegisterRuleConditionSchemaDefinitions(services);
         RegisterRuleConditionOperatorSchemaDefinitions(services);
 
+        services.AddSingleton<ISitemapSchemaService, SitemapSchemaService>();
+        RegisterSitemapSourceSchemaDefinitions(services);
+
         foreach (var schemaDefinition in schemaDefinitions)
         {
             services.AddSingleton<IContentSchemaDefinition>(schemaDefinition);
@@ -364,6 +367,19 @@ internal sealed class Program
     private static void RegisterRuleConditionOperatorSchemaDefinitions(IServiceCollection services)
     {
         var definitionType = typeof(IRuleConditionOperatorSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterSitemapSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(ISitemapSourceSchemaDefinition);
         var implementations = definitionType.Assembly
             .GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));

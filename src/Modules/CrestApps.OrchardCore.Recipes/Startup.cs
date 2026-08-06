@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
@@ -499,6 +500,13 @@ public sealed class SitemapsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<ISitemapSchemaService, SitemapSchemaService>();
+
+        services
+            .AddSitemapSourceSchema<ContentTypesSitemapSourceSchema>()
+            .AddSitemapSourceSchema<CustomPathSitemapSourceSchema>()
+            .AddSitemapSourceSchema<SitemapIndexSourceSchema>();
+
         services.AddScoped<IRecipeStep, SitemapsRecipeStep>();
     }
 }
