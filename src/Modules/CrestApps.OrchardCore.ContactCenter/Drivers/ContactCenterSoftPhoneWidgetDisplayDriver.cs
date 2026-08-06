@@ -86,7 +86,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
             ? []
             : await _reasonCodeManager.ListEnabledAsync();
 
-        _resourceManager.RegisterResource("stylesheet", "crestapps-bootstrap-select").AtHead();
+        _resourceManager.RegisterResource("stylesheet", "bootstrap-select").AtHead();
         _resourceManager.RegisterResource("script", "contact-center-realtime").AtFoot();
         _resourceManager.RegisterResource("script", "contact-center-soft-phone").AtFoot();
 

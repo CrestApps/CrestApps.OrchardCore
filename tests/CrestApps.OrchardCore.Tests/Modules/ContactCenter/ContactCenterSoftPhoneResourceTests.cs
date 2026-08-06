@@ -36,22 +36,22 @@ public sealed class ContactCenterSoftPhoneResourceTests
 
         // Assert
         Assert.Contains(
-            ".SetDependencies(\"telephony-soft-phone\", \"crestapps-bootstrap-select\")",
-            resourceConfiguration,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(
             ".SetDependencies(\"telephony-soft-phone\", \"bootstrap-select\")",
             resourceConfiguration,
             StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "crestapps-bootstrap-select",
+            resourceConfiguration,
+            StringComparison.Ordinal);
         Assert.Contains(
-            "RegisterResource(\"stylesheet\", \"crestapps-bootstrap-select\").AtHead()",
+            "RegisterResource(\"stylesheet\", \"bootstrap-select\").AtHead()",
             displayDriver,
             StringComparison.Ordinal);
         Assert.Contains(
             "RegisterResource(\"script\", \"contact-center-soft-phone\").AtFoot()",
             displayDriver,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("<style asp-name=\"crestapps-bootstrap-select\">", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("crestapps-bootstrap-select", view, StringComparison.Ordinal);
         Assert.DoesNotContain("<script asp-name=\"contact-center-soft-phone\"", view, StringComparison.Ordinal);
         Assert.Equal(2, bulkActionCount);
         Assert.Contains("data-count-selected-text=\"{0} queues selected\"", view, StringComparison.Ordinal);
