@@ -23,7 +23,7 @@ public sealed class IfElseTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["True", "False"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Condition", WorkflowActivitySchemaBuilders.ScriptExpression("An expression evaluating to true or false. Required when 'Syntax' is 'JavaScript'."));
         yield return ("LiquidCondition", WorkflowActivitySchemaBuilders.LiquidExpression("An expression evaluating to true or false. Required when 'Syntax' is 'Liquid'."));

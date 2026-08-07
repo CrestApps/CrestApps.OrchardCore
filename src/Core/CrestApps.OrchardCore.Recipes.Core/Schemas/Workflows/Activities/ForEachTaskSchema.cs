@@ -23,7 +23,7 @@ public sealed class ForEachTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Iterate", "Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Enumerable", WorkflowActivitySchemaBuilders.ScriptExpression("An expression evaluating to the enumerable object to iterate over. Required when 'Syntax' is 'JavaScript'."));
         yield return ("LiquidEnumerable", WorkflowActivitySchemaBuilders.LiquidExpression("An expression evaluating to the enumerable object to iterate over. A JSON array, a comma-separated list or a single value are all accepted. Required when 'Syntax' is 'Liquid'."));

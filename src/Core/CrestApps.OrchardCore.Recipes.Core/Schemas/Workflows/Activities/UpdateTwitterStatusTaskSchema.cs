@@ -26,7 +26,7 @@ public sealed class UpdateTwitterStatusTaskSchema : WorkflowActivitySchemaDefini
     protected override IEnumerable<string> RequiredProperties => ["StatusTemplate"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("StatusTemplate", WorkflowActivitySchemaBuilders.LiquidExpression("The status text of the post."));
     }

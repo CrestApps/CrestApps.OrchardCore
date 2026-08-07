@@ -23,7 +23,7 @@ public sealed class NotifyTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("NotificationType", WorkflowActivitySchemaBuilders.EnumValue("The notification type. Defaults to 'Success'.", "Success", "Information", "Warning", "Error"));
         yield return ("Message", WorkflowActivitySchemaBuilders.LiquidExpression("The message to show. The rendered value may contain HTML by design."));

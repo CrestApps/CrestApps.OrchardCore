@@ -26,7 +26,7 @@ public sealed class AICompletionFromProfileTaskSchema : WorkflowActivitySchemaDe
     protected override IEnumerable<string> RequiredProperties => ["ProfileId", "PromptTemplate", "ResultPropertyName"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("ProfileId", WorkflowActivitySchemaBuilders.String("The identifier of the AI profile to use when generating the response."));
         yield return ("PromptTemplate", WorkflowActivitySchemaBuilders.String("The template used to generate the prompt for the AI model. Supports Liquid syntax."));

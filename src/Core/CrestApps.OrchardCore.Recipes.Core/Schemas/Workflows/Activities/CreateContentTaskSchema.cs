@@ -26,10 +26,10 @@ public sealed class CreateContentTaskSchema : WorkflowActivitySchemaDefinitionBa
     protected override IEnumerable<string> RequiredProperties => ["ContentType"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Content", WorkflowActivitySchemaBuilders.ScriptExpression("Inherited from the activity base class but not used by this task; content is always created from scratch using ContentType."));
-        yield return ("ContentType", WorkflowActivitySchemaBuilders.String("The content type name of the item to create."));
+        yield return ("ContentType", WorkflowActivitySchemaBuilders.String("The content type name of the item to create.", context.Examples.ContentTypeNames));
         yield return ("Publish", WorkflowActivitySchemaBuilders.Boolean("When true, the created content item is published immediately. When false, a draft version is saved. Defaults to false."));
         yield return ("ContentProperties", WorkflowActivitySchemaBuilders.LiquidExpression("An optional JSON object providing values for content parts, fields, and their properties to apply when creating the item. Defaults to {\"DisplayText\":\"Enter a title\"}."));
     }
