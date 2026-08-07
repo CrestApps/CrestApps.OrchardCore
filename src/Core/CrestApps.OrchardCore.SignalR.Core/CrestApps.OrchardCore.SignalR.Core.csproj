@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore SignalR Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Shared SignalR primitives, including feature identifiers, tenant-qualified group naming, and hub cancellation conventions, used by the CrestApps SignalR modules.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS SignalR</PackageTags>
+  </PropertyGroup>
+
+</Project>

@@ -18,14 +18,3 @@ using OrchardCore.Modules.Manifest;
     Category = "Communication"
 )]
 
-[assembly: Feature(
-    Id = SignalRConstants.Feature.RedisBackplane,
-    Name = "SignalR Redis Backplane",
-    Description = "Routes SignalR messages across application nodes through a tenant-qualified Redis backplane.",
-    Category = "Communication",
-    Dependencies =
-    [
-        SignalRConstants.Feature.Area,
-        "OrchardCore.Redis",
-    ]
-)]
