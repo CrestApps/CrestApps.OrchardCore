@@ -26,9 +26,9 @@ public sealed class UnassignUserRoleTaskSchema : WorkflowActivitySchemaDefinitio
     protected override IEnumerable<string> RequiredProperties => ["UserName", "Roles"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("UserName", WorkflowActivitySchemaBuilders.LiquidExpression("The username of the user from whom to remove the roles."));
-        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles to remove from the user."));
+        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles to remove from the user.", context.Examples.RoleNames));
     }
 }

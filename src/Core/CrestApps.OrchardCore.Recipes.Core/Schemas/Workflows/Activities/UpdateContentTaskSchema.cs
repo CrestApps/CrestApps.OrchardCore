@@ -26,7 +26,7 @@ public sealed class UpdateContentTaskSchema : WorkflowActivitySchemaDefinitionBa
     protected override IEnumerable<string> RequiredProperties => ["Content"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Content", WorkflowActivitySchemaBuilders.ScriptExpression("A JavaScript expression that evaluates to the ContentItemId of the item to update. For example: correlationId(). The expression must return a string; the task throws if the result is empty or not a string."));
         yield return ("ContentProperties", WorkflowActivitySchemaBuilders.LiquidExpression("An optional JSON object providing values for content parts, fields, and their properties to merge into the item. Defaults to {\"DisplayText\":\"Enter a title\"}."));

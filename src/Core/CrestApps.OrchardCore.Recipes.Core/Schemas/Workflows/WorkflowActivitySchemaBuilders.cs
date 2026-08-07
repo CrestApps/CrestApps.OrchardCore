@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -98,6 +99,18 @@ public static class WorkflowActivitySchemaBuilders
             .Description(description);
 
     /// <summary>
+    /// Creates a schema for a string property that surfaces the provided values as non-restrictive
+    /// suggestions while still allowing any custom value.
+    /// </summary>
+    /// <param name="description">The description shown for the property.</param>
+    /// <param name="examples">The well-known values to surface as suggestions.</param>
+    public static JsonSchemaBuilder String(string description, IEnumerable<string> examples)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .WithSuggestions(examples)
+            .Description(description);
+
+    /// <summary>
     /// Creates a schema for a string property restricted to a known set of values.
     /// </summary>
     /// <param name="description">The description shown for the property.</param>
@@ -140,6 +153,20 @@ public static class WorkflowActivitySchemaBuilders
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description(description);
+
+    /// <summary>
+    /// Creates a schema for an array of strings that surfaces the provided values as non-restrictive
+    /// suggestions on each item while still allowing any custom value.
+    /// </summary>
+    /// <param name="description">The description shown for the property.</param>
+    /// <param name="itemExamples">The well-known values to surface as suggestions on each array item.</param>
+    public static JsonSchemaBuilder StringArray(string description, IEnumerable<string> itemExamples)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+                .Type(SchemaValueType.String)
+                .WithSuggestions(itemExamples))
             .Description(description);
 
     /// <summary>

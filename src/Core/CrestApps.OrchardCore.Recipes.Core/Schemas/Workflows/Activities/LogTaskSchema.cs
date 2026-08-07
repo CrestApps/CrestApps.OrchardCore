@@ -23,7 +23,7 @@ public sealed class LogTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("LogLevel", WorkflowActivitySchemaBuilders.EnumValue("The log level used when writing the message. Defaults to 'Information'.", "Trace", "Debug", "Information", "Warning", "Error", "Critical", "None"));
         yield return ("Text", WorkflowActivitySchemaBuilders.LiquidExpression("The text to log."));

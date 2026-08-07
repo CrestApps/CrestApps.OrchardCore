@@ -23,7 +23,7 @@ public sealed class WorkflowFaultEventSchema : WorkflowActivitySchemaDefinitionB
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("ErrorFilter", WorkflowActivitySchemaBuilders.ScriptExpression("Inspects the captured workflow error information and returns a boolean. The workflow starts only when the expression returns true. Read the error details with input('WorkflowFault'), which exposes WorkflowName, WorkflowId, ErrorMessage, ExceptionDetails, FaultMessage, ActivityDisplayName, ActivityTypeName, ActivityId and ExecutedActivityCount."));
     }

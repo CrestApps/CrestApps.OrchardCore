@@ -23,7 +23,7 @@ public sealed class CreateTenantTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("TenantName", WorkflowActivitySchemaBuilders.LiquidExpression("The name of the tenant to create."));
         yield return ("Description", WorkflowActivitySchemaBuilders.LiquidExpression("The optional description of the tenant to create."));

@@ -26,7 +26,7 @@ public sealed class AICompletionWithConfigTaskSchema : WorkflowActivitySchemaDef
     protected override IEnumerable<string> RequiredProperties => ["DeploymentName", "PromptTemplate", "ResultPropertyName"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("DeploymentName", WorkflowActivitySchemaBuilders.String("The name or identifier of the chat deployment that should run this workflow task."));
         yield return ("PromptTemplate", WorkflowActivitySchemaBuilders.String("The template used to generate the prompt for the AI model. Supports Liquid syntax."));
