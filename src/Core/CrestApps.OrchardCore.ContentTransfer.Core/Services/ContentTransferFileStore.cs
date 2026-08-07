@@ -10,6 +10,10 @@ public sealed class ContentTransferFileStore : IContentTransferFileStore
     {
         _fileStore = fileStore;
     }
+
+    public IFileStoreCapabilities Capabilities
+        => _fileStore.Capabilities;
+
     public Task CopyFileAsync(string srcPath, string dstPath)
         => _fileStore.CopyFileAsync(srcPath, dstPath);
 
