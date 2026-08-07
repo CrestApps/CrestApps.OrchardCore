@@ -407,6 +407,34 @@ Then the field settings and content payload can be expressed like this:
 
 The `WorkflowType` step composes its schema from per-activity contributions, so every workflow event and task can describe its own category, outcomes and properties. See [Workflow Activity Schemas](./workflow-activity-schemas.md) for the full contract and for how to describe a custom event or task.
 
+## Extending rule condition schemas
+
+The `Layers` step composes its `LayerRule` schema from per-condition and per-operator contributions, so every rule condition and operator can describe its own members. See [Rule Condition Schemas](./rule-condition-schemas.md) for the full contract and for how to describe a custom condition or operator.
+
+## Extending sitemap source schemas
+
+The `Sitemaps` step composes its schema from per-source contributions, so every sitemap source can describe its own members. See [Sitemap Source Schemas](./sitemap-source-schemas.md) for the full contract and for how to describe a custom source.
+
+## Extending deployment step schemas
+
+The `deployment` step composes its schema from per-step contributions, so every deployment step can describe its own `Step` payload. See [Deployment Step Schemas](./deployment-step-schemas.md) for the full contract and for how to describe a custom deployment step.
+
+## Extending admin menu node schemas
+
+The `AdminMenu` step composes its schema from per-node contributions, so every admin menu node can describe its own members. See [Admin Menu Node Schemas](./admin-menu-node-schemas.md) for the full contract and for how to describe a custom admin menu node.
+
+## Extending query source schemas
+
+The `Queries` step composes its schema from per-source contributions, so every query source can describe its own members. See [Query Source Schemas](./query-source-schemas.md) for the full contract and for how to describe a custom query source.
+
+## Extending URL rewrite rule schemas
+
+The `UrlRewriting` step composes its schema from per-source contributions, so every rewrite rule source can describe its own members. See [URL Rewrite Rule Schemas](./url-rewrite-rule-schemas.md) for the full contract and for how to describe a custom rewrite rule source.
+
+## Extending placement node filter schemas
+
+The `Placements` step composes its placement node schema from per-filter contributions, so every placement node filter can describe its own value. See [Placement Node Filter Schemas](./placement-node-filter-schemas.md) for the full contract and for how to describe a custom placement node filter.
+
 ## How schemas stay accurate
 
 Orchard Core recipe steps are implemented by classes inheriting from `NamedRecipeStepHandler`. Each handler converts the incoming JSON into a specific model (for example `ContentStepModel`) and then processes it.
