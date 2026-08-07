@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.SignalR;
+namespace CrestApps.OrchardCore.SignalR.Core;
 
 /// <summary>
 /// Names the cancellation convention hub methods follow, so the choice of token is a decision a reader can see

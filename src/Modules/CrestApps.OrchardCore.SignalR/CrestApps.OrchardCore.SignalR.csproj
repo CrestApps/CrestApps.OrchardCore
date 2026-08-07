@@ -20,12 +20,11 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="OrchardCore.Redis" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <PackageReference Include="CrestApps.Core.SignalR" />
   </ItemGroup>
 
