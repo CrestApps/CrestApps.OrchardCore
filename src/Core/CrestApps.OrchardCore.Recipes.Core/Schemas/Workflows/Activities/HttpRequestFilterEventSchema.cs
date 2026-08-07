@@ -23,7 +23,7 @@ public sealed class HttpRequestFilterEventSchema : WorkflowActivitySchemaDefinit
     protected override IEnumerable<string> Outcomes => ["Matched"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("HttpMethod", WorkflowActivitySchemaBuilders.String("The HTTP method to match, for example GET or POST."));
         yield return ("RouteValues", new JsonSchemaBuilder()

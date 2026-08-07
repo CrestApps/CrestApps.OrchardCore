@@ -169,7 +169,7 @@ public sealed class BuiltInRecipeStepTests
             new ListsAdminNodeSchema(),
         };
 
-        return new AdminMenuSchemaService(nodes);
+        return new AdminMenuSchemaService(nodes, new FakeRecipeSchemaExampleService());
     }
 
     private static QuerySchemaService CreateQuerySchemaService()

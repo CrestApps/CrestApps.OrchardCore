@@ -26,9 +26,9 @@ public sealed class UserTaskEventSchema : WorkflowActivitySchemaDefinitionBase
     protected override bool HasDynamicOutcomes => true;
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Actions", WorkflowActivitySchemaBuilders.StringArray("A list of action names the user can perform. Each action name becomes a workflow outcome."));
-        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles allowed to perform the actions. Leave empty to allow any role."));
+        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles allowed to perform the actions. Leave empty to allow any role.", context.Examples.RoleNames));
     }
 }

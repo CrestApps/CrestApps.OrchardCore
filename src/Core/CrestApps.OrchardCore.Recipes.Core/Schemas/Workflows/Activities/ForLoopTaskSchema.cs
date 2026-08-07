@@ -23,7 +23,7 @@ public sealed class ForLoopTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Iterate", "Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("From", WorkflowActivitySchemaBuilders.ScriptExpression("An expression evaluating to the start value. A plain number is also accepted. Required when 'Syntax' is 'JavaScript'. Defaults to \"0\"."));
         yield return ("LiquidFrom", WorkflowActivitySchemaBuilders.LiquidExpression("An expression evaluating to the start value. Required when 'Syntax' is 'Liquid'. Defaults to \"0\"."));

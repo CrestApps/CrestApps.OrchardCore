@@ -26,7 +26,7 @@ public sealed class SetPropertyTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["PropertyName"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("PropertyName", WorkflowActivitySchemaBuilders.String("The workflow property to set. The property is added when it does not exist yet."));
         yield return ("Value", WorkflowActivitySchemaBuilders.ScriptExpression("The value to store in the specified property. Required when 'Syntax' is 'JavaScript'."));

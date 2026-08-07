@@ -17,6 +17,7 @@ public sealed class AdminMenuSchemaService : IAdminMenuSchemaService
     private const int _maxNestingDepth = 3;
 
     private readonly IEnumerable<IAdminNodeSchemaDefinition> _nodeDefinitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<AdminNodeDescriptor> _cachedNodeDescriptors;
     private JsonSchemaBuilder _cachedNodeSchema;
@@ -26,9 +27,13 @@ public sealed class AdminMenuSchemaService : IAdminMenuSchemaService
     /// Initializes a new instance of the <see cref="AdminMenuSchemaService"/> class.
     /// </summary>
     /// <param name="nodeDefinitions">The registered admin menu node schema definitions.</param>
-    public AdminMenuSchemaService(IEnumerable<IAdminNodeSchemaDefinition> nodeDefinitions)
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
+    public AdminMenuSchemaService(
+        IEnumerable<IAdminNodeSchemaDefinition> nodeDefinitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _nodeDefinitions = nodeDefinitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -46,11 +51,14 @@ public sealed class AdminMenuSchemaService : IAdminMenuSchemaService
 
         var descriptors = new List<AdminNodeDescriptor>();
 
+        var examples = await _exampleService.GetExamplesAsync(cancellationToken);
+
         foreach (var definition in definitions.Values.OrderBy(definition => definition.Name, StringComparer.Ordinal))
         {
             var context = new AdminNodeSchemaContext
             {
                 NodeName = definition.Name,
+                Examples = examples,
             };
 
             var schema = await definition.GetNodeSchemaAsync(context, cancellationToken);

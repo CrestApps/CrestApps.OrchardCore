@@ -26,7 +26,7 @@ public sealed class AssignUserRoleTaskSchema : WorkflowActivitySchemaDefinitionB
     protected override IEnumerable<string> RequiredProperties => ["UserName", "RoleName"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("UserName", WorkflowActivitySchemaBuilders.LiquidExpression("The username of the user to assign the role to."));
         yield return ("RoleName", WorkflowActivitySchemaBuilders.LiquidExpression("The name of the role to assign to the user."));

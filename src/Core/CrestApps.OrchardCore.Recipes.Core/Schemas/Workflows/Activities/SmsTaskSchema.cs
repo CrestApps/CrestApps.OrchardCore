@@ -26,7 +26,7 @@ public sealed class SmsTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["PhoneNumber", "Body"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("PhoneNumber", WorkflowActivitySchemaBuilders.LiquidExpression("The destination phone number. Must include the country code, for example +1 for the United States."));
         yield return ("Body", WorkflowActivitySchemaBuilders.LiquidExpression("The body of the SMS message."));

@@ -23,7 +23,7 @@ public sealed class AddModelValidationErrorTaskSchema : WorkflowActivitySchemaDe
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Key", WorkflowActivitySchemaBuilders.String("The name of the form field that has an invalid value."));
         yield return ("ErrorMessage", WorkflowActivitySchemaBuilders.String("The validation error message to display."));

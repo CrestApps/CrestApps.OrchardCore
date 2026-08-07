@@ -23,7 +23,7 @@ public sealed class RegisterUserTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done", "Valid", "Invalid"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("SendConfirmationEmail", WorkflowActivitySchemaBuilders.Boolean("When true, sends a confirmation email to the newly registered user. Defaults to true."));
         yield return ("ConfirmationEmailSubject", WorkflowActivitySchemaBuilders.LiquidExpression("The subject of the confirmation email. Required when 'SendConfirmationEmail' is true."));

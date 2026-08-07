@@ -23,7 +23,7 @@ public sealed class HttpResponseTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Content", WorkflowActivitySchemaBuilders.LiquidExpression("The response body to send to the client."));
         yield return ("HttpStatusCode", WorkflowActivitySchemaBuilders.Integer("The HTTP status code to return. Defaults to 200."));

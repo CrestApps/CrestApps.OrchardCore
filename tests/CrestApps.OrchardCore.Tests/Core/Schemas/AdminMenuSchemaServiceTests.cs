@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -176,7 +177,35 @@ public sealed class AdminMenuSchemaServiceTests
         return result.IsValid;
     }
 
+    [Fact]
+    public async Task GetNodeDescriptorsAsync_SurfacesContentTypesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            ContentTypeNames = ["Article", "BlogPost"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetNodeDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var lists = Assert.Single(descriptors, descriptor => descriptor.Name == "ListsAdminNode");
+        var contentType = Assert.Single(lists.Properties, property => property.Name == "ContentType");
+
+        var schemaNode = JsonSerializer.SerializeToNode(contentType.Schema.Build());
+        var examplesNode = schemaNode?["examples"]?.AsArray();
+
+        Assert.NotNull(examplesNode);
+        Assert.Equal(examples.ContentTypeNames, examplesNode.Select(example => example.GetValue<string>()).ToArray());
+    }
+
     private static AdminMenuSchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static AdminMenuSchemaService CreateService(RecipeSchemaExamples examples)
     {
         var nodes = new IAdminNodeSchemaDefinition[]
         {
@@ -186,6 +215,6 @@ public sealed class AdminMenuSchemaServiceTests
             new ListsAdminNodeSchema(),
         };
 
-        return new AdminMenuSchemaService(nodes);
+        return new AdminMenuSchemaService(nodes, new FakeRecipeSchemaExampleService(examples));
     }
 }

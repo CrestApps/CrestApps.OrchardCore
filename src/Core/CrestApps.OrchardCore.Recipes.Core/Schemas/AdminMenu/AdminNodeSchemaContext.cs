@@ -9,4 +9,9 @@ public sealed class AdminNodeSchemaContext
     /// Gets the admin menu node name as reported by the schema definition.
     /// </summary>
     public required string NodeName { get; init; }
+
+    /// <summary>
+    /// Gets the example values from the current tenant that nodes surface as non-restrictive suggestions.
+    /// </summary>
+    public RecipeSchemaExamples Examples { get; init; } = RecipeSchemaExamples.Empty;
 }

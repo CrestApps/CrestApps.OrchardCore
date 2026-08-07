@@ -89,7 +89,8 @@ public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySc
     /// <remarks>
     /// The shared <c>ActivityMetadata</c> property is added automatically and must not be returned here.
     /// </remarks>
-    protected abstract IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions();
+    /// <param name="context">The context describing the activity being documented.</param>
+    protected abstract IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context);
 
     /// <summary>
     /// Assembles the activity schema from the declared metadata and property definitions.
@@ -107,7 +108,7 @@ public abstract class WorkflowActivitySchemaDefinitionBase : IWorkflowActivitySc
             ("ActivityMetadata", WorkflowActivitySchemaBuilders.ActivityMetadata()),
         };
 
-        properties.AddRange(GetPropertyDefinitions() ?? []);
+        properties.AddRange(GetPropertyDefinitions(context) ?? []);
 
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)

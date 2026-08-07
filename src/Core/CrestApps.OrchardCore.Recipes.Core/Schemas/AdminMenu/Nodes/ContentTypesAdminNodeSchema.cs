@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
@@ -38,6 +39,7 @@ public sealed class ContentTypesAdminNodeSchema : AdminNodeSchemaDefinitionBase
                 .Properties(
                     ("ContentTypeName", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
+                        .WithSuggestions(context.Examples.ContentTypeNames)
                         .Description("The technical name of the content type to add.")),
                     ("ContentTypeDisplayName", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String | SchemaValueType.Null)

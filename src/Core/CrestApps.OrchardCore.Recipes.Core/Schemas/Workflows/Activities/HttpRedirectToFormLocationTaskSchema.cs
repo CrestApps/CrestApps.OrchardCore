@@ -23,7 +23,7 @@ public sealed class HttpRedirectToFormLocationTaskSchema : WorkflowActivitySchem
     protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("FormLocationKey", WorkflowActivitySchemaBuilders.String("This key name should be equal to the 'Form Location Key' of the HTTP request event. Leave blank if the workflow only handles a single form. Defaults to \"\"."));
     }

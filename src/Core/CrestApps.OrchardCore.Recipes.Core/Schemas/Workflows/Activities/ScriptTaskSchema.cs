@@ -26,7 +26,7 @@ public sealed class ScriptTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override bool HasDynamicOutcomes => true;
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("AvailableOutcomes", WorkflowActivitySchemaBuilders.StringArray("The outcomes the script may select. Each entry becomes an outcome of this activity. Defaults to a single \"Done\" outcome."));
         yield return ("Script", WorkflowActivitySchemaBuilders.ScriptExpression("The script to execute. Call setOutcome with one of the values listed in 'AvailableOutcomes' at least once. Defaults to \"setOutcome('Done');\"."));
