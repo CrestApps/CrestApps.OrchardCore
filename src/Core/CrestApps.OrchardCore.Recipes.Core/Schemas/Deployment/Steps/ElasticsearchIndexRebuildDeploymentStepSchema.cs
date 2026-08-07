@@ -14,12 +14,12 @@ public sealed class ElasticsearchIndexRebuildDeploymentStepSchema : DeploymentSt
     protected override string DisplayText => "Elasticsearch index rebuild";
 
     /// <inheritdoc />
-    protected override string Description => "Instructs the target to rebuild the selected Elasticsearch indices.";
+    protected override string Description => "Instructs the target to rebuild the selected Elasticsearch indexes.";
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indices"));
-        yield return ("Indices", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indices to rebuild."));
+        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indexes"));
+        yield return ("Indices", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indexes to rebuild.", context.Examples.IndexProfileNames));
     }
 }

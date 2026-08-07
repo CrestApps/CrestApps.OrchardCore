@@ -14,12 +14,12 @@ public sealed class ElasticsearchIndexResetDeploymentStepSchema : DeploymentStep
     protected override string DisplayText => "Elasticsearch index reset";
 
     /// <inheritdoc />
-    protected override string Description => "Instructs the target to reset the selected Elasticsearch indices.";
+    protected override string Description => "Instructs the target to reset the selected Elasticsearch indexes.";
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indices"));
-        yield return ("Indices", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indices to reset."));
+        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indexes"));
+        yield return ("Indices", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indexes to reset.", context.Examples.IndexProfileNames));
     }
 }

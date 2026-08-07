@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
@@ -24,6 +25,7 @@ public sealed class LuceneQuerySourceSchema : QuerySourceSchemaDefinitionBase
     {
         yield return ("Index", new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
+            .WithSuggestions(context.Examples.IndexProfileNames)
             .Description("The name of the Lucene index the query runs against."));
 
         yield return ("Template", new JsonSchemaBuilder()

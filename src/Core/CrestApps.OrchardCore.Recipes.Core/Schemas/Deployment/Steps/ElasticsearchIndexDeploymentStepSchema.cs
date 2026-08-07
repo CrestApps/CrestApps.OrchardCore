@@ -14,12 +14,12 @@ public sealed class ElasticsearchIndexDeploymentStepSchema : DeploymentStepSchem
     protected override string DisplayText => "Elasticsearch index settings";
 
     /// <inheritdoc />
-    protected override string Description => "Exports the settings of the selected Elasticsearch indices.";
+    protected override string Description => "Exports the settings of the selected Elasticsearch indexes.";
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indices"));
-        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indices to export."));
+        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Elasticsearch indexes"));
+        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the Elasticsearch indexes to export.", context.Examples.IndexProfileNames));
     }
 }

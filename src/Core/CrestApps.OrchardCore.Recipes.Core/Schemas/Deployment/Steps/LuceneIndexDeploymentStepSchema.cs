@@ -14,12 +14,12 @@ public sealed class LuceneIndexDeploymentStepSchema : DeploymentStepSchemaDefini
     protected override string DisplayText => "Lucene index settings";
 
     /// <inheritdoc />
-    protected override string Description => "Exports the settings of the selected Lucene indices.";
+    protected override string Description => "Exports the settings of the selected Lucene indexes.";
 
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Lucene indices"));
-        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the Lucene indices to export."));
+        yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("Lucene indexes"));
+        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the Lucene indexes to export.", context.Examples.IndexProfileNames));
     }
 }

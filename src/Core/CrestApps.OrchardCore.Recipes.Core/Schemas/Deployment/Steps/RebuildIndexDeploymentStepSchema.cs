@@ -20,6 +20,6 @@ public sealed class RebuildIndexDeploymentStepSchema : DeploymentStepSchemaDefin
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
         yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("index profiles"));
-        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the index profiles to rebuild."));
+        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the index profiles to rebuild.", context.Examples.IndexProfileNames));
     }
 }

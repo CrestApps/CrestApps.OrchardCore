@@ -20,6 +20,6 @@ public sealed class ResetIndexDeploymentStepSchema : DeploymentStepSchemaDefinit
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
         yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("index profiles"));
-        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the index profiles to reset."));
+        yield return ("IndexNames", DeploymentSchemaBuilders.StringArray("The names of the index profiles to reset.", context.Examples.IndexProfileNames));
     }
 }

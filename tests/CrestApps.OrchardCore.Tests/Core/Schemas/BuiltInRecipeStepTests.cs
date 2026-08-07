@@ -181,7 +181,7 @@ public sealed class BuiltInRecipeStepTests
             new ElasticsearchQuerySourceSchema(),
         };
 
-        return new QuerySchemaService(sources);
+        return new QuerySchemaService(sources, new FakeRecipeSchemaExampleService());
     }
 
     private static RewriteRuleSchemaService CreateRewriteRuleSchemaService()

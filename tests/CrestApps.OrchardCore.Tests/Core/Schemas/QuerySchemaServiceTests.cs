@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -138,7 +139,35 @@ public sealed class QuerySchemaServiceTests
         return result.IsValid;
     }
 
+    [Fact]
+    public async Task GetSourceDescriptorsAsync_SurfacesIndexProfileNamesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            IndexProfileNames = ["articles", "products"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetSourceDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var lucene = Assert.Single(descriptors, descriptor => descriptor.Name == "Lucene");
+        var index = Assert.Single(lucene.Properties, property => property.Name == "Index");
+
+        var schemaNode = JsonSerializer.SerializeToNode(index.Schema.Build());
+        var examplesNode = schemaNode?["examples"]?.AsArray();
+
+        Assert.NotNull(examplesNode);
+        Assert.Equal(examples.IndexProfileNames, examplesNode.Select(example => example.GetValue<string>()).ToArray());
+    }
+
     private static QuerySchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static QuerySchemaService CreateService(RecipeSchemaExamples examples)
     {
         var sources = new IQuerySourceSchemaDefinition[]
         {
@@ -147,6 +176,6 @@ public sealed class QuerySchemaServiceTests
             new ElasticsearchQuerySourceSchema(),
         };
 
-        return new QuerySchemaService(sources);
+        return new QuerySchemaService(sources, new FakeRecipeSchemaExampleService(examples));
     }
 }

@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Services;
 public sealed class QuerySchemaService : IQuerySchemaService
 {
     private readonly IEnumerable<IQuerySourceSchemaDefinition> _sourceDefinitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<QuerySourceDescriptor> _cachedSourceDescriptors;
     private JsonSchemaBuilder _cachedQuerySchema;
@@ -19,9 +20,13 @@ public sealed class QuerySchemaService : IQuerySchemaService
     /// Initializes a new instance of the <see cref="QuerySchemaService"/> class.
     /// </summary>
     /// <param name="sourceDefinitions">The registered query source schema definitions.</param>
-    public QuerySchemaService(IEnumerable<IQuerySourceSchemaDefinition> sourceDefinitions)
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
+    public QuerySchemaService(
+        IEnumerable<IQuerySourceSchemaDefinition> sourceDefinitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _sourceDefinitions = sourceDefinitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -39,11 +44,14 @@ public sealed class QuerySchemaService : IQuerySchemaService
 
         var descriptors = new List<QuerySourceDescriptor>();
 
+        var examples = await _exampleService.GetExamplesAsync(cancellationToken);
+
         foreach (var definition in definitions.Values.OrderBy(definition => definition.Name, StringComparer.Ordinal))
         {
             var context = new QuerySourceSchemaContext
             {
                 SourceName = definition.Name,
+                Examples = examples,
             };
 
             var schema = await definition.GetSourceSchemaAsync(context, cancellationToken);
