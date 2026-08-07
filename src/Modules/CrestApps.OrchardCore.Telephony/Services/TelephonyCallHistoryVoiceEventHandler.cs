@@ -1,5 +1,5 @@
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;

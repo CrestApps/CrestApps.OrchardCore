@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Core;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

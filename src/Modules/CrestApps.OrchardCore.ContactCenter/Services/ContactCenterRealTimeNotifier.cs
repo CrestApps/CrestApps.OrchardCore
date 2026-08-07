@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR;
 using OrchardCore.Environment.Shell;
 

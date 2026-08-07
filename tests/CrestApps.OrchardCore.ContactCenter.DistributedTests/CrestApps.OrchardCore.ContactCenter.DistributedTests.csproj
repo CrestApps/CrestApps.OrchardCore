@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SignalR.Redis/CrestApps.OrchardCore.SignalR.Redis.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
   </ItemGroup>

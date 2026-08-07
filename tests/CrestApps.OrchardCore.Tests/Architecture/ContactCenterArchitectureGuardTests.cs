@@ -41,7 +41,7 @@ public sealed class ContactCenterArchitectureGuardTests
     [
         new ArchitectureAllowlistEntry(
             RawRedisRule,
-            "src/Modules/CrestApps.OrchardCore.SignalR/RedisBackplaneStartup.cs",
+            "src/Modules/CrestApps.OrchardCore.SignalR.Redis/Startup.cs",
             null,
             "Approved Orchard Core SignalR Redis backplane adapter; it tenant-prefixes the backplane channel."),
         new ArchitectureAllowlistEntry(

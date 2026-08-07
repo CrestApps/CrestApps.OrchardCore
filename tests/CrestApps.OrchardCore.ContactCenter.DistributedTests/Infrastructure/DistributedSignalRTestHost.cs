@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.SignalR;
-using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +49,7 @@ internal sealed class DistributedSignalRTestHost : IAsyncDisposable
             throw new InvalidOperationException("The transport harness does not resolve Orchard's Redis service."));
         builder.Services.AddSingleton<TestProviderListener>();
 
-        new RedisBackplaneStartup().ConfigureServices(builder.Services);
+        new CrestApps.OrchardCore.SignalR.Redis.Startup().ConfigureServices(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.SignalR;
+using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR;
 using OrchardCore.Environment.Shell;
 
