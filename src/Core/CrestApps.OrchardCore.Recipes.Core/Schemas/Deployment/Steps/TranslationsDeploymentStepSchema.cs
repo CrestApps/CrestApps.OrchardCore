@@ -20,7 +20,7 @@ public sealed class TranslationsDeploymentStepSchema : DeploymentStepSchemaDefin
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
         yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("cultures and categories"));
-        yield return ("Cultures", DeploymentSchemaBuilders.StringArray("The culture codes whose translations are exported, for example fr-FR."));
+        yield return ("Cultures", DeploymentSchemaBuilders.StringArray("The culture codes whose translations are exported, for example fr-FR.", context.Examples.CultureNames));
         yield return ("Categories", DeploymentSchemaBuilders.StringArray("The translation categories to export."));
     }
 }

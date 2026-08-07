@@ -14,6 +14,7 @@ public sealed class DeploymentSchemaService : IDeploymentSchemaService
 {
     private readonly IEnumerable<IDeploymentStepFactory> _stepFactories;
     private readonly IEnumerable<IDeploymentStepSchemaDefinition> _definitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<DeploymentStepDescriptor> _cachedDescriptors;
     private JsonSchemaBuilder _cachedStepSchema;
@@ -23,12 +24,15 @@ public sealed class DeploymentSchemaService : IDeploymentSchemaService
     /// </summary>
     /// <param name="stepFactories">The deployment step factories registered on the tenant.</param>
     /// <param name="definitions">The registered deployment step schema definitions.</param>
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
     public DeploymentSchemaService(
         IEnumerable<IDeploymentStepFactory> stepFactories,
-        IEnumerable<IDeploymentStepSchemaDefinition> definitions)
+        IEnumerable<IDeploymentStepSchemaDefinition> definitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _stepFactories = stepFactories;
         _definitions = definitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -52,6 +56,8 @@ public sealed class DeploymentSchemaService : IDeploymentSchemaService
 
         var descriptors = new List<DeploymentStepDescriptor>();
 
+        var examples = await _exampleService.GetExamplesAsync(cancellationToken);
+
         foreach (var stepType in stepTypes)
         {
             if (!definitions.TryGetValue(stepType, out var definition))
@@ -68,6 +74,7 @@ public sealed class DeploymentSchemaService : IDeploymentSchemaService
             var context = new DeploymentStepSchemaContext
             {
                 StepType = stepType,
+                Examples = examples,
             };
 
             var schema = await definition.GetStepSchemaAsync(context, cancellationToken);

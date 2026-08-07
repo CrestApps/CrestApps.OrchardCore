@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -22,6 +23,31 @@ public sealed class DeploymentSchemaServiceTests
         Assert.Contains(descriptors, descriptor => descriptor.StepType == "CustomFileDeploymentStep" && descriptor.HasSchemaDefinition);
         Assert.Contains(descriptors, descriptor => descriptor.StepType == "MediaDeploymentStep" && descriptor.HasSchemaDefinition);
         Assert.Contains(descriptors, descriptor => descriptor.StepType == "AllRolesDeploymentStep" && !descriptor.HasSchemaDefinition);
+    }
+
+    [Fact]
+    public async Task GetStepDescriptorsAsync_SurfacesContentTypesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            ContentTypeNames = ["Article", "BlogPost"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetStepDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var step = Assert.Single(descriptors, descriptor => descriptor.StepType == "ContentDeploymentStep");
+        var contentTypes = Assert.Single(step.Properties, property => property.Name == "ContentTypes");
+
+        var schemaNode = JsonSerializer.SerializeToNode(contentTypes.Schema.Build());
+        var examplesNode = schemaNode?["items"]?["examples"]?.AsArray();
+
+        Assert.NotNull(examplesNode);
+        Assert.Equal(examples.ContentTypeNames, examplesNode.Select(example => example.GetValue<string>()).ToArray());
     }
 
     [Fact]
@@ -139,6 +165,9 @@ public sealed class DeploymentSchemaServiceTests
     }
 
     private static DeploymentSchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static DeploymentSchemaService CreateService(RecipeSchemaExamples examples)
     {
         var definitions = new IDeploymentStepSchemaDefinition[]
         {
@@ -161,6 +190,6 @@ public sealed class DeploymentSchemaServiceTests
             return factory.Object;
         });
 
-        return new DeploymentSchemaService(factories, definitions);
+        return new DeploymentSchemaService(factories, definitions, new FakeRecipeSchemaExampleService(examples));
     }
 }

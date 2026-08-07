@@ -19,7 +19,7 @@ public sealed class ContentDeploymentStepSchema : DeploymentStepSchemaDefinition
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content types whose items are exported."));
+        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content types whose items are exported.", context.Examples.ContentTypeNames));
         yield return ("ExportAsSetupRecipe", DeploymentSchemaBuilders.Boolean("When true, exports the content in a form suitable for a setup recipe, resetting owner and identifier information."));
     }
 }

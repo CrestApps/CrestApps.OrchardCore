@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
@@ -33,6 +34,20 @@ public static class DeploymentSchemaBuilders
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description(description);
+
+    /// <summary>
+    /// Creates a schema for an array of strings that surfaces the provided values as non-restrictive
+    /// suggestions on each item while still allowing any custom value.
+    /// </summary>
+    /// <param name="description">The description shown for the property.</param>
+    /// <param name="itemExamples">The well-known values to surface as suggestions on each array item.</param>
+    public static JsonSchemaBuilder StringArray(string description, IEnumerable<string> itemExamples)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+                .Type(SchemaValueType.String)
+                .WithSuggestions(itemExamples))
             .Description(description);
 
     /// <summary>

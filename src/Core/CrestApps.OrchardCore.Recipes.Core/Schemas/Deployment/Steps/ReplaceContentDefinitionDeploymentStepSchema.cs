@@ -20,7 +20,7 @@ public sealed class ReplaceContentDefinitionDeploymentStepSchema : DeploymentSte
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
         yield return ("IncludeAll", DeploymentSchemaBuilders.IncludeAll("content type and content part definitions"));
-        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content type definitions to export."));
-        yield return ("ContentParts", DeploymentSchemaBuilders.StringArray("The technical names of the content part definitions to export."));
+        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content type definitions to export.", context.Examples.ContentTypeNames));
+        yield return ("ContentParts", DeploymentSchemaBuilders.StringArray("The technical names of the content part definitions to export.", context.Examples.ContentPartNames));
     }
 }

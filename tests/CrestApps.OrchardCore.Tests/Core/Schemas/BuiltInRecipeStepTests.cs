@@ -230,7 +230,7 @@ public sealed class BuiltInRecipeStepTests
             return factory.Object;
         });
 
-        return new DeploymentSchemaService(factories, definitions);
+        return new DeploymentSchemaService(factories, definitions, new FakeRecipeSchemaExampleService());
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()

@@ -19,7 +19,7 @@ public sealed class DeleteContentDefinitionDeploymentStepSchema : DeploymentStep
     /// <inheritdoc />
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
     {
-        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content type definitions to delete."));
-        yield return ("ContentParts", DeploymentSchemaBuilders.StringArray("The technical names of the content part definitions to delete."));
+        yield return ("ContentTypes", DeploymentSchemaBuilders.StringArray("The technical names of the content type definitions to delete.", context.Examples.ContentTypeNames));
+        yield return ("ContentParts", DeploymentSchemaBuilders.StringArray("The technical names of the content part definitions to delete.", context.Examples.ContentPartNames));
     }
 }
