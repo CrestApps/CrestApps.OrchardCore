@@ -391,6 +391,11 @@ public sealed class BuiltInRecipeStepTests
             return new PlacementsRecipeStep(CreatePlacementSchemaService());
         }
 
+        if (stepType == typeof(TranslationsRecipeStep))
+        {
+            return new TranslationsRecipeStep(new FakeRecipeSchemaExampleService());
+        }
+
         return (IRecipeStep)Activator.CreateInstance(stepType);
     }
 
@@ -1654,12 +1659,19 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task TranslationsRecipeStep_SchemaContainsNewFormatTranslationEntries()
     {
-        var step = new TranslationsRecipeStep();
+        var examples = new RecipeSchemaExamples
+        {
+            CultureNames = ["en-US", "fr"],
+        };
+
+        var step = new TranslationsRecipeStep(new FakeRecipeSchemaExampleService(examples));
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"translations\"", json);
         Assert.Contains("\"culture\"", json);
         Assert.Contains("\"key\"", json);
+        Assert.Contains("\"en-US\"", json);
+        Assert.Contains("\"fr\"", json);
     }
 
     [Fact]
