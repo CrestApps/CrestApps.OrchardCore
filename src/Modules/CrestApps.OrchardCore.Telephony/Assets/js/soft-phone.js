@@ -708,8 +708,10 @@
             merge: rootElement.querySelector('[data-telephony-merge]'),
             hangup: rootElement.querySelector('[data-telephony-hangup]'),
             hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
+            body: rootElement.querySelector('[data-telephony-body]'),
             connectPanel: rootElement.querySelector('[data-telephony-connect-panel]'),
             connect: rootElement.querySelector('[data-telephony-connect]'),
+            connectError: rootElement.querySelector('[data-telephony-connect-error]'),
             unavailable: rootElement.querySelector('[data-telephony-unavailable]'),
             unavailableText: rootElement.querySelector('[data-telephony-unavailable-text]'),
             keypadView: rootElement.querySelector('[data-telephony-view="keypad"]'),
@@ -1061,6 +1063,12 @@
             dom.views.forEach(function (view) {
                 show(view, view.getAttribute('data-telephony-view') === name);
             });
+        }
+
+        function setBodyVisible(visible) {
+            if (dom.body) {
+                dom.body.hidden = !visible;
+            }
         }
 
         function syncViewHeight() {
@@ -1638,6 +1646,20 @@
             var notAvailable = connectionStatusResolved && !isAvailable;
             var needsConnect = connectionStatusResolved && isAvailable && requiresAuthentication && !isConnected;
 
+            // Pending: the provider and connection status have not resolved yet. Keep the keypad and the
+            // status messages hidden so the widget never briefly flashes the keypad before the real state
+            // (unavailable, connect, or operating) is known.
+            if (!connectionStatusResolved && !active) {
+                show(dom.unavailable, false);
+                show(dom.connectPanel, false);
+                showView(null);
+                setBodyVisible(false);
+                show(dom.footer, hasExtensionTabs());
+                updateTabs();
+
+                return;
+            }
+
             // Unavailable: no provider configured. Keep contributed tabs reachable.
             if (notAvailable && !active) {
                 var showUnavailable = isTelephonyTab(activeTab);
@@ -1646,6 +1668,7 @@
                     dom.unavailableText.textContent = strings.notConfigured || 'No telephony provider is configured.';
                 }
 
+                setBodyVisible(true);
                 show(dom.unavailable, showUnavailable);
                 show(dom.connectPanel, false);
                 showView(showUnavailable ? null : activeTab);
@@ -1659,21 +1682,28 @@
 
             show(dom.unavailable, false);
 
-            // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable.
+            // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable. The body is
+            // collapsed while the connect panel is shown so the widget keeps its normal height instead of
+            // stacking the connect panel above an empty, height-reserving body.
             if (needsConnect && !active) {
                 var showConnect = isTelephonyTab(activeTab);
 
                 show(dom.connectPanel, showConnect);
+                setBodyVisible(!showConnect);
                 showView(showConnect ? null : activeTab);
                 show(dom.footer, hasExtensionTabs());
                 updateTabs();
                 setStatus(strings.notConnected || 'Not connected');
-                syncViewHeight();
+
+                if (!showConnect) {
+                    syncViewHeight();
+                }
 
                 return;
             }
 
             show(dom.connectPanel, false);
+            setBodyVisible(true);
 
             // Operating state: show the footer tabs and the selected view (keypad or recent calls).
             show(dom.footer, true);
@@ -2480,18 +2510,43 @@
             });
         }
 
-        function startOAuth() {
-            if (!config.connectUrl) {
+        function showConnectError(message) {
+            if (!dom.connectError) {
                 return;
             }
 
-            var separator = config.connectUrl.indexOf('?') >= 0 ? '&' : '?';
-            var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname);
-            var popup = window.open(url, 'telephony-oauth', 'width=520,height=640');
-
-            if (!popup) {
-                window.location.href = url;
+            if (message) {
+                dom.connectError.textContent = message;
+                dom.connectError.hidden = false;
+            } else {
+                dom.connectError.textContent = '';
+                dom.connectError.hidden = true;
             }
+        }
+
+        function startOAuth() {
+            if (!config.connectUrl) {
+                showConnectError(strings.connectUnavailable || 'The connection could not be started.');
+
+                return;
+            }
+
+            showConnectError(null);
+
+            var separator = config.connectUrl.indexOf('?') >= 0 ? '&' : '?';
+            var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+            var popup = window.open(url, 'telephony-oauth');
+
+            if (popup) {
+                popup.focus();
+
+                return;
+            }
+
+            // The pop-up was blocked. Rather than silently failing, navigate the current window so the
+            // user can still complete the authorization, and surface guidance to allow pop-ups.
+            showConnectError(strings.connectPopupBlocked || 'Your browser blocked the connection window.');
+            window.location.href = url;
         }
 
         function handleConnect() {
@@ -2518,6 +2573,7 @@
             }
 
             if (event.data.success) {
+                showConnectError(null);
                 refreshConnectionStatus();
             }
         }

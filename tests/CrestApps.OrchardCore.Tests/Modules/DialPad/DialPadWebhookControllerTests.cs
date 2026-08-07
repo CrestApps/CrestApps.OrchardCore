@@ -36,7 +36,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = null,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = null,
+                },
             }),
             new EphemeralDataProtectionProvider(),
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -60,7 +63,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = "not-a-protected-secret",
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = "not-a-protected-secret",
+                },
             }),
             new EphemeralDataProtectionProvider(),
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -86,7 +92,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = null,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = null,
+                },
             }),
             new EphemeralDataProtectionProvider(),
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -177,7 +186,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = protectedSecret,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
             }),
             dataProtectionProvider,
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -225,7 +237,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = protectedSecret,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
             }),
             dataProtectionProvider,
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -262,7 +277,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = protectedSecret,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
             }),
             dataProtectionProvider,
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -300,7 +318,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = protectedSecret,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
             }),
             dataProtectionProvider,
             NullLogger<DialPadContactCenterStartup>.Instance,
@@ -336,7 +357,10 @@ public sealed class DialPadWebhookEndpointTests : IDisposable
             SiteServiceFactory.Create(new DialPadSettings
             {
                 IsEnabled = true,
-                WebhookSigningSecret = protectedSecret,
+                Production = new DialPadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
             }),
             dataProtectionProvider,
             NullLogger<DialPadContactCenterStartup>.Instance,

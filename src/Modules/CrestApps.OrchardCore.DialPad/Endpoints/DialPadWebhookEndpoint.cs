@@ -46,6 +46,8 @@ internal static class DialPadWebhookEndpoint
             return TypedResults.NotFound();
         }
 
+        var environment = settings.GetActiveEnvironmentSettings();
+
         if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
         {
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
@@ -71,14 +73,14 @@ internal static class DialPadWebhookEndpoint
 
         var body = read.Body;
 
-        if (string.IsNullOrEmpty(settings.WebhookSigningSecret))
+        if (string.IsNullOrEmpty(environment.WebhookSigningSecret))
         {
             logger.LogWarning("Rejected a DialPad webhook because no webhook signing secret is configured.");
 
             return TypedResults.Unauthorized();
         }
 
-        if (!TryUnprotectSecret(dataProtectionProvider, settings.WebhookSigningSecret, out var secret))
+        if (!TryUnprotectSecret(dataProtectionProvider, environment.WebhookSigningSecret, out var secret))
         {
             logger.LogError("Rejected a DialPad webhook because the configured signing secret could not be unprotected.");
 

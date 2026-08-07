@@ -29,20 +29,32 @@ authentication is the simplest integration path because one DialPad account plac
 tenant. OAuth 2.0 is recommended for production multiuser integrations where each soft phone user
 connects their own DialPad account.
 
+DialPad exposes two separate environments — **Production** (`dialpad.com`) and **Sandbox**
+(`sandbox.dialpad.com`). The settings editor lets you configure each environment independently on its
+own tab, so a tenant can hold production and sandbox credentials side by side. The **Active
+environment** selector decides which credential set the provider actually connects with, letting you
+validate an integration against the sandbox and switch to production without re-entering credentials.
+Switching the active environment preserves the credentials of the environment that is not active.
+
 | Setting | Description |
 | --- | --- |
 | **Enable DialPad provider** | Turns the provider on and makes it selectable as the default provider. |
-| **Environment** | Select **Production** (`dialpad.com`) or **Sandbox** (`sandbox.dialpad.com`). This applies to both the REST API and the OAuth 2.0 endpoints, so developers can validate an integration against the sandbox before going live. |
-| **Authentication type** | Select **API key** or **OAuth 2.0**. The default **Select authentication type** option keeps DialPad disabled until an authentication mode is chosen. |
+| **Active environment** | Select **Production** (`dialpad.com`) or **Sandbox** (`sandbox.dialpad.com`). This chooses which environment's credentials the provider uses to connect and place calls, and applies to both the REST API and the OAuth 2.0 endpoints. |
+
+Each environment tab (**Production** and **Sandbox**) exposes its own copy of the following credentials:
+
+| Setting | Description |
+| --- | --- |
+| **Authentication type** | Select **API key** or **OAuth 2.0**. The default **Select authentication type** option keeps DialPad disabled until an authentication mode is chosen for the active environment. |
 | **API key** | The DialPad API key used when **API key** authentication is selected. Stored encrypted with the data protection provider. |
+| **User id** | The DialPad user id that places outbound calls when **API key** authentication is selected. |
+| **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
 | **OAuth client id** | The OAuth client id issued by DialPad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by DialPad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
-| **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
-| **User id** | The DialPad user id that places outbound calls when **API key** authentication is selected. |
 | **Webhook signing secret** | Required when DialPad Contact Center Voice is enabled. The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. |
 
-DialPad API calls use the environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
+DialPad API calls use the active environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
 
 When you enable DialPad and no default provider is set yet, DialPad becomes the default
@@ -53,10 +65,10 @@ Secrets (the API key and the OAuth client secret) are encrypted before they are 
 secret has already been saved the field is left empty; enter a new value only when you want to
 replace the stored secret.
 
-The settings editor validates the selected authentication mode before saving. API key authentication
+The settings editor validates the **active** environment before saving. API key authentication
 requires both the API key and the DialPad user id. OAuth 2.0 requires the client id and client
 secret. Missing values are reported next to the matching fields so administrators know exactly what
-must be provided.
+must be provided. The non-active environment is saved as entered without blocking validation.
 
 ### Authenticating with an API key
 
@@ -76,7 +88,8 @@ To configure OAuth 2.0:
 1. Register an OAuth application in the DialPad admin portal to obtain a client id and client secret.
 2. Add `{scheme}://{host}/Telephony/Connect/Callback` (with your tenant URL prefix when one is
    configured) as an allowed redirect URI on the DialPad OAuth application.
-3. Enter the client id, client secret, and any scopes on the DialPad settings tab.
+3. Enter the client id, client secret, and any scopes on the matching environment tab (**Production**
+   or **Sandbox**) of the DialPad settings, and set that environment as the **Active environment**.
 
 Each user then sees a **Connect to provider** button in the soft phone and connects their own DialPad
 account. DialPad implements the "three-legged" OAuth 2.0 authorization code flow (RFC 6749 §4.1), and the
@@ -88,7 +101,7 @@ provider follows DialPad's documented requirements:
 - The **`offline_access`** scope is always requested so DialPad issues a refresh token. The user's access
   and refresh tokens are stored **encrypted on the user's account**, and outbound calls are placed with the
   connected user's access token. Tokens are refreshed automatically when they expire.
-- The **environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
+- The **active environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
   endpoints.
 - When a user **disconnects**, the local tokens are always removed first — and that deletion is durably

@@ -125,8 +125,11 @@ public sealed class DialPadTelephonyProviderTests
         var settings = new DialPadSettings
         {
             IsEnabled = true,
-            AuthenticationType = DialPadAuthenticationType.NotConfigured,
-            ApiBaseUrl = BaseUrl,
+            Production = new DialPadEnvironmentSettings
+            {
+                AuthenticationType = DialPadAuthenticationType.NotConfigured,
+                ApiBaseUrl = BaseUrl,
+            },
         };
 
         var provider = new DialPadTelephonyProvider(
@@ -296,10 +299,13 @@ public sealed class DialPadTelephonyProviderTests
         var settings = new DialPadSettings
         {
             IsEnabled = isEnabled,
-            ApiToken = protectedToken,
-            ApiBaseUrl = BaseUrl,
-            OutboundCallerId = "+15550000000",
-            UserId = "user-1",
+            Production = new DialPadEnvironmentSettings
+            {
+                ApiToken = protectedToken,
+                ApiBaseUrl = BaseUrl,
+                OutboundCallerId = "+15550000000",
+                UserId = "user-1",
+            },
         };
 
         return new DialPadTelephonyProvider(
@@ -533,9 +539,12 @@ public sealed class DialPadTelephonyProviderTests
         var settings = new DialPadSettings
         {
             IsEnabled = true,
-            AuthenticationType = DialPadAuthenticationType.ApiKey,
-            ClientId = "client-id",
-            ClientSecret = protectedSecret,
+            Production = new DialPadEnvironmentSettings
+            {
+                AuthenticationType = DialPadAuthenticationType.ApiKey,
+                ClientId = "client-id",
+                ClientSecret = protectedSecret,
+            },
         };
 
         var provider = new DialPadTelephonyProvider(
@@ -554,20 +563,6 @@ public sealed class DialPadTelephonyProviderTests
         Assert.False(requiresUserAuthentication);
     }
 
-    [Fact]
-    public void UseOAuth_Setter_PreservesLegacySettingsCompatibility()
-    {
-        // Arrange
-        var settings = new DialPadSettings();
-
-        // Act
-        settings.UseOAuth = true;
-
-        // Assert
-        Assert.Equal(DialPadAuthenticationType.OAuth2, settings.AuthenticationType);
-        Assert.True(settings.UseOAuth);
-    }
-
     private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialPadEnvironment environment = DialPadEnvironment.Production, DialPadAuthenticationType authenticationType = DialPadAuthenticationType.OAuth2)
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
@@ -576,16 +571,29 @@ public sealed class DialPadTelephonyProviderTests
             .CreateProtector(DialPadConstants.OAuthProtectorName)
             .Protect("client-secret");
 
-        var settings = new DialPadSettings
+        var environmentSettings = new DialPadEnvironmentSettings
         {
-            IsEnabled = true,
-            Environment = environment,
             AuthenticationType = authenticationType,
             ClientId = "client-id",
             ClientSecret = protectedSecret,
             Scopes = "calls",
             ApiBaseUrl = BaseUrl,
         };
+
+        var settings = new DialPadSettings
+        {
+            IsEnabled = true,
+            Environment = environment,
+        };
+
+        if (environment == DialPadEnvironment.Sandbox)
+        {
+            settings.Sandbox = environmentSettings;
+        }
+        else
+        {
+            settings.Production = environmentSettings;
+        }
 
         return new DialPadTelephonyProvider(
             SiteServiceFactory.Create(settings),

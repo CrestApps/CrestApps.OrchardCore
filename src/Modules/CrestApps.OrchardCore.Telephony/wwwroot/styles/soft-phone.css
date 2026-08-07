@@ -276,6 +276,12 @@
   font-size: 0.85rem;
   color: var(--bs-secondary-color, #6c757d);
 }
+.telephony-soft-phone__connect-error {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.78rem;
+  text-align: left;
+}
 .telephony-soft-phone__error {
   margin: 0 0.85rem 0.5rem;
   padding: 0.4rem 0.6rem;

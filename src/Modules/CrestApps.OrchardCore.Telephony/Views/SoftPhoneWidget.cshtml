@@ -31,6 +31,15 @@
     }
 
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+
+    if (string.IsNullOrEmpty(connectUrl))
+    {
+        // Fall back to the well-known connect path (including any tenant prefix) when link generation
+        // cannot resolve the named route from this shape, so the "Connect to provider" button always has
+        // a destination instead of silently doing nothing.
+        connectUrl = $"{Context.Request.PathBase}/Telephony/Connect";
+    }
+
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
     var config = new Dictionary<string, object>
@@ -79,6 +88,8 @@
             ["conference"] = T["Conference selected calls"].Value,
             ["disconnectAll"] = T["Disconnect all calls"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
+            ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
+            ["connectPopupBlocked"] = T["Your browser blocked the connection window. Allow pop-ups for this site and try again."].Value,
             ["noInteractions"] = T["No recent calls."].Value,
             ["incoming"] = T["Incoming"].Value,
             ["outgoing"] = T["Outgoing"].Value,
@@ -125,6 +136,7 @@
 
         <div class="telephony-soft-phone__connect" data-telephony-connect-panel hidden>
             <p class="telephony-soft-phone__connect-text">@T["Connect your account to the telephony provider to start making calls."]</p>
+            <div class="telephony-soft-phone__connect-error alert alert-danger" data-telephony-connect-error hidden></div>
             <button type="button" class="telephony-soft-phone__connect-btn btn btn-primary" data-telephony-connect>
                 <i class="fa-solid fa-link"></i> @T["Connect to provider"]
             </button>

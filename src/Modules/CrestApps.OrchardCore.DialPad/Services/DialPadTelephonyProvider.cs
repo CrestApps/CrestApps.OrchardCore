@@ -47,7 +47,7 @@ public sealed class DialPadTelephonyProvider :
 
     internal readonly IStringLocalizer S;
 
-    private DialPadSettings _settings;
+    private DialPadResolvedSettings _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialPadTelephonyProvider"/> class.
@@ -121,10 +121,11 @@ public sealed class DialPadTelephonyProvider :
         get
         {
             var settings = _siteService.GetSettings<DialPadSettings>();
+            var environment = settings.GetActiveEnvironmentSettings();
 
-            return GetEffectiveAuthenticationType(settings) == DialPadAuthenticationType.OAuth2 &&
-                !string.IsNullOrWhiteSpace(settings.ClientId) &&
-                !string.IsNullOrEmpty(settings.ClientSecret);
+            return environment.GetEffectiveAuthenticationType() == DialPadAuthenticationType.OAuth2 &&
+                !string.IsNullOrWhiteSpace(environment.ClientId) &&
+                !string.IsNullOrEmpty(environment.ClientSecret);
         }
     }
 
@@ -600,7 +601,7 @@ public sealed class DialPadTelephonyProvider :
     {
         var settings = await GetResolvedSettingsAsync();
 
-        if (GetEffectiveAuthenticationType(settings) != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId))
+        if (settings.GetEffectiveAuthenticationType() != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId))
         {
             return null;
         }
@@ -634,7 +635,7 @@ public sealed class DialPadTelephonyProvider :
     {
         var settings = await GetResolvedSettingsAsync();
 
-        if (GetEffectiveAuthenticationType(settings) != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrEmpty(settings.ClientSecret))
+        if (settings.GetEffectiveAuthenticationType() != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrEmpty(settings.ClientSecret))
         {
             return null;
         }
@@ -666,7 +667,7 @@ public sealed class DialPadTelephonyProvider :
 
         var settings = await GetResolvedSettingsAsync();
 
-        if (GetEffectiveAuthenticationType(settings) != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrEmpty(settings.ClientSecret))
+        if (settings.GetEffectiveAuthenticationType() != DialPadAuthenticationType.OAuth2 || string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrEmpty(settings.ClientSecret))
         {
             return null;
         }
@@ -762,7 +763,7 @@ public sealed class DialPadTelephonyProvider :
     private async Task<TelephonyUserTokens> RequestTokensAsync(
         Dictionary<string, string> form,
         string existingRefreshToken,
-        DialPadSettings settings,
+        DialPadResolvedSettings settings,
         CancellationToken cancellationToken)
     {
         try
@@ -834,9 +835,9 @@ public sealed class DialPadTelephonyProvider :
         return tokens;
     }
 
-    private async Task<string> GetBearerTokenAsync(DialPadSettings settings, CancellationToken cancellationToken)
+    private async Task<string> GetBearerTokenAsync(DialPadResolvedSettings settings, CancellationToken cancellationToken)
     {
-        if (GetEffectiveAuthenticationType(settings) == DialPadAuthenticationType.OAuth2)
+        if (settings.GetEffectiveAuthenticationType() == DialPadAuthenticationType.OAuth2)
         {
             var tokens = await _authenticationService.GetValidTokensAsync(DialPadConstants.ProviderTechnicalName, cancellationToken);
 
@@ -906,14 +907,14 @@ public sealed class DialPadTelephonyProvider :
     private TelephonyResult NotConnected()
         => TelephonyResult.Failed(S["Connect your account to DialPad to place calls."].Value);
 
-    private static bool IsConfigured(DialPadSettings settings)
+    private static bool IsConfigured(DialPadResolvedSettings settings)
     {
         if (settings is null || !settings.IsEnabled)
         {
             return false;
         }
 
-        var authenticationType = GetEffectiveAuthenticationType(settings);
+        var authenticationType = settings.GetEffectiveAuthenticationType();
 
         if (authenticationType == DialPadAuthenticationType.OAuth2)
         {
@@ -1026,26 +1027,6 @@ public sealed class DialPadTelephonyProvider :
         return null;
     }
 
-    private static DialPadAuthenticationType GetEffectiveAuthenticationType(DialPadSettings settings)
-    {
-        if (settings.AuthenticationType != DialPadAuthenticationType.NotConfigured)
-        {
-            return settings.AuthenticationType;
-        }
-
-        if (!string.IsNullOrEmpty(settings.ApiToken))
-        {
-            return DialPadAuthenticationType.ApiKey;
-        }
-
-        if (!string.IsNullOrWhiteSpace(settings.ClientId) || !string.IsNullOrEmpty(settings.ClientSecret))
-        {
-            return DialPadAuthenticationType.OAuth2;
-        }
-
-        return DialPadAuthenticationType.NotConfigured;
-    }
-
     private static async Task<string> ReadCallIdAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         try
@@ -1079,7 +1060,7 @@ public sealed class DialPadTelephonyProvider :
         return Guid.NewGuid().ToString("N");
     }
 
-    private HttpClient CreateClient(DialPadSettings settings, string bearerToken)
+    private HttpClient CreateClient(DialPadResolvedSettings settings, string bearerToken)
     {
         var client = _httpClientFactory.CreateClient(DialPadConstants.ProviderTechnicalName);
 
@@ -1093,26 +1074,27 @@ public sealed class DialPadTelephonyProvider :
         return client;
     }
 
-    private async Task<DialPadSettings> GetResolvedSettingsAsync()
+    private async Task<DialPadResolvedSettings> GetResolvedSettingsAsync()
     {
         if (_settings is null)
         {
             var settings = await _siteService.GetSettingsAsync<DialPadSettings>();
+            var environment = settings.GetActiveEnvironmentSettings();
             var apiTokenProtector = _dataProtectionProvider.CreateProtector(DialPadConstants.ProtectorName);
             var clientSecretProtector = _dataProtectionProvider.CreateProtector(DialPadConstants.OAuthProtectorName);
 
-            _settings = new DialPadSettings
+            _settings = new DialPadResolvedSettings
             {
                 IsEnabled = settings.IsEnabled,
                 Environment = settings.Environment,
-                ApiBaseUrl = settings.ApiBaseUrl,
-                UserId = settings.UserId,
-                OutboundCallerId = settings.OutboundCallerId,
-                ApiToken = string.IsNullOrEmpty(settings.ApiToken) ? null : Unprotect(apiTokenProtector, settings.ApiToken),
-                AuthenticationType = settings.AuthenticationType,
-                ClientId = settings.ClientId,
-                ClientSecret = string.IsNullOrEmpty(settings.ClientSecret) ? null : Unprotect(clientSecretProtector, settings.ClientSecret),
-                Scopes = settings.Scopes,
+                ApiBaseUrl = environment.ApiBaseUrl,
+                UserId = environment.UserId,
+                OutboundCallerId = environment.OutboundCallerId,
+                ApiToken = string.IsNullOrEmpty(environment.ApiToken) ? null : Unprotect(apiTokenProtector, environment.ApiToken),
+                AuthenticationType = environment.AuthenticationType,
+                ClientId = environment.ClientId,
+                ClientSecret = string.IsNullOrEmpty(environment.ClientSecret) ? null : Unprotect(clientSecretProtector, environment.ClientSecret),
+                Scopes = environment.Scopes,
             };
         }
 
