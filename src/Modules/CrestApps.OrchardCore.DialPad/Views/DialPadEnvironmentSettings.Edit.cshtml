@@ -18,7 +18,7 @@
         <div class="ocat-wrapper" asp-validation-class-for="ApiToken">
             <label asp-for="ApiToken" class="ocat-label">@T["API key"]</label>
             <div class="ocat-end">
-                <input asp-for="ApiToken" class="form-control" type="password" autocomplete="off" />
+                <input asp-for="ApiToken" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasApiToken ? T["An API key is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter the DialPad API key."])" />
                 <span asp-validation-for="ApiToken"></span>
                 @if (Model.HasApiToken)
                 {
@@ -63,7 +63,7 @@
         <div class="ocat-wrapper" asp-validation-class-for="ClientSecret">
             <label asp-for="ClientSecret" class="ocat-label">@T["OAuth client secret"]</label>
             <div class="ocat-end">
-                <input asp-for="ClientSecret" class="form-control" type="password" autocomplete="off" />
+                <input asp-for="ClientSecret" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasClientSecret ? T["A client secret is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter the OAuth client secret issued by DialPad."])" />
                 <span asp-validation-for="ClientSecret"></span>
                 @if (Model.HasClientSecret)
                 {
@@ -89,9 +89,9 @@
     <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
         <label asp-for="WebhookSigningSecret" class="ocat-label">@T["Webhook signing secret"]</label>
         <div class="ocat-end">
-            <input asp-for="WebhookSigningSecret" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookSigningSecret ? T["A secret is already saved. Enter a new value to replace it."] : T["Enter the DialPad webhook signing secret."])" />
+            <input asp-for="WebhookSigningSecret" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookSigningSecret ? T["A secret is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter the DialPad webhook signing secret."])" />
             <span asp-validation-for="WebhookSigningSecret"></span>
-            <span class="hint">@T["Used to validate inbound DialPad call-event webhooks posted to /api/dialpad/webhook/call. Configure a DialPad webhook with this secret so inbound calls create Contact Center activities and route to agents."]</span>
+            <span class="hint">@T["Used to validate inbound DialPad call-event webhooks posted to /api/dialpad/webhook/call. Create the webhook in the DialPad developer portal (or via POST /api/v2/webhooks) and set its signing secret to this value so inbound calls create Contact Center activities and route to agents."]</span>
         </div>
     </div>
 </div>

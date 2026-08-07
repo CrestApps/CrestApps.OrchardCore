@@ -64,16 +64,36 @@ public sealed class DialPadSettingsDisplayDriver : SiteDisplayDriver<DialPadSett
 
     public override IDisplayResult Edit(ISite site, DialPadSettings settings, BuildEditorContext context)
     {
-        return Initialize<DialPadSettingsViewModel>("DialPadSettings_Edit", model =>
-        {
-            model.IsEnabled = settings.IsEnabled;
-            model.Environment = settings.Environment;
+        Task<bool> CanManageAsync()
+            => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings);
 
-            MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialPadEnvironment.Production), model.Production);
-            MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialPadEnvironment.Sandbox), model.Sandbox);
-        }).Location("Content:10#DialPad")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
-        .OnGroup(SettingsGroupId);
+        return Combine(
+            Initialize<DialPadSettingsViewModel>("DialPadSettings_Edit", model =>
+            {
+                model.IsEnabled = settings.IsEnabled;
+                model.Environment = settings.Environment;
+            }).Location("Content:10#DialPad;1")
+            .RenderWhen(CanManageAsync)
+            .OnGroup(SettingsGroupId),
+
+            Initialize<DialPadEnvironmentSettingsViewModel>("DialPadEnvironmentSettings_Edit", model =>
+            {
+                MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialPadEnvironment.Production), model);
+            }).Location("Content:10#DialPad%Production;5")
+            .Differentiator(nameof(DialPadSettingsViewModel.Production))
+            .Prefix($"{Prefix}.{nameof(DialPadSettingsViewModel.Production)}")
+            .RenderWhen(CanManageAsync)
+            .OnGroup(SettingsGroupId),
+
+            Initialize<DialPadEnvironmentSettingsViewModel>("DialPadEnvironmentSettings_Edit", model =>
+            {
+                MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialPadEnvironment.Sandbox), model);
+            }).Location("Content:10#DialPad%Sandbox;10")
+            .Differentiator(nameof(DialPadSettingsViewModel.Sandbox))
+            .Prefix($"{Prefix}.{nameof(DialPadSettingsViewModel.Sandbox)}")
+            .RenderWhen(CanManageAsync)
+            .OnGroup(SettingsGroupId)
+        );
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, DialPadSettings settings, UpdateEditorContext context)

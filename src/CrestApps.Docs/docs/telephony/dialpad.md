@@ -30,8 +30,8 @@ tenant. OAuth 2.0 is recommended for production multiuser integrations where eac
 connects their own DialPad account.
 
 DialPad exposes two separate environments — **Production** (`dialpad.com`) and **Sandbox**
-(`sandbox.dialpad.com`). The settings editor lets you configure each environment independently on its
-own tab, so a tenant can hold production and sandbox credentials side by side. The **Active
+(`sandbox.dialpad.com`). The settings editor lets you configure each environment independently in its
+own card, so a tenant can hold production and sandbox credentials side by side. The **Active
 environment** selector decides which credential set the provider actually connects with, letting you
 validate an integration against the sandbox and switch to production without re-entering credentials.
 Switching the active environment preserves the credentials of the environment that is not active.
@@ -41,7 +41,7 @@ Switching the active environment preserves the credentials of the environment th
 | **Enable DialPad provider** | Turns the provider on and makes it selectable as the default provider. |
 | **Active environment** | Select **Production** (`dialpad.com`) or **Sandbox** (`sandbox.dialpad.com`). This chooses which environment's credentials the provider uses to connect and place calls, and applies to both the REST API and the OAuth 2.0 endpoints. |
 
-Each environment tab (**Production** and **Sandbox**) exposes its own copy of the following credentials:
+Each environment card (**Production** and **Sandbox**) exposes its own copy of the following credentials:
 
 | Setting | Description |
 | --- | --- |
@@ -52,7 +52,7 @@ Each environment tab (**Production** and **Sandbox**) exposes its own copy of th
 | **OAuth client id** | The OAuth client id issued by DialPad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by DialPad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
-| **Webhook signing secret** | Required when DialPad Contact Center Voice is enabled. The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. |
+| **Webhook signing secret** | Required when DialPad Contact Center Voice is enabled. The secret DialPad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. See [Where to obtain the webhook signing secret](#where-to-obtain-the-webhook-signing-secret). |
 
 DialPad API calls use the active environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
@@ -88,7 +88,7 @@ To configure OAuth 2.0:
 1. Register an OAuth application in the DialPad admin portal to obtain a client id and client secret.
 2. Add `{scheme}://{host}/Telephony/Connect/Callback` (with your tenant URL prefix when one is
    configured) as an allowed redirect URI on the DialPad OAuth application.
-3. Enter the client id, client secret, and any scopes on the matching environment tab (**Production**
+3. Enter the client id, client secret, and any scopes in the matching environment card (**Production**
    or **Sandbox**) of the DialPad settings, and set that environment as the **Active environment**.
 
 Each user then sees a **Connect to provider** button in the soft phone and connects their own DialPad
@@ -143,7 +143,25 @@ dialing and call transfer.
 
 Create the call-event webhook subscription in the DialPad administration portal and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the DialPad subscription automatically, so operators should monitor subscription status and delivery failures in DialPad.
 
-## Registering the provider in code
+### Where to obtain the webhook signing secret
+
+The **Webhook signing secret** is a value **you choose and register with DialPad** when you create the
+call-event webhook — it is not issued by DialPad. DialPad then uses it to sign every webhook payload it
+delivers (as an HS256 JWT), and this module validates inbound deliveries to `/api/dialpad/webhook/call`
+against the same value.
+
+Create the webhook and set its secret using either method, then paste the same secret into the active
+environment's **Webhook signing secret** field:
+
+- **DialPad developer portal** — in [developers.dialpad.com](https://developers.dialpad.com/), create a
+  webhook subscription for call events and set its **secret** to a strong random value that you generate.
+- **DialPad API** — `POST https://dialpad.com/api/v2/webhooks` (or the sandbox host) with a JSON body that
+  includes the `hook_url` (your tenant's `https://<host>/api/dialpad/webhook/call` endpoint) and a `secret`
+  field set to the value you generate, then subscribe that webhook to the call events.
+
+Use a high-entropy random string (for example a 32-byte value) as the secret, keep production and sandbox
+secrets distinct, and rotate them if they are ever exposed. Leaving the field blank after saving keeps the
+previously stored secret unchanged.
 
 The provider is registered by the module's startup with a named HTTP client that uses the standard
 ASP.NET Core resiliency pipeline, plus the tenant-aware provider options configuration:
