@@ -16,6 +16,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Deployment;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Localization;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
@@ -61,6 +64,28 @@ internal sealed class Program
         "Moderator",
     ];
 
+    private static readonly string[] _contentTypeNames =
+    [
+        "Article",
+        "BlogPost",
+        "Page",
+    ];
+
+    private static readonly string[] _cultureNames =
+    [
+        "en",
+        "en-US",
+        "fr",
+        "fr-FR",
+    ];
+
+    private static readonly string[] _indexProfileNames =
+    [
+        "articles",
+        "blogposts",
+        "pages",
+    ];
+
     private static readonly string[] _fieldTypeNames =
     [
         "BooleanField",
@@ -94,9 +119,11 @@ internal sealed class Program
         Console.WriteLine($"Discovered {_eventActivityNames.Length} workflow events, {_taskActivityNames.Length} workflow tasks, and {_permissionNames.Length} permissions.");
 
         var outputPath = ResolveOutputPath(args, repositoryRoot);
-        var recipeSteps = CreateRecipeSteps()
+        var recipeSteps = CreateRecipeSteps(out var recipeStepServiceProvider)
             .OrderBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        await using var _ = recipeStepServiceProvider;
 
         Directory.CreateDirectory(outputPath);
         ClearGeneratedArtifacts(outputPath);
@@ -233,7 +260,7 @@ internal sealed class Program
         return $"{safeName}.schema.json";
     }
 
-    private static IRecipeStep[] CreateRecipeSteps()
+    private static IRecipeStep[] CreateRecipeSteps(out ServiceProvider serviceProvider)
     {
         var schemaDefinitions = CreateContentSchemaDefinitions();
         var partNames = schemaDefinitions
@@ -243,14 +270,16 @@ internal sealed class Program
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        using var serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+        serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+
+        var provider = serviceProvider;
 
         return typeof(IRecipeStep).Assembly.ExportedTypes
             .Where(type =>
                 typeof(IRecipeStep).IsAssignableFrom(type) &&
                     type is { IsAbstract: false, IsInterface: false })
                     .OrderBy(type => type.Name, StringComparer.Ordinal)
-                    .Select(type => CreateRecipeStep(type, serviceProvider))
+                    .Select(type => CreateRecipeStep(type, provider))
                     .ToArray();
     }
 
@@ -282,7 +311,7 @@ internal sealed class Program
     {
         var services = new ServiceCollection();
         var siteSettingsSchemaDefinitions = CreateSiteSettingsSchemaDefinitions();
-        var contentDefinitionManager = CreateContentDefinitionManager();
+        var contentDefinitionManager = CreateContentDefinitionManager(partNames);
         var contentSchemaProvider = new StubContentSchemaProvider(partNames, _fieldTypeNames);
         var contentItemSchemaService = new ContentItemSchemaService(contentDefinitionManager, schemaDefinitions);
 
@@ -294,6 +323,9 @@ internal sealed class Program
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateRoleService());
+        services.AddSingleton(contentDefinitionManager);
+        services.AddSingleton(CreateLocalizationService());
+        services.AddSingleton(CreateIndexProfileStore());
         services.AddSingleton(CreateActivityLibrary());
         services.AddSingleton<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
         services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
@@ -351,13 +383,48 @@ internal sealed class Program
         return (IRecipeStep)ActivatorUtilities.CreateInstance(serviceProvider, stepType);
     }
 
-    private static IContentDefinitionManager CreateContentDefinitionManager()
+    private static IContentDefinitionManager CreateContentDefinitionManager(IReadOnlyList<string> partNames)
     {
+        var typeDefinitions = _contentTypeNames
+            .Select(name => new ContentTypeDefinition(name, name))
+            .ToArray();
+
+        var partDefinitions = partNames
+            .Select(name => new ContentPartDefinition(name))
+            .ToArray();
+
         var manager = new Mock<IContentDefinitionManager>();
         manager.Setup(service => service.ListTypeDefinitionsAsync())
-            .ReturnsAsync(Array.Empty<ContentTypeDefinition>());
+            .ReturnsAsync(typeDefinitions);
+        manager.Setup(service => service.ListPartDefinitionsAsync())
+            .ReturnsAsync(partDefinitions);
 
         return manager.Object;
+    }
+
+    private static ILocalizationService CreateLocalizationService()
+    {
+        var localizationService = new Mock<ILocalizationService>();
+        localizationService.Setup(service => service.GetSupportedCulturesAsync())
+            .ReturnsAsync(_cultureNames);
+
+        return localizationService.Object;
+    }
+
+    private static IIndexProfileStore CreateIndexProfileStore()
+    {
+        var profiles = _indexProfileNames
+            .Select(name => new IndexProfile
+            {
+                Name = name,
+            })
+            .ToArray();
+
+        var indexProfileStore = new Mock<IIndexProfileStore>();
+        indexProfileStore.Setup(service => service.GetAllAsync())
+            .ReturnsAsync(profiles);
+
+        return indexProfileStore.Object;
     }
 
     private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
