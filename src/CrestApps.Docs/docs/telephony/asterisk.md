@@ -1,0 +1,349 @@
+---
+sidebar_label: Asterisk
+sidebar_position: 2
+title: Asterisk Telephony Provider
+description: Integrate Asterisk as a telephony provider for the Orchard Core soft phone.
+---
+
+| | |
+| --- | --- |
+| **Feature Name** | Asterisk |
+| **Feature ID** | `CrestApps.OrchardCore.Asterisk` |
+
+The **Asterisk** module integrates the [Asterisk](https://www.asterisk.org/) platform as a provider for the [Telephony](./) soft phone. It uses the **Asterisk REST Interface (ARI)** over HTTP basic authentication and performs call control server-side, so the browser never needs direct access to Asterisk credentials. Here, **provider** means the Asterisk backend adapter that the soft phone talks to, not a separate telecom billing provider.
+
+## Two Asterisk providers
+
+When the **Asterisk** feature is enabled, the telephony settings can expose up to two selectable providers:
+
+| Provider | How it is configured | When it appears |
+| --- | --- | --- |
+| **Asterisk** | Site settings under **Settings → Communication → Telephony → Asterisk** | When an administrator enables it for the tenant |
+| **Default Asterisk** | Shell configuration (`appsettings.json`, user secrets, or environment variables) | Automatically, when the required configuration exists |
+
+This mirrors the Orchard Core default-provider pattern used by modules such as SMTP: the tenant-specific provider is managed in the UI, while the configuration-backed provider is automatically available across tenants whenever the host supplies its configuration.
+
+## Capabilities
+
+The Asterisk provider currently advertises support for:
+
+- **Dial**
+- **Hang up**
+- **Answer / reject inbound calls**
+- **Send to voicemail** when a voicemail context and extension template are configured
+- **Hold / resume**
+- **Mute / unmute**
+- **Blind transfer** when the endpoint template resolves to a `Local/...@context` dialplan route
+- **Merge**
+- **Send DTMF digits**
+- **Directory lookup** from ARI endpoints
+
+Voicemail routing still depends on your dialplan design, but the provider can now expose the soft-phone
+voicemail button when you configure a voicemail dialplan target for the integration.
+
+:::note
+The Contact Center voice provider advertises the **server-side ACD** delivery model, but connecting a
+parked call to a browser-media agent requires a .NET-side ARI originate/bridge because WebRTC PJSIP
+endpoints are provisioned just in time per browser session and are not addressable from a static
+Asterisk queue or dialplan. That ARI originate/bridge is scheduled for a later wave, so the connect-to-agent
+operation currently **fails closed** (it returns a clear `agent_bridge_unavailable` failure) rather than
+reporting a false success for a call whose media was never bridged.
+:::
+
+For Contact Center orchestration, the Asterisk voice provider also advertises **call recording** (ARI bridge recording of the tenant-owned conversation) and **supervisor monitoring** — **monitor** (listen only), **whisper** (heard by the agent only), and **barge** (heard by all parties). A monitoring engagement originates the supervisor's live browser softphone and, for monitor and whisper, bridges it to a snoop of the agent channel; barge adds the supervisor directly into the conversation bridge. It also advertises **call transfer** for a **blind transfer to another agent**: the customer stays on the canonical conversation bridge (so recording continuity is preserved), the destination agent's live browser softphone is originated as a new leg and added to that same bridge once it answers, and the previous agent leg is then hung up. The handoff is crash-safe: the destination leg is persisted up front as a durable, non-owning **joining** claim on a deterministic channel id, so a concurrent duplicate transfer to the same destination is idempotent (it never re-rings the destination), while a retry that finds a stale, already-terminating claim fails closed with a confirmed, retryable error instead of reporting a completed transfer that has no live leg. Any death of the destination leg before the handoff commits tears down nothing and leaves the customer with the current agent; if a destination originate fails ambiguously and its compensating hangup cannot be confirmed, the joining claim is retained as a recovery record for the reconciler rather than being deleted. Ownership then transfers with a single atomic swap that promotes the destination leg and retires the previous leg in one transaction — committed only while the previous agent is still the live owner, so a second concurrent transfer can never create a second owner — and the conversation bridge is owned by exactly one agent at every instant, never dropped, never left unowned. If the destination agent does not answer, the original call is left fully intact. It also advertises **attended (consultative) transfer** as three explicit phases so the initiating agent can speak privately with the destination agent before committing the handoff. **Begin consult** places the customer on hold (music on hold, so the customer can never overhear the consult) and only then rings the destination agent's live browser softphone into the same canonical bridge as a non-owning **participating** leg — holding fails closed, so the destination is never rung while the customer could hear, and a destination that never answers leaves the original call fully intact. **Complete consult** resumes the customer and, in a single version-checked transaction, atomically promotes the destination participant to the `Connected` owner while retiring the initiating agent leg, then hangs up the initiating agent — so ownership passes with exactly one owner at every instant; if the consult leg is already gone the completion fails closed and the customer safely keeps the initiating agent. **Cancel consult** drops the non-owning destination leg and resumes the customer with the initiating agent, whose ownership never changed. Transfers to a queue, external number, or entry point are not yet executable and return a clear, confirmed failure rather than a false success. It also advertises **conference** for adding another agent as a **multi-party participant** on the canonical conversation bridge. The extra agent's live browser softphone is originated as a new leg and joined to the same bridge the customer is already on, so recording and monitoring stay continuous. Multi-party ownership is modeled without an N-writer teardown race: exactly one agent leg is the bridge's `Connected` owner (the sole party allowed to destroy the bridge and release the caller), while every additional agent is a non-owning **participating** leg whose own hangup tears down only its own channel — never the shared bridge, the caller, or another agent. When the `Connected` owner departs while participants remain, ownership is handed off by **atomically** promoting one remaining participating leg to `Connected` and retiring the departing owner in a single version-checked transaction (the same linearization used by the transfer swap), so the bridge always has exactly one destroyer and two concurrent owner departures can never create a second owner or strand the caller; only when the last participant is gone is the bridge destroyed and the caller released. These capabilities resolve the conversation through the tenant-owned channel binding and fail closed on a call the current tenant does not own, and they remain gated in the support matrix until the single-node audio and two-tenant proofs land.
+
+## Tenant-configured Asterisk settings
+
+Configure the tenant-specific **Asterisk** provider on the **Asterisk** tab under **Settings → Communication → Telephony**. The Telephony settings UI creates that tab from the site-settings display driver, and the Asterisk editor itself only renders the provider fields inside the tab. You need the `Manage telephony settings` permission.
+
+| Setting | Description |
+| --- | --- |
+| **Enable Asterisk provider** | Turns the tenant-configured provider on, makes it selectable as the default provider, and reveals the rest of the tenant-specific Asterisk fields in the settings UI. |
+| **ARI base URL** | The base ARI endpoint, for example `http://localhost:8088/ari/`. If you omit `/ari`, it is added automatically. |
+| **ARI user name** | The Asterisk ARI user name used for HTTP basic authentication. |
+| **ARI password** | The ARI password. Stored encrypted with the data protection provider. |
+| **Stasis application name** | Required. The ARI application name that receives originated channels. It must match the `Stasis()` application your dialplan hands calls to. This value is not defaulted for you: if it is left blank the provider fails closed (no inbound listener starts and outbound origination is unavailable) rather than silently sharing a well-known name. When several tenants share one Asterisk server, give each tenant a **unique** application name so a tenant never receives another tenant's Stasis events. |
+| **Endpoint template** | Optional. Use `{number}` to convert the dialed destination into an Asterisk endpoint, for example `PJSIP/{number}@phones` or `Local/{number}@default`. The admin hint now renders that token literally, so the settings screen remains stable while showing the exact placeholder to enter. When empty, the dialed destination is sent to Asterisk as-is. |
+| **Outbound caller id** | Optional caller identifier presented on outbound calls. |
+| **Dial timeout (seconds)** | How long Asterisk keeps trying to originate the call before timing out. |
+| **Voicemail context** | Optional. The dialplan context Orchard continues a ringing call into when the agent chooses **Send to voicemail**. |
+| **Voicemail extension template** | Optional. Resolves the dialplan extension used for voicemail routing. It can reference provider-neutral call metadata such as `{voicemailRecipientUserName}`, `{voicemailRecipientUserId}`, `{calledAddress}`, or `{queueName}`. |
+| **Voicemail priority** | Optional. The dialplan priority to start at when the provider continues the call to voicemail. |
+| **SIP WebSocket URL** | Required for browser audio. The secure `wss://` endpoint exposed by Asterisk `chan_pjsip` for browser SIP user agents. |
+| **SIP domain** | Required for browser audio. Used to compose tenant/session-scoped browser SIP addresses of record. |
+| **ICE server URLs** | Optional STUN/TURN URLs sent to the browser. TURN URLs use coturn REST credentials when a shared secret is configured. |
+| **TURN shared secret** | Optional coturn REST shared secret. Stored encrypted and used to issue time-limited TURN credentials. |
+| **ICE transport policy** | Browser ICE transport policy. Use `all` for normal direct ICE or `relay` for forced-TURN validation. |
+| **Browser audio codecs** | Comma- or newline-delimited codec preference list, typically `opus,g722,ulaw`. |
+| **PJSIP credential lifetime (minutes)** | Short-lived browser SIP credential lifetime. Credentials are tenant-, session-, and expiry-bound. |
+| **PJSIP contact expiration (seconds)** | Asterisk registration contact expiration. Revocation also explicitly removes contacts and terminates existing dialogs; credential expiry alone is not treated as a dialog teardown. |
+| **PJSIP Realtime provider** | Required for browser audio. ADO.NET provider invariant name used to write Asterisk Realtime endpoint/auth/AOR rows. |
+| **PJSIP Realtime connection string** | Required for browser audio. Stored encrypted in tenant settings. The database must be the same source configured by Asterisk `sorcery.conf`/`extconfig.conf`. |
+| **PJSIP Realtime table prefix** | Optional prefix for `ps_endpoints`, `ps_auths`, and `ps_aors`. Because the prefix is concatenated into SQL table names, it must be a strict SQL identifier — only letters, digits, and underscores, optionally qualified with a single `schema.` component. Invalid prefixes are rejected when you save the settings, and the Realtime store refuses to run a query with an invalid stored prefix as defense-in-depth. |
+
+When you enable **Asterisk** and no default telephony provider is set yet, **Asterisk** becomes the default automatically. When you disable **Asterisk** while it is the default, the default provider is cleared and the soft phone is disabled until another provider is selected.
+
+## Configuration-backed Default Asterisk provider
+
+The **Default Asterisk** provider is not managed through site settings. Instead, the host configures it through shell configuration. When all required values are present, the provider appears automatically in the **Default telephony provider** selector for every tenant where the module is enabled.
+
+### Required configuration
+
+Use the `OrchardCore:CrestApps:Asterisk:Default` section:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Asterisk": {
+        "Default": {
+          "BaseUrl": "http://localhost:8088/ari/",
+          "UserName": "<your-ari-user>",
+          "Password": "<your-ari-password>",
+          "ApplicationName": "crestapps-telephony",
+          "EndpointTemplate": "Local/{number}@default",
+          "TimeoutSeconds": 30,
+          "VoicemailContext": "crestapps-voicemail",
+          "VoicemailExtensionTemplate": "{voicemailRecipientUserName}",
+          "VoicemailPriority": 1
+        }
+      }
+    }
+  }
+}
+```
+
+Equivalent environment variables use the standard double-underscore path, for example:
+
+```text
+OrchardCore__CrestApps__Asterisk__Default__BaseUrl=http://localhost:8088/ari/
+OrchardCore__CrestApps__Asterisk__Default__UserName=<your-ari-user>
+OrchardCore__CrestApps__Asterisk__Default__Password=<your-ari-password>
+OrchardCore__CrestApps__Asterisk__Default__ApplicationName=crestapps-telephony
+OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate=Local/{number}@default
+OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds=30
+OrchardCore__CrestApps__Asterisk__Default__VoicemailContext=crestapps-voicemail
+OrchardCore__CrestApps__Asterisk__Default__VoicemailExtensionTemplate={voicemailRecipientUserName}
+OrchardCore__CrestApps__Asterisk__Default__VoicemailPriority=1
+```
+
+The provider becomes available only when `BaseUrl`, `UserName`, `Password`, and `ApplicationName` are all configured.
+
+### Per-tenant ARI application names
+
+The host-configured **Default Asterisk** connection is a single shared configuration, but every tenant that selects it needs an isolated ARI event stream. Asterisk delivers each Stasis event to exactly one connected ARI application, so if two tenants attached to the same raw `ApplicationName` they would cross-deliver each other's call events. To keep tenants isolated, the module resolves the host-default connection under a **unique per-tenant ARI application name** built by suffixing the configured `ApplicationName` with the tenant's shell name: `<ApplicationName>-<ShellName>`. For example, a configured `crestapps-telephony` resolves to `crestapps-telephony-Default` on the default shell and `crestapps-telephony-blog1` on a tenant named `blog1`. This suffixing applies only to the shared host-default connection; a tenant that configures its own **Asterisk** provider in site settings uses its own `ApplicationName` unchanged.
+
+Orchard controls this application name on both origination and event subscription, so **outbound** call control is isolated automatically with no operator action. For **inbound** routing where the operator's dialplan hands calls to Orchard, the Asterisk dialplan must route each tenant's calls to the matching `Stasis(<ApplicationName>-<ShellName>)` application. The bundled Aspire development dialplan is outbound/echo only (it contains no `Stasis()` line), so it is unaffected.
+
+## Browser WebRTC media
+
+The Asterisk adapter uses `chan_pjsip` WebRTC and a browser SIP user agent. Agent media flows directly between the browser and Asterisk over WSS, DTLS-SRTP, and ICE; Orchard/.NET does not relay agent RTP. The existing ARI External Media RTP/UDP adapter remains a separate development foundation for server-side media taps and AI scenarios.
+
+Browser audio is advertised only when the tenant or default provider has executable WebRTC settings: a `wss://` SIP WebSocket URL, SIP domain, codec list, positive PJSIP credential lifetime, positive contact expiration, and PJSIP Realtime provider/connection settings. Missing settings fail closed by making browser audio unavailable instead of crashing host startup.
+
+The credential lifecycle uses PJSIP Realtime rather than static pre-provisioning. ARI cannot create endpoint, auth, or AOR objects, and static pre-provisioning cannot bind every browser registration to a tenant, session, and expiry. Orchard issues short-lived PJSIP credentials through a scoped issuer, persists a durable per-tenant credential **lease** in the tenant's own YesSql store as the single source of truth for ownership and expiry, materializes endpoint/auth/AOR rows through the Realtime store seam, rotates by revoking the prior session credential, and cleans up expired or revoked registrations. The reference templates live under `src/Startup/CrestApps.Aspire.AppHost/Asterisk/pjsip-webrtc-realtime.conf.template` and `src/Startup/CrestApps.Aspire.AppHost/Coturn/turnserver-webrtc.conf.template`.
+
+Each credential is bound to an authoritative, server-owned media session. The issuer derives ownership from the authenticated user, generates the session id itself, and never trusts a caller-supplied identifier (such as an interaction id) to authorize issuance — an interaction id may still travel as non-authoritative metadata. Every issue, rotate, revoke, and cleanup state transition runs under a tenant-qualified `IDistributedLock`. Ownership, expiry, the per-user cap, and revocation are all resolved from the durable lease store, which is inherently isolated to the current tenant because each query runs through the tenant's own YesSql session — there is no `LIKE` prefix scan over the shared Realtime tables, so one tenant can never observe or delete another tenant's rows. Issuance writes the durable lease **first**, then the Realtime SIP row, then the cache, so a Realtime row can never exist without a lease the current tenant owns; if the Realtime write fails, the lease is marked revoked and cleanup reclaims any partial row by exact authorization user. The distributed cache is only a read-through performance cache: a cache miss is reconciled against the durable lease (expiry is read from the lease and is never inferred from a cache miss). Cleanup queries only the current tenant's expired or revoked leases and deletes each corresponding Realtime row by its exact authorization user. Authorization-user identifiers additionally incorporate a fixed-width stable hash of the raw tenant name so tenants that share one Realtime database and whose sanitized names would otherwise collide (for example `acme`, `acme-east`, and `Acme`) receive distinct identifier namespaces. Each authenticated user is capped at a small number of concurrent live browser credentials; issuing beyond the cap revokes the oldest session first so the newest browser session wins. Signing out of the soft phone (or terminating the agent session) revokes all of the user's live credentials immediately instead of waiting for natural expiry.
+
+## How call control works
+
+The provider uses ARI endpoints such as:
+
+- `POST /channels` to originate a call
+- `DELETE /channels/{id}` to hang up a call
+- `POST /channels/{id}/answer` to answer an inbound Stasis-managed channel
+- `POST` / `DELETE /channels/{id}/hold` to hold and resume
+- `POST` / `DELETE /channels/{id}/mute?direction=both` to mute and unmute
+- `POST /channels/{id}/continue` to blind-transfer a Stasis-managed Local channel back into the dialplan
+- `POST /channels/{id}/variable` plus `POST /channels/{id}/continue` to push provider-neutral metadata into the channel and route it to the configured voicemail dialplan target
+- `POST /channels/{id}/dtmf` to send digits
+- `POST /bridges` plus `POST /bridges/{id}/addChannel` to merge all selected calls; the provider clears each prior hold marker, stamps the owned bridge id on every channel, and deletes the mixing bridge after the last tracked participant hangs up
+- `GET /endpoints` to list transfer destinations in the soft-phone directory
+
+Because all requests are issued server-side, the ARI password never reaches the browser.
+
+## Asterisk Web development-only host
+
+`src\Startup\CrestApps.OrchardCore.Asterisk.Web` is a local development harness, not a production dashboard. It refuses to start unless `ASPNETCORE_ENVIRONMENT=Development`, and the development launch profile binds to loopback addresses. To use the standalone host, provide its ARI credentials through user secrets or environment variables instead of committing them to `appsettings.json`:
+
+```bash
+dotnet user-secrets set "AsteriskWeb:AsteriskUserName" "<your-ari-user>"
+dotnet user-secrets set "AsteriskWeb:AsteriskPassword" "<your-ari-password>"
+```
+
+The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `AsteriskWeb__AsteriskPassword`. Override the local listener addresses only when needed with `ASPNETCORE_URLS`, for example `https://127.0.0.1:59496;http://127.0.0.1:59497`. Do not expose this host or its anonymous diagnostics, call-origination, hangup, and bridge-deletion endpoints to an untrusted network.
+
+## Bidirectional RTP media
+
+The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` or `CrestApps.OrchardCore.Asterisk.ContactCenterMedia`.
+
+`CrestApps.OrchardCore.ContactCenter.Voice.Media` and `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` are dependency-only development foundations and are not included in either approved GA-Core profile. They remain hidden from direct selection in the Orchard Features UI until the transport certification tracked for R9 is complete. The executable media feature registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
+
+Opening a media session:
+
+1. binds an Orchard UDP socket
+2. finds the bridge containing the provider call or creates a mixing bridge
+3. creates an ARI `/channels/externalMedia` channel using RTP/UDP and `ulaw`
+4. adds the external-media channel to the call bridge
+5. reads `UNICASTRTP_LOCAL_ADDRESS` and `UNICASTRTP_LOCAL_PORT` from Asterisk for outbound RTP
+6. exposes incoming and outgoing frames through `IContactCenterVoiceMediaSession`
+
+The session request must include `AsteriskConstants.ExternalMediaHostMetadataKey` (`externalHost`), containing the host or IP address Asterisk can reach for the Orchard RTP socket. This is often different from the address Orchard binds locally when containers, NAT, or reverse proxies are involved.
+
+Optional metadata:
+
+| Key | Description |
+| --- | --- |
+| `bindAddress` | Local IP address on which Orchard binds the UDP socket. Defaults to all local interfaces. |
+| `bindPort` | Local UDP port. Defaults to an operating-system-assigned ephemeral port. Production deployments should select and allow an explicit UDP range. |
+
+The current adapter accepts and emits RTP payload type `0` (G.711 mu-law). It parses RTP header extensions, contributing-source entries, and padding before exposing the audio payload. Stopping the media session removes the external-media channel without hanging up the customer call. A bridge created exclusively for the media session is also removed.
+
+The automated test suite exercises the ARI bridge and External Media lifecycle with a scripted HTTP transport and exchanges real RTP datagrams over loopback UDP sockets. It validates sender filtering, malformed-packet rejection, mu-law payload enforcement, sequence/timestamp continuity, and cleanup behavior. This is development-foundation evidence only. Production support requires a documented secure RTP network boundary plus loss, reordering, jitter, capacity, failover, and node-affinity certification; that work is deferred to R9.
+
+Any non-production lab must isolate the unencrypted RTP/UDP path on a trusted private network, restrict ingress to the expected Asterisk endpoint and explicit UDP port range, and prevent public routing to the Orchard media socket. If Orchard is scaled across nodes, the media session must remain pinned to the node that owns the UDP socket unless a dedicated media relay is introduced. These requirements describe the current risk boundary; they do not certify the adapter for production.
+
+## Real-time call state and recovery
+
+The module keeps a tenant-scoped ARI WebSocket listener for every configured Asterisk provider. Long-running listeners create an explicit scope through `IShellHost` and the tenant's `ShellSettings` for every reconciliation and event dispatch; they do not depend on an ambient request scope that disappears after tenant activation. Each listener is supervised independently, reconnects with exponential jitter after failure, and runs immediate provider-scoped reconciliation for both Contact Center interactions and plain Telephony interactions after connecting. A failed endpoint therefore does not stop healthy provider listeners, and reconnect recovery does not trigger overlapping full-provider sweeps.
+
+### Single active process per ARI application
+
+The listener attaches to an Asterisk ARI application, and Asterisk delivers each Stasis event to exactly one connected ARI application consumer. To stop two tenants on the same node from both attaching to the same `(base URL, application name)` pair, the module tracks ownership in a **process-wide** registry: the first tenant to claim a pair on a node owns it, and later claimants for the same pair are refused. That guard is intentionally node-local — Orchard Core's `IDistributedLock` and `IDistributedCache` are tenant-scoped and cannot arbitrate a claim shared by two tenants — so it prevents a same-node collision but cannot see a cross-node one. Tenants that share the host-configured **Default Asterisk** connection do not contend for a single pair, because each resolves it under its own per-tenant application name (`<ApplicationName>-<ShellName>`) and therefore claims a distinct pair.
+
+Because of this, real-time Asterisk voice is supported only on a **single active application process**, and running exactly one active node is an **operator responsibility** rather than something the platform detects for you. It is also why the only production-certified Contact Center topology in this release is `single-node-distributed`, which certifies exactly one application node; the `single-region-multi-node` profile remains the architectural direction but is not production-certified. The Contact Center topology health check validates the *infrastructure prerequisites* a declared profile requires — that a production host declares a profile at all, and that the database provider and any required Redis distributed-lock and SignalR backplane features are in place — and refuses work admission (reporting the node unready) when those are unmet. It does **not** count how many application nodes are actually running, so two hosts can each declare `single-node-distributed` and both report healthy while silently double-claiming the same ARI application on different nodes. To keep the constraint in front of whoever operates the deployment rather than only in this document, the topology health check's healthy verdict for a single-node production profile states explicitly that the profile certifies exactly one active application node and that running a single active node is an operator responsibility it cannot enforce; and because the readiness probe intentionally exposes only the aggregate status, the tenant-activation log emits that same operator responsibility once, at `Warning`, when a single-node production topology is satisfied (logged at `Warning` so it survives the production host's `Warning` default minimum log level). Guarantee single-process operation through your deployment (run the Asterisk-owning role as a single active node), not by relying on the health check to catch a second one.
+
+Lifting this to a genuinely multi-node deployment requires backing the ARI application claim with a lease in a shared, cross-tenant store keyed by ARI identity (tracked as a planned improvement). Until then, keep Asterisk real-time voice on one active node.
+
+ARI events are normalized into provider-authoritative call states and projected through Orchard to connected soft-phone clients without continuous browser polling. Command acknowledgements do not update or re-query the browser call state; the corresponding ARI event drives the transition. Because the listener tags every projected voice event with the canonical `Asterisk` provider identity — even for the host-configured **Default Asterisk** connection, whose alias is `Default Asterisk` — the Telephony interaction store canonicalizes the provider name it records and matches on. This keeps host-default soft-phone calls correlated with their real-time events so the soft phone transitions to **Connected** and back to **Disconnected** live, without a manual page refresh. A hangup request that receives ARI `404 Channel not found` is treated as idempotent success because Asterisk has already reached the requested disconnected state. Provider lookup also verifies that the channel still exists after reading hold, mute, and conference variables, preventing a channel destroyed during the multi-request lookup from being reported as connected. A two-channel mixing bridge is treated as a conference because the agent is the controlling participant even when the provider bridge contains only the two remote call channels. Supported dashboard states include **Offered**, **Offering**, **Ringing**, **Connected**, **In conference**, and **On hold**, with hold and mute badges where Asterisk exposes those facts. Bridge-leave events only project a lifecycle state when the channel snapshot is authoritative, while hold/unhold, mute-variable, state-change, hangup, and Stasis lifecycle events update the projection in real time. Once an interaction is terminal, later `ChannelHangupRequest`, `StasisEnd`, or `ChannelDestroyed` events are ignored so one physical hangup cannot republish the terminal transition multiple times.
+
+Periodic and provider-reconnect reconciliation query the ARI channel directly. The provider reads the `CRESTAPPS_STATE_ONHOLD` and `CRESTAPPS_STATE_MUTED` channel variables so an `Up` channel is not incorrectly collapsed to a plain connected state after a restart. Unknown ARI channel states fail the lookup instead of being guessed as connected, leaving the prior projection intact until authoritative state is available. An ARI `404` is authoritative evidence that the channel no longer exists: the reconciler removes the orphaned in-progress Telephony record and sends a disconnected state to the soft phone, preventing a restart or page reload from restoring a call that Asterisk has already ended.
+
+An accepted ARI originate response begins in **Connecting** even for the bundled Local-channel endpoint. The soft phone does not assume that accepting the Dial command means the call is connected; it waits for an ARI event or authoritative channel lookup to report the actual state.
+
+## Voicemail routing
+
+When an agent clicks **Send to voicemail**, Orchard now sends a provider-neutral metadata bag along
+with the call action. For Contact Center offers that bag includes values such as:
+
+- `voicemailRecipientUserId`
+- `voicemailRecipientUserName`
+- `voicemailRecipientDisplayName`
+- `calledAddress`
+- `callerAddress`
+- `queueId`
+- `queueName`
+
+The Asterisk provider copies those values into channel variables with a `CRESTAPPS_METADATA_`
+prefix and then continues the call into the configured voicemail dialplan target. For example,
+`voicemailRecipientUserName = mike` becomes the channel variable
+`CRESTAPPS_METADATA_VOICEMAILRECIPIENTUSERNAME`.
+
+That lets your dialplan decide how to route voicemail without introducing Asterisk-specific
+properties into the shared telephony contracts. A common pattern is to make the extension template
+match the intended mailbox key:
+
+```text
+VoicemailContext = crestapps-voicemail
+VoicemailExtensionTemplate = {voicemailRecipientUserName}
+VoicemailPriority = 1
+```
+
+Then configure Asterisk to map the extension or the channel variables to the actual mailbox, with a
+fallback when the user-specific mailbox does not exist.
+
+## Aspire local development
+
+`src\Startup\CrestApps.Aspire.AppHost` now provisions an **Asterisk** container for local development using the `andrius/asterisk:latest` image, mounts minimal `http.conf`, `ari.conf`, and `extensions.conf` files, and injects the **Default Asterisk** environment variables into the Orchard Core web project automatically. Repository projects use `TargetFramework` for the default single `net10.0` target while preserving `TargetFrameworks` for multi-target overrides, so Aspire can launch Orchard Core, Asterisk Web, and the sample clients without `dotnet run` stopping for an ambiguous framework selection.
+
+This makes the configuration-backed provider available immediately for local tenants as soon as:
+
+1. The **Asterisk** module is enabled.
+2. The tenant selects **Default Asterisk** as its default telephony provider.
+
+The `CrestApps.OrchardCore.Cms.Web` launch profile injects the same **Default Asterisk** environment variables, so running the CMS host directly with `dotnet run` (or from the IDE) also exposes the configuration-backed provider without starting the full Aspire host. These are local-only development values and expect the Asterisk container to be reachable on `http://localhost:8088/ari/`.
+
+The Aspire host supplies its local-only ARI connection values at runtime. The standalone Asterisk Web sample intentionally keeps ARI credentials out of committed configuration; use user secrets or environment variables as described above. Visiting `http://localhost:8088/` returns **Not Found** by design because the container exposes the ARI HTTP service, not a browser landing page. The `/ari/` endpoint can be used to verify that the local ARI service is reachable.
+
+The Asterisk container generates its self-signed WebRTC certificate in its entrypoint rather than in a `RUN` layer, so no private key is baked into the image. The key is created on first start under `/etc/asterisk/keys` and is unique per container.
+
+### Coturn dashboard URLs are suppressed on purpose
+
+The Coturn container registers its TURN endpoints with `WithUrls(context => context.Urls.Clear())`. This is a workaround for a defect in Aspire `13.4.6`, not a configuration preference, and removing it makes the app host fail to start on most runs.
+
+Aspire builds each resource's dashboard URL snapshot in `ResourceSnapshotBuilder.GetUrls`, which resolves a URL to its DCP endpoint with `SingleOrDefault`. Coturn publishes the same port over both TCP and UDP, so that lookup matches more than one endpoint and throws. The exception escapes into the DCP resource watch tasks and terminates them, and because those watchers drive orchestration for every resource, the failure is not limited to Coturn: when it triggers, no container and no project starts. The symptom is `Watch task over Kubernetes Service resources terminated unexpectedly` followed by `Sequence contains more than one matching element` in the app host log. The failure is timing dependent, so an occasional clean run does not mean it is fixed.
+
+Clearing the generated URLs skips that lookup entirely. The endpoints themselves are still published and proxied, so TURN over TCP and UDP on `3478` and `5349` continues to work; the only thing lost is the clickable Coturn link in the dashboard. Remove the call once Aspire resolves the underlying defect.
+
+The default Aspire endpoint template uses `Local/{number}@default`, which loops the originated call back into the bundled demo dialplan. Numeric and E.164 destinations beginning with `+` are supported. The dialplan answers, plays a short generated tone sequence, and enters `Echo()` so the simulation does not depend on sound files that are absent from the container image. That local development path still **originates through the configured Stasis application**, so the same live channel remains under ARI control for hold, resume, mute, merge, inbound answer/reject, and Local-route blind transfer while the simulated media stays inside Asterisk.
+
+### Two-party dashboard simulation
+
+The **Asterisk Dashboard** now includes a **Two-party call simulation** form. It originates both selected endpoints into the dashboard's Stasis application, waits until both channels are under ARI control, creates a `mixing` bridge, and adds both channels to that bridge. Partial failures remove any channels or bridge that were already created.
+
+The bundled defaults are:
+
+| Party | Endpoint | Behavior |
+| --- | --- | --- |
+| A | `Local/2001@crestapps-simulation` | Answers and emits a repeating 440 Hz synthetic tone pattern. |
+| B | `Local/2002@crestapps-simulation` | Answers and emits a repeating 659 Hz synthetic tone pattern. |
+
+These endpoints create a real Asterisk media bridge and remain active for up to five minutes or until disconnected from the dashboard. Disconnect the channels to end either simulated party, and disconnect the bridge when the simulation is finished so the ARI bridge is removed. The live dashboard shows four Local channel legs, the two logical calls, and the shared mixing bridge. To test with two actual people or devices, replace the defaults with endpoints configured by your PBX, such as `PJSIP/1001` and `PJSIP/1002`. Both endpoints must answer before the bridge can be completed.
+
+This simulation validates Asterisk channel origination, Stasis control, media bridging, live ARI events, and dashboard diagnostics. It does not run the automated AI conversation pipeline or create a Contact Center activity; use the separate **Inbound Simulator** for Contact Center routing and activity creation.
+
+For inbound routing tests, use the **Asterisk Web** startup sample (`src\Startup\CrestApps.OrchardCore.Asterisk.Web`). It signs in to Orchard, originates one or more Asterisk channels directly into the configured Stasis application, waits for the matching `StasisStart` events, and then forwards the normalized `InboundVoiceEvent` requests to `POST /api/contact-center/voice/inbound` using the live Asterisk channel ids. The WebSocket reader queues events to concurrent dispatch workers, so one slow Orchard ingress request does not block later calls in a burst, and each forward has a bounded timeout. If the sample listener misses the matching event, the simulator briefly reconciles the originated channel through ARI and forwards it only when the authoritative channel snapshot confirms the configured Stasis application and exact simulation key. This prevents a transient listener gap from turning a successfully originated inbound call into a false HTTP 504 result. The sign-in check also recognizes tenant-prefixed login redirects and fails explicitly instead of continuing with an unauthenticated client. The sample exposes two pages: **Asterisk Dashboard** for live ARI telemetry and two-party bridge testing, and **Inbound Simulator** for Contact Center burst testing. The dashboard uses a dedicated `crestapps-dashboard` ARI application so it does not compete with the CMS `crestapps-telephony` event listener. It treats the Asterisk event stream as the primary update path: channel, bridge, state, dialplan, and variable events request an immediate snapshot, the server coalesces only a short event burst, reads independent ARI diagnostics endpoints concurrently, enriches active channels concurrently, and pushes the snapshot to connected browsers over SignalR. Dashboard ARI HTTP requests close their connections after each response to avoid stale pooled sockets after container restarts. The sample serves the SignalR client from the application instead of depending on an external CDN. While SignalR is connected, browser polling is stopped; a 15-second reconciliation poll starts only while SignalR is unavailable or reconnecting, then stops again after reconnection. Call and bridge count badges update from every snapshot, and the initial page snapshot uses the same web JSON naming policy as live hub messages. The dashboard groups raw local channel legs into logical calls so one Local call is easier to read, shows inferred call direction, surfaces provider-tracked hold and mute state, estimates party counts from bridge membership, and adds a disconnect action so you can simulate caller hangup from the PBX side. Its two-party form can use the bundled synthetic Local endpoints or real PBX endpoints and reports the created bridge and channel ids. The inbound simulator distinguishes calls that were immediately **Offered**, are **Waiting in queue**, or were **Not queued**, so `routed: false` is no longer presented as a rejection when the durable queue accepted the call. Live notifications now sit beside the raw ARI payload drill-down so the active call and bridge tables have more room. In the simulator, configured defaults populate the initial form, the configured provider identity is authoritative and read-only so ingress records match the live ARI listener, **To address** controls which Contact Center entry point or queue mapping the inbound call targets, and **Caller number seed** only changes the generated caller identities. The sample and Aspire host use the root Orchard URL and **Default Asterisk** provider by default; set **Orchard base URL** to the tenant URL, such as `https://localhost:5001/blog1`, when testing a named tenant.
+
+The bundled local configuration is intended for development and connectivity testing. The Asterisk Web host is development-only and must not be deployed as a production component. Production telephony deployments should supply their own ARI credentials, dialplan, endpoints, and media/network configuration through protected configuration.
+
+## Verifying local Asterisk activity
+
+The bundled image does not expose a separate web dashboard for live calls. For local development, the easiest inspection points are the ARI endpoints and the container logs.
+
+### Quick ARI checks
+
+With the default Aspire credentials, these endpoints are useful:
+
+- `GET http://localhost:8088/ari/asterisk/info` confirms that ARI is reachable and authenticated.
+- `GET http://localhost:8088/ari/channels` lists the active channels that Asterisk currently knows about.
+- `GET http://localhost:8088/ari/bridges` lists any active bridges, including merged calls.
+
+If the soft phone dials successfully but `channels` stays empty while the call is active, the originate request is not reaching or being accepted by Asterisk. If the call appears in `channels` but a later action such as hold fails, inspect the Orchard application logs and the Asterisk container logs together to see the ARI response body and the PBX-side reason.
+
+The Telephony SignalR hub now logs the start and completion of each soft-phone action with the authenticated user id, SignalR connection id, the provider call id, and any Contact Center correlation metadata that travelled with the call reference. When an Asterisk call-control action fails after a queued inbound offer is accepted, those hub entries make it easier to confirm whether Orchard is still acting on the original offered channel id or on the latest provider-side call identity.
+
+The Asterisk module also registers a Contact Center voice-provider adapter. It returns the actual tenant or configuration-backed provider name used for the call, allowing outbound interactions and later ARI lifecycle events to correlate on the same provider identity.
+
+The Asterisk development dashboard also logs the refresh source, refresh-lock wait, ARI snapshot duration, SignalR broadcast duration, and resulting channel/bridge/logical-call counts. Compare the timestamp of the incoming ARI event with these entries to distinguish delayed provider event delivery from slow snapshot acquisition, lock contention, or SignalR broadcast delay. The standalone sample builds its own local SignalR browser asset through `Assets.json`; if `/js/signalr.min.js` is missing, the dashboard cannot receive event pushes and intentionally falls back to its slower reconciliation poll.
+
+### What to expect from the bundled local path
+
+The local `Local/{number}@default` endpoint remains useful for keeping the media loop inside Asterisk during development, and the provider now originates those calls directly into the configured Stasis application so ARI events, dashboard telemetry, and the forwarded Contact Center ingress event all describe the same provider call id. Because the same Local loopback call leg stays inside Stasis, the Orchard soft phone can now expose advanced ARI-backed controls there instead of hiding them.
+
+## Provider protocol contract tests
+
+The Asterisk integration is pinned to the protocol Asterisk actually publishes, not to a hand-written stub. The Asterisk project ships its REST Interface as machine-readable Swagger declarations for every release, and the declarations for the release this repository pins its container image to are vendored verbatim under `tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/Asterisk/{version}`.
+
+That directory contains four things:
+
+- `spec-events.json`, `spec-channels.json`, `spec-bridges.json`, and `spec-recordings.json` are the upstream declarations, copied byte for byte.
+- `manifest.json` records the provenance of those copies: the upstream repository, the tag they were taken from, the path and URL of each file, the SHA-256 of each file, and the container image tag and digest the single-node profile runs.
+- `contract.json` binds the realtime voice event mapper to those declarations. For each event the mapper interprets it lists the property paths the mapper depends on, and it separately lists the compatibility fallbacks the mapper only tolerates, together with the reason each one is tolerated.
+- `events/` and `rest/` hold the recorded payloads and REST responses that are replayed through the production code.
+
+Four suites enforce this:
+
+- `AsteriskAriContractProvenanceTests` recomputes every recorded hash, requires the vendored release to match the release parsed out of `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile`, and requires exactly one vendored release directory to exist. An Asterisk version bump therefore breaks the build until the declarations are refreshed.
+- `AsteriskAriEventContractTests` scans `AsteriskRealtimeVoiceEventMapper` for the event types it special-cases and requires `contract.json` and the recorded events to cover exactly that set, requires every declared property path to resolve against the vendored declarations, requires every recorded payload to contain only fields those declarations permit, requires each tolerated fallback to stay absent from the corresponding model, and replays every recorded event through the production mapper.
+- `AsteriskAriRestContractTests` constructs the real `AsteriskAriClient` over the recorded responses, exercises every method `IAsteriskAriClient` publishes, and requires every request the client issues to match an operation the vendored declarations declare, with only query parameters that release accepts.
+- `DialPadWebhookContractTests` covers the other provider; see [DialPad](dialpad.md).
+
+### Refreshing the vendored declarations
+
+1. Change the pinned image in `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile` and record the new digest.
+2. Download `rest-api/api-docs/events.json`, `channels.json`, `bridges.json`, and `recordings.json` from the Asterisk repository at the tag matching the new release.
+3. Rename the version directory to the new release and replace the four `spec-*.json` files.
+4. Update `manifest.json` with the new tag, digest, URLs, and SHA-256 values.
+5. Run the Asterisk contract suites. Any property the mapper depends on that the new release no longer declares, and any request the client issues that the new release no longer accepts, fails immediately and must be resolved before the bump lands.
+
+These gates are not theoretical. They found two real defects. The mapper read channel variables from four locations, none of which was `Channel.channelvars`, the only location a conforming Asterisk release populates, so the interaction correlation identifier could never be recovered from a channel object. Recording duration was read from `StoredRecording`, which Asterisk declares with only a name and a format, so every completed recording reported no duration; the client now reads the live recording, where the duration is declared, before stopping it.

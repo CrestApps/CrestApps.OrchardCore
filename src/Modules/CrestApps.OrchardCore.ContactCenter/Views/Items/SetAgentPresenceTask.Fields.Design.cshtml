@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SetAgentPresenceTask>
+
+<header>
+    <h4>
+        <i class="fa-regular fa-circle-user" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Set Agent Presence to {0}.", Model.Activity.Status])
+    </h4>
+</header>

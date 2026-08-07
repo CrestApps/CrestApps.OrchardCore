@@ -1,0 +1,973 @@
+# Orchard Core Production Readiness Plan
+
+**Branch:** `ma/add-contact-center`
+**Scope:** ContactCenter, Telephony, Asterisk, DialPad and supporting Abstractions/Core projects
+**Last reviewed:** 2026-08-02
+**Review method:** Six independent expert reviewers (Orchard Core alignment, ASP.NET Core/.NET, extensibility & public API, UI & resource management, security & production readiness, module architecture & code quality), each running a different model against source only. Every finding below was independently re-verified against the code before being admitted to this plan.
+
+---
+
+## Verdict
+
+| Axis | Score |
+| --- | --- |
+| **Production ready** | **No** — 1 merge blocker, 13 high-severity items |
+| Overall | 7.5 / 10 |
+| Orchard Core alignment | 8 / 10 |
+| ASP.NET Core practice | 7 / 10 |
+| Extensibility | 7 / 10 |
+| Maintainability | 6 / 10 |
+| Performance & scalability | 5 / 10 |
+| Security | 6.5 / 10 |
+
+This is genuinely idiomatic Orchard Core work and belongs in the ecosystem. It is blocked by a small number of specific, fixable defects — not by systemic architectural failure. `OC-001` alone blocks merge.
+
+### Review caveat
+
+A clean full build could **not** be verified in this environment: `dotnet build` fails with `CS0246` on `IModifiedUtcAwareModel` and `AIDataSourceSourceOptions`. This reproduces identically on `origin/main` in a clean worktree, so it is a **pre-existing package/feed issue, not a defect of this branch**. Compile-verification of the branch remains outstanding and must be performed on a machine with CloudSmith feed access before merge.
+
+---
+
+## How to use this plan
+
+Work items are independent unless a `Dependencies` field says otherwise, so they can be picked up one at a time. Update `Status` in place. When an item is completed, mark it `Completed` and re-run the affected verification command in its acceptance criteria.
+
+**Status values:** `Not Started` · `In Progress` · `Blocked` · `Completed`
+**Effort:** S (<½ day) · M (1–3 days) · L (1–2 weeks) · XL (>2 weeks)
+
+---
+
+# Phase 1 — Critical Architecture Issues
+
+### OC-001 — Contact Center bricks any tenant running OrchardCore.HealthChecks at its default route
+
+- **Priority:** Critical (merge blocker)
+ - **Status:** Completed
+- **Category:** Startup correctness / availability
+- **Effort:** S
+- **Risk:** Low
+- **Dependencies:** None
+
+**Problem.** `ContactCenterSharedHealthEndpointStartup` (`src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs:288-312`) carries `[RequireFeatures("OrchardCore.HealthChecks")]` and no `[Feature]` attribute, so it belongs to the module's **default** feature. Its `ConfigureServices` calls `SharedHealthCheckEndpointGuard.Validate(...)`, which throws `InvalidOperationException` when the health route's last segment is `live`/`liveness` and the operator has not opted out.
+
+**Root cause.** The guard treats an unconfigured route as unsafe. `SharedHealthCheckEndpointGuard.DefaultSharedEndpointRoute` is `/health/live`, and I confirmed by extracting the string table from `OrchardCore.HealthChecks.Abstractions/3.0.0` that `/health/live` is genuinely the shipped Orchard default. So `Validate(null, false)` throws. The behaviour is deliberate — `SharedHealthCheckEndpointGuardTests.cs:36-41` asserts the unconfigured case throws.
+
+**Why it matters.** Enabling Contact Center on a tenant that already has `OrchardCore.HealthChecks` enabled — both modules at their **shipped defaults** — throws while the shell container is being built. The shell never activates, so every request to that tenant fails, including `/admin`, which is the only place to disable the feature. Recovery requires editing shell configuration and restarting the process. On the `Default` tenant this takes the whole site down.
+
+**Orchard Core pattern violated.** `StartupBase.ConfigureServices` is part of shell-container construction; it is not a validation phase and has no failure surface. The module's own `ContactCenterTopologyValidator` documents the correct rule — *"Throwing during activation bricks the tenant with no diagnostic surface"* — and this code does exactly that one file away. A module must also not veto another module's configuration.
+
+**Recommended solution.** Convert the guard to a non-fatal check:
+1. Move the validation out of `ConfigureServices` into `IModularTenantEvents.ActivatedAsync`.
+2. Log at `Critical` and register a degraded/unhealthy Contact Center health-check entry, mirroring `BaseVoiceVerificationStartupCheck` and `ContactCenterTopologyValidator`.
+3. Surface an admin notification via `INotifier` so an operator actually sees it.
+4. Alternatively invert the default: treat the shipped `/health/live` as acknowledged and object only to an explicitly configured liveness route.
+
+**Files affected.** `ContactCenter/Startup.cs:288-312` · `ContactCenter.Core/HealthChecks/SharedHealthCheckEndpointGuard.cs` · `tests/.../ContactCenter/SharedHealthCheckEndpointGuardTests.cs`
+
+**Acceptance criteria.**
+- Enabling Contact Center + `OrchardCore.HealthChecks` with no health configuration leaves the tenant fully bootable and `/admin` reachable.
+- The hazard is reported via log + health check + admin notification.
+- `SharedHealthCheckEndpointGuardTests` asserts the logged/health outcome instead of a throw.
+
+---
+
+### OC-002 — Soft-phone dialing bypasses the outbound compliance gate
+
+- **Priority:** Critical (legal/regulatory exposure)
+- **Status:** Completed
+- **Category:** Compliance / security
+- **Effort:** M
+- **Risk:** Medium
+- **Dependencies:** Permission model decision (see Notes)
+
+**Problem.** `TelephonyHub.Dial()` (`Telephony/Hubs/TelephonyHub.cs:90-91`) dispatches straight to `DefaultTelephonyService.DialAsync` → `provider.DialAsync` after only a `UseSoftPhone` authorization check. DNC, suppression, retry limits, calling-window and abandonment checks live **only** in `DialerAttemptService` (`ContactCenter.Core/Services/DialerAttemptService.cs:94`, `_eligibilityService.EvaluateAsync`).
+
+**Root cause.** Two independent dial paths exist — the campaign dialer path (gated) and the generic soft-phone path (ungated) — and the compliance gate was attached to the service rather than to the provider boundary that both paths share. A grep for DNC/compliance/eligibility vocabulary across the entire Telephony module returns 2 incidental hits.
+
+**Why it matters.** With the Contact Center Dialer and Compliance features enabled, any agent holding `UseSoftPhone` can place a call to a DNC-suppressed number, or outside permitted calling hours, simply by invoking the hub — bypassing the auditable dialer path entirely. This is a TCPA/DNC regulatory exposure, not merely a design inconsistency.
+
+**Recommended solution.** Pick one and document it:
+1. **Preferred** — enforce eligibility at the shared provider boundary so *every* origination passes the gate, with a distinct audited "manual call" policy for agent-initiated dialing.
+2. Deny generic PSTN dialing to Contact Center agents unless an explicitly audited, policy-screened manual-call capability is granted.
+
+**Files affected.** `Telephony/Hubs/TelephonyHub.cs` · `Telephony/Services/DefaultTelephonyService.cs` · `ContactCenter.Core/Services/DialerAttemptService.cs` · compliance/eligibility services
+
+**Acceptance criteria.**
+- A regression test proves a DNC-suppressed number cannot be dialed through `TelephonyHub.Dial` when Compliance is enabled.
+- A regression test proves calling-window enforcement applies to the soft-phone path.
+- Every origination path is covered by an audit record.
+
+**Notes.** Manual agent-initiated calls are treated differently from automated campaign dialing under TCPA, so "gate everything identically" may be the wrong answer — but the current *silent* bypass is not defensible. This needs an explicit, documented policy decision.
+
+**Resolution (Solution 1).** Added a provider-agnostic screening extension point in Telephony (`IOutboundCallScreener` / `IOutboundCallScreeningService`, with `OutboundCallScreeningContext`/`OutboundCallScreeningResult`/`OutboundCallOrigin`). `DefaultTelephonyService.DialAsync` now runs the aggregated screeners before dispatching any origination and fails closed on the first denial (and on a null verdict from a registered screener); standalone Telephony with no screener registered still dials, preserving backward compatibility. The layer boundary is respected — Telephony does not depend on ContactCenter. The **Contact Center Outbound Compliance** feature registers `ContactCenterManualCallScreener`, which applies contact opt-out, national do-not-call registries, and (opt-in) calling-window enforcement to soft-phone dials, resolving the destination to E.164 and failing closed on an unparseable number while do-not-call is enforced. Every suppression publishes a `ManualDialSuppressed` audit event. Configured under `CrestApps_ContactCenter:Compliance:ManualDialing` (`ManualDialingComplianceOptions`, bound + validated on start — calling-window enforcement requires a calling calendar id). Tests: `OutboundCallScreeningTests`, `ManualCallScreenerTests` (including an end-to-end composition test that drives the real screener through the real `DefaultTelephonyService` and asserts the provider is untouched and the audit is recorded). Docs: `contact-center/agents-queues-dialer.md` (Manual soft-phone screening) and changelog `v2.0.0.md`. Independently reviewed by gpt-5.6. Follow-up recorded as **OC-048** (audit actor attribution).
+
+---
+
+### OC-003 — A never-released module ships live-upgrade migration chains, including a destructive rebuild
+
+- **Priority:** High
+- **Status:** Won't Fix — premise disproven (see Resolution)
+- **Category:** Data migrations
+- **Effort:** M
+- **Risk:** Low
+- **Dependencies:** None
+
+**Problem (as originally stated).** The ContactCenter module does not exist on `origin/main`. Yet **14 of 25** migration classes carry `UpdateFromN` chains. `CallSessionIndexMigrations.UpdateFrom3Async` performs a destructive rebuild: schema-qualified raw `drop index if exists`, a tolerant `SchemaBuilder(throwOnError: false)` pass, two `IndexStringColumnRebuild.WidenAsync` calls, index recreation, a `GROUP BY ... HAVING COUNT(*) > 1` duplicate scan that throws on collision, and a raw `CREATE UNIQUE INDEX`. The item asserted that *every brand-new tenant* executes this rebuild against an empty table for zero benefit, and recommended collapsing every ContactCenter migration into a single `CreateAsync`.
+
+**Resolution — Won't Fix (premise disproven; validated by independent gpt-5.6 review).**
+
+Deeper investigation showed the central premise is factually wrong and the recommended collapse would be net-harmful:
+
+1. **Fresh installs run no destructive rebuild.** Orchard Core's migration manager invokes `CreateAsync`, records its returned version `V`, then runs `UpdateFrom{V}Async`, `UpdateFrom{next}Async`, … until no method matches. `CallSessionIndexMigrations.CreateAsync` already builds the final schema (ProviderCallId length 256, claim key 385, all indexes and the unique constraint) and **returns 4** (`CallSessionIndexMigrations.cs:60,110`). The manager then looks for `UpdateFrom4Async` — none exists — so it runs nothing. The destructive `UpdateFrom3Async` (`:176`) runs **only** for a tenant already recorded at version 3 (a real earlier-preview adopter), as a genuine upgrade — never on a fresh tenant.
+2. **The chains are an intentional, documented, tested rolling-upgrade capability, not pre-release debt.** They are exercised by `ContactCenterRollingUpgradeTests` (synthesizes the previous-version schema, applies the real upgrade steps to a live DB, then asserts both previous- and current-version writers succeed against the upgraded database; hard-floors `MinimumUpgradeStepCount = 8`), governed by `MigrationAdditiveOnlyGuardTests` (a formal contract register that detects every destructive step, requires explicit authorization, and verifies in-place rebuilds restore each object they drop), enforced by `ContactCenterRetentionCoverageTests` (`covered >= 8` upgrade steps that add a settlement column must backfill it), and validated on real PostgreSQL by the `*PostgresMigrationTests` distributed suite.
+3. **Collapsing would remove a real capability and invalidate ~5,000+ lines of deliberate safety tests** to save fresh installs only a handful of harmless additive `ALTER` statements on empty tables.
+
+**Scope carve-outs recorded during review (not part of OC-003; see OC-049).**
+- A narrower change — having the additive migrations whose `CreateAsync` returns an old version (e.g. `InteractionIndexMigrations` returns 1) build the final schema and return the final version *while retaining* their `UpdateFromN` for existing tenants — is contract-legal and rolling-test compatible, but is a **measured fresh-activation optimization**, not a correctness fix. Tracked separately as OC-049.
+- The rolling-upgrade guarantee should be described as **preserved upgrade + post-upgrade write compatibility**, not unconditional zero-downtime for the in-place rebuild step itself: `UpdateFrom3Async` drops indexes, widens columns and rewrites the table, and acknowledges a MySQL uniqueness window (PostgreSQL can also take disruptive DDL locks). Deployments applying that specific step should drain/maintenance-window it unless concurrent-load testing proves otherwise. Documentation follow-up tracked under OC-049.
+
+**Verification.** Independent gpt-5.6 review returned verdict **WITHDRAW**, confirmed the migration-manager interpretation against the code, and ran the migration-safety suite (**90 tests, 0 failures**). No code changed.
+
+---
+
+# Phase 2 — Orchard Core Integration
+
+### OC-004 — Provider registry is case-sensitive and swallows name collisions
+
+- **Priority:** High · **Status:** Completed · **Category:** Extensibility/DI · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** `TelephonyProviderOptions` (`Telephony.Abstractions/TelephonyProviderOptions.cs:10,34-38`) backs its registry with `private readonly Dictionary<string, TelephonyProviderTypeOptions> _providers = [];` — a default **case-sensitive** ordinal dictionary. `TryAddProvider` returns `this` silently when the key already exists.
+
+**Why it matters.** `"Asterisk"` and `"asterisk"` become two distinct providers, producing tenant-resolution failures that are near-impossible to debug. A third-party module that collides with an existing technical name is silently discarded with no exception, no log, and no `false` return. `IProviderIdentityResolver.Canonicalize` mitigates alias drift at event ingress but does **not** protect the options registry.
+
+**Recommended solution.** Initialize with `StringComparer.OrdinalIgnoreCase`; make collision observable (return `bool`, or throw at startup since registration happens during container build). Normalize/trim names and validate non-whitespace.
+
+**Acceptance criteria.** Tests cover case-insensitive resolution and an observable collision outcome.
+
+**Resolution (commit `b4aa374f`).** Backed `_providers` with `StringComparer.OrdinalIgnoreCase` and rebuilt the exposed `Providers` frozen dictionary with the same comparer (it was ordinal — a second latent bug affecting `DefaultTelephonyProviderResolver` lookups). Names are trimmed and validated via `ArgumentException.ThrowIfNullOrWhiteSpace`. Collisions are now observable: re-registering the identical provider `Type` is an idempotent no-op, while registering a **different** `Type` under an existing (case-insensitive) name throws `InvalidOperationException` at container/options build. `TryAddProvider` keeps its fluent `TelephonyProviderOptions` return type to avoid a breaking public-API change (Telephony.Abstractions is released on `main`); `ReplaceProvider` remains the intentional override path. Added tests for case-insensitive resolution, idempotent/collision semantics, whitespace trimming, and null-vs-whitespace argument validation (17/17 pass, 0 warnings). Documented in `telephony/custom-providers.md` and the `v2.0.0` changelog. Independently reviewed by gpt-5.6 (code-review agent): one Medium finding (null name should throw `ArgumentNullException` per repo convention) was applied and the change was then APPROVED.
+
+---
+
+### OC-005 — `ReconcileAsync` is a published contract that nothing ever invokes
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Lifecycle · **Effort:** S · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `IContactCenterFeatureLifecycleParticipant.ReconcileAsync` is documented as reconciling feature state on shell activation, and `ContactCenterFeatureLifecycleCoordinator.ReconcileAsync` implements the fan-out — but `ContactCenterFeatureLifecycleHandler` overrides only `DisablingAsync`. No caller of the coordinator's `ReconcileAsync` exists in the repository. Four types implement it and none is reached. Relatedly `ContactCenterVoiceTenantEvents` is named for tenant events but is never registered as `IModularTenantEvents`.
+
+**Why it matters.** This ships in the **Abstractions package**. A third-party voice provider will implement `ReconcileAsync` per the XML doc and silently receive no post-restart reconciliation. Internally the gap is masked by `ProviderCallStateReconciliationBackgroundTask`, so it will not surface in testing — it will surface as a provider that never recovers after a shell reload.
+
+**Recommended solution.** Either wire it (`IModularTenantEvents.ActivatedAsync` or `FeatureEventHandler.EnabledAsync` resolving the coordinator), or delete `ReconcileAsync` from the interface and all four implementations. Do not ship a contract that lies.
+
+**Resolution (chose deletion).** Deleted `ReconcileAsync` from the interface and all five implementations. Investigation showed every implementation only flipped an in-memory admission flag (`_workManager.Activate` / `_connectionRegistry.Activate`), which is redundant on a fresh shell — a re-enabled feature rebuilds the tenant shell, so the per-instance `ConcurrentDictionary` defaults to not-quiescing and the hub connection registry defaults active. The contract could not be safely wired at activation either: both a synchronous fan-out and a `ShellScope.AddDeferredTask` execute inside the nested activation scope whose `finally` awaits `BeforeDisposeAsync` **before** `IsActivated` is set (verified against Orchard `ShellScope.ActivateShellInternalAsync`), so a hung participant would block tenant startup. The genuine post-restart provider reconciliation is owned by `ProviderCallStateReconciliationBackgroundTask` → `ContactCenterVoiceLifecycleParticipant.ReconcileProviderStateAsync` (a real `IBackgroundTask`, gated on the work-admission gate, fully decoupled from activation) — which is retained. The interface is new on this unreleased branch, so removal is zero-breakage. Also deleted `ContactCenterFeatureLifecycleActivationHandler` and its `IModularTenantEvents` registration, and dropped both `ReconcileAsync` overloads plus the orphaned `ExecuteBestEffortAsync` from the coordinator (now quiesce + drain only). Updated the PublicApi baseline, tests, changelog, `production-support.md`, and the `feature-lifecycle-contracts.v1.json` ledger. Independently reviewed (gpt-5.6-sol): **APPROVE**. Commit `ea3225a1`.
+
+---
+
+### OC-006 — Provider modules register admin settings in their base feature
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Feature design · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** `Asterisk/Startup.cs:101` and `DialPad/Startup.cs:39` call `AddSiteDisplayDriver<...SettingsDisplayDriver>()` in the un-attributed base `Startup`. Both drivers declare `SettingsGroupId => TelephonyConstants.SettingsGroupId`, whose menu entry is contributed only by the `Telephony Administration` feature — which neither provider depends on.
+
+**Why it matters.** Two symmetric defects: (1) headless deployments enabling Asterisk get admin drivers they explicitly do not want — the exact scenario the `.Admin` split exists to prevent; (2) enabling Asterisk *without* Telephony Administration registers a settings editor with no navigation entry, reachable only by guessing the `groupId` URL.
+
+**Recommended solution.** Move both calls into `[RequireFeatures(TelephonyConstants.Feature.Admin)]`-gated `AsteriskAdminStartup` / `DialPadAdminStartup` classes.
+
+**Resolution.** Extracted `AddSiteDisplayDriver<AsteriskSettingsDisplayDriver>()` out of the Asterisk base `Startup` fluent chain and `AddSiteDisplayDriver<DialPadSettingsDisplayDriver>()` out of the DialPad base `Startup` into new `sealed` `AsteriskAdminStartup` / `DialPadAdminStartup` classes, each decorated with `[RequireFeatures(TelephonyConstants.Feature.Admin)]`. The provider settings drivers are now registered only when the Telephony Administration feature is enabled, so the settings tab and its `telephony` group navigation entry always appear together. Both modules build with 0 warnings.
+
+---
+
+### OC-007 — Logout hooked via tenant-wide middleware matched on hardcoded URLs
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Authentication integration · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `AvailabilityStartup.Configure` (`ContactCenter/Startup.cs:500-553`) installs `app.Use(...)` into the tenant pipeline; `IsLogoutRequest` matches only `POST /Users/Account/LogOff` and `POST /Users/Account/Logout`.
+
+**Why it matters.** The delegate runs for **every** request on the tenant to evaluate two string comparisons, and silently misses every other way a session ends: OIDC/external sign-out, front-channel logout, cookie expiry, security-stamp invalidation, admin-initiated disable. An agent whose cookie expires stays `Available` and keeps receiving offers until the cleanup sweep, and their browser SIP credentials are never revoked. It also breaks if Orchard renames the account routes.
+
+**Recommended solution.** Replace with `PostConfigure<CookieAuthenticationOptions>` chaining `OnSigningOut` (and `OnValidatePrincipal` for stamp rejection), executing presence sign-out and credential revocation inside a `ShellScope` child scope. Keep `AgentSessionCleanupBackgroundTask` as the backstop.
+
+**Also fix here (trivial).** Line 509 resolves `ILogger<AgentsStartup>` inside `AvailabilityStartup` (wrong log category), and uses a fully-qualified `Microsoft.Extensions.Logging.ILogger<...>` despite the `using` at line 41.
+
+**Resolution.** Removed the tenant-wide `app.Use(...)` middleware, the `IsLogoutRequest` URL matcher, and the `Configure` override from `AvailabilityStartup`. Replaced them with a new `internal sealed ContactCenterAgentSignOutCookieConfiguration : IPostConfigureOptions<CookieAuthenticationOptions>` (registered via `services.ConfigureOptions<>()`) that chains the application cookie scheme's (`IdentityConstants.ApplicationScheme`) `OnSigningOut` **and** `OnValidatePrincipal` events, preserving any previously configured handlers. Presence sign-out and soft-phone credential revocation now run whenever the cookie session ends by **any** mechanism — explicit log off, programmatic/external front-channel sign-out, and security-stamp rejection — instead of only on two hardcoded URLs, and the per-request string comparisons are gone. `OnValidatePrincipal` is hooked specifically because the security-stamp validator rejects and signs out the principal *inside* cookie authentication, before `HttpContext.User` is populated, so the `OnSigningOut` it triggers cannot see the user; the handler captures the user id from `context.Principal` before the prior handler runs and synchronizes only when the principal was actually rejected (`context.Principal is null`), which avoids any per-request work on the normal validation path. The synchronization body is fully isolated from the sign-out flow — the cookie handler raises these events *before* it deletes the auth cookie, so all exceptions are caught and swallowed (logged at Warning) and the work runs under a bounded, request-independent `CancellationTokenSource(10s)` token so a client disconnect cannot cancel it and leave a live auth cookie. The correct logger category (`ILogger<ContactCenterAgentSignOutCookieConfiguration>`) is resolved from the request scope, fixing the wrong-category/fully-qualified-`ILogger` issue. The per-revoker credential-revocation loop was centralized into a new shared `internal static SoftPhoneCredentialRevocation.RevokeForUserAsync(...)` helper in Core (failure-isolated per provider) so the cookie handler and the cleanup backstop revoke identically. `AgentSessionService.ExpireStaleAsync` — the durable backstop for pure cookie-expiry, which never raises `SignOutAsync` — now also calls that helper (reason `"session-expired"`) after presence sign-out, so an agent whose cookie merely expires has their browser SIP credentials torn down too; the service gained `IEnumerable<ISoftPhoneCredentialRevoker>` + `ILogger<AgentSessionService>` constructor dependencies. The tested revocation helper's call sites moved from the module class to the Core helper, and a new `ExpireStaleAsync_RevokesSoftPhoneCredentials` test asserts the backstop revocation.
+
+---
+
+### OC-008 — Six `.Admin` sub-features are feature-explosion
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Feature design · **Effort:** M · **Risk:** Medium · **Dependencies:** Update `support-matrix.v1.json` + `feature-dependency-violations.v1.json` in the same change
+
+**Problem.** The manifest declares 24 features. `ContactCenterRecordingAdminStartup` (`Startup.cs:407-419`) is an entire manifest feature whose body is a single `AddSiteDisplayDriver` call and which contributes no navigation. `DialerAdmin` and `EntryPointsAdmin` are two lines each. All six `.Admin` features depend on both `Admin` and their capability feature, so none can be enabled in isolation.
+
+**Why it matters.** Each feature multiplies the state space that the activation tests, support matrix, dependency ledger and docs must cover, and the on/off combinations an operator must reason about. The headless justification is already satisfied by the single `Contact Center Administration` feature.
+
+**Recommended solution.** Fold the five capability `.Admin` features into `Feature.Admin`, gating each registration with `[RequireFeatures(...)]` sibling startups. Manifest drops 24 → 19. **Retain** the genuine capability features (Agents, Availability, Queues, Routing, Voice, Dialer, Compliance, Recording, EntryPoints, RealTime, Analytics, Workflows) — those map to separately licensable capabilities and are correctly designed.
+
+**Resolution.** Removed the five capability `.Admin` manifest features (`Agents.Admin`, `Queues.Admin`, `Dialer.Admin`, `Recording.Admin`, `EntryPoints.Admin`) and their `ContactCenterConstants.Feature` identifiers, dropping the manifest from 24 features to 19. Their five admin `StartupBase` classes and the eight admin controllers that previously carried `[Feature(<capability>Admin)]` now carry `[Feature(Admin)]` + `[RequireFeatures(<capability>)]`, so every administration registration belongs to the single `Contact Center Administration` feature and each capability's screens light up only when both `Admin` and that capability are enabled. `RequireFeaturesAttribute` returns 404 for a routed admin controller whose capability is disabled, matching the previous behavior exactly while removing five features from the state space. The headless closure proof was tightened, not weakened: the R0a `feature-dependency-violations.v1.json` closures for the five removed features were deleted (the `FeatureDependencyClosures_AreLegalAndMatchTheExpectedLedger` test iterates the 19 remaining manifest features), `support-matrix.v1.json` needed no change (it never listed the `.Admin` sub-features), and `ContactCenterHeadlessClosureTests` replaced the obsolete per-`.Admin`-feature test with two new proofs — `EnablingAdministrationWithACapability_RestoresThatCapabilitysSurface` (Admin + capability registers strictly more Contact Center admin surface than Admin alone) and `EnablingACapabilityWithoutAdministration_RegistersNoSurface` (a capability without Admin stays headless). The Abstractions public-API baseline was regenerated to drop the five constants, and the architecture test that pinned the entry-point navigation owner now asserts `Admin` owns it while requiring `EntryPoints`.
+
+---
+
+### OC-009 — No `placement.json` in any module
+
+- **Priority:** Low · **Status:** Won't Fix · **Category:** Display management · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** None of the four modules ships a `placement.json`; drivers hardcode `.Location("Content:1")`, `"Actions:5"`, `"Meta:5"`.
+
+**Why it matters.** Integrators can still override from a theme, but a module-shipped `placement.json` documents the available slots and lets shape output be reordered or hidden without code — the standard Orchard extension point core modules provide.
+
+**Disposition (Won't Fix).** The premise is accurate — the four modules set default placement in their display drivers rather than in a `placement.json` — but neither available form of the change adds capability or value, so it is not worth the churn and regression surface.
+
+- **There is no capability gap.** Orchard Core resolves placement globally by shape type, so an integrator, site, or theme can already ship a `placement.json` targeting any of these shapes (for example `ContactCenterSkill_Fields_SummaryAdmin`, `ContactCenterSkill_Buttons_SummaryAdmin`, or a settings shape's `Content:10#Asterisk` slot) to reorder or hide it with no code. The driver `.Location()` calls provide sensible, fully overridable defaults, which is exactly the extension point the item asks for. Nothing in the current design blocks a theme- or site-level override.
+- **A module `placement.json` that duplicates the driver defaults would violate DRY.** Restating the current 52 default locations across 22 drivers creates two sources of truth that must stay byte-for-byte in sync; any drift silently changes rendering. This adds regression surface for zero behavioural benefit. (Shipping module-default placement is itself a legitimate Orchard Core idiom — `OrchardCore.Contents` does it — the objection is specifically to *duplicating* defaults that already live in the drivers.)
+- **The single-source alternative — deleting the `.Location()` calls and moving every default into `placement.json` — would be DRY, but adds risk across all 52 placements while adding no functionality.** It is a pure representation change of defaults that already work and are already overridable, so it carries migration and regression risk with no offsetting value.
+- **No specific beneficial override was identified.** A `placement.json` is worth shipping when it *hides* or *reorders* a shape whose current default is wrong (as `CrestApps.OrchardCore.Users/placement.json` does with `{"UserMenuItems":[{"differentiator":"Title","place":"-"}]}`). Every current default here is appropriate, so there is no targeted override to ship.
+
+Because there is no capability gap and no beneficial targeted override to add, no change is made. If a concrete customization need arises later, it can be met by a targeted `placement.json` at that time without any change to these modules.
+
+---
+
+### OC-010 — No setup/bootstrap recipe for a 24-feature module set
+
+- **Priority:** Low (Enhancement) · **Status:** Completed · **Category:** Recipes · **Effort:** M · **Risk:** Low · **Dependencies:** Follows OC-008
+
+**Problem.** The only `.recipe.json` in scope is `Migrations/agent-state-reason-codes.recipe.json`. There is no module-level recipe enabling a coherent feature set with seed configuration.
+
+**Why it matters.** First-run experience is a ~20-step manual checklist across 4 modules before a single call can route. All seven recipe steps needed already exist and are tested — they are simply not composed.
+
+**Recommended solution.** Ship "Contact Center — Inbound Voice" and "Contact Center — Outbound Dialer" recipes with a `feature` step plus the existing config steps and starter data.
+
+**Resolution.** Shipped two harvestable recipes in `src/Modules/CrestApps.OrchardCore.ContactCenter/Recipes/` — `contact-center-asterisk-ga-core.recipe.json` and `contact-center-dialpad-ga-core.recipe.json` — each with a `feature` step that enables, in one step, exactly the feature set of the matching authoritative support-matrix tenant profile (`ga-core-asterisk` / `ga-core-dialpad`). Because the module uses `OrchardCore.Module.Targets`, the `Recipes/` folder is embedded and harvested by `OrchardCore.Recipes`, so both appear under **Configuration → Recipes** and run on demand; Orchard Core resolves feature dependencies on enable. A ledger-bound test (`ContactCenterSetupRecipeTests`, 7 cases, all green) asserts each recipe is well-formed, references only registered step names, enables *exactly* its profile's feature set from `support-matrix.v1.json` (set equality, so a recipe cannot drift from the matrix or ship an unlisted combination), and that every supported tenant profile has a matching recipe.
+
+**Deviation from the recommendation (documented).** The recommended "Inbound Voice" / "Outbound Dialer" split does not map to a supported combination. The authoritative `support-matrix.v1.json` defines the certified sets as *provider* bundles (`ga-core-asterisk`, `ga-core-dialpad`), and each already includes both inbound voice and preview/manual dialing; there is no certified inbound-only or outbound-only profile, and the matrix's `prohibitedCombinations` explicitly forbids "unlisted feature, provider, database, or topology combinations." Shipping the literal split would therefore have shipped two unsupported recipes. Aligning the recipes to the two certified provider profiles delivers the same first-run value (collapsing the multi-module enablement checklist into one click) while staying inside the support envelope. Seed *starter data* (queues, skills, entry points, dialer profiles) was intentionally left out of the recipes: those entities reference environment-specific resources — a configured provider, its channel endpoints, and campaigns — that cannot be fixed in a shipped recipe, and the one environment-agnostic seed that already existed (agent state reason codes) is seeded at migration time. The existing per-entity recipe steps remain available for operators to compose their own configuration recipes, as documented in the deployment guide.
+
+---
+
+# Phase 3 — Extensibility Improvements
+
+### OC-011 — `IContactCenterVoice*Provider` contracts sit in the orchestration layer, inverting the dependency
+
+- **Priority:** High · **Status:** Won't Fix (premise misclassified) · **Category:** Module boundaries · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** Thirteen `IContactCenterVoice*` interfaces are defined in `ContactCenter.Abstractions`. `Asterisk.csproj` and `DialPad.csproj` therefore both take a `ProjectReference` on `ContactCenter.Abstractions` to implement them (`AsteriskContactCenterVoiceProvider.cs:18-25`).
+
+**Why it matters.** The stated contract is *"Telephony contains provider-agnostic abstractions; provider modules implement those abstractions."* Today every telephony provider that wants Contact Center participation must compile against the orchestration layer, so orchestration changes can break provider builds and a third-party provider inherits an unwanted dependency.
+
+**Balanced view.** This is defensible if "Contact Center voice provider" is considered a *distinct role* from "telephony provider" — the provider module genuinely plays two roles. The problem is that the roles are not physically separable today.
+
+**Recommended solution (choose one).**
+1. Move the neutral subset into `Telephony.Abstractions` (which `ContactCenter.Abstractions` already references, so no cycle).
+2. Ship the Contact Center integration as separate optional modules (`CrestApps.OrchardCore.Asterisk.ContactCenter`), keeping the base provider pure.
+3. Provide a generic adapter in `ContactCenter.Core` that elevates any `ITelephonyProvider` into an `IContactCenterVoiceProvider`, so CC participation requires no provider-side code at all.
+
+**Acceptance criteria.** A pure telephony provider can be authored with a reference to `Telephony.Abstractions` only, and the public-API baseline is regenerated.
+
+**Resolution (Won't Fix — architectural inversion not substantiated; independently reviewed, gpt-5.6-sol).** The finding is *misclassified* rather than a genuine defect. Evidence:
+- The interfaces live in `ContactCenter.Abstractions` — the shared **contract/abstractions package**, which itself depends *downward* on `Telephony.Abstractions` (not vice-versa). A provider module implementing a host-defined extension port by referencing that contract package is **textbook dependency inversion** (the higher-level Contact Center policy owns the port; provider adapters implement it), identical to a module referencing `OrchardCore.*.Abstractions` to implement `IDisplayDriver`/`IPermissionProvider`. It is *not* an inversion of the intended layering. The repository already enforces this with `ContactCenterFeatureDependencyArchitectureTests` (providers may reference `ContactCenter.Abstractions` but never `ContactCenter.Core`/runtime).
+- A **pure** telephony provider can already be authored against `Telephony.Abstractions` only — the base `Asterisk` (Area) feature's manifest depends solely on `TelephonyConstants.Feature.Area`, with zero Contact Center dependency, and `ITelephonyProvider` + ~30 sibling capability contracts live in `Telephony.Abstractions` with no project references. The acceptance criterion (new telephony-only provider needs only `Telephony.Abstractions`) is therefore already met.
+- Contact Center integration is already isolated by feature: `AsteriskContactCenterVoiceStartup`/`AsteriskContactCenterMediaStartup` and `DialPadContactCenterStartup`/`DialerStartup` are `[Feature(...ContactCenterVoice/Media)]`-gated, and the manifest CC features declare the `ContactCenterConstants.Feature.Voice`/`VoiceMedia` dependency. Enabling only the base telephony feature activates no CC voice provider.
+- Option 1 is infeasible: an exhaustive map shows every operational interface references `ContactCenter.Abstractions` domain types (`ContactCenterDialRequest`, `ContactCenterVoiceProviderResult`, `ContactCenterVoiceTransferRequest`, `ContactCenterVoiceMediaFrame`, …) and the implementers additionally use `IContactCenterFeatureWorkManager`/`IContactCenterFeatureWorkLease` and `ContactCenterConstants` metadata keys. Moving the interfaces down would drag CC orchestration concepts into the provider-agnostic layer — making the layering *worse*. Option 3 cannot synthesize the advanced CC semantics (recording/monitoring/attended-transfer/conference/media-session). Option 2 (separate assemblies) is a pure packaging change whose substantial refactoring cost is not justified for an unreleased module.
+- **Residual (conceded):** the combined `Asterisk.dll`/`DialPad.dll` assemblies do retain a *compile-time* `ProjectReference` to `ContactCenter.Abstractions` (a lightweight contract package) because the CC-integration features share the assembly, and the manifests reference `ContactCenterConstants`. `[Feature]` gating removes runtime activation, not the assembly-level dependency. This co-installation of a contract package is intentional and acceptable; physical package separation may be revisited later as a packaging enhancement, not a High-severity layering defect. Fixed two `.csproj` comments (`Asterisk.csproj`, `DialPad.csproj`) that had falsely claimed the provider code depends *only* on Telephony abstractions.
+
+---
+
+### OC-012 — No abstract base classes for the provider contracts (versioning hazard)
+
+- **Priority:** High · **Status:** Won't Fix (premise disproven) · **Category:** Public API · **Effort:** S · **Risk:** Low · **Dependencies:** OC-011
+
+**Problem.** `ITelephonyProvider` and `IContactCenterVoiceProvider` are exposed only as raw interfaces with no `TelephonyProviderBase` / `ContactCenterVoiceProviderBase` to inherit from.
+
+**Why it matters.** Adding a single member in a minor release is a hard compile break for every third-party provider. Orchard's own pattern uses abstract base classes (e.g. `ContentPartDisplayDriver`) as expansion joints.
+
+**Recommended solution.** Introduce abstract bases implementing the interfaces with virtual members; document them as the supported extension point.
+
+**Resolution (Won't Fix — premise disproven; corroborated by the independent OC-011 review, gpt-5.6-sol).** The design already provides a *better* expansion joint than base classes: capabilities are intentionally **interface-segregated (ISP)**. `ITelephonyProvider`/`IContactCenterVoiceProvider` are minimal *identity* contracts (`Name`, `Capabilities`, and for voice `TechnicalName`/`DeliveryModel`) whose XML docs explicitly state *"Executable operations live on the separate capability contracts a provider chooses to implement, so a provider is never obliged to answer for an operation it cannot perform."* New capabilities are therefore added as **new** small interfaces (`IContactCenterVoice*Provider`, `ITelephony*Provider`) — inherently non-breaking to existing implementers — rather than as new members on an existing interface. Consequently:
+- The identity interfaces have no optional/defaultable members a base class could usefully virtualize (`Name`/`TechnicalName`/`Capabilities`/`DeliveryModel` are all provider-specific with no sensible default).
+- A monolithic base implementing all thirteen capability interfaces would **break capability detection**: the runtime resolves optional capabilities via `provider is IContactCenterVoiceCallControlProvider` (e.g. `AnswerProviderCommandTypeExecutor.cs:171`, `VoiceContactCenterCallRouter.cs:44`) and `provider.Capabilities.HasFlag(...)`. A base that makes every provider satisfy every `is`-check would make providers advertise operations they cannot perform — the exact failure the documented contract prevents.
+- An identity-only base (`IContactCenterVoiceProvider`/`ITelephonyProvider` alone) is possible but adds no value today, since those interfaces are already minimal and stable, and evolving through new ISP capability interfaces remains a valid, non-breaking versioning strategy. Not warranted for an unreleased module.
+
+---
+
+### OC-013 — Internal implementation details published via `ContactCenterConstants`
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Public API · **Effort:** M · **Risk:** Low · **Dependencies:** Regenerate public-API baseline
+
+**Problem.** An 819-line `ContactCenterConstants` in the public Abstractions package exposes YesSql `CollectionName`, `CurrentEventSchemaVersion`, projection checkpoint IDs and similar internals.
+
+**Why it matters.** Incrementing an internal projection version forces a public-package version bump and churns downstream consumers who only needed the webhook interfaces.
+
+**Recommended solution.** Keep feature names, permissions and claim types public; move storage/schema/projection constants to `internal static` in `ContactCenter.Core`. Split the file by domain.
+
+**Resolution.** Moved five storage/schema/projection scalars (`CollectionName`, `CurrentEventSchemaVersion`, `MetricsProjectionHandlerId`, `MetricsProjectionVersion`, `ProviderNameLength`) out of the public `ContactCenterConstants` in the Abstractions package into a new `internal static ContactCenterStorage` class in `ContactCenter.Core` (same `CrestApps.OrchardCore.ContactCenter` namespace, so references resolve without new usings). The manual-call aggregate-type discriminator stayed public — it is emitted as `InteractionEvent.AggregateType` on the published `ManualDialSuppressed` event and forms part of the event contract webhook/workflow consumers may inspect — and was relocated into a new public `ContactCenterConstants.AggregateTypes` group (`ManualCall`). Exposed the Core internals to the module and distributed-test assemblies via `InternalsVisibleTo`, then mechanically repointed all ~430 references across Core/Module/Tests/DistributedTests. `SystemActor` and the diagnostic `Components` taxonomy also stay public. Regenerated the `CrestApps.OrchardCore.ContactCenter.Abstractions` and `.Core` public-API baselines to reflect the reduced surface and the two new `InternalsVisibleTo` grants. Incrementing a projection version now no longer forces a public-package bump. Domain file-splitting of the remaining public constants is tracked separately by OC-047. Also corrected a pre-existing `ContactCenterFeatureDependencyArchitectureTests` `.Single()` ambiguity introduced by OC-006's `AsteriskAdminStartup` (disambiguated the base-feature startup by `RequiredFeatureIds.Count == 0`).
+
+---
+
+### OC-014 — Workflows integration is read-only
+
+- **Priority:** Low (Enhancement) · **Status:** Completed · **Category:** Workflows · **Effort:** L · **Risk:** Low · **Dependencies:** Benefits from a canonical event-type registry
+
+**Problem.** The Workflows feature registers exactly one `EventActivity` (`ContactCenterEvent`) and no `TaskActivity` implementations. `ContactCenterEvent.EventType` is free text with no picker.
+
+**Why it matters.** Workflows can observe the contact center but cannot act on it. "On abandoned call create a callback", "on SLA breach notify a supervisor", "after wrap-up set presence" all require C#. This is the single biggest missed opportunity to make the module extensible without code — Orchard's core value proposition.
+
+**Recommended solution.** Add `TaskActivity` implementations for enqueue activity, assign to agent, set presence, create callback, transfer call, start/stop recording. Back `EventType` with explicit `S["..."]` `SelectListItem` entries per the localization-extraction rule.
+
+**Resolution.** The `ContactCenterEvent.EventType` free-text field is now a grouped, localized picker (`IContactCenterWorkflowEventTypeProvider` / `ContactCenterWorkflowEventTypeProvider`) defining an explicit `S["..."]` `SelectListItem` for all 55 canonical `ContactCenterConstants.Events` values plus a leading empty "Any event type" option, with `ContactCenterWorkflowEventTypeProviderTests` binding the picker's values one-for-one to the constants so it cannot drift. Five `TaskActivity` implementations were added, each resolving identifiers through the idiomatic `IWorkflowExpressionEvaluator` (Liquid, so they bind to the triggering event's input) with a display driver, view model, and Edit/Design/Thumbnail shape templates: `SetAgentPresenceTask` (Availability), `EnqueueActivityTask` (Queues), `ScheduleCallbackTask` (Dialer), and `StartCallRecordingTask` / `StopCallRecordingTask` (Recording). Each is registered in a dedicated startup gated `[Feature(Workflows)]` + `[RequireFeatures(capability)]`, so a task surfaces only when the capability that owns its service is enabled and the service is always resolvable — no optional-dependency anti-pattern. The recording tasks expose a third **Indeterminate** outcome mirroring `RecordingCommandResult.OutcomeUnknown`. Transfer-call and assign-to-specific-agent are deliberately **not** shipped as tasks with a documented, compelling reason: a transfer authorizes against the initiating agent's `ClaimsPrincipal` (unavailable to a background workflow), and agent-targeted assignment is owned by the routing engine (no agent-targeted service exists, and bypassing routing would break presence/skill/reservation guarantees) — `EnqueueActivity` is the supported hand-off to routing. Independent review hardened three points, all addressed: (1) the Liquid examples in editor hints and docs use the correct `{{ Workflow.Input.* }}` scope so authored expressions actually resolve; (2) the `SetAgentPresence` picker excludes the reservation- and work-lifecycle-owned states (`Reserved`, `Busy`, `WrapUp`) and the task rejects them at execution, so automation cannot park an agent in a routing-blocking state that has no backing reservation; (3) `EnqueueActivity` verifies both the target queue and the CRM activity exist before enqueuing, taking the **Failed** outcome instead of creating an orphan queue item on a typoed identifier. `ContactCenterWorkflowTaskGuardTests` covers the lifecycle-status rejection and the enqueue existence guards. Documented in a new `contact-center/workflows.md` page (linked from the index) and the v2.0.0 changelog. Independently reviewed and approved. Module and test builds are clean (0 warnings); the new picker and task-guard tests and existing workflow tests pass.
+
+---
+
+### OC-015 — Optional cross-feature dependencies hidden behind `IEnumerable<T>` + `FirstOrDefault()`
+
+- **Priority:** Low · **Status:** Won't Fix · **Category:** DI hygiene · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** Feature-conditional services are injected as `IEnumerable<TService>` and reduced with `.FirstOrDefault()`, then null-checked per use site (`ContactCenterCallCommandService.cs:54-55,68-69`, `AgentPresenceManagerService.cs:46-47`, and others).
+
+**Why it matters.** The dependency is invisible in the constructor signature and easy to omit in new code paths. **Verified mitigating fact:** the highest-risk instance (Compliance disabled while Dialer enabled) degrades safely — `ContactCenterCallCommandService.cs:98-111` falls through to the accept-only path rather than dialing ungated. So this is maintainability, not a live correctness defect.
+
+**Recommended solution.** Split feature-gated consumers so the dependency becomes required, or register a null-object default via `TryAddScoped`.
+
+**Disposition — Won't Fix (documented).** `IEnumerable<TService>` injection reduced with `FirstOrDefault()` is the sanctioned Orchard Core idiom for consuming a service that lives in a *feature which may be disabled*. When that feature is off, the tenant container holds no registration for `TService`, so a direct `TService` constructor parameter would throw `InvalidOperationException` at activation for every deployment that has not enabled the optional feature — the exact failure the idiom exists to avoid. Orchard Core itself resolves optional cross-feature services this way (`IEnumerable<T>` / `GetServices<T>()`). Re-examining the premise against the two recommended alternatives, both regress rather than improve the code:
+
+- **Splitting the consumers** so the dependency becomes required would fracture central orchestrators along a feature seam. `ContactCenterCallCommandService` performs offer acceptance, media connection, and state advancement as one cohesive server-side operation, and `AgentPresenceManagerService` owns the sign-in/sign-out lifecycle; carving the Dialer-only or session-only branch into a second type would scatter one cohesive workflow across two classes and duplicate the surrounding orchestration for no correctness benefit — a larger, riskier change than the item it addresses, and against the SRP intent it claims to serve.
+- **Null-object defaults via `TryAddScoped`** would remove the per-site null checks but at a real cost: the field would then *look* mandatory while silently no-opping when the feature is absent, hiding the feature-gating that the `IEnumerable<T>` signature currently makes explicit; it would require roughly ten no-op implementations to be authored and kept in lockstep with their interfaces; and it changes nothing about correctness, since `FirstOrDefault() is null` and "call a no-op" already produce the same safe degradation.
+
+The dependency is also not genuinely invisible: `IEnumerable<IDialerProfileManager>` in the signature is a widely-understood Orchard Core signal for "zero-or-more, optional." The pattern is applied uniformly at ~19 reduction sites across the module set, so it is a deliberate convention rather than an oversight, and that consistency has its own maintainability value. Keeping the idiom — correct, visible, consistently applied, and safer than either alternative — is the right call. The safe-degradation guarantee remains covered by the existing Compliance/Dialer test noted above.
+
+---
+
+# Phase 4 — UI & Display Management
+
+### OC-016 — Agent workspace and supervisor dashboard are inaccessible
+
+- **Priority:** High · **Status:** Completed · **Category:** Accessibility · **Effort:** M · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Verified counts: `Views/AgentWorkspace/Index.cshtml` and `Views/SupervisorDashboard/Index.cshtml` contain **0** `aria-*`/`role` attributes, and there are **0** `aria-live`/`role="status"`/`role="alert"` occurrences across all four ContactCenter scripts. Offers, presence, queue depth and the active-call panel are injected via `innerHTML` into containers with no live-region semantics. The presence menu is a `div`+`button` with no `role="menu"`, `aria-expanded`, Escape handling, or focus management. Error feedback uses `window.alert()`.
+
+**Why it matters.** This is a softphone/agent desktop operated all day. A blind or low-vision agent receives no announcement that a call is ringing or that a response is required within N seconds. By contrast the admin CRUD views do carry baseline Bootstrap ARIA, so the gap is specific to the real-time surfaces.
+
+**Documentation discrepancy — must be corrected.** `.github/contact-center/PRODUCTION-READINESS.md` lists *"Agent desktop accessibility (W6): ARIA/live-region/keyboard/degraded-state work on the agent workspace"* under **completed** work. The code does not support that claim. Correct the record as part of this item.
+
+**Recommended solution.** `role="alert"`/`aria-live="assertive"` on the offer container; `aria-live="polite"` on presence/queue/active regions; convert the presence menu to a proper ARIA menu (or a Bootstrap dropdown that ships the semantics); move focus to Accept when an offer renders; surface disconnected/reconnecting state visibly and via live region; replace `window.alert()` with status semantics.
+
+**Acceptance criteria.** Keyboard-only operation of accept/decline/presence; automated axe scan clean on both views.
+
+**Resolution.** Both real-time surfaces are now accessible. **Agent workspace** (`AgentWorkspace/Index.cshtml` + `agent-workspace.js`): the incoming-offer container is `role="alert" aria-live="assertive" aria-atomic="true"` and moves keyboard focus to the **Accept** button when a new offer renders; the active-interaction, queue-chip regions are `aria-live="polite"` with `aria-label`/`aria-labelledby`; the per-second countdown and talk-time nodes are `aria-hidden="true"` so live regions announce state changes once rather than ticking every second; the presence control is a real ARIA menu — the trigger carries `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`, the menu is `role="menu"` with `role="menuitem"` children, and JS wires open-on-click with focus to the first item, Arrow/Home/End roving focus, Escape-to-close with focus return, and click-away close. **Supervisor dashboard** (`SupervisorDashboard/Index.cshtml` + `supervisor-dashboard.js`): summary/tiles/board regions are `aria-live="polite"` with labels. **Both surfaces** replace `window.alert()` with a non-blocking inline `role="alert"` error region and add a `role="status" aria-live="polite"` connection indicator driven by new lifecycle callbacks (`onConnected`/`onReconnecting`/`onReconnected`/`onDisconnected`) surfaced from the shared `contact-center-realtime.js` helper (which now hooks `connection.onreconnecting` and reports connect/close transitions), so agents are told when live updates pause. New localized `strings` (connected/reconnecting/disconnected, presence-menu label) flow through the existing config dictionaries. SCSS adds `.cc-connection`/`.cc-error`/`.cc-dashboard__topbar` styling; `npm run rebuild` regenerated the minified assets. The false "completed" claim in `.github/contact-center/PRODUCTION-READINESS.md` was corrected to describe the actually-delivered agent-and-supervisor accessibility work. Module builds with 0 warnings.
+
+### OC-017 — Seven near-identical catalog list views
+
+- **Priority:** Medium · **Status:** Completed · **Category:** UI duplication · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `Views/{Queues,Skills,EntryPoints,DialerProfiles,QueueGroups,AgentStateReasonCodes,BusinessHoursCalendars}/Index.cshtml` are ~57 lines each and structurally identical, differing only by title and add-label.
+
+**Recommended solution.** Extract a shared `_CatalogList` partial/shape taking title, add-label and `ListCatalogEntryViewModel<T>`; keep per-type differences in the already-used item shape.
+
+**Resolution.** Added a shared `Views/Shared/_CatalogList.cshtml` partial (resolved globally via OrchardCore's `SharedViewLocationExpanderProvider`) backed by two new view models, `CatalogListViewModel` and `CatalogListEntry` (`ViewModels/`). The partial holds the single copy of the action-bar, search field (`asp-for="Options.Search"` binding preserved), create button, item-count row, list, empty message, no-results alert, and pager markup. Each of the seven `Index.cshtml` files now only builds a `CatalogListViewModel` — supplying its title, create label, list id, empty message, `Options`, `Pager`, and entries mapped from `INameAwareModel.Name` for client-side filtering — then renders `<partial name="_CatalogList" />`. Per-type `T["…"]` literals stay in each view so localization extraction remains per-type. Views dropped from ~57 to ~22 lines each; shared strings collapse from seven copies to one. Module and test project build with 0 warnings; all 1497 ContactCenter tests pass.
+
+---
+
+### OC-018 — Real-time views are not shape-composable
+
+- **Priority:** Low · **Status:** Won't Fix · **Category:** Display management · **Effort:** L · **Risk:** Medium · **Dependencies:** OC-009
+
+**Problem.** `AgentWorkspace/Index.cshtml`, `SupervisorDashboard/Index.cshtml` and `Items/ContactCenterSoftPhoneWork.View.cshtml` are monolithic controller-rendered pages, so a theme cannot override sub-regions (topbar, offer, panels) via alternates or placement. Defensible for a bespoke SPA-like page, but it is the module's least extensible UI.
+
+**Disposition (Won't Fix — accepted extensibility trade-off; independently reviewed, gpt-5.6-sol).** The premise is accurate (these three views are single Razor pages rather than compositions of sub-shapes), and — to be precise — the structural regions the finding names *are* partly server-rendered: Agent Workspace renders its topbar, presence menu (a server `@foreach` over `Model.ReasonCodes`) and panel headers in Razor; Supervisor Dashboard renders its panel and header structure; and the soft-phone view server-renders its forms and membership lists. JavaScript populates the dynamic slots (`data-cc-active`, `data-cc-history`, `data-cc-offer`, `data-cc-queues`, the presence label) rather than creating the whole UI. So a decomposition into shapes is *technically* possible without discarding SignalR. It is nonetheless declined as a cost/benefit trade-off, for the same net reason that closed its dependency OC-009: it adds regression surface and no capability.
+
+- **The server-rendered structure is a co-designed scaffold, not an independently composable one.** The Razor markup and the client bundle share a single contract: the JavaScript selects the exact class names and `data-cc-*` hooks the view emits (`data-cc-workspace`/`data-config`, `.cc-panel`, `data-cc-active`, `data-cc-offer`, `data-cc-queues`, `data-cc-presence*`) to mount live updates onto them. Exposing those regions as separately overridable shapes would advertise an extension point whose main effect is that reordering, hiding or re-templating a region silently detaches the client that targets it — extensibility that mostly manufactures breakage on the module's most stateful screens. The structure and the bundle are versioned together on purpose.
+- **The extension points that fit this design already exist.** A theme can override the whole Razor view (`AgentWorkspace/Index.cshtml`, `SupervisorDashboard/Index.cshtml`, `Items/ContactCenterSoftPhoneWork.View.cshtml`) through standard view resolution — which keeps the view and its client contract overridden together, as they must be — and every script and style is a named resource in the manifest, so the client and its styling are replaceable or dependable through `IResourceManager` without touching the module.
+- **No beneficial override was identified, and the cost is real.** As with OC-009, decomposition earns its keep when it unblocks a concrete customization; none was found. Splitting these live screens into per-region shapes carries migration and regression risk against the JS/DOM contract for a Low-priority extensibility nicety with no capability gap. If a specific sub-region override is ever required, the fitting move is to promote that one region to a shape (and adjust its client hook) at that time, not to pre-emptively re-architect all three views.
+
+---
+
+# Phase 5 — Resource Management
+
+### OC-019 — ContactCenter assets bypass the Gulp pipeline and the min/debug resource convention
+
+- **Priority:** High · **Status:** Completed · **Category:** Resource management · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Verified: ContactCenter has **no** `Assets/`, **no** `Assets.json`, **no** `package.json`. Five hand-authored files (~2,000 lines) live directly in `wwwroot/` — `scripts/{contact-center-realtime,agent-workspace,supervisor-dashboard,contact-center-soft-phone}.js` and `styles/contact-center-workspace.css` — with no minified variants. Both resource configurations use the single-argument `SetUrl(...)` pointing at unminified files. The sibling Telephony module does it correctly (`Assets.json` + `SetUrl(min, debug)` + `.min` outputs).
+
+**Why it matters.** Production tenants download unminified, source-map-free JS/CSS for the two highest-traffic authenticated pages in the product. `npm run rebuild` never touches these files, so the documented pre-commit asset check silently does not cover them.
+
+**Recommended solution.** Move sources to `Assets/js` and `Assets/scss`, add `Assets.json` mirroring Telephony, run `npm run rebuild`, switch to the two-argument `SetUrl` overload, and use `SetVersion` values that change with content.
+
+**Acceptance criteria.** `npm run rebuild` regenerates all ContactCenter assets; `git status` is clean afterwards; production serves `.min` variants.
+
+**Resolution.** Moved the four scripts to `Assets/js` and the stylesheet to `Assets/scss` (`.css` → `.scss`), added `Assets.json` mirroring the Telephony module, and ran `npm run rebuild` to regenerate `wwwroot/scripts/*.js` + `*.min.js` and `wwwroot/styles/*.css` + `*.min.css`. Both resource configurations now use the two-argument `SetUrl(min, debug)` overload so production serves the minified variant. Module builds with 0 warnings.
+
+---
+
+### OC-020 — Inline script in a settings view hardcodes English strings
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Resource management / localization · **Effort:** S · **Risk:** Low · **Dependencies:** OC-019
+
+**Problem.** `ContactCenterExternalTransferSettings.Edit.cshtml:65-122` contains a ~57-line inline `<script>` with no `at="Foot"`. Server-rendered rows use `@T["Display name"]`/`@T["Remove destination"]`, but the JS row template hardcodes `placeholder="Display name"` and `title="Remove destination"`, so dynamically added rows are always English and the strings are invisible to extraction.
+
+**Recommended solution.** Move to a registered `DefineScript` resource and pass a `strings` config object, as `AgentWorkspace`/`SupervisorDashboard` already do correctly.
+
+**Scope note.** Only **3** of 101 views contain true inline `<script>` blocks; the other two (`AsteriskSettings.Edit.cshtml`, `DialPadSettings.Edit.cshtml`) use `at="Foot"` for ~20 lines of view glue and are acceptable. All 5 `<style>` usages are correct `<style asp-name>` forms, and the single inline `style=` is a justified dynamic CSS variable.
+
+**Resolution.** Extracted the inline logic into a new Gulp-built asset `Assets/js/contact-center-external-transfer-settings.js` (output to `wwwroot/scripts`, minified), registered as the named resource `contact-center-external-transfer-settings` through a new `ContactCenterExternalTransferResourceConfiguration : IConfigureOptions<ResourceManagementOptions>` added to the **Contact Center Administration** feature's startup (matching the feature that registers the settings driver). The view now requires the script with `<script asp-name="contact-center-external-transfer-settings" at="Foot"></script>` and serializes a `strings` config object (`displayName`, `removeDestination`) into a `data-config` attribute on the wrapper — mirroring the `AgentWorkspace`/`SupervisorDashboard` pattern — and the JS reads those localized strings so dynamically added rows honor the active culture and the strings are visible to extraction. The dynamic-row template also HTML-attribute-encodes the injected strings. Module builds 0 warnings; assets rebuilt with `gulp rebuild`.
+
+---
+
+### OC-021 — Duplicated JS helpers and a duplicated call-state enum
+
+- **Priority:** Medium · **Status:** Completed · **Category:** DRY · **Effort:** M · **Risk:** Low · **Dependencies:** OC-019
+
+**Problem.** `escapeHtml` is copy-pasted across four files; the array `['Idle','Connecting','Ringing','Connected','OnHold','Disconnected','Failed']` — which must stay in sync with the C# `CallState` enum — is duplicated between `contact-center-soft-phone.js` and `Telephony/soft-phone.js`.
+
+**Why it matters.** State-enum drift between JS and C# is a live bug risk.
+
+**Recommended solution.** Export `escapeHtml`, `formatDuration` and `STATE_NAMES` once from the shared telephony/realtime module; ideally emit the state names from the server so the C# enum stays authoritative.
+
+**Resolution.** Added a single shared browser helper resource, `telephony-client` (`Assets/js/telephony-client.js` in the Telephony base module, wired through `Assets.json` and the two-argument `SetUrl(min, debug)` overload), exposing `escapeHtml`, `formatDuration`, `normalizeCallState`, and `callStateNames` on `window.telephonyClient`. Because ContactCenter already depends on Telephony, both resource graphs reach it: `telephony-soft-phone` and `contact-center-realtime` now declare `telephony-client` as a dependency, so all four consumers (`soft-phone.js`, `contact-center-soft-phone.js`, `agent-workspace.js`, `supervisor-dashboard.js`) load it before running. The four copied `escapeHtml` bodies, the duplicated `formatDuration`/`pad`, and both hard-coded call-state arrays (the `STATE_NAMES` var and the inline literal in `isBlockingActiveCall`) were replaced with references to the shared helper, leaving one definition of each. To keep the C# enum authoritative for the wire ordinals — the drift the review called out — a build-time guard test, `CallStateNamesJsSyncTests`, extracts `CALL_STATE_NAMES` from the shared script and asserts it equals `Enum.GetValues<CallState>()` in ordinal order, so any future divergence fails the build rather than surfacing as a runtime mismatch. `npm run rebuild` regenerates the minified variants; ContactCenter and the test project build with 0 warnings and the guard plus soft-phone resource tests pass.
+
+---
+
+# Phase 6 — Performance & Scalability
+
+### OC-022 — Routing repeatedly materializes entire queue backlogs
+
+- **Priority:** High · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** High · **Dependencies:** YesSql index/query changes
+
+**Problem.** Verified: `QueueItemStore.ListWaitingAsync` (`ContactCenter.Core/Services/QueueItemStore.cs:31-44`) queries all waiting items for a queue with `.ListAsync()` and no pagination or limit, then `.ToArray()`. Assignment and offer loops call it repeatedly after individual state changes (`ActivityAssignmentService.cs:127,167`, `ReservationExpiryBackgroundTask.cs:131,165`).
+
+**Why it matters.** A queue spike produces roughly quadratic query traffic and allocations precisely when assignment latency matters most.
+
+**Recommended solution.** Query only the next eligible indexed item or a bounded ordered page; reuse one batch per cycle; maintain queue depth as a separate aggregate.
+
+**Resolution.** The three single-item hot paths that materialized the entire waiting backlog only to pick one item now use a bounded top-one query. Added `IQueueItemStore.FindNextWaitingAsync` (a `FirstOrDefaultAsync` with the exact `Priority` desc → `EnqueuedUtc` asc ordering of `ListWaitingAsync`) and `IQueueItemManager.FindNextWaitingAsync(ActivityQueue queue, DateTime utcNow, …)`. The manager selects a fast path when the queue does not apply SLA aging — where an item's effective priority equals its base priority, so the store's first row is provably identical to `QueueItemPrioritizer.SelectNext` without materializing the backlog — and falls back to the full in-memory scan only for queues that opt into SLA aging (aging can reorder items by wait time, so all candidates must be scored). The assignment loop (`ActivityAssignmentService`) and both voice/generic offer paths (`ReservationExpiryBackgroundTask`) now call `FindNextWaitingAsync`; `ListWaitingAsync` is retained for the aging fallback and for `OverflowDueAsync`, which legitimately iterates the whole backlog. Added `QueueItemManagerTests` proving the fast path calls only the bounded store query and the aging path scores the backlog (an aged low-priority item beats a newer highest-priority item). Independently reviewed (gpt-5.6-sol) and approved; all 1483 ContactCenter tests pass.
+
+---
+
+### OC-023 — Supervisor dashboard polling generates N+1 queries
+
+- **Priority:** High · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting read-model indexes
+
+**Problem.** Every 10 seconds (`supervisor-dashboard.js:12,258`) the endpoint performs several sequential queries per queue and per agent, including repeated authorization and user-display-name resolution (`SupervisorDashboardEndpoints.cs:74-97,119-144,249`).
+
+**Why it matters.** A few hundred agents can generate thousands of queries per minute per supervisor, saturating the database and increasing routing latency.
+
+**Recommended solution.** Aggregated/batched read models, batched authorization and user resolution, a fixed page size, and coalesced/cached identical polls.
+
+**Resolution.** The per-agent N+1 — the dominant cost, since agents greatly outnumber queues — was eliminated. Waiting depth per authorized queue is now read with the existing batched `IQueueItemManager.CountWaitingByQueueIdsAsync` (one query for all queues). Agent load is resolved with three whole-set batches instead of three queries per agent: active interactions via a new index-backed `IInteractionManager.ListActiveByAgentIdsAsync` (chunked `.IsIn` YesSql query, keeping the most recent by `CreatedUtc` per agent), active counts via the existing `CountActiveByAgentIdsAsync`, and display names by bulk-loading users with `session.Query<User, UserIndex>(x => x.UserId.IsIn(chunk))` and feeding the already-materialized user to `IDisplayNameProvider.GetAsync` (which performs no further database access). Supervisor queue authorization — which reloads the same supervisor profile on every call — is now memoized per queue for the request, so the per-agent monitoring gate no longer reissues the supervisor lookup for each busy agent. Monitoring-mode resolution takes a new `IContactCenterMonitoringService.GetAvailableModesAsync(Interaction)` overload that reuses the already-batched interaction instead of reloading it through `FindByIdAsync`. No new raw SQL was introduced, so the query-plan budget gate is untouched. Remaining per-queue longest-wait/SLA reads are bounded residuals (queues ≪ agents) and are documented as such. Covered by `AvailabilityStoreSharedDatabaseTests.InteractionStore_ListActiveByAgentIds_ReturnsOnlyActiveInteractionsAcrossBatches`, `ContactCenterRecordingAndMonitoringTests.GetAvailableModesAsync_WithMaterializedInteraction_ResolvesModesWithoutReloading`, and the updated public-API baseline.
+
+---
+
+### OC-024 — Recording ingestion buffers whole files multiple times
+
+- **Priority:** High · **Status:** Completed · **Category:** Memory · **Effort:** L · **Risk:** High · **Dependencies:** Recording storage format + migration
+
+**Problem.** Verified: `LocalEncryptedRecordingMediaStore.StoreAsync` calls `_protector.Protect(request.Content)` on a full `byte[]` then wraps it in a `MemoryStream`; `OpenReadAsync` copies the file into a `MemoryStream`, calls `.ToArray()`, `Unprotect`s the whole array, and returns another `MemoryStream`. `AsteriskAriClient.cs:491` downloads as a byte array.
+
+**Why it matters.** A single long recording consumes several times its size in managed memory, causing LOH pressure or OOM under concurrent ingestion.
+
+**Recommended solution.** Streaming download plus chunked authenticated encryption, or storage-native encryption; expose streaming read/write APIs instead of `byte[]`.
+
+**Resolution.** Introduced a streaming chunked-AEAD container (`RecordingMediaCryptoFormat` + `ChunkedAeadEncryptingReadStream`/`ChunkedAeadDecryptingReadStream`) using envelope encryption: a per-recording random AES-256-GCM data key encrypts the media as a sequence of independently authenticated 64 KiB frames, and that data key is wrapped by the data-protection provider (so key management — tenant isolation, rotation — stays with data protection while bulk media streams a fixed chunk at a time). Every frame binds its ordinal counter, length, and an end-of-stream marker into the AES-GCM associated data, so tampering, reordering, and truncation are rejected on read (surfaced as `CryptographicException`). `RecordingMediaWriteRequest.Content` changed from `byte[]` to `Stream`; `LocalEncryptedRecordingMediaStore` now streams straight through `IFileStore.CreateFileFromStreamAsync`/`GetFileStreamAsync`, so a recording is never buffered whole in memory in either direction. On the Asterisk side, `DownloadStoredRecordingAsync` now uses `HttpCompletionOption.ResponseHeadersRead` and returns an owning `AsteriskAriStoredRecordingContent` (holds the open response) whose stream is `await using`-scoped across the store call in `AsteriskRecordingIngestService`. Because recording is off by default and the branch is unmerged there is no on-disk migration burden. Added multi-chunk round-trip, empty-recording, tamper, and truncation tests; updated the public API baseline. Independently reviewed (gpt-5.6) and approved.
+
+---
+
+### OC-025 — Unbounded reporting and reservation-cleanup materialization
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Performance · **Effort:** L · **Risk:** Medium · **Dependencies:** Reporting indexes
+
+**Problem.** Reporting materializes complete date-range result sets before in-memory grouping with no maximum range or pagination (`ContactCenterReportingService.cs:713-750`, `EnterpriseInteractionReportProvider.cs:105-108,1222-1225`). Expired-reservation cleanup loads every expired pending reservation before processing (`ActivityReservationStore.cs:28-35`).
+
+**Recommended solution.** Enforce an interactive range limit and aggregate indexes; page/stream exports. For cleanup, read bounded pages ordered by expiry and process to a deadline.
+
+**Resolution.** Both unbounded materializations are now bounded.
+
+*Reservation cleanup* — `IActivityReservationStore.ListExpiredAsync` / `IActivityReservationManager.ListExpiredAsync` now take a keyset cursor (`afterExpiresUtc`, `afterDocumentId`) plus a `maxResults` bound and return an `ExpiredReservationPage` (the page of reservations plus the cursor for the next page). The store queries the `ActivityReservationIndex` ordered by `ExpiresUtc` then `DocumentId` with the keyset predicate `ExpiresUtc > cursor || (ExpiresUtc == cursor && DocumentId > afterDocumentId)`, then loads the page documents by id — so a page is a fixed, oldest-first slice rather than the entire expiry backlog. `ActivityReservationService.ExpireDueAsync` drains in bounded `ExpiryPageSize` (100) pages using **keyset (seek) paging**: each page advances the cursor past the last row it observed, whether that row was expired here or is currently locked by another node. Because the cursor is an absolute position in the `(ExpiresUtc, DocumentId)` key space rather than a numeric offset, concurrent expirations or insertions elsewhere in the backlog never shift the window, so a live reservation is never skipped and a locked oldest page never starves the drainable reservations behind it. Candidates that could not be processed this run (locked, or already changed) are retried on the next scheduled sweep, which restarts from the oldest expired reservation. Draining stops on a short/empty page or cancellation. New unit tests cover multi-page draining and the anti-starvation case where the oldest page is fully locked, plus a real-store integration test asserting the keyset query pages in stable order against SQLite. Keyset was chosen over offset paging because offset paging over a concurrently-mutating set can still skip live rows when locked candidates are expired by their owner between pages.
+
+*Reporting* — silently trimming rows would corrupt the aggregate totals, so instead of a row cap the reporting paths now **fail fast** on an over-wide window. A new `ContactCenterReportingOptions.MaximumReportRange` (Options pattern, bound from `CrestApps_ContactCenter:Reporting`, default 400 days, `ValidateOnStart`) is enforced by the shared `ContactCenterReportingService.EnsureRangeWithinLimit(...)` guard at the top of every query helper (`QueryInteractionsAsync`, `QueryActivityIndexesAsync`) and in `EnterpriseInteractionReportProvider` before it queries, so every report path enforces the same bound before any rows are read. The 400-day default comfortably covers the built-in day/week/month/quarter/year presets. Tests cover the guard boundary.
+
+*Deferred (documented follow-up, not a regression of this item):* pre-aggregated rollup indexes and streaming/paged CSV export remain an enhancement — the fixes here bound worst-case materialization but still build the in-memory aggregates per request. `AgentWorkforceReportProvider` reads the event store up to `ToUtc` only (it ignores `FromUtc` as a lower bound); tightening that is a separate event-store concern tracked outside OC-025.
+
+---
+
+### OC-026 — Routing-hot configuration is re-queried on every decision; no caching or `ISignal` invalidation
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Performance · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** Queues, skills, business-hours calendars and queue groups are small, slowly-changing configuration read on the routing path, but every read is a fresh `Session.Query` (`ActivityQueueStore.ListEnabledAsync`). A grep across all eight in-scope projects returns **0** hits for `ISignal`, `IMemoryCache`, `IDistributedCache` and `IDocumentManager`. `ISiteService` *is* used correctly for site settings, so the cached-settings path is understood — it just was not extended to catalog entities.
+
+**Orchard Core pattern violated.** `IDocumentManager<TDocument>` with `ISignal.SignalToken` invalidation is Orchard's purpose-built mechanism for exactly this data shape, and is already tenant- and distributed-cache aware.
+
+**Recommended solution.** Cached read models for the four entities, invalidated from the existing `ICatalogEntryHandler<T>` implementations, which already fire on every write (including recipe imports).
+
+**Resolution.** A shared `IContactCenterConfigurationCache` (implemented by `ContactCenterConfigurationCache`) now serves the four small, slowly-changing routing configuration collections read on the hot path — enabled queues (`ActivityQueue`), skills (`ContactCenterSkill`), business-hours calendars (`BusinessHoursCalendar`), and entry points (`ContactCenterEntryPoint`) — from a shell-scoped snapshot instead of a fresh `Session.Query` per routing decision. (The plan originally named "queue groups" as the fourth entity, but `IActivityQueueGroupManager` exposes no `ListEnabledAsync`; entry points are the actual fourth collection enumerated on every inbound routing decision via `EntryPointResolver`, so they were cached instead.) The four managers' `ListEnabledAsync` methods delegate to `IContactCenterConfigurationCache.GetEnabledAsync`, which returns the cached snapshot on a hit and populates it (running the existing per-entry `LoadAsync`) on a miss. Invalidation is driven by a generic `ContactCenterConfigurationCacheInvalidationHandler<T>` registered as an additional `ICatalogEntryHandler<T>` for each of the four types alongside the existing handlers; it fires on `CreatedAsync`/`UpdatedAsync`/`DeletedAsync` (which already run for direct writes and recipe imports) and schedules the invalidation through `ShellScope.AddDeferredTask` so the signal is raised **after** the ambient session commits — preventing a concurrent read from repopulating the cache with pre-commit data. The cache deliberately does **not** use `IMemoryCache`: the Contact Center architecture guard (`ContactCenterArchitectureGuardTests.MemoryCacheUsage_WhenInTenantSensitiveModules_DoesNotExist`) forbids `IMemoryCache` in tenant-sensitive modules and prescribes "tenant-keyed `IDistributedCache` plus `ISignal`, or shell-scoped state." The implementation uses the latter: a per-tenant singleton holding snapshots in a `ConcurrentDictionary` keyed by type, each paired with the `ISignal` change token captured **before** the load so a write that trips the token mid-load marks the stored entry stale and forces the next read to reload. Because invalidation flows through `ISignal.SignalTokenAsync`, it is honored across every process instance sharing the tenant's signal backplane, satisfying the plan's "distributed-cache aware" intent without a per-read serialization/network cost on the routing path. Five unit tests (`ContactCenterConfigurationCacheTests`) cover caching, reload-after-invalidation, per-type key isolation, cross-type invalidation independence, and the invalidated-during-load safety ordering; the four architecture-guard tests and the full 1497-test Contact Center suite and the 58 feature-activation tests remain green. An independent gpt-5.6 review approved the change.
+
+**Status:** Completed.
+
+---
+
+### OC-027 — Latency-critical work scheduled on one-minute cron background tasks
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Scheduling · **Effort:** L · **Risk:** High · **Dependencies:** Distributed-lock story (OC-028)
+
+**Problem.** `IActivityReservationService.ExpireDueAsync` has exactly one caller — a `Schedule = "* * * * *"` task. Queues configure `ReservationTimeoutSeconds` (seconds-scale), but expiry acts at minute granularity. Eleven ContactCenter tasks plus three Asterisk/Telephony tasks all run every minute, each taking a distributed lock.
+
+**Why it matters.** An offer configured to expire after 15 seconds is reclaimed up to ~75 seconds later, holding agent capacity while the caller waits. Eleven per-tenant tasks per minute is an 11× scheduler load that scales linearly with tenant count, since Orchard's `ModularBackgroundService` walks tenants sequentially.
+
+**Recommended solution.** Keep the cron tasks as the safety net — they are well written (bounded run budgets, linked CTS, lock-expiration reasoning). Add event-driven triggers for latency-sensitive paths (deadline-scheduled expiry, outbox dispatch driven from the appending commit) and consolidate the eleven tasks into fewer dispatchers.
+
+**Resolution (Completed).** The latency-critical case was accelerated with an in-convention, event-driven trigger rather than a new scheduling framework, while the scheduled sweep remains the authoritative deadline backstop:
+
+- **Opportunistic reclamation at the voice-offer chokepoint.** `VoiceQueueOfferService.OfferNextAsync` — the single funnel for every voice offer path (inbound processor, re-offer handler, cron re-offer, and `IInboundVoiceService` → `VoiceContactCenterCallRouter`) — now reclaims due reservations before selecting an agent. Whenever an offer runs for a queue, any capacity a silently-ignored offer is still holding is freed immediately instead of remaining parked until the next minute sweep. This is most valuable on a busy queue where offers keep arriving; it is deliberately *not* a deadline mechanism (see boundary below).
+- **Strictly bounded with only a short lock wait, so it adds negligible latency to admitting a call.** A new, additive `IActivityReservationReclaimer.ReclaimDueAsync(maxReservations, …)` interface examines only a small batch of the oldest due reservations (bounded to `MaxReclaimPerOffer` = 4) and acquires each per-reservation lock with a **short, bounded wait** (`_reclaimLockWait` = 50 ms), so it skips — rather than blocks indefinitely on — any reservation another node or the cron is already transitioning. A positive wait is required for provider parity: the distributed Redis lock gates its acquisition loop on a timeout-derived cancellation token, so a `TimeSpan.Zero` wait would cancel before the first attempt and never reclaim anything on Redis-backed tenants; a window below the provider's ~100 ms first-retry back-off yields effectively a single, non-blocking attempt on both the local and Redis providers. Uncontended locks acquire on the first attempt with no wait, so the offer path normally carries at most a handful of quick transitions and, only under pathological contention (all four candidates already being drained elsewhere), a worst-case ceiling of ~200 ms — never the full tenant-wide drain nor its up-to-10-second per-lock waits. `ExpireDueAsync` and `ReclaimDueAsync` share one keyset-paged core differing only in their reservation budget and lock-wait. The capability is a *separate* interface rather than a new member on the governed `IActivityReservationService`, so the reservation-lifecycle contract other modules compile against is unchanged; the additive interface is recorded in the public-API baseline as a reviewed surface change.
+- **Best-effort so reclamation never fails admitting a call.** The call is wrapped so a genuine caller cancellation still propagates, but any other transient failure (e.g. losing a concurrent `ConcurrencyException` transition) is logged as a warning and the offer proceeds.
+- **Tests.** `InboundVoiceServiceTests` adds `OfferNextAsync_ReclaimsDueReservationsBeforeSelectingAnAgent` (asserts `ReclaimDueAsync` runs before `AssignNextAsync`) and `OfferNextAsync_WhenReservationReclaimFails_StillOffers` (asserts a thrown non-cancellation reclaim is swallowed and the offer still proceeds).
+
+**Scope dispositioned explicitly.** This item is closed as an *opportunistic acceleration*, and the two residual requirements OC-027 recorded are dispositioned as **Won't Fix (documented)** rather than left silently incomplete:
+
+- *Sub-minute deadline-triggered expiry for the idle-queue case* — **Won't Fix.** An offer an agent silently ignores on an otherwise idle queue (no further offer traffic to piggyback on) is still reclaimed by the untouched `* * * * *` `ReservationExpiryBackgroundTask`, which remains the authoritative backstop. A true per-reservation deadline trigger would require a sub-minute per-tenant scheduler — a parallel scheduling framework the module layer deliberately avoids (repo convention: per-tenant recurring work uses cron `IBackgroundTask`; host-wide loops live only in Web/Startup hosts). Correctness is already guaranteed by the cron, and reject/cancel release reservations synchronously, so only the ignored-offer path ever depended on the schedule and it is now accelerated wherever offer traffic exists.
+- *Consolidating the eleven per-minute tasks and adding outbox-on-commit dispatch* — **Won't Fix (for this milestone).** Consolidation trades away each task's independent fault isolation and needs load testing before it can be justified; it is a scalability optimization, not a correctness or production-readiness blocker, and is left as a tracked future optimization.
+
+---
+
+### OC-028 — Scheduler leases can expire while work continues
+
+- **Priority:** High · **Status:** Completed · **Category:** Distributed correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `DialerPacingBackgroundTask` holds a 60-second lock while profiles and outbound attempts execute sequentially with no matching run deadline or lease renewal (`DialerPacingBackgroundTask.cs:10-15,24-43`, `DialerStrategyBase.cs:43-64`). `AgentAvailabilityRecoveryBackgroundTask` has the same shape with a one-minute lock.
+
+**Why it matters.** A second node can begin an overlapping pacing cycle while the first still runs, so per-invocation pacing no longer constrains aggregate call rate — producing over-reservation or a call burst, and racing agent state transitions.
+
+**Recommended solution.** Renewable per-profile leases or a strict execution deadline shorter than lock expiry; stop immediately when the budget expires.
+
+**Resolution.** Both tasks now adopt the same bounded-run pattern already proven in `ReservationExpiryBackgroundTask`: the distributed-lock expiration was raised from 60s to `LockExpiration = 120_000` (twice the one-minute schedule) and each run is bounded to a `MaxRunDurationMilliseconds = 90_000` wall-clock budget that is strictly below the lock expiration, so a run always finishes before its lock can expire and a second node can therefore never start an overlapping run. `DialerPacingBackgroundTask` enforces the budget both with a hard `CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)` + `CancelAfter` that cancels in-flight `RunCycleAsync` work and with a between-profile `IClock.UtcNow` deadline check that defers the remaining profiles to the next tick; `AgentAvailabilityRecoveryBackgroundTask` (a single recovery pass) enforces it with the linked `CancelAfter` token. Both distinguish shutdown cancellation (rethrown so the lease is released promptly) from budget cancellation (logged at Debug and deferred). Covered by new/updated unit tests: reflection-based metadata ordering guards (`schedule < 2× ≤ lock-expiration`, `run-budget < lock-expiration`, `lock-expiration > lock-timeout`), a clock-advance budget-defer test for the pacing task, quiescence and shutdown-propagation tests, and an assertion that the recovery pass runs under the budgeted (linked, cancelable) token rather than the raw shutdown token. Independent gpt-5.6-sol review: APPROVE.
+
+---
+
+# Phase 7 — Security
+
+### OC-029 — Unsafe HTTP retries on non-idempotent operations
+
+- **Priority:** High · **Status:** Completed · **Category:** Resilience/correctness · **Effort:** M · **Risk:** Medium · **Dependencies:** Provider idempotency contracts
+
+**Problem.** Both providers install standard resilience retry pipelines without excluding unsafe methods (`Asterisk/Startup.cs:51-56`, `DialPad/Startup.cs:22-27`), and those clients carry call-origination POSTs and OAuth authorization-code/refresh-token POSTs.
+
+**Why it matters.** A lost response can place a **second outbound call**. Retrying a one-time authorization code or a rotating refresh token yields `invalid_grant` after the first request actually succeeded.
+
+**Recommended solution.** Separate clients/pipelines by operation type; disable retries for unsafe methods unless the provider guarantees idempotency via a deterministic key; never auto-replay ambiguous OAuth grant requests.
+
+**Resolution.** Both provider resilience pipelines now call the framework-provided `options.Retry.DisableForUnsafeHttpMethods()` (from `Microsoft.Extensions.Http.Resilience`) inside their `AddStandardResilienceHandler` retry configuration. This excludes POST/PATCH/PUT/DELETE/CONNECT from automatic replay while preserving retries for idempotent safe methods (status GETs). Neither provider exposes a deterministic idempotency key, so retrying unsafe methods (ARI call-origination, PJSIP credential mutations, DialPad call-origination, and OAuth authorization-code/refresh-token POSTs) is unsound; disabling replay is the correct fail-closed behavior. A source-scanning architecture guard test (`ProviderHttpRetryArchitectureTests`) dynamically discovers **every** source file under `src` that installs the standard resilience handler and asserts each also disables unsafe-method retries — the guard is not limited to a hardcoded provider list, so a future client cannot regress the rule. That dynamic guard surfaced three additional clients (the AbstractAPI, Veriphone, and Twilio Lookup phone-number-verification providers); although those are GET-only lookups today, the same disable call was applied so a future POST cannot silently gain unsafe-retry behavior. Independent gpt-5.6-sol review: initial REQUEST-CHANGES (guard was hardcoded to two files) applied by making the guard dynamic; re-review APPROVE.
+
+---
+
+### OC-030 — OAuth token persistence failures reported as success
+
+- **Priority:** High · **Status:** Completed · **Category:** Correctness/security · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** `UserManager.UpdateAsync()` returns an `IdentityResult` that is discarded (`DefaultTelephonyUserAccessor.cs:43-46`, `DefaultTelephonyUserTokenStore.cs:72,94`).
+
+**Why it matters.** Validation/concurrency/storage failures do not necessarily throw, so OAuth connect or refresh can report success while replacement tokens were never persisted.
+
+**Recommended solution.** Inspect the result, propagate a typed failure with redacted errors, and report success only after persistence succeeds.
+
+**Resolution.** `DefaultTelephonyUserAccessor.UpdateUserAsync` now inspects the `IdentityResult`, logs only the identity error **codes** (descriptions can carry usernames/emails, so they are never logged), and throws an internal `TelephonyUserPersistenceException` whose message carries codes only. `DefaultTelephonyUserTokenStore.StoreAsync` now throws the same exception when there is no persistable current user rather than silently no-op-ing. `CompleteAuthorizationAsync` converts the exception into `TelephonyResult.Failed(...)` so connect reports success only after persistence succeeds; `GetStatusAsync` degrades to `IsConnected = false` on a refresh-persist failure so the status probe cannot fault; disconnect/refresh surface the failure loudly. Covered by `DefaultTelephonyUserAccessorTests`. Independent gpt-5.6-sol review: two follow-up findings (token-store silent skip, PII in logs) applied and re-confirmed.
+
+---
+
+### OC-031 — Concurrent OAuth refreshes are not serialized
+
+- **Priority:** High · **Status:** Completed · **Category:** Correctness/security · **Effort:** M · **Risk:** Medium · **Dependencies:** Distributed lock
+
+**Problem.** `DefaultTelephonyAuthenticationService.cs:183-223` lets multiple requests read the same expiring token, refresh concurrently, and overwrite stored credentials with no lock or compare-and-swap.
+
+**Why it matters.** Providers using refresh-token rotation invalidate the old token on first use, so concurrent refreshes fail intermittently or lose the only valid replacement token.
+
+**Recommended solution.** Distributed tenant/user/provider lock; re-read inside the lock; refresh once; persist with concurrency checking.
+
+**Resolution.** Added `TokenRefreshLockTimeout` (10s) / `TokenRefreshLockExpiration` (60s) to `TelephonyCoordinationOptions`, validated at startup so the lease must exceed the wait window, and a per-user+provider distributed lock (`Telephony:TokenRefresh:{provider}:{user}`) using the same `IDistributedLock` idiom as `TelephonyInteractionSynchronizationService` (the tenant is already an implicit lock scope). Inside the lock the service now reloads the current user through `ITelephonyUserAccessor.ReloadCurrentUserAsync` — which evicts the user from the YesSQL identity map (`ISession.Detach`) so the re-read observes a peer's committed refresh rather than this request's stale copy — and, after refreshing, commits durably via `SaveChangesAsync` before releasing the lock so a waiting peer actually sees the new tokens instead of rotating a second time. A caller that cannot acquire the lock within the wait window reloads and reuses valid stored tokens rather than starting a competing refresh. Covered by a hardened concurrency test (a gate parks the first refresh inside the critical section while the second provably contends) proving two racing calls trigger exactly one provider refresh. Independent gpt-5.6-sol review: APPROVE.
+
+---
+
+### OC-032 — Provider revocation failures hidden before local tokens are deleted
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Security · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** DialPad revocation catches and logs every exception (`DialPadTelephonyProvider.cs:680-711`); the authentication service then deletes local tokens as though remote revocation succeeded (`DefaultTelephonyAuthenticationService.cs:175-179`).
+
+**Why it matters.** The external grant can remain active with no retained state or durable intent for retry — a disconnected account that is still authorized at the provider.
+
+**Recommended solution.** Return a typed revocation result; clear interactive credentials immediately but persist encrypted retry work or explicitly report incomplete remote revocation.
+
+**Resolution.** `ITelephonyAuthenticationProvider.RevokeTokensAsync` now returns a typed `TelephonyResult` instead of `Task`: a confirmed `Success` (2xx, or nothing to revoke), a definitive `Failed` when the provider returned a non-ambiguous rejection (`4xx` other than timeout/throttling), or an indeterminate `Unknown` (`OutcomeUnknown`) when the outcome could not be observed (timeout `408`, throttling `429`, `5xx`, or a transport exception) — because the unsafe deauthorize `POST` may still have committed server-side. This ambiguous-status classification reuses the same `IsAmbiguousStatusCode` helper the provider already applies to dial POSTs. The DialPad implementation attempts revocation whenever a stored access token exists, **regardless of the current authentication mode**, so a tenant that switched from OAuth to API-key authentication cannot silently abandon a still-active per-user OAuth grant; it never throws for non-cancellation failures. `ITelephonyAuthenticationService.DisconnectAsync` now returns that `TelephonyResult`: it removes the local tokens **first** so the interactive credentials are cleared immediately even if the remote revocation is canceled or throws, then, when revocation was not confirmed, logs a durable warning naming the provider and the reason and returns the non-successful result so callers can react to a grant that may still be active. `TelephonyOAuthController.Disconnect` relays the outcome, returning `remoteRevocationConfirmed: false` with the reason when the remote grant could not be confirmed revoked. The chosen path is "explicitly report incomplete remote revocation" (not a durable retry queue), which is the correctly-scoped fix for this item; a durable encrypted retry queue would be a separate, larger enhancement. New tests cover DialPad returning `Success`/`Failed`/`Unknown` per status code, revocation still calling the deauthorize endpoint after a switch to API-key mode, and `DisconnectAsync` clearing local tokens both when the provider reports failure and when the provider throws (cancellation). Public-API baselines for `Telephony` and `Telephony.Abstractions` were regenerated for the changed signatures. An independent gpt-5.6 review raised three findings (local removal could be skipped when the remote call was canceled; ambiguous `408`/`429`/`5xx` statuses were misclassified as definitive failures; a switch to API-key mode abandoned a leftover OAuth grant) — all three were fixed and covered by new tests before completion. A second review round raised two more findings: the local removal only *staged* the YesSql update, so the deletion had to be durably committed via `_userAccessor.SaveChangesAsync()` before the remote revocation runs (otherwise a concurrent request in another scope could still observe the stale credentials); and returning `Success` when a stored token exists but the resolved provider is missing or is not an `ITelephonyAuthenticationProvider` was a false success — that branch now logs a warning and returns `Unknown`. Both were fixed and covered by a new test (`DisconnectAsync_WhenProviderCannotRevoke_ClearsLocalTokensAndReportsUnknown`).
+
+---
+
+### OC-033 — Cross-tenant ARI ownership guard is process-local static state
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Multi-tenancy/scale · **Effort:** M · **Risk:** Medium · **Dependencies:** Needs a cross-tenant coordination primitive
+
+**Problem.** `AsteriskAriApplicationOwnershipRegistry.cs:18` uses a `static readonly ConcurrentDictionary` to stop two tenants on one node attaching to the same ARI application. The implementation is careful and its comment candidly explains that `IDistributedLock`/`IDistributedCache` are tenant-scoped and therefore unusable here.
+
+**Why it matters.** On two web nodes, tenant A on node 1 and tenant B on node 2 can both claim the same ARI application — the exact collision the registry exists to prevent — and the failure is silent. It is also the one place in scope violating the repo's "no static mutable state" rule.
+
+**Recommended solution.** Back the claim with a lease in a shared store keyed by ARI identity, keeping the static dictionary as a local fast cache. Short of that, document the single-node constraint in `docs/telephony/asterisk.md` and surface it in the existing topology health check.
+
+**Resolution.** The fallback path is delivered; the full cross-node lease is dispositioned as a documented follow-up because it genuinely requires infrastructure the platform does not yet expose. Orchard Core's `IDistributedLock`/`IDistributedCache` are tenant-scoped, so a claim shared across tenants on one node — let alone across nodes — cannot be arbitrated by them, which is exactly why the registry is a node-local static in the first place; backing the claim with a cross-tenant lease is blocked on a cross-tenant coordination primitive that does not exist, and is left as a **Won't-Fix-now / future improvement** (the `single-region-multi-node` profile remains uncertified until it lands). What is delivered: the single-active-node operator responsibility is now **surfaced by the platform at runtime** rather than living only in the docs. `ContactCenterTopologyHealthCheck.Evaluate` looks up the satisfied profile and, when it is a production profile capped at one active application node (`MaximumApplicationNodes == 1`, which is the certified `single-node-distributed`), its *healthy* verdict states that the profile certifies exactly one active application node and that the check verifies infrastructure prerequisites but cannot detect a second active node claiming the same real-time voice application, so single-active-node operation is an operator responsibility. Because the Contact Center readiness probe deliberately writes only the aggregate status (its detailed disclosure is confined to the authorized *dependency* endpoint, and topology is a node-local *readiness* verdict that the tag separation keeps off that endpoint by design), the operator-visible surface for this static, activation-time fact is the tenant-activation log: `ContactCenterTopologyValidator` already logs the satisfied-topology verdict once on activation, and that success log now names the single-active-node operator responsibility for a single-node production profile, logged at `Warning` so the caveat survives the `Warning` default minimum log level shipped by the production host (the ordinary satisfied-topology message stays at `Information`). This is layer-clean — driven by the topology profile in `ContactCenter.Core`, with no reference to Asterisk — and the health-check description signature is unchanged, so the governed public-API baseline is unaffected. The registry's XML remark and `docs/telephony/asterisk.md` were updated to note the health check now surfaces the responsibility, and a health-check test asserts the healthy verdict carries the "one active application node" / "operator responsibility" language.
+
+---
+
+### OC-034 — Webhook rate limiting is process-local
+
+- **Priority:** Low (Enhancement) · **Status:** Completed · **Category:** DoS · **Effort:** M · **Risk:** Low · **Dependencies:** Ingress gateway or Redis
+
+**Problem.** Rate and concurrency limiters are in-memory singletons (`ProviderWebhookIngressLimiter.cs:11-16,40-64`), so each node accepts its own configured limit.
+
+**Recommended solution.** Enforce an edge/WAF rate limit and consider a Redis-backed global quota. Document the per-node semantics.
+
+**Resolution.** Documented the per-node semantics, which was the actionable core of the recommendation, and framed it against the topology this release actually certifies. A new **"Rate and concurrency limits are per node"** subsection under *Provider webhook ingress* in `docs/contact-center/production-support.md` states that the rate and concurrency limiters are held in-process via `System.Threading.RateLimiting` and therefore enforced per application node; that on the only production-certified topology (a single application node) per-node equals fleet-wide, so the configured value *is* the effective global limit; and that the app-level limiter is a defense-in-depth backstop rather than the primary DoS control, which belongs at the edge. For any (uncertified) multi-node deployment the doc directs operators to enforce a fleet-wide ceiling at a WAF, reverse proxy, or API gateway and to size per-node values so `node count × per-node limit` stays within provider/store capacity. `<remarks>` blocks were added to `ProviderWebhookIngressLimiter` and `ProviderWebhookIngressOptions` mirroring the semantics and pointing to the operator guidance. The **Redis-backed global quota was a "consider," not a "must,"** and is explicitly recorded as a tracked option for a future certified multi-node topology — building it now would be premature (single-node is the only certified topology, and multi-node coordination is the same class of work as OC-033), so it is deliberately deferred rather than implemented. No behavior changed.
+
+---
+
+### OC-035 — Confirm antiforgery coverage on admin catalog POSTs
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Security verification · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Catalog and entitlement POST actions have no explicit antiforgery attribute; they rely on Orchard's global admin antiforgery filter.
+
+**Recommended solution.** Add an integration test proving admin catalog POSTs reject absent/invalid antiforgery tokens, so the reliance is asserted rather than assumed.
+
+**Resolution.** The four modules have no web-host integration harness, so a full HTTP round-trip test was not feasible without introducing one (out of scope for an S item). Instead the reliance was asserted at the layer under our control with a reflection-based architecture test, `AdminPostAntiforgeryArchitectureTests`. It enumerates every concrete MVC controller in the ContactCenter, Telephony, Asterisk, and DialPad module assemblies, finds each action that responds to an unsafe HTTP verb (POST/PUT/PATCH/DELETE via any `IActionHttpMethodProvider`), and asserts none opts out of antiforgery through `[IgnoreAntiforgeryToken]` on the action or its controller. Because Orchard Core registers `AutoValidateAntiforgeryTokenAttribute` globally, the *only* way one of these POSTs could bypass antiforgery is an explicit opt-out — so proving no opt-out exists proves the coverage holds. A second test pins the known catalog controllers (`Skills`, `Queues`, `AgentEntitlements`) as discovered so the scan can never silently degrade to zero actions. Confirmed no controller in any of the four modules declares `[IgnoreAntiforgeryToken]`; provider webhook receivers are minimal-API endpoints and never surface as controllers. Both tests pass.
+
+---
+
+### OC-036 — Cancellation handled as an ordinary fault; unbounded WebSocket frames
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Async correctness / DoS · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem (cluster).**
+- Broad handlers catch `OperationCanceledException` alongside real failures, so shutdown produces error noise and loops continue with a canceled token (`ContactCenterOutbox.cs:411`, `DialerPacingBackgroundTask.cs:42`, `TelephonyInteractionReconciliationBackgroundTask.cs:28`, `DialPadTelephonyProvider.cs:239-329`).
+- Canceled agent readiness is persisted as **no-answer**, corrupting interaction outcomes and agent metrics (`AsteriskAgentChannelReadySignal.cs:89-91`, `AsteriskContactCenterVoiceProvider.cs:275-288`).
+- `AsteriskRealtimeVoiceListener.cs:217-241` appends WebSocket frames until `EndOfMessage` with **no accumulated size limit**, then copies again via `ToArray()`.
+- `IAsteriskChannelTenantBindingStore` has no `CancellationToken` parameters and uses uncancelable `SemaphoreSlim.WaitAsync()`.
+- Durable hub work uses `MustComplete` with no host-stopping token or bounded deadline (`ContactCenterHub.cs:304-350,372-429`).
+
+**Recommended solution.** Rethrow `OperationCanceledException` when the supplied token is canceled before generic handling; return a distinct `Ready/TimedOut/Canceled` result and re-check cancellation before no-answer compensation; enforce a configured max WebSocket message size and close with `MessageTooBig`; thread cancellation through the binding store; link durable hub work to application shutdown with a bounded timeout.
+
+**Resolution.** The cluster was triaged into fixes and two documented Won't-Fix sub-parts (the panel review deliberately treats each sub-part on its own merits rather than mechanically applying the reviewer's blanket recommendation):
+
+- **Cancellation-as-fault (FIXED).** Added `catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }` guards ahead of the swallowing generic handlers in `ContactCenterOutbox` (handler loop), `TelephonyInteractionReconciliationBackgroundTask`, and the six generic catches in `DialPadTelephonyProvider` (call-state, directory list, token revoke, token request, call-action, place-call). `DialerPacingBackgroundTask` was re-examined and already rethrows on shell-token cancellation while distinguishing its own run-budget token — no change required.
+- **Canceled readiness recorded as no-answer (FIXED).** Introduced a tri-state `AsteriskAgentChannelReadyOutcome { Ready, NotReady, Canceled }` and changed `IAsteriskAgentChannelReadyRegistration.WaitAsync` to return it (both `internal`, so no PublicApi baseline impact). `AsteriskAgentChannelReadySignal` now distinguishes a genuine answer-timeout from host cancellation by re-checking the caller's token when the delay wins the race, and gives caller cancellation **precedence** over a superseded-registration `false` result so a simultaneous supersede + cancel is never reported as `NotReady`. All four readiness call sites (connect, conference, transfer, supervisor monitor/barge) now propagate `OperationCanceledException` on `Canceled` instead of compensating into a false `*_no_answer` disposition, so shutdown never corrupts interaction outcomes or agent metrics. The connect path additionally gained a dedicated `catch (OperationCanceledException) when (token.IsCancellationRequested)` guard ahead of its broad fault catch, because the readiness-thrown cancellation was otherwise swallowed and returned as `agent_connect_failed` (found by the independent review). Added `AsteriskAgentChannelReadySignalTests` coverage for the `Ready`/`NotReady`/`Canceled` outcomes.
+- **Unbounded WebSocket frames (FIXED).** Added a validated `AsteriskCoordinationOptions.MaxRealtimeMessageBytes` (default 1 MiB, ceiling 64 MiB via `AsteriskConstants.MaxRealtimeMessageBytesCeiling`, `.Validate(...)` in `Startup`). `AsteriskRealtimeVoiceListener` now tracks accumulated frame size in its receive loop and, when a message would exceed the cap, logs a warning and closes the socket with `WebSocketCloseStatus.MessageTooBig` instead of buffering unbounded attacker-controlled data. The close is bounded (`CloseOutputAsync` under a `RealtimeCloseHandshakeTimeoutSeconds` token) so a hostile peer cannot stall the listener by refusing to complete the close handshake (found by the independent review).
+- **Binding-store cancellation threading (SPLIT → OC-050).** The independent review correctly observed that the OC-036 "durable mutations must run to completion" rationale does not justify the store's *uncancellable, unbounded create-lock acquisition* or its uncancellable *read* queries: a wedged holder can block unrelated colliding channels indefinitely. A safe fix changes `CreateAsync`'s failure contract (an acquisition timeout must surface distinctly, not masquerade as a lost create race) and is larger than OC-036's scope, so it is tracked as **OC-050**. The durable write mutation itself still legitimately runs to completion.
+- **`ContactCenterHub` `MustComplete` (SPLIT → OC-051).** `HubConnectionWork.MustComplete` uses `CancellationToken.None` by deliberate, documented design because durable state plus SignalR group membership must not be abandoned half-applied (no repair mechanism exists), and the convention is enforced by `HubCancellationConventionTests`. The independent review agreed the client-disconnect token must stay ignored but noted the missing *bounded application-shutdown* seam. Because a shutdown token is only safe once each durable step is idempotent and group membership is reconstructed on reconnect — an L-sized redesign — it is tracked as **OC-051** rather than changed here, where introducing the token alone would reintroduce the half-applied inconsistency the design prevents.
+
+---
+
+# Phase 8 — Documentation
+
+### OC-037 — No `README.md` in any of the four modules
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Verified: none of ContactCenter, Telephony, Asterisk or DialPad has a `README.md`, which the repository conventions require for every module.
+
+**Recommended solution.** Add a `README.md` per module covering purpose, features, installation, configuration, usage and dependencies.
+
+**Resolution.** Added a `README.md` to each of the four modules — `CrestApps.OrchardCore.Telephony`, `CrestApps.OrchardCore.Asterisk`, `CrestApps.OrchardCore.DialPad`, and `CrestApps.OrchardCore.ContactCenter`. Each README documents the module purpose, a feature table with verified feature IDs (cross-checked against the module manifests and `*Constants` classes), a recipe-based installation snippet, configuration, usage, dependencies, and a link to the corresponding page on the documentation site. The Telephony README also covers provider authoring; the Asterisk README surfaces the single-active-process deployment constraint.
+
+---
+
+### OC-038 — Correct the accessibility claim in the readiness record
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Documentation accuracy · **Effort:** S · **Risk:** Low · **Dependencies:** OC-016
+
+**Problem.** `.github/contact-center/PRODUCTION-READINESS.md` lists W6 agent-desktop accessibility as completed. Verified code state contradicts this (0 ARIA attributes on both real-time views, 0 live regions in scripts).
+
+**Recommended solution.** Either complete OC-016 and keep the claim, or restate the claim honestly. Per the project's own "honest capability advertising" principle, do not advertise unverified capability.
+
+**Resolution.** Resolved together with OC-016 by choosing the "complete and keep the claim" path: the ARIA/live-region/keyboard/degraded-state work was actually implemented on both the agent workspace and the supervisor dashboard, and the readiness record's W6 bullet was rewritten to describe the delivered scope precisely (offer/active/queue/summary/tiles/board live regions, keyboard-operable presence menu, focus management, inline error regions, connection-state announcements) across **both** surfaces rather than the agent workspace alone. The claim is now backed by shipped code.
+
+---
+
+### OC-039 — Document the single-active-process telephony constraint at the point of use
+
+- **Priority:** Low · **Status:** Completed · **Category:** Documentation · **Effort:** S · **Risk:** Low · **Dependencies:** OC-033
+
+**Problem.** The single-active-process constraint for ARI ownership is a deployment-critical limitation that is not surfaced in `docs/telephony/asterisk.md` or in the module README.
+
+**Recommended solution.** Document it in the operator docs and reference it from the topology health check message.
+
+**Resolution.** Added a **"Single active process per ARI application"** subsection to `docs/telephony/asterisk.md`, placed directly after the tenant-scoped ARI listener description. It explains that Asterisk delivers each Stasis event to exactly one ARI application consumer, that the ownership guard is a process-wide (node-local) registry that cannot arbitrate a cross-node claim, and that real-time voice is therefore supported only on a single active application process — an **operator responsibility**, not something the platform detects. The write is precise about enforcement: the only production-certified topology is `single-node-distributed` (exactly one application node) and `single-region-multi-node` is not production-certified, but `ContactCenterTopologyEvaluator`/`ContactCenterTopologyHealthCheck` only validate a declared profile's *infrastructure prerequisites* (production host declares a profile, required database provider, required Redis distributed-lock/SignalR backplane features) — they do **not** observe the number of running application nodes, so two hosts can each declare the single-node profile and both report healthy. The guidance directs operators to guarantee single-process operation through deployment rather than rely on the health check to catch a second node. A `<remarks>` block on `AsteriskAriApplicationOwnershipRegistry` mirrors this and points to the operator guidance and the planned shared-lease path to multi-node (OC-033). No code behavior changed. (An initial draft overstated the health check as refusing admission on a multi-node deployment; independent review flagged that node count is never observed, and the wording was corrected to describe operator-enforced single-process operation.)
+
+---
+
+# Phase 9 — Technical Debt
+
+### OC-040 — `ContactCenter/Startup.cs`: 36 public types in 1,368 lines
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Code organization · **Effort:** M · **Risk:** Low · **Dependencies:** OC-008 (do after feature consolidation)
+
+**Problem.** Verified: 36 public types in one file — the only serious violation of the repo's one-public-type-per-file rule in the entire scope (the next worst files have 2–3, an accepted Startup idiom). It also contains 73 registration calls.
+
+**Recommended solution.** Split into per-feature startup files (`VoiceStartup.cs`, `ReportingStartup.cs`, `AgentPresenceStartup.cs`, …), each named for its type.
+
+**Note.** An earlier reviewer reported "363 service registrations"; the verified count is **73**. The file-size and type-count problems are real; the registration count is not extreme.
+
+**Resolution.** Split the 1,298-line `Startup.cs` into 36 files, one per `StartupBase` type, each named for its class (`VoiceStartup.cs`, `RoutingStartup.cs`, `ComplianceStartup.cs`, `AnalyticsStartup.cs`, the seven `*AdminStartup` / `*DeploymentStartup` / `*RecipesStartup` feature startups, and so on). `Startup.cs` now holds only the base `Startup` feature class. Every extracted file carries only the `using` directives it needs (verified via a one-off IDE0005 pass with `dotnet format`); the shared 57-line using block that would otherwise be copied into each file was trimmed to its per-file minimum. No type, namespace, attribute, or registration changed, so behaviour is identical. Two source-parsing architecture tests that had read the single `Startup.cs` were updated to scan the whole module: `ContactCenterFeatureDependencyArchitectureTests` now calls `ParseStartupClassesInDirectory(ContactCenterModulePath, …)` at its twelve Contact Center call sites, and `ContactCenterRetentionCoverageTests.EveryPolicy_IsRegistered_…` concatenates every `*Startup.cs` in the module before asserting each retention policy is registered. Module and test project build 0 warnings; all 1497 ContactCenter tests pass.
+
+---
+
+### OC-041 — `ContactCenter.Core/Services` is 226 flat files
+
+- **Priority:** Medium · **Status:** Won't Fix (deferred — disproportionate churn for zero capability) · **Category:** Code organization · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** Verified: 226 `.cs` files in a single flat `Services/` directory within a ~33k-line library whose only other folders are `HealthChecks`, `Indexes`, `Models`, `Telemetry`.
+
+**Recommended solution.** Partition by bounded context — `AgentManagement`, `ActivityQueuing`, `Reporting`, `ProviderExecution`, `CallTopology`. Sub-folders first (low risk); consider extracting `ContactCenter.Reporting.Core` if the reporting surface keeps growing.
+
+**Disposition (Won't Fix / deferred — independently reviewed, gpt-5.6-sol).** The observation is accurate — the directory is flat and large (now 231 files) — but it is a navigability nicety, and in *this* library every available reorganization is disproportionate to a Medium code-organization item with no behavioural or capability benefit, so it is deferred rather than forced.
+
+- **The convention-correct reorg is a large public-surface + solution-wide churn.** All 231 files declare `namespace CrestApps.OrchardCore.ContactCenter.Core.Services`, and **228 of them expose public types** in a library that is public precisely so the module and tests can consume it. The repository convention (and the approved-baseline format, which groups types under `namespace { … }` blocks) is *namespace matches folder*, so moving files into `Services/AgentManagement`, `Services/Reporting`, … means renaming their namespaces to match. That is a **228-type change to the governed `ContactCenter.Core` public-API baseline** plus a mechanical edit of every consumer: `using CrestApps.OrchardCore.ContactCenter.Core.Services;` appears in **255 files across `src` and `tests`**, each of which would have to be re-split into up to five sub-namespace usings. Hundreds of files touched, a large reviewed-surface diff, and real regression surface — for zero behavioural change.
+- **The zero-API alternative violates the stated convention.** Moving the files into sub-folders while *keeping* the flat `…Core.Services` namespace avoids every API and using change, but it deliberately creates the folder/namespace mismatch the repository convention forbids (there is no `IDE0130`/`namespace_match_folder` rule enforcing it in `.editorconfig`, so it would compile, but it contradicts a documented convention and invites a later "correction" that reintroduces the churn above). Trading a documented convention for directory tidiness is not a clean win.
+- **Almost nothing is internal, so there is no low-risk subset.** Only 3 of the 231 types are non-public, so there is no meaningful cohesive slice that could be re-foldered without touching the baseline.
+- **Deferral, not denial.** If the reporting surface keeps growing to where a separate `ContactCenter.Reporting.Core` assembly is independently justified (its own bounded context, its own baseline), that extraction becomes worth its cost and is the right moment to carve reporting out of the flat directory. Until a concrete driver like that exists, the flat `Services/` directory is left as-is; the other concerns (`HealthChecks`, `Indexes`, `Models`, `Telemetry`) already live in their own folders.
+
+---
+
+### OC-042 — God classes in providers and reporting
+
+- **Priority:** Medium · **Status:** Won't Fix (deferred — internal maintainability smell; safe extraction is the full XL refactor) · **Category:** SRP · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** Verified files >600 lines (16 in scope). Worst offenders: `AsteriskTelephonyProviderBase.cs` (1,361 — dial, call state, hangup, transfer, merge, credential issuance, directory, with `GetCallStateAsync` ~180 lines and `MergeAsync` ~120), `EnterpriseInteractionReportProvider.cs` (1,298), `DialPadTelephonyProvider.cs` (1,112), `ContactCenterReportingService.cs` (973), `ProviderVoiceEventService.cs` (904).
+
+**Recommended solution.** Extract `AsteriskCallControlService`/`CredentialService`/`DirectoryService`; apply a per-metric-family provider strategy for reporting behind a thin aggregator.
+
+**Disposition (Won't Fix / deferred — independently reviewed, gpt-5.6-sol).** The size observation is accurate, but for these specific classes the recommended extraction is a maintainability-only change whose *safe* form is precisely the full XL refactor, so it is deferred rather than forced now.
+
+- **These are internal / non-extensible types — a maintainability smell, not an extensibility or API defect.** `AsteriskTelephonyProviderBase` is `internal abstract`, `EnterpriseInteractionReportProvider` is `internal sealed`, and `DialPadTelephonyProvider` is `public sealed` in a module assembly that is **not** governed by a public-API baseline. The framework's extension point is `ITelephonyProvider` and its capability interfaces (external providers implement those directly and never subclass these classes), so splitting them yields no extensibility or public-surface benefit — it is an internal readability change only. The plan's overarching "everything should be extensible" driver does not apply here.
+- **Capability detection pins behaviour to one type.** `AsteriskTelephonyProviderBase` implements the root `ITelephonyProvider` plus **12** capability interfaces (`ITelephonyCallControlProvider`, `…Hold`, `…Mute`, `…Transfer`, `…Conference`, `…Dtmf`, `…Voicemail`, `…SoftPhoneCredentials`, `…Audio`, `…CallState`, `…Directory`, `…InboundCall` — 13 interfaces in total) because the resolver/service detects capabilities with `provider is ITelephony*Provider`. Extraction therefore cannot shrink the type's interface surface; it can only relocate method *bodies* into collaborators the provider delegates to. The result is a thinner-but-still-13-interface type plus several new collaborator types and DI wiring — more moving parts for the same fixed capability surface.
+- **The transport-heavy capabilities are glued together by shared private plumbing, and the transport-free ones are too small to carve out profitably.** The call-bearing methods route through the base's private `SendAsync` → `CreateClient` (`IHttpClientFactory`) plumbing plus `IsConfigured` / `NotConfigured` / `ReadString` helpers (**11** direct `await SendAsync(...)` call sites across dial, call state, hangup, transfer, merge, DTMF, voicemail and directory). For those capabilities a *safe* extraction must first lift the ARI transport into an injected collaborator and then split each body onto it — i.e. the whole XL refactor; there is no low-risk cohesive subset of the transport-using methods to peel off first. The genuinely transport-free members are small and not worth their own collaborators: `GetClientCredentialsAsync` (`AsteriskTelephonyProviderBase.cs:714`) only resolves settings and checks `IsConfigured` before returning an empty credential bag, so extracting it would add a new type and DI registration to relocate a dozen lines — churn without a maintainability payoff. So the size reduction that would actually matter is exactly the transport-coupled bulk, which is the XL refactor.
+- **Critical call-control path, thin coverage, unreleased module.** The Asterisk provider has a single dedicated test file; the mechanical relocation of dial/state/hangup/transfer/merge risks subtle ordering, shared-client-lifetime, and cancellation regressions that the current tests would not catch. That regression exposure on the live call path is disproportionate to a Medium internal-maintainability item on a module that has not shipped, and is consistent with the board's prior deferrals of costly, zero-capability refactors (OC-011, OC-012, OC-041).
+
+**Scoped plan for when this is picked up.** Trigger the refactor when call-control behaviour next needs substantial change (so it is covered by the same test effort): (1) extract an injected `AsteriskAriTransport` collaborator wrapping `SendAsync`/`CreateClient`/`IsConfigured`/`NotConfigured`/`ReadString`; (2) split the capability bodies into `AsteriskCallControlService` / `AsteriskDirectoryService` / `AsteriskCredentialService` that consume it, with the provider retaining the 13 interface implementations as thin delegations; (3) expand the Asterisk/DialPad provider test suites before the move; (4) for `EnterpriseInteractionReportProvider`, first grow the report totals/concurrency tests, then apply the per-metric-family strategy behind a thin aggregator. Until such a driver exists, the classes are left intact to avoid unjustified risk on the call path.
+
+---
+
+### OC-043 — Duplication between the two provider implementations
+
+- **Priority:** Medium · **Status:** Completed (partial extraction; sweeping base class Won't Fix) · **Category:** DRY · **Effort:** L · **Risk:** Medium · **Dependencies:** OC-011, OC-012
+
+**Problem.** Asterisk and DialPad each re-implement quiescing guards, HTTP status mapping, retry semantics and the call-lifecycle methods. A bug fix in the dial flow needs two patches.
+
+**Recommended solution.** Extract a shared `TelephonyProviderBase` into `Telephony.Core` covering the quiescing guard, HTTP result mapping and lifecycle scaffolding; both providers extend it. Combines naturally with OC-012.
+
+**Resolution (partial fix delivered; the sweeping base class is Won't Fix — premise substantially overstated; independently reviewed, gpt-5.6-sol).** The premise was audited call-by-call and is mostly disproven, but two genuinely-identical pure helpers were found and consolidated.
+
+*What was disproven.* The one cross-provider concern the finding names first — the **quiescing / work-admission guard** — is *already shared*: both providers depend on `IContactCenterFeatureWorkManager` and merely add a one-line call plus a provider-specific "temporarily unavailable" message (which *should* differ per provider). The "HTTP status mapping", "retry semantics" and "call-lifecycle methods" are **not** mechanically duplicated: Asterisk speaks the Asterisk REST Interface (ARI — channels, bridges, Stasis, its own `AsteriskAriClient`/`AsteriskAriOutcomeClassifier`/`AsteriskAriException`) while DialPad speaks a cloud REST API, so their dial/hangup/transfer/state flows, status semantics and retry conditions diverge by protocol. A shared lifecycle base over two independently-varying remote APIs would be a **false abstraction**, and the recommended `TelephonyProviderBase` carries the exact ISP-breaking objection the board already **sustained in OC-012** (a monolithic base makes every provider satisfy every capability `is`-check, defeating capability detection) — and OC-043's own stated dependencies, OC-011 and OC-012, are both **Won't Fix**. The claimed hazard ("a bug fix in the dial flow needs two patches") does not hold: the dial flows are not shared code.
+
+*What was fixed.* Two helpers were **byte-identical** across the providers and encode real provider-agnostic *telephony policy*, so they were extracted into a new `public static TelephonyProviderResponse` in `Telephony.Abstractions` (alongside the existing `TelephonyAudioModeResolver` precedent): (1) `IsAmbiguousStatusCode(HttpStatusCode)` — the cross-provider policy for which HTTP outcomes (request timeout, throttling, `>= 500`) leave a call's real outcome *ambiguous* and must be reported as `Unknown` rather than success/failure; and (2) `ResolveDirection(string)` — the normalized inbound/outbound decision. Both providers now call the shared helper (three call sites in Asterisk, three in DialPad), the six duplicated private methods were removed, and future REST-backed providers inherit the same policy. A third overlap (`ReadString(JsonElement,string)`) was deliberately **left in place**: it is a generic `System.Text.Json` utility with no telephony semantics, and centralizing generic JSON helpers in a telephony contract package would be scope creep, not DRY. The Telephony.Abstractions public-API baseline was regenerated for the additive type.
+
+---
+
+### OC-044 — 54 report providers registered as hand-written lines
+
+- **Priority:** Low · **Status:** Completed · **Category:** DI/organization · **Effort:** M · **Risk:** Low · **Dependencies:** `IReport` shape in the Reports module
+
+**Problem.** `AnalyticsStartup.ConfigureServices` (`Startup.cs:1224-1350`) contains 37 `AddEnterpriseReport(...)`, 12 `AddWorkforceReport(...)` and 5 direct `AddScoped<IReport,...>` calls, many exceeding 400 characters on one line. Resolving `IEnumerable<IReport>` constructs 54 instances per scope, and the metadata is trapped in imperative code where another module cannot extend it.
+
+**Recommended solution.** Move definitions into `ContactCenterReportOptions` via `services.Configure<...>` — the pattern this same file already uses correctly for `ActivityBatchSourceOptions` — and project them through one provider, keeping `S["..."]` in the options callback so extraction still works.
+
+**Resolution (Completed).** Added a general `IReportProvider` contract to `CrestApps.OrchardCore.Reports.Abstractions` — a single registration contributes a family of reports — and taught `ReportManager` to merge reports from both individually registered `IReport` services and `IReportProvider` instances while still enforcing globally unique report names. The 37 enterprise and 12 workforce report definitions moved out of `AnalyticsStartup` into a configurable `ContactCenterReportCatalogOptions`, populated through the options pipeline by `ConfigureContactCenterReportCatalog` (an `IConfigureOptions<>` that keeps the `S["..."]` literals intact for localization extraction). One scoped `ContactCenterReportProvider` projects the catalog into report instances, constructing a fresh instance per enumeration so the per-request-scope concurrency guarantee proven under OC-earlier work is preserved. `AnalyticsStartup` now registers the five hand-written reports, `ConfigureOptions<ConfigureContactCenterReportCatalog>()`, and `AddScoped<IReportProvider, ContactCenterReportProvider>()` — no more 400-character registration lines, and any feature can now add or remove catalog entries through the options pipeline without editing service registration. Files: `IReportProvider.cs` (new), `ReportManager.cs`, `AnalyticsStartup.cs`, `ContactCenterReportCatalogOptions.cs` (new), `ConfigureContactCenterReportCatalog.cs` (new), `ContactCenterReportProvider.cs` (new); tests `ReportManagerTests` (provider aggregation + collision) and `EnterpriseInteractionReportConcurrencyTests` (scoped-lifetime assertion updated for the provider); docs `modules/reports.md`. Independently reviewed and approved.
+
+---
+
+### OC-045 — Assorted hygiene
+
+- **Priority:** Low · **Status:** Completed · **Category:** Hygiene · **Effort:** S · **Risk:** Low · **Dependencies:** None
+
+- `Manifest.cs:246,273`: feature dependencies declared as magic strings (`"CrestApps.OrchardCore.Omnichannel.Managements"`, `"CrestApps.OrchardCore.SignalR"`) though `OmnichannelConstants.Features.Managements` is already imported and used at lines 24/35.
+- Admin menus live in `Services/` in ContactCenter but `Navigation/` in Telephony — pick one.
+- Three illustrative provider names in neutral XML docs (`TelephonyConstants.cs:54`, `IProviderIdentityResolver.cs:6-7`). These reference this product's own providers, not competitors, so this is a purity nit rather than a rule violation — but neutral contracts read better without them.
+- `TelephonyOAuthController.cs:63,120,147` ignores `HttpContext.RequestAborted`.
+- `AsteriskContactCenterVoiceMediaProvider.cs:477-495` does not dispose the `HttpRequestMessage`.
+- `AsteriskContactCenterVoiceMediaSession.cs:118-151`: concurrent `StopAsync`/`DisposeAsync` can race semaphore disposal and leak the feature work lease.
+
+**Resolution:** All six items are fixed.
+- The two magic-string feature dependencies in the Contact Center `Manifest.cs` now use the already-imported `OmnichannelConstants.Features.Managements` and the newly-imported `SignalRConstants.Feature.Area`, so a rename of either feature id is a single-source change the compiler enforces.
+- The one outlier admin-menu file, `Telephony/Navigation/TelephonyAdminMenu.cs`, moved into `Telephony/Services/` (namespace updated to match) so every admin menu across the repository now lives under `Services/` — the dominant house convention (30 of 31 providers).
+- The three illustrative provider names were removed from the neutral `TelephonyConstants.AuthenticationSchemes.OAuth2` and `IProviderIdentityResolver` XML docs, which now describe behaviour in provider-agnostic terms.
+- `TelephonyOAuthController` now flows `HttpContext.RequestAborted` into all three authentication-service calls (`GetAuthorizationUrlAsync`, `CompleteAuthorizationAsync`, `DisconnectAsync`), which already accepted a `CancellationToken`.
+- `AsteriskContactCenterVoiceMediaProvider.SendAsync` now scopes the `HttpRequestMessage` with `using` so it is disposed after the send.
+- `AsteriskContactCenterVoiceMediaSession` now guards disposal with an interlocked `_disposed` flag so `DisposeAsync` is idempotent, and releases the feature work lease exactly once via an interlocked `_leaseReleased` flag. The two `SemaphoreSlim`s are intentionally never disposed — they never access `AvailableWaitHandle`, so they allocate no unmanaged handle, matching the sibling Asterisk primitives (`AsteriskChannelTenantBindingStore`, `AsteriskSupervisorEngagementLock`); this removes the teardown race entirely, since a concurrent `StopAsync` can no longer touch a disposed lock. `StopAsync` still releases the lease only after `_cleanupCompleted`, preserving the retry-on-cleanup-failure contract, while `DisposeAsync` guarantees the lease is released in its own `finally` (terminal teardown has no later retry), so a lease can neither leak nor be released twice. A manifest-token architecture test that read the single `ContactCenterConstants.cs` was also generalised to read every `ContactCenterConstants*.cs` partial file, keeping it correct after the OC-047 split.
+
+---
+
+# Phase 10 — Nice-to-have Improvements
+
+### OC-046 — Split runtime presence out of `AgentProfile` and make it exportable
+
+- **Priority:** Low · **Status:** Part 1 Completed (config promotion) · Part 2 Deferred (presence split — post-merge follow-up) · **Category:** Modelling / deployment · **Effort:** L · **Risk:** High · **Dependencies:** Part 2 should follow OC-003
+
+**Problem.** `AgentProfile` mixes portable configuration (`MaxConcurrentInteractions`, `AllowedQueueIds`, `AllowedCampaignIds`, `Skills`) with hot runtime state (`PresenceStatus`, `RequestedPresenceStatus`, `PresenceChangedUtc`, `LastAssignedUtc`, `ActiveReservationId`). `AgentPresenceManagerService` rewrites the document on sign-in, sign-out, break, wrap-up start/end and heartbeat recovery.
+
+**Why it matters.** Two consequences. (1) `AgentProfile` was the only major Contact Center configuration entity with **no recipe step and no deployment source** — skills, queues, queue groups, business hours, entry points, dialer profiles and reason codes all have both. Agent entitlements and skills therefore could not be promoted between environments and had to be re-entered by hand. (2) Every presence change rewrites the whole document and re-runs the full handler/index pipeline — write amplification on the hottest path.
+
+**Recommended solution (two parts).** *Part 1* — add an agent-entitlement deployment source/step/driver + recipe step that promote the **manager-owned configuration projection only**, keyed by `UserName`. *Part 2* — split runtime presence into its own document keyed by `UserId`, leaving `AgentProfile` as stable configuration, then retire the bespoke projection in favour of the generic `ContactCenterDeploymentSerializer`.
+
+**Disposition — Part 1 implemented; Part 2 deferred (independently reviewed, gpt-5.6-sol).** The reviewer's REQUEST-CHANGES corrected an earlier "Part 1 is disposable" premise: a config **projection is required permanently** (the generic serializer's `EnvironmentOwnedMembers` is only `{CreatedUtc, ModifiedUtc, OwnerId, Author}`, so it would leak environment-specific `UserId`/`Name`/`ItemId` and the runtime presence members even after a presence split), and `UpdateEntitlementsAsync` alone could not import `DisplayName`/`MaxConcurrentInteractions`/`Skills`. Part 1 was therefore implemented now as a durable capability; Part 2 (relocating the hottest write path to a new document + reworking `AgentPresenceManagerService`, the presence index and every reader) remains a High-risk change to an unreleased module and stays a post-merge follow-up.
+
+**What shipped (Part 1).**
+- **New portable carrier** `AgentManagedConfiguration` (ContactCenter.Core) — `DisplayName`, `MaxConcurrentInteractions`, `AllowedQueueIds`, `AllowedCampaignIds`, `Skills`; no runtime presence.
+- **New API** `IAgentPresenceManager.ApplyManagedConfigurationAsync(agentId, AgentManagedConfiguration, ct)`. `AgentPresenceManagerService` refactored so both `UpdateEntitlementsAsync` and the new method funnel through a single lock-guarded `UpdateManagedConfigurationCoreAsync`, so importing configuration prunes unauthorized live membership yet **never clobbers `PresenceStatus`/`ActiveReservationId`** or other runtime state.
+- **Deployment triple + recipe step** — `ContactCenterAgentEntitlementDeploymentStep`/`…DeploymentSource`/`…DeploymentStepDisplayDriver` and `ContactCenterAgentEntitlementStep`, mirroring the `ContactCenterSkill` shape and the proven `AgentEntitlementsController` import logic: export a **config projection** per profile keyed by `UserName` (the portable identity; `UserId` differs per environment) — never runtime members, `UserId` or `ItemId`; on import resolve `UserName` → user via `UserManager<IUser>` (error + skip when absent in the target), `FilterExisting{Queue,Campaign}IdsAsync` to drop dangling references (queues/dialer profiles/skills preserve `ItemId` on import so surviving references are portable), match by `FindByUserIdAsync`, then create a new profile or call `ApplyManagedConfigurationAsync` for an existing one.
+- **Registered** in `QueuesDeploymentStartup` (source/step), `QueuesRecipesStartup` (recipe step) and `ContactCenterDeploymentAdminStartup` (driver); `_Summary`/`_Thumbnail` shapes added; `CrestApps.OrchardCore.ContactCenter.Core` public-API baseline updated; unit tests cover promotion + runtime preservation + missing-agent.
+
+**Deferred (Part 2 — presence split).** Introduce an `AgentPresence` document keyed by `UserId`, move the seven runtime members onto it, repoint `AgentPresenceManagerService`, the presence index and every reader. The config projection added in Part 1 stays (it is not disposable), so Part 2 is purely a hot-path modelling change and remains post-merge.
+
+---
+
+### OC-047 — Reduce startup/type-count churn in the abstractions
+
+- **Priority:** Low · **Status:** Completed · **Category:** API surface · **Effort:** M · **Risk:** Low · **Dependencies:** OC-013
+
+Split `ContactCenterConstants.cs` (819 lines) into domain-scoped files to keep each navigable, alongside the public/internal split from OC-013.
+
+**Resolution:** `ContactCenterConstants` is now a `public static partial class` split across seven domain-scoped files in `CrestApps.OrchardCore.ContactCenter.Abstractions`: `ContactCenterConstants.cs` (class summary, `SystemActor`, `AggregateTypes`, `Components`), `.Features.cs`, `.HealthChecks.cs`, `.Recording.cs` (recording metadata + governance/erasure deny/reason groups), `.CallControl.cs` (command/transfer/conference/attended-transfer/telephony metadata), `.Events.cs`, and `.Settings.cs`. Because partial classes merge to identical metadata, the public API is byte-for-byte unchanged — all 15 nested groups and 120 constants are preserved, `PublicApiApprovalTests` passes with no baseline change, no consumer edits were required, and there is zero behavior change. Each file now stays small and navigable per the one-type-per-file convention (the `.<Domain>.cs` suffix is the accepted idiom for partial members of a single type).
+
+---
+
+### OC-048 — Attribute manual-dial suppression audits to the initiating agent
+
+- **Priority:** Low · **Status:** Not Started · **Category:** Auditability · **Effort:** M · **Risk:** Low · **Dependencies:** None
+
+**Problem.** `ManualDialSuppressed` events published by `ContactCenterManualCallScreener` (OC-002) carry no `ActorId`, so `DefaultContactCenterEventPublisher` stamps them with `ContactCenterConstants.SystemActor`. The suppression is therefore attributed to the system rather than to the agent who attempted the call, which weakens the compliance trail for repeat-offender analysis.
+
+**Root cause.** The screener runs inside the fresh `ShellScope.UsingChildScopeAsync` child scope created by `TelephonyHub.ExecuteAsync`, which does not carry the SignalR `Context.UserIdentifier` into the scope, and the manual soft-phone path has no domain object (reservation/interaction) to source an agent id from — unlike every other agent-attributed event in the codebase.
+
+**Recommended solution.** Add an optional, provider-agnostic `InitiatorUserId` to `OutboundCallScreeningContext` (the generic "who initiated this origination" concept), populate it from `TelephonyHub` (which knows `Context.UserIdentifier`) via a scoped call-context accessor set inside the child scope, and have `ContactCenterManualCallScreener` set it as the suppression event's `ActorId`. Keep the fallback to `SystemActor` when the initiator is genuinely unknown (e.g. non-hub callers).
+
+**Files affected.** `Telephony.Abstractions/Models/OutboundCallScreeningContext.cs` · `Telephony/Hubs/TelephonyHub.cs` · `Telephony/Services/DefaultTelephonyService.cs` · `ContactCenter/Services/ContactCenterManualCallScreener.cs`
+
+**Acceptance criteria.**
+- A manual soft-phone suppression records the initiating agent's user id as the audit `ActorId`.
+- A non-hub origination with no known initiator still audits cleanly (falls back to `SystemActor`).
+
+**Notes.** Discovered during the independent review of OC-002. Deferred out of OC-002 because actor fidelity is not among that item's acceptance criteria and the fix touches the public Telephony abstraction.
+
+---
+
+### OC-049 — Optional fresh-activation fold + strengthen migration equivalence docs/tests
+
+- **Priority:** Low (Enhancement) · **Status:** Not Started · **Category:** Data migrations / performance · **Effort:** M · **Risk:** Low · **Dependencies:** None
+
+**Problem.** Two low-value refinements surfaced while disproving OC-003 (see OC-003 Resolution): (1) migrations whose `CreateAsync` returns an old version (e.g. `InteractionIndexMigrations` returns 1) run a few additive `ALTER`/`CreateIndex` statements against an empty table on every fresh activation; (2) the deployment documentation's rolling-upgrade wording and the equivalence tests could be sharpened.
+
+**Recommended solution.**
+- *(Optional, evidence-gated)* Have such migrations build the final schema in `CreateAsync` and return the final version, **retaining** their `UpdateFromN` methods for already-versioned tenants (contract-legal; rolling-upgrade harness already supports this shape). Only pursue if fresh-activation startup profiling shows measurable benefit — the change duplicates final-schema declarations between `CreateAsync` and the update methods, which several migrations deliberately avoid.
+- Reword the deployment docs so the guarantee reads as **preserved upgrade + post-upgrade write compatibility**, and require draining/maintenance when the `CallSessionIndexMigrations` in-place rebuild step (`UpdateFrom3Async`) is deployed, unless concurrent-load testing proves the DDL is non-blocking on the target engine.
+- Optionally extend `ContactCenterRollingUpgradeTests` to assert full fresh-vs-upgrade equivalence for *all* ordinary indexes (not only columns and unique constraints) and to follow each update method's returned version exactly as Orchard's manager does.
+
+**Acceptance criteria.**
+- Any `CreateAsync` change keeps every `MigrationAdditiveOnlyGuardTests`, `ContactCenterRollingUpgradeTests`, and `ContactCenterRetentionCoverageTests` assertion green.
+- Deployment docs no longer imply unconditional zero-downtime for the in-place rebuild step.
+
+**Notes.** Recorded from the independent gpt-5.6 review of the OC-003 disposition. Not a correctness blocker.
+
+---
+
+### OC-050 — Uncancellable channel-binding create lock can block colliding channels indefinitely
+
+- **Priority:** Medium · **Status:** Completed · **Category:** Async correctness / liveness · **Effort:** M · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `AsteriskChannelTenantBindingStore.CreateAsync` acquires a process-wide static striped `SemaphoreSlim` with an uncancellable, unbounded `WaitAsync()` and then performs YesSql query + save operations while holding it. If one holder wedges on a database operation, every other channel that hashes to the same stripe — including unrelated channels and other tenants sharing the process — blocks on the lock indefinitely. The store's read-only lookups (`FindByChannelIdAsync`, `FindAllByPeerChannelIdAsync`) also ignore cancellation even though they perform no durable mutation.
+
+**Root cause.** The single-node exactly-once inbound-claim design (see the store's `CreateLockStripeCount` comment) intentionally serializes same-channel creates in-process, but the serialization primitive was written without a liveness bound because the original threat model only considered the two-contender connect/teardown race, not a wedged database operation holding the stripe.
+
+**Recommended solution.**
+- Give the create-lock acquisition a bounded wait. On acquisition timeout, surface a distinct failure (throw a dedicated exception the caller maps to its ambiguous/reconcile path) rather than returning the `false` "lost the create race" flag, which would incorrectly signal that another attempt owns the channel and could strand it.
+- Thread `CancellationToken` into the read-only lookup methods (no durable-mutation risk) so shutdown does not wait on stalled queries. Keep durable **write** mutations running to completion (the OC-036 rationale still holds for the mutation itself, only the *acquisition* and *reads* gain a bound).
+- Consider replacing the striped in-process lock with a YesSql unique index on `ChannelId` so the database enforces exactly-once creation without a process-wide gate; evaluate migration cost against the existing optimistic-concurrency model first.
+
+**Acceptance criteria.** A wedged create holder can no longer block an unrelated colliding channel beyond the bounded window; read-only lookups honor cancellation; every existing binding-store and reconciliation test stays green; no live call is stranded by a create that times out (verified by a unit test that forces acquisition contention).
+
+**Notes.** Split out of OC-036 from the independent gpt-5.6 review, which correctly observed that the OC-036 "durable mutations must complete" rationale does not justify an *uncancellable, unbounded lock acquisition* or uncancellable *read* queries. Kept as its own item because a safe fix changes `CreateAsync`'s failure contract and is larger than OC-036's scope.
+
+**Resolution.** The create-lock acquisition in `AsteriskChannelTenantBindingStore.CreateAsync` now uses a bounded `SemaphoreSlim.WaitAsync(timeout)` instead of the unbounded `WaitAsync()`. The window is deployment-tunable through a new `AsteriskCoordinationOptions.ChannelBindingCreateLockTimeout` (default 10 seconds, validated `> TimeSpan.Zero` at startup alongside the other coordination timings). On acquisition timeout the method throws a dedicated `AsteriskChannelBindingCreateTimeoutException` (carrying the channel id and the elapsed window) rather than returning the `false` "lost the create race" flag — because a wedged holder on a *colliding, unrelated* stripe would otherwise make the caller believe another attempt owns the channel and skip answering/parking it, stranding a live caller in silence. The exception propagates to the realtime listener's existing per-event isolation (`ProcessBufferedPayloadsAsync` logs it and continues), which is exactly the "route to reconciliation" path the plan called for: the periodic provider-truth sweep reconciles the channel, and because no binding was persisted there is no half-applied durable state. The durable write itself still runs to completion once the lock is held (the OC-036 rationale for the *mutation* is preserved). The read-only lookups `FindByChannelIdAsync` and `FindAllByPeerChannelIdAsync` gained a `CancellationToken` parameter (defaulted for source-compat) that is threaded to the YesSql query and checked up front, so shutdown no longer blocks on a stalled read; the four production call sites that have a token in scope (offer bridge, transfer, inbound reconciler cleanup, conference) now pass it. A new white-box test, `CreateAsync_WhenCreateLockIsHeldBeyondTheBoundedWindow_ThrowsTimeoutAndDoesNotStrandTheChannel`, forces acquisition contention by occupying the exact per-channel stripe (via the private `GetCreateLock` seam) and asserts the create throws the timeout exception (not `false`), persists nothing, and that the channel is claimable normally once the stripe is released — proving no live call is stranded by a create that times out. The third bullet of the recommended solution (replacing the striped in-process lock with a YesSql unique index on `ChannelId`) was evaluated and deliberately *not* taken here: it is a larger migration against the existing optimistic-concurrency model and does not address the cross-node claim (that remains OC-033's shared-lease scope); the bounded-window fix fully satisfies this item's liveness acceptance criteria without that churn. An independent gpt-5.6 review raised one High finding on the first pass: because `AsteriskInboundReconciler.ReconcileAsync` enumerates only *persisted* bindings (not live ARI channels), a create that times out on the **inbound offer** path — where the caller is already live in the Stasis application but no binding was persisted — would be stranded unanswered and untracked forever (the listener's per-event isolation only logs the throw). The fix adds a fail-safe in `AsteriskInboundCallOfferBridge.TryHandleAsync`: the `CreateAsync` call is wrapped so that on `AsteriskChannelBindingCreateTimeoutException` the bridge terminates the live caller and absorbs the event (`return true`) so the dispatcher does not fall through to ingestion. Because no binding was persisted, the binding-scoped reconciler cannot retry this cleanup, so the termination is layered: (1) the bridge retries the hang up a bounded number of times inline (`StrandedCallerHangupAttempts`), which converts a transient ARI transport failure into a successful termination (the ARI client maps an already-gone channel to success, so a returned failure is a genuine transient error worth retrying); and (2) when every inline attempt fails — a transport error can persist across a brief circuit-breaker window while the WebSocket stays connected, so Asterisk's Stasis-disconnect disposition is not guaranteed to fire — the channel is enqueued into a new per-tenant `IAsteriskPendingCallerTerminationRegistry` and an error is logged naming the channel. A new `AsteriskPendingCallerTerminationReconciler` (registered as an `IAsteriskProviderStateReconciler`, so it runs on both the periodic background sweep and the listener-reconnect sweep) drains the registry every sweep, retrying the hang up until ARI is reachable and then removing the channel; the registry is process-local per-tenant state, and a restart drops the WebSocket so Asterisk's Stasis-disconnect disposition covers the residual channel, meaning nothing leaks across a restart either. Five end-to-end tests cover it: three on the offer bridge (`..._HangsUpCallerAndAbsorbsEventWithoutStranding` first-attempt success, `..._AndHangupFailsTransiently_RetriesUntilTheCallerIsTerminated` transient-then-success within the inline budget, `..._AndHangupNeverSucceeds_AbsorbsEventWithoutOrphanAfterBoundedRetries` which also asserts the channel is enqueued for over-time retry), and three on the reconciler (`ReconcileAsync_When*` covering resolve-on-success, keep-pending-on-throw, and eventual resolution across sweeps). A durable store record was deliberately not used: the create-lock exists precisely to prevent two bindings for the same channel, so persisting a second record in the duplicate-delivery wedge case would reintroduce the corruption the lock prevents; and an ARI orphan-channel sweep was rejected as multi-tenant-unsafe because ARI `GET /channels` returns every channel on the box with no reliable per-Stasis-app attribution. Two further independent-review rounds identified residual hazards in this recovery path and drove the final design. First, a *duplicate* delivery for the same channel can win the freed create-lock and route the caller to a live, valid call *after* the losing delivery has already enqueued (or is mid-inline-retrying) a termination for that same channel id — so a blind hang up would kill a successfully recovered call. The binding is the ownership record, so the guard must never terminate a channel that has a binding, and the check must be atomic with the decision so a create cannot slip a binding in between. An intermediate design held the striped create lock across the hang up to make the check-then-terminate atomic, but the next review round correctly flagged that holding the process-wide striped lock across the remote `HangupAsync` (bounded by the full ARI request budget) starves unrelated channels and other tenants that hash to the same stripe — they would hit the create-lock timeout for reasons unrelated to their own work. The final design resolves both hazards with an **in-memory termination claim** that is planted under the striped lock (a fast, in-memory decision with no I/O) but never held across the hang up. The store adds a process-wide `_terminationClaims` set keyed by `tenant|channelId` and two methods: `TryClaimChannelForTerminationAsync` acquires the exact per-channel striped lock under the same bounded window, checks `FindByChannelIdAsync`, and — only when no binding exists — plants a claim and returns `true` (returning `false` when a binding already exists, meaning the caller was recovered and must not be terminated); `ReleaseTerminationClaim` removes the claim. `CreateAsync` now consults the claim set under that same lock and returns `false` when a claim is present, so once a channel is claimed for termination no delivery can persist a binding or route the caller into a live call. The recover-vs-terminate decision is therefore made exactly once, atomically, at claim time; the hang up then runs entirely **outside** every lock, so no unrelated stripe-mate is ever starved by remote ARI latency. `AsteriskInboundCallOfferBridge.TryTerminateStrandedCallerAsync` claims first (deferring to the reconciliation sweep on a claim-lock timeout, and stopping immediately when the claim is refused because the caller was recovered), then performs the bounded inline hang-up retries outside the lock, releasing the claim on success and keeping it (plus enqueuing the channel) when every inline attempt fails. The `AsteriskPendingCallerTerminationReconciler` drain performs the identical outside-the-lock hang up and, on success, releases the claim and resolves the registry entry. The offer bridge no longer needs a post-create `Resolve` call because a winning create (`created == true`) can only happen when no claim is active, so a self-recovered channel is never left pending by construction. Store-level white-box tests against the real YesSql store lock the invariant in (`TryClaimChannelForTerminationAsync_WhenNoBindingExists_ClaimsAndBlocksCreateUntilReleased`, `..._WhenABindingAlreadyExists_RefusesTheClaimToProtectTheRecoveredCall`, and `..._WhenTheStripeIsWedgedBeyondTheBoundedWindow_ThrowsTimeout`), alongside the offer-bridge and reconciler recovery tests. The independent gpt-5.6 review then raised a Medium finding: the termination claim was held in a process-wide `static` set while the pending-retry entries lived in the per-tenant (per-shell) registry singleton, so a shell reload would drop the retry entry — the only mechanism that releases the claim — while the static claim leaked indefinitely, permanently rejecting future creates for that key. An intermediate design gave the claim and its release path one shared lifecycle by moving the claim set off the store's static field into the per-tenant `AsteriskPendingCallerTerminationRegistry` alongside the pending-retry queue, so a claim and its retry entry were created and dropped together. The next review round correctly flagged that this per-shell coupling reintroduced a worse hazard in the other direction: a stranded-caller `HangupAsync` is a remote ARI operation that can still be in flight when the shell reloads, so a per-shell fence is dropped *while the old generation's hang up is still running* — and the same reload lets a new shell generation route the identical channel id into a live, valid call, which the old generation's late-landing hang up would then kill. The create locks are process-wide `static` for exactly this reason (overlapping shell generations must serialize against one another), so the fence that gates them had to share that scope. The final design makes **both** the termination-claim set and the pending-retry set process-wide `static` and tenant-partitioned (`tenant|channelId` keys) inside `AsteriskPendingCallerTerminationRegistry`, mirroring the striped create locks: the fence now survives a reload and keeps `CreateAsync` fenced until the termination *actually completes*, while whichever generation is live drains the shared pending queue and releases the claim (so nothing leaks — resolving the earlier Medium finding without reopening the reload race). `AsteriskPendingCallerTerminationReconciler.ReconcileAsync` now **re-claims each pending channel before hanging up** (via `TryClaimChannelForTerminationAsync`): a claim-lock timeout keeps the channel pending for the next sweep, a refused claim means a concurrent create legitimately recovered the caller so the channel is resolved out without a hang up, and only a granted claim proceeds to the outside-the-lock hang up (releasing the claim and resolving on success). This makes the fence authoritative even for channels enqueued *without* a prior claim (the claim-lock-timeout path) or abandoned mid-inline by a reload. Correspondingly, `AsteriskInboundCallOfferBridge` enqueues the channel into the process-wide registry **before** attempting inline termination, so a reload tearing down the scope mid-hang-up still leaves the channel owned by the reconciler; the bridge resolves the channel back out on recovery or inline-hang-up success. A process restart drops the static state alongside the ARI WebSocket, so Asterisk's Stasis-application-disconnect disposition releases any residual channel — nothing leaks across a restart either. A dedicated recovery test, `TerminationClaim_SurvivesAShellReload_AndKeepsANewGenerationFencedUntilTheTerminationCompletes`, plants a claim through an old registry generation, resolves a fresh registry generation (simulating a shell reload), and proves the create for the same channel stays fenced under the new generation and is only permitted once the termination completes and the claim is released — confirming a late/reload-abandoned hang up can never terminate a call a new generation has routed. The independent gpt-5.6 review approved the change once the recover-vs-terminate decision was made under the striped lock as a fast in-memory claim, the remote hang up was moved outside all locks, and both the claim and its release path were made process-wide and tenant-partitioned so the fence survives a shell reload until the termination completes.
+
+---
+
+### OC-051 — Durable hub work uses `CancellationToken.None` with no bounded shutdown deadline
+
+- **Priority:** Medium · **Status:** Won't Fix (deferred to post-merge follow-up — no safe partial exists) · **Category:** Async correctness / graceful shutdown · **Effort:** L · **Risk:** Medium · **Dependencies:** None
+
+**Problem.** `HubConnectionWork.MustComplete` runs durable Contact Center hub work under `CancellationToken.None`. This prevents a client disconnect from abandoning half-applied durable state plus SignalR group membership (correct), but it also means a wedged database or backplane call can hang indefinitely and block graceful shutdown, and it cannot actually *guarantee* completion — the host can still be force-terminated after the shutdown deadline, leaving the same mid-operation state the `None` token was meant to prevent.
+
+**Root cause.** Group membership and durable state are mutated in separate steps with no idempotent replay or reconnect-time reconstruction, so the only tool available to avoid a half-applied disconnect was to make the work uninterruptible. The `HubCancellationConventionTests` convention then froze that decision.
+
+**Recommended solution.** Keep ignoring the client-disconnect token, but (1) make each durable step idempotent and reconstruct group membership on reconnect, then (2) run the work under a token linked to application shutdown with a bounded deadline so shutdown stays graceful. The two parts must land together: introducing the shutdown token before idempotency/reconstruction exists would reintroduce the half-applied membership inconsistency. Update `HubCancellationConventionTests` to encode the new "client-disconnect-ignored, shutdown-bounded, idempotent" contract.
+
+**Acceptance criteria.** Client disconnects still never abandon durable work mid-flight; application shutdown no longer blocks indefinitely on hub work; a killed-mid-operation process recovers consistent group membership on reconnect; the convention test encodes the new contract.
+
+**Notes.** Split out of OC-036 from the independent gpt-5.6 review. The reviewer agreed the client-disconnect token must stay ignored; the disagreement was only about the missing *bounded shutdown* seam. Kept as its own item because it is an idempotency/reconstruction redesign (L) enforced by a convention test, not an OC-036-sized change.
+
+**Disposition (Won't Fix / deferred to post-merge follow-up — independently reviewed, gpt-5.6-sol).** The gap is real, but there is no *safe, beneficial* partial that can land now, so the item stays a tracked post-merge follow-up rather than a rushed change on the live signalling path.
+
+- **A shutdown-bounded token is only safe once the durable steps are idempotent and group membership is reconstructed on reconnect — the two halves genuinely must land together.** Without idempotency, a shutdown-linked deadline has no good value: set it equal to the host's `ShutdownTimeout` and it changes nothing (the host already waits that long for the in-flight invocation before force-terminating), set it shorter and it merely *raises* the probability of cancelling a durable multi-step mutation part-way — the exact half-applied inconsistency the `None` token exists to prevent. So the partial the plan warns against (shutdown token first) is not just incomplete, it is a regression on the hottest signalling path.
+- **The residual risk today is already bounded by the host.** The concern that `None` "blocks graceful shutdown indefinitely" is capped in practice: at application stop the host waits for in-flight hub invocations only up to `HostOptions.ShutdownTimeout` (30s default) and then the process exits regardless. `None` converts that into an unbounded-wait-then-kill only within that host window; it does not hang the box forever. The real defect is that completion is *not actually guaranteed* at force-termination — which is precisely what the idempotency/reconstruction redesign, not a token change, is needed to fix.
+- **The safe fix is an L/XL redesign disproportionate to a Medium item on an unreleased module.** `MustComplete` is consumed at ~28 durable call sites across `ContactCenterHub` and `TelephonyHub`; the safe change must make each of those steps idempotent, add reconnect-time group reconstruction, run the work under a bounded application-stopping token, and rewrite `HubCancellationConventionTests` (whose `TheConventionToken_IsOneThatNeverCancels` currently asserts `MustComplete.CanBeCanceled == false`). That is a coordinated redesign, not a local edit, and it belongs behind the same test-hardening effort that would cover it.
+- **Correct default preserved, and already tracked.** The client-disconnect behaviour — the dangerous case — is correct and stays. The remaining shutdown seam is already recorded as a post-merge follow-up in the checklist with explicit acceptance criteria, so deferring it loses no visibility. The convention test continues to pin the current contract until the redesign replaces it.
+
+---
+
+## Production Readiness Checklist
+
+Pre-merge blockers:
+
+- [x] **OC-001** — tenant no longer bricked by default-configured `OrchardCore.HealthChecks`
+- [x] **OC-002** — soft-phone compliance bypass closed or formally policy-gated and documented
+- [x] **OC-003** — Won't Fix (premise disproven): fresh installs run no destructive rebuild; `UpdateFromN` chains are an intentional, tested rolling-upgrade capability. See OC-003 Resolution + OC-049.
+- [x] **OC-005** — the lying `ReconcileAsync` lifecycle contract removed; genuine post-restart provider reconcile owned by the background task. See OC-005 Resolution.
+- [ ] Full `dotnet build -c Release -warnaserror` verified clean on a machine with feed access (see review caveat)
+- [ ] `dotnet test` green, including the feature-activation and distributed test projects
+- [x] `npm run rebuild` run and `git status` clean (ContactCenter now covered — see **OC-019**)
+
+Strongly recommended before first release:
+
+- [ ] OC-011, OC-012 — provider extensibility and versioning seams (OC-004 done — provider registry now case-insensitive with observable collisions)
+- [x] OC-016 — agent desktop accessibility (or OC-038, restate the claim honestly)
+- [x] OC-019 — ContactCenter asset pipeline
+- [x] OC-029, OC-030, OC-031 — OAuth and retry-safety cluster
+- [x] OC-022 (done), OC-023 (done), OC-024 (done), OC-025 (done) — load-bearing performance items
+- [x] OC-028 — scheduler lease correctness
+- [ ] OC-037 — module READMEs
+
+Post-merge follow-ups:
+
+- [ ] OC-034 — multi-node coordination and edge rate limiting
+- [x] OC-033 — single-active-node ARI ownership constraint now surfaced in the topology health check (full cross-node lease deferred: needs a cross-tenant coordination primitive)
+- [x] OC-035 — antiforgery coverage (delivered as a reflection-based architecture test proving no module controller opts out of the global `AutoValidateAntiforgeryToken` filter)
+- [ ] OC-040 → OC-045 — technical debt
+- [ ] OC-046 — agent profile split
+- [ ] OC-048 — attribute manual-dial suppression audits to the initiating agent
+- [ ] OC-049 — optional fresh-activation fold + sharpen rolling-upgrade docs/tests (non-blocking)
+- [x] OC-050 — bound the channel-binding create-lock acquisition; thread cancellation into read-only lookups (split from OC-036)
+- [ ] OC-051 — bounded application-shutdown seam for durable hub work, gated on idempotent steps + group reconstruction (split from OC-036)
+
+---
+
+## Positive Findings — do not change these
+
+These decisions are correct and should survive remediation.
+
+1. **Idiomatic Orchard Core throughout.** Settings via `ISite` + `SiteDisplayDriver<T>` with `SettingsGroupId` and `RenderWhen` permission gating; 24 `DataMigration` classes; 7 `NamedRecipeStepHandler` steps; 9 `AdminNavigationProvider` menus; `IPermissionProvider` with stereotypes; `[BackgroundTask]` with lock timeouts; `EventActivity` + `ActivityDisplayDriver`; correct `ShellScope.UsingChildScopeAsync` / `AddDeferredTask` usage.
+2. **Every exportable artifact has a matched triple** — `NamedRecipeStepHandler` + `DeploymentSourceBase<TStep>` + `DisplayDriver<DeploymentStep, T>` plus `.Summary`/`.Thumbnail` shapes — 7 of 7, no gaps. Import/export is never hand-rolled.
+3. **Not modelling interactions/queues/agents as content items is the right call** for a high-write, non-editorial, non-versioned domain — while still extending Orchard where appropriate (a `DisplayDriver` is added onto Telephony's `SoftPhoneWidget` rather than forking it).
+4. **Webhook ingress is exemplary.** The DialPad endpoint enforces a 1 MiB limit, JWT/HMAC signature validation against a data-protected secret, timestamp freshness (replay protection), rate + concurrency admission control, and durable idempotent acceptance with unique provider/delivery indexes.
+5. **SignalR hub authorization is exemplary.** `[Authorize]` at class level, per-method permission checks, and `AuthorizeReferencedCallsAsync` enforcing per-user call ownership (IDOR protection) that fails closed on a missing store, unidentified caller, blank id, empty set or unmatched call. Call-control methods are one-line delegations, not fat-hub logic.
+6. **Exceptional async hygiene.** Zero `async void`, zero blocking `.Wait()`, zero unsafe `GetAwaiter().GetResult()`, no request-path `Task.Run`, no ad-hoc `new HttpClient()`. The apparent `.Result` at `AsteriskAgentChannelReadySignal.cs:84` is provably safe — `Task.WhenAny` has already established completion.
+7. **Repository conventions honoured at scale:** 0 `DateTime.UtcNow` (universal `IClock` injection), 0 `NotImplementedException` stubs, 0 `TODO`/`HACK`/`FIXME`, 0 `global using`, 0 non-sealed public classes in the abstractions, ~96% XML doc coverage on public members.
+8. **Localization discipline is genuinely clean** — `IStringLocalizer` named `S` everywhere, and **zero** `S[variable]`/`S[$"..."]` extraction-breaking misuses across all 101 views and the C# drivers.
+9. **Immutability and defensive design in the abstractions** — `ProviderVoiceEvent` is an immutable `sealed record` that defensively copies metadata while preserving the provider's comparer; capability contracts are properly segregated (`ITelephonyHoldProvider`, `ITelephonyMuteProvider`, …) so providers implement only what they support.
+10. **Capability dispatch degrades gracefully** — an unsupported capability returns a typed, localized `TelephonyResult.Failed` rather than throwing or silently no-oping.
+11. **Provider settings are correctly decoupled** — a third party contributes admin settings, workflow tasks and recipe steps through standard Orchard DI without core modules knowing it exists.
+12. **Layer separation holds** — Telephony contains no `OmnichannelActivity`/disposition/workflow references; ContactCenter.Core makes no direct ARI/PJSIP/DialPad calls; `Interaction` carries no disposition or workflow state, with transitions guarded by `InteractionLifecycle.CanTransition`.
+13. **Provider internals are properly encapsulated** — `IAsteriskAriClient`, `IAsteriskPjsipRealtimeCredentialStore` and peers are `internal sealed`.
+14. **Resources are properly registered** via `IConfigureOptions<ResourceManagementOptions>` with explicit versions and correct dependency chains; the Telephony asset pipeline is a correct reference implementation.
+15. **Extensive options validation** with `IValidateOptions<T>` + `ValidateOnStart`; no singleton capture of tenant-scoped options found.
+16. **All four modules are correctly registered** in both `CrestApps.OrchardCore.slnx` and the Cms.Core.Targets `csproj`.
+17. **Documentation is unusually complete** for a branch this size — 16 pages across `docs/contact-center/` and `docs/telephony/`, including `custom-providers.md`.

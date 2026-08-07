@@ -39,6 +39,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             BuildHtml(context.Request.Query.ContainsKey("browserAudio")),
             "text/html; charset=utf-8"));
         app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
+        app.MapGet("/telephony-client.js", () => ServeAsset("telephony-client.js"));
         app.MapGet("/signalr.js", () => ServeAsset("signalr.js"));
 
         await app.StartAsync();
@@ -168,6 +169,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 </div>
             </div>
             <script src="/signalr.js"></script>
+            <script src="/telephony-client.js"></script>
             <script src="/soft-phone.js"></script>
         </body>
         </html>

@@ -1,0 +1,13 @@
+@model AgentEntitlementViewModel
+
+<div class="mb-3">
+    <label asp-for="AllowedQueueIds" class="form-label">@T["Allowed queues"]</label>
+    <select asp-for="AllowedQueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed queue(s)"]"></select>
+    <span class="hint">@T["The agent can sign in only to these queues. Removing a queue also removes any current live membership in that queue."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AllowedCampaignIds" class="form-label">@T["Allowed campaigns"]</label>
+    <select asp-for="AllowedCampaignIds" asp-items="Model.CampaignOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed campaign(s)"]"></select>
+    <span class="hint">@T["The agent can sign in only to these dialer campaigns. Removing a campaign also removes any current live membership in that campaign."]</span>
+</div>

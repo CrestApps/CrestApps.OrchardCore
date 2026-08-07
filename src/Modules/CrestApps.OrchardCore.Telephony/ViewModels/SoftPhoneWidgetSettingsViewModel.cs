@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.Rendering;
+
 namespace CrestApps.OrchardCore.Telephony.ViewModels;
 
 /// <summary>
@@ -24,4 +26,15 @@ public class SoftPhoneWidgetSettingsViewModel
     /// Gets or sets the maximum number of calls shown in the recent-calls history.
     /// </summary>
     public int RecentCallsCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default ISO 3166-1 alpha-2 country code the soft phone's phone number input
+    /// selects initially. When empty, the country is derived from the current request culture.
+    /// </summary>
+    public string DefaultCountryCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of selectable countries shown in the default-country editor.
+    /// </summary>
+    public IList<SelectListItem> Countries { get; set; }
 }

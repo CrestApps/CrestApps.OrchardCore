@@ -29,7 +29,34 @@ internal sealed class FakeAuthTelephonyProvider :
 
     public TelephonyUserTokens RefreshResult { get; set; }
 
+    private int _refreshCount;
+
+    /// <summary>
+    /// Gets the number of times <see cref="RefreshTokensAsync"/> was invoked. Incremented atomically so a
+    /// concurrency test can assert an exact count without a data race of its own.
+    /// </summary>
+    public int RefreshCount => Volatile.Read(ref _refreshCount);
+
+    /// <summary>
+    /// Gets or sets an optional gate awaited inside <see cref="RefreshTokensAsync"/>. A test sets this so the
+    /// first caller holds the refresh lock while a second caller is provably contending for it, exercising the
+    /// serialization path rather than a coincidentally sequential run.
+    /// </summary>
+    public Task RefreshGate { get; set; }
+
+    /// <summary>
+    /// Gets a task that completes the first time <see cref="RefreshTokensAsync"/> starts, letting a test wait
+    /// until the lock holder is inside the critical section before releasing the gate.
+    /// </summary>
+    public Task RefreshStarted => _refreshStarted.Task;
+
+    private readonly TaskCompletionSource _refreshStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public TelephonyUserTokens RevokedTokens { get; private set; }
+
+    public TelephonyResult RevokeResult { get; set; } = TelephonyResult.Success();
+
+    public Exception RevokeException { get; set; }
 
     public LocalizedString Name => new("FakeAuth", "FakeAuth");
 
@@ -41,14 +68,29 @@ internal sealed class FakeAuthTelephonyProvider :
     public Task<TelephonyUserTokens> ExchangeCodeAsync(TelephonyCodeExchangeContext context, CancellationToken cancellationToken = default)
         => Task.FromResult(new TelephonyUserTokens { AccessToken = "exchanged", RefreshToken = "refresh" });
 
-    public Task<TelephonyUserTokens> RefreshTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
-        => Task.FromResult(RefreshResult);
+    public async Task<TelephonyUserTokens> RefreshTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _refreshCount);
+        _refreshStarted.TrySetResult();
 
-    public Task RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+        if (RefreshGate is not null)
+        {
+            await RefreshGate;
+        }
+
+        return RefreshResult;
+    }
+
+    public Task<TelephonyResult> RevokeTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
     {
         RevokedTokens = tokens;
 
-        return Task.CompletedTask;
+        if (RevokeException is not null)
+        {
+            throw RevokeException;
+        }
+
+        return Task.FromResult(RevokeResult);
     }
 
     public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)

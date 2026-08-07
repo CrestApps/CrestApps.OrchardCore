@@ -1,10 +1,10 @@
 using CrestApps.OrchardCore.DialPad.Models;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.DialPad.ViewModels;
 
 /// <summary>
-/// View model for editing the DialPad provider settings.
+/// View model for editing the DialPad provider settings. Production and sandbox credentials are edited
+/// independently, and <see cref="Environment"/> selects which set the provider uses when connecting.
 /// </summary>
 public class DialPadSettingsViewModel
 {
@@ -14,66 +14,17 @@ public class DialPadSettingsViewModel
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
-    /// endpoints.
+    /// Gets or sets the active DialPad environment (production or sandbox) the provider connects to.
     /// </summary>
     public DialPadEnvironment Environment { get; set; }
 
     /// <summary>
-    /// Gets or sets the selected DialPad authentication type.
+    /// Gets or sets the credentials for the production DialPad environment.
     /// </summary>
-    public DialPadAuthenticationType AuthenticationType { get; set; }
+    public DialPadEnvironmentSettingsViewModel Production { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the DialPad API key used when API key authentication is selected.
+    /// Gets or sets the credentials for the sandbox DialPad environment.
     /// </summary>
-    public string ApiToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth client identifier.
-    /// </summary>
-    public string ClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the OAuth client secret.
-    /// </summary>
-    public string ClientSecret { get; set; }
-
-    /// <summary>
-    /// Gets or sets the space-separated OAuth scopes requested during authorization.
-    /// </summary>
-    public string Scopes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the caller identifier presented on outbound calls.
-    /// </summary>
-    public string OutboundCallerId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the DialPad user that places outbound calls.
-    /// </summary>
-    public string UserId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the DialPad webhook signing secret used to validate inbound call-event webhooks.
-    /// </summary>
-    public string WebhookSigningSecret { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether an API key has already been saved.
-    /// </summary>
-    [BindNever]
-    public bool HasApiToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether an OAuth client secret has already been saved.
-    /// </summary>
-    [BindNever]
-    public bool HasClientSecret { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether a webhook signing secret has already been saved.
-    /// </summary>
-    [BindNever]
-    public bool HasWebhookSigningSecret { get; set; }
+    public DialPadEnvironmentSettingsViewModel Sandbox { get; set; } = new();
 }

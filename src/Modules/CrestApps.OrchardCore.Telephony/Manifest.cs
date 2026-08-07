@@ -24,17 +24,6 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = TelephonyConstants.Feature.Admin,
-    Name = "Telephony Administration",
-    Description = "Adds the telephony provider settings screen and its administration menu entry.",
-    Category = "Telephony",
-    Dependencies =
-    [
-        TelephonyConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
     Id = TelephonyConstants.Feature.SoftPhone,
     Name = "Telephony Soft Phone",
     Description = "Injects the floating soft phone experience into the admin dashboard, front end, or both.",
@@ -42,5 +31,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
+        "CrestApps.OrchardCore.Resources",
     ]
 )]

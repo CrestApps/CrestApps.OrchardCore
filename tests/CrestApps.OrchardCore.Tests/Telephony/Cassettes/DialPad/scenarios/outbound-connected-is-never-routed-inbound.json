@@ -1,0 +1,15 @@
+{
+  "description": "An outbound call the sink does not own must not be routed as an inbound arrival.",
+  "payload": {
+    "call_id": "3456789012345679",
+    "state": "connected",
+    "direction": "outbound",
+    "external_number": "+15125550188",
+    "internal_number": "+15125550100",
+    "event_timestamp": 1699887610000
+  },
+  "expected": {
+    "result": "Ignored",
+    "state": "Connected"
+  }
+}

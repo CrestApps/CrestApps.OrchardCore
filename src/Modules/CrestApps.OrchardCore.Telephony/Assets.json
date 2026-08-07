@@ -1,6 +1,12 @@
 [
   {
     "inputs": [
+      "Assets/js/telephony-client.js"
+    ],
+    "output": "wwwroot/scripts/telephony-client.js"
+  },
+  {
+    "inputs": [
       "Assets/js/soft-phone.js"
     ],
     "output": "wwwroot/scripts/soft-phone.js"

@@ -33,16 +33,7 @@
     Browser: 1,
     ExternalDevice: 2
   };
-  var STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
-  function normalizeState(state) {
-    if (typeof state === 'number') {
-      return STATE_NAMES[state] || 'Idle';
-    }
-    if (typeof state === 'string' && state.length) {
-      return state;
-    }
-    return 'Idle';
-  }
+  var normalizeState = window.telephonyClient.normalizeCallState;
   function isActive(stateName) {
     return stateName === 'Connecting' || stateName === 'Ringing' || stateName === 'Connected' || stateName === 'OnHold';
   }
@@ -65,10 +56,227 @@
       };
     }
   }
-  function escapeHtml(value) {
-    var element = document.createElement('div');
-    element.textContent = value == null ? '' : String(value);
-    return element.innerHTML;
+  var escapeHtml = window.telephonyClient.escapeHtml;
+  function buildRegistrationConfigUrl(config) {
+    if (config.registrationConfigUrl) {
+      return config.registrationConfigUrl;
+    }
+    var parts = window.location.pathname.split('/').filter(function (part) {
+      return !!part;
+    });
+    var adminPrefix = parts.length ? parts[0] : 'Admin';
+    return '/' + adminPrefix + '/contact-center/agent/soft-phone/registration-config';
+  }
+  function fetchRegistrationConfig(config) {
+    return fetch(buildRegistrationConfigUrl(config), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json'
+      }
+    }).then(function (response) {
+      if (!response.ok) {
+        throw new Error('The browser media registration configuration is unavailable.');
+      }
+      return response.json();
+    });
+  }
+  function createRemoteStreamSink(setRemoteStream) {
+    var remoteStream = new MediaStream();
+    return {
+      stream: remoteStream,
+      addTrack: function (track) {
+        remoteStream.addTrack(track);
+        setRemoteStream(remoteStream);
+      },
+      clear: function () {
+        remoteStream.getTracks().forEach(function (track) {
+          remoteStream.removeTrack(track);
+          track.stop();
+        });
+        setRemoteStream(null);
+      }
+    };
+  }
+  function createBrowserMediaAdapterRegistry(rootElement, config) {
+    var adapters = {};
+
+    /*
+     * IBrowserMediaAdapter contract:
+     *   adapter(context) -> Promise/session
+     *   context: { config, credentials, localStream, remoteAudioElement, setRemoteStream, showError }
+     *   session: { handleCallState(call), dispose() }
+     *
+     * The registry is intentionally scoped to this soft-phone instance/page. Providers add server
+     * contributors through shell DI; the browser does not expose a global adapter registry. A provider
+     * that ships its own browser media stack registers it on the instance through
+     * `registerMediaAdapter`, so one page can host adapters from different providers without a
+     * process-wide registry that any script could silently overwrite.
+     */
+    adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
+    return adapters;
+  }
+  function createSipJsBrowserMediaAdapter(rootElement, widgetConfig) {
+    return function (context) {
+      var sip = window.SIP;
+      if (!sip || typeof sip.UserAgent !== 'function') {
+        return Promise.reject(new Error('SIP.js is required for the configured browser audio adapter.'));
+      }
+      return fetchRegistrationConfig(widgetConfig).then(function (registrationConfig) {
+        return createSipJsSession(sip, context, registrationConfig);
+      });
+    };
+  }
+  function createSipJsSession(sip, context, registrationConfig) {
+    var signaling = registrationConfig.signaling || {};
+    var credential = registrationConfig.credential || {};
+    var ice = registrationConfig.ice || {};
+    var media = registrationConfig.media || {};
+    var remoteSink = createRemoteStreamSink(context.setRemoteStream);
+    var peerConnection = null;
+    var activeSession = null;
+    var registerer = null;
+    var disposed = false;
+    if (!signaling.webSocketUrl || !signaling.sipUri || !signaling.authorizationUser || !credential.value) {
+      return Promise.reject(new Error('The browser media registration configuration is incomplete.'));
+    }
+    function getSessionDescriptionHandler(session) {
+      return session && session.sessionDescriptionHandler ? session.sessionDescriptionHandler : null;
+    }
+    function attachPeerConnection(session) {
+      var handler = getSessionDescriptionHandler(session);
+      if (!handler || !handler.peerConnection || peerConnection === handler.peerConnection) {
+        return;
+      }
+      peerConnection = handler.peerConnection;
+      context.localStream.getTracks().forEach(function (track) {
+        var alreadyAdded = peerConnection.getSenders().some(function (sender) {
+          return sender.track === track;
+        });
+        if (!alreadyAdded) {
+          peerConnection.addTrack(track, context.localStream);
+        }
+      });
+      peerConnection.getReceivers().forEach(function (receiver) {
+        if (receiver.track) {
+          remoteSink.addTrack(receiver.track);
+        }
+      });
+      peerConnection.addEventListener('track', function (event) {
+        if (event.track) {
+          remoteSink.addTrack(event.track);
+        }
+      });
+    }
+    function wireSession(session) {
+      activeSession = session;
+      attachPeerConnection(session);
+      if (session.stateChange && typeof session.stateChange.addListener === 'function') {
+        session.stateChange.addListener(function () {
+          attachPeerConnection(session);
+        });
+      }
+    }
+    function setMicrophoneEnabled(enabled) {
+      context.localStream.getAudioTracks().forEach(function (track) {
+        track.enabled = enabled;
+      });
+    }
+    function requestHold(hold) {
+      if (!activeSession || typeof activeSession.invite !== 'function') {
+        return Promise.resolve();
+      }
+      var modifiers = hold && sip.Web && sip.Web.holdModifier ? [sip.Web.holdModifier] : [];
+      return Promise.resolve(activeSession.invite({
+        requestDelegate: {},
+        sessionDescriptionHandlerModifiers: modifiers
+      })).catch(function () {});
+    }
+    function terminateSession() {
+      if (!activeSession) {
+        return Promise.resolve();
+      }
+      if (typeof activeSession.bye === 'function') {
+        return Promise.resolve(activeSession.bye()).catch(function () {});
+      }
+      if (typeof activeSession.dispose === 'function') {
+        return Promise.resolve(activeSession.dispose()).catch(function () {});
+      }
+      return Promise.resolve();
+    }
+    var userAgent = new sip.UserAgent({
+      uri: sip.UserAgent.makeURI(signaling.sipUri),
+      displayName: signaling.displayName || '',
+      authorizationUsername: signaling.authorizationUser,
+      authorizationPassword: credential.value,
+      transportOptions: {
+        server: signaling.webSocketUrl
+      },
+      sessionDescriptionHandlerFactoryOptions: {
+        constraints: {
+          audio: true,
+          video: false
+        },
+        peerConnectionConfiguration: {
+          iceServers: ice.iceServers || [],
+          iceTransportPolicy: ice.iceTransportPolicy || 'all'
+        }
+      },
+      delegate: {
+        onInvite: function (invitation) {
+          wireSession(invitation);
+          Promise.resolve(invitation.accept({
+            sessionDescriptionHandlerOptions: {
+              constraints: {
+                audio: true,
+                video: false
+              }
+            }
+          })).then(function () {
+            attachPeerConnection(invitation);
+          }).catch(function (error) {
+            context.showError(error && error.message ? error.message : String(error));
+          });
+        }
+      }
+    });
+    registerer = new sip.Registerer(userAgent, {
+      expires: Math.max(30, Math.floor((Date.parse(credential.expiresAtUtc) - Date.now()) / 1000))
+    });
+    return userAgent.start().then(function () {
+      return registerer.register();
+    }).then(function () {
+      return {
+        providerConfig: registrationConfig,
+        mediaCodecs: media.codecs || [],
+        handleCallState: function (call) {
+          var stateName = normalizeState(call && call.state);
+          if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
+            return terminateSession();
+          }
+          setMicrophoneEnabled(stateName === 'Connected' && !call.isMuted);
+          if (stateName === 'OnHold') {
+            return requestHold(true);
+          }
+          if (stateName === 'Connected') {
+            return requestHold(false);
+          }
+          return Promise.resolve();
+        },
+        dispose: function () {
+          if (disposed) {
+            return Promise.resolve();
+          }
+          disposed = true;
+          remoteSink.clear();
+          return terminateSession().then(function () {
+            return registerer ? registerer.unregister().catch(function () {}) : null;
+          }).then(function () {
+            return userAgent.stop().catch(function () {});
+          });
+        }
+      };
+    });
   }
   function buildRegistrationConfigUrl(config) {
     if (config.registrationConfigUrl) {
@@ -340,6 +548,10 @@
     }
     return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
   }
+
+  // Formats a number for display only (call history and active-call rows). This is deliberately
+  // independent of intl-tel-input, which only enhances the editable keypad input; the display
+  // formatter must work even where the phone-field library is not loaded.
   function formatPhoneNumber(value) {
     var normalized = normalizeDialNumber(value);
     var international = normalized.charAt(0) === '+';
@@ -368,6 +580,8 @@
       close: rootElement.querySelector('[data-telephony-close]'),
       status: rootElement.querySelector('[data-telephony-status]'),
       number: rootElement.querySelector('[data-telephony-number]'),
+      dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
+      dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
       error: rootElement.querySelector('[data-telephony-error]'),
       activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
       activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
@@ -390,8 +604,10 @@
       merge: rootElement.querySelector('[data-telephony-merge]'),
       hangup: rootElement.querySelector('[data-telephony-hangup]'),
       hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
+      body: rootElement.querySelector('[data-telephony-body]'),
       connectPanel: rootElement.querySelector('[data-telephony-connect-panel]'),
       connect: rootElement.querySelector('[data-telephony-connect]'),
+      connectError: rootElement.querySelector('[data-telephony-connect-error]'),
       unavailable: rootElement.querySelector('[data-telephony-unavailable]'),
       unavailableText: rootElement.querySelector('[data-telephony-unavailable-text]'),
       keypadView: rootElement.querySelector('[data-telephony-view="keypad"]'),
@@ -432,6 +648,118 @@
     var browserAudioPromise = null;
     var browserAudioSession = null;
     var localAudioStream = null;
+
+    // The phone number input is enhanced with intl-tel-input so a national number entered on the
+    // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
+    // A country must always be selected, otherwise intl-tel-input cannot resolve a national number
+    // to E.164 and getNumber() echoes the raw digits, which the server then rejects as not dialable.
+    var telInput = null;
+    var initialCountry = resolveInitialCountry();
+    var extensionMode = false;
+    if (dom.number && typeof window.intlTelInput === 'function') {
+      var telInputOptions = {
+        containerClass: 'telephony-soft-phone__number-iti',
+        dropdownParent: document.body
+      };
+      if (initialCountry) {
+        telInputOptions.initialCountry = initialCountry;
+      }
+      telInput = window.intlTelInput(dom.number, telInputOptions);
+      preventCountryDropdownScroll();
+    }
+
+    // The country dropdown is detached to document.body so it can escape the panel's bounded,
+    // scrollable area. Because that detached list sits outside the normal flow, the browser scrolls
+    // the page to the search input the first time intl-tel-input focuses it. Capture the scroll
+    // position when the flag is clicked and restore it before the next paint so the page does not jump.
+    function preventCountryDropdownScroll() {
+      var flagButton = rootElement.querySelector('.iti__selected-country');
+      if (!flagButton) {
+        return;
+      }
+      flagButton.addEventListener('click', function () {
+        var scrollX = window.scrollX;
+        var scrollY = window.scrollY;
+        window.requestAnimationFrame(function () {
+          if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+            window.scrollTo(scrollX, scrollY);
+          }
+        });
+      });
+    }
+    function resolveInitialCountry() {
+      if (config.defaultCountryCode) {
+        return config.defaultCountryCode;
+      }
+      var candidates = navigator.languages && navigator.languages.length ? navigator.languages : navigator.language ? [navigator.language] : [];
+      for (var i = 0; i < candidates.length; i++) {
+        var match = /[-_]([A-Za-z]{2})(?:$|[-_])/.exec(candidates[i] || '');
+        if (match) {
+          return match[1].toLowerCase();
+        }
+      }
+      return 'us';
+    }
+    function getDialNumber() {
+      var raw = dom.number ? normalizeDialNumber(dom.number.value) : '';
+
+      // In extension mode the destination is an internal extension, not a dialable phone number,
+      // so it is sent verbatim and the country selector is ignored.
+      if (extensionMode) {
+        return raw;
+      }
+      if (telInput && typeof telInput.getNumber === 'function') {
+        // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
+        // strings such as internal extensions are not valid numbers, so they are dialed
+        // verbatim instead of being turned into a bogus "+1101" style destination.
+        var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
+        if (isValid) {
+          var e164 = telInput.getNumber();
+          if (e164 && e164.charAt(0) === '+') {
+            return e164;
+          }
+        }
+      }
+      return raw;
+    }
+    function setNumberDisplay(value) {
+      if (!dom.number) {
+        return;
+      }
+
+      // This shows the active call's number in the disabled field for display only, so it is
+      // formatted for readability rather than routed through the intl-tel-input editor.
+      dom.number.value = value ? formatPhoneNumber(value) : '';
+    }
+    function clearNumberInput() {
+      if (dom.number) {
+        dom.number.value = '';
+      }
+      if (telInput && initialCountry && typeof telInput.setSelectedCountry === 'function') {
+        telInput.setSelectedCountry(initialCountry);
+      }
+    }
+    function setDialMode(isExtension) {
+      extensionMode = !!isExtension;
+      rootElement.classList.toggle('telephony-soft-phone--extension', extensionMode);
+      if (dom.dialModeToggle) {
+        dom.dialModeToggle.setAttribute('aria-pressed', extensionMode ? 'true' : 'false');
+      }
+      if (dom.dialModeLabel) {
+        dom.dialModeLabel.textContent = extensionMode ? strings.dialPhoneNumber || 'Dial phone number' : strings.dialExtension || 'Dial extension';
+      }
+      if (dom.number) {
+        dom.number.setAttribute('placeholder', extensionMode ? strings.extensionPlaceholder || 'Enter an extension' : strings.numberPlaceholder || 'Enter a number');
+        dom.number.setAttribute('aria-label', extensionMode ? strings.extensionLabel || 'Extension' : strings.numberLabel || 'Phone number');
+      }
+      clearNumberInput();
+      if (dom.number) {
+        dom.number.focus();
+      }
+    }
+    function toggleDialMode() {
+      setDialMode(!extensionMode);
+    }
     function has(capability) {
       return (capabilities & capability) === capability;
     }
@@ -560,6 +888,11 @@
       dom.views.forEach(function (view) {
         show(view, view.getAttribute('data-telephony-view') === name);
       });
+    }
+    function setBodyVisible(visible) {
+      if (dom.body) {
+        dom.body.hidden = !visible;
+      }
     }
     function syncViewHeight() {
       if (!dom.panel || dom.panel.hidden || !dom.keypadView) {
@@ -1008,12 +1341,26 @@
       var notAvailable = connectionStatusResolved && !isAvailable;
       var needsConnect = connectionStatusResolved && isAvailable && requiresAuthentication && !isConnected;
 
+      // Pending: the provider and connection status have not resolved yet. Keep the keypad and the
+      // status messages hidden so the widget never briefly flashes the keypad before the real state
+      // (unavailable, connect, or operating) is known.
+      if (!connectionStatusResolved && !active) {
+        show(dom.unavailable, false);
+        show(dom.connectPanel, false);
+        showView(null);
+        setBodyVisible(false);
+        show(dom.footer, hasExtensionTabs());
+        updateTabs();
+        return;
+      }
+
       // Unavailable: no provider configured. Keep contributed tabs reachable.
       if (notAvailable && !active) {
         var showUnavailable = isTelephonyTab(activeTab);
         if (dom.unavailableText) {
           dom.unavailableText.textContent = strings.notConfigured || 'No telephony provider is configured.';
         }
+        setBodyVisible(true);
         show(dom.unavailable, showUnavailable);
         show(dom.connectPanel, false);
         showView(showUnavailable ? null : activeTab);
@@ -1025,18 +1372,24 @@
       }
       show(dom.unavailable, false);
 
-      // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable.
+      // Needs a per-user connection (for example OAuth). Keep contributed tabs reachable. The body is
+      // collapsed while the connect panel is shown so the widget keeps its normal height instead of
+      // stacking the connect panel above an empty, height-reserving body.
       if (needsConnect && !active) {
         var showConnect = isTelephonyTab(activeTab);
         show(dom.connectPanel, showConnect);
+        setBodyVisible(!showConnect);
         showView(showConnect ? null : activeTab);
         show(dom.footer, hasExtensionTabs());
         updateTabs();
         setStatus(strings.notConnected || 'Not connected');
-        syncViewHeight();
+        if (!showConnect) {
+          syncViewHeight();
+        }
         return;
       }
       show(dom.connectPanel, false);
+      setBodyVisible(true);
 
       // Operating state: show the footer tabs and the selected view (keypad or recent calls).
       show(dom.footer, true);
@@ -1046,11 +1399,11 @@
       if (dom.number && currentCall && (active || stateName === 'OnHold')) {
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
-          dom.number.value = formatPhoneNumber(peerNumber);
+          setNumberDisplay(peerNumber);
           numberIsCallDisplay = true;
         }
       } else if (dom.number && canDial && numberIsCallDisplay) {
-        dom.number.value = '';
+        clearNumberInput();
         numberIsCallDisplay = false;
       }
       show(dom.dial, canDial && has(CAPABILITIES.Dial));
@@ -1064,7 +1417,15 @@
       show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
       show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
       if (dom.number) {
-        dom.number.disabled = !canDial || !!activeCommand;
+        var numberDisabled = !canDial || !!activeCommand;
+        if (telInput && typeof telInput.setDisabled === 'function') {
+          telInput.setDisabled(numberDisabled);
+        } else {
+          dom.number.disabled = numberDisabled;
+        }
+        if (dom.dialModeToggle) {
+          dom.dialModeToggle.disabled = numberDisabled;
+        }
       }
       [dom.dial, dom.hangup, dom.hold, dom.resume, dom.mute, dom.unmute, dom.transfer, dom.merge, dom.hangupAll].forEach(function (button) {
         if (button) {
@@ -1160,17 +1521,16 @@
       };
     }
     function dial() {
-      var number = dom.number ? normalizeDialNumber(dom.number.value) : '';
+      var number = getDialNumber();
       if (!number) {
         showError(strings.invalidNumber || 'Enter a phone number to call.');
         return;
       }
-      if (dom.number) {
-        dom.number.value = '';
-        numberIsCallDisplay = false;
-      }
+      clearNumberInput();
+      numberIsCallDisplay = false;
       invokeWithBrowserAudio('Dial', {
-        to: number
+        to: number,
+        isExtension: extensionMode
       });
     }
     function dialNumber(number) {
@@ -1179,10 +1539,8 @@
       }
       setActiveTab('keypad');
       togglePanel(true);
-      if (dom.number) {
-        dom.number.value = '';
-        numberIsCallDisplay = false;
-      }
+      clearNumberInput();
+      numberIsCallDisplay = false;
       invokeWithBrowserAudio('Dial', {
         to: normalizeDialNumber(number)
       });
@@ -1335,7 +1693,7 @@
           digits: value
         });
       } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
-        dom.number.value = formatPhoneNumber(dom.number.value + value);
+        dom.number.value = dom.number.value + value;
       }
     }
     function togglePanel(open) {
@@ -1674,16 +2032,36 @@
         // Keep the capabilities provided in the configuration when the hub call fails.
       });
     }
-    function startOAuth() {
-      if (!config.connectUrl) {
+    function showConnectError(message) {
+      if (!dom.connectError) {
         return;
       }
-      var separator = config.connectUrl.indexOf('?') >= 0 ? '&' : '?';
-      var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname);
-      var popup = window.open(url, 'telephony-oauth', 'width=520,height=640');
-      if (!popup) {
-        window.location.href = url;
+      if (message) {
+        dom.connectError.textContent = message;
+        dom.connectError.hidden = false;
+      } else {
+        dom.connectError.textContent = '';
+        dom.connectError.hidden = true;
       }
+    }
+    function startOAuth() {
+      if (!config.connectUrl) {
+        showConnectError(strings.connectUnavailable || 'The connection could not be started.');
+        return;
+      }
+      showConnectError(null);
+      var separator = config.connectUrl.indexOf('?') >= 0 ? '&' : '?';
+      var url = config.connectUrl + separator + 'returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+      var popup = window.open(url, 'telephony-oauth');
+      if (popup) {
+        popup.focus();
+        return;
+      }
+
+      // The pop-up was blocked. Rather than silently failing, navigate the current window so the
+      // user can still complete the authorization, and surface guidance to allow pop-ups.
+      showConnectError(strings.connectPopupBlocked || 'Your browser blocked the connection window.');
+      window.location.href = url;
     }
     function handleConnect() {
       var handlers = window.telephonySoftPhone && window.telephonySoftPhone.authHandlers;
@@ -1705,6 +2083,7 @@
         return;
       }
       if (event.data.success) {
+        showConnectError(null);
         refreshConnectionStatus();
       }
     }
@@ -1885,10 +2264,12 @@
       if (dom.dial) {
         dom.dial.addEventListener('click', dial);
       }
+      if (dom.dialModeToggle) {
+        dom.dialModeToggle.addEventListener('click', toggleDialMode);
+      }
       if (dom.number) {
         dom.number.addEventListener('input', function () {
           numberIsCallDisplay = false;
-          dom.number.value = formatPhoneNumber(dom.number.value);
         });
         dom.number.addEventListener('focus', function () {
           if (currentCall && normalizeState(currentCall.state) === 'OnHold') {

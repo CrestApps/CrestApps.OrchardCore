@@ -8,6 +8,10 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Recipes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Recipes.Models;
@@ -416,6 +420,89 @@ public sealed class NamedRecipeStepHandlerTests
         Assert.Empty(context.Errors);
         manager.Verify(x => x.NewAsync("PostgreSQL", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
         manager.Verify(x => x.CreateAsync(dataSource, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Builds the recipe step that imports agent state reason codes, so these tests keep proving the identity rules
+    /// the step has to honour.
+    /// </summary>
+    /// <param name="manager">The manager that owns the reason codes.</param>
+    private static AgentStateReasonCodeStep CreateReasonCodeHandler(IAgentStateReasonCodeManager manager)
+        => new(manager, new PassThroughStringLocalizer<AgentStateReasonCodeStep>());
+
+    [Fact]
+    public async Task AgentStateReasonCodeStep_WhenReasonCodeExists_ShouldUpdateInsteadOfCreate()
+    {
+        // Arrange
+        var reasonCode = new AgentStateReasonCode
+        {
+            ItemId = "reason-1",
+            Name = "Lunch",
+        };
+
+        var manager = new Mock<IAgentStateReasonCodeManager>();
+        manager.Setup(x => x.FindByIdAsync("reason-1", It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(reasonCode));
+        manager.Setup(x => x.ValidateAsync(reasonCode, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var handler = CreateReasonCodeHandler(manager.Object);
+
+        var context = CreateContext("AgentStateReasonCode", new JsonObject
+        {
+            ["ReasonCodes"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    [nameof(AgentStateReasonCode.ItemId)] = "reason-1",
+                    [nameof(AgentStateReasonCode.Name)] = "Lunch",
+                    [nameof(AgentStateReasonCode.AppliesTo)] = "Break",
+                },
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.UpdateAsync(reasonCode, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AgentStateReasonCodeStep_WhenReasonCodeIsNew_ShouldCreate()
+    {
+        // Arrange
+        var manager = new Mock<IAgentStateReasonCodeManager>();
+        manager.Setup(x => x.FindByNameAsync("Lunch", It.IsAny<CancellationToken>()))
+            .Returns(() => Task.FromResult<AgentStateReasonCode>(null));
+        manager.Setup(x => x.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new AgentStateReasonCode { Name = "Lunch" }));
+        manager.Setup(x => x.ValidateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var handler = CreateReasonCodeHandler(manager.Object);
+
+        var context = CreateContext("AgentStateReasonCode", new JsonObject
+        {
+            ["ReasonCodes"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    [nameof(AgentStateReasonCode.Name)] = "Lunch",
+                    [nameof(AgentStateReasonCode.AppliesTo)] = "Break",
+                },
+            },
+        });
+
+        // Act
+        await ExecuteAsync(handler, context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(x => x.UpdateAsync(It.IsAny<AgentStateReasonCode>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -1,0 +1,181 @@
+name: Supply Chain
+
+on:
+  pull_request:
+    branches: [ main, release/** ]
+  push:
+    branches: [ main, release/** ]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  # The build already fails on advisories because NuGetAudit is enabled with the audit warnings promoted
+  # to errors. This job reports the whole dependency graph in one place so a reviewer can see what is
+  # resolved rather than only what is broken, and it fails independently of compiler diagnostics.
+  vulnerability-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore
+      - name: Audit transitive and direct packages
+        run: |
+          set -o pipefail
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.txt
+          if grep -qiE '\bhas the following vulnerable packages' audit.txt; then
+            echo "::error::Vulnerable packages detected. Pin the patched version in Directory.Packages.props."
+            exit 1
+          fi
+          echo "No vulnerable packages resolved."
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit
+          path: audit.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # gitleaks needs history to scan commits rather than only the working tree.
+          fetch-depth: 0
+      - name: Install gitleaks
+        # The published action requires a paid licence for organisation repositories, so the open source
+        # binary is used directly and pinned to an exact release.
+        run: |
+          set -o pipefail
+          curl -sSL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          chmod +x gitleaks
+      - name: Scan history for secrets
+        run: ./gitleaks detect --source . --config .gitleaks.toml --redact --report-format sarif --report-path gitleaks.sarif --exit-code 1
+      - name: Upload secret scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks.sarif
+          if-no-files-found: error
+          retention-days: 30
+
+  license-inventory:
+    name: Third-Party License Inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore
+      - name: Generate license inventory
+        # Built from the resolved graph and the packages' own nuspec metadata rather than a third-party
+        # scanner, so the inventory is reproducible and fails when a dependency declares no licence.
+        run: python3 .github/scripts/license-inventory.py --output artifacts/licenses/third-party-licenses.json
+      - name: Upload license inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: third-party-licenses
+          path: artifacts/licenses
+          if-no-files-found: error
+          retention-days: 90
+
+  sbom:
+    name: Software Bill of Materials
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build
+        run: dotnet build -c Release
+      - name: Generate SBOM
+        run: |
+          set -o pipefail
+          curl -sSL -o sbom-tool https://github.com/microsoft/sbom-tool/releases/download/v4.1.5/sbom-tool-linux-x64
+          chmod +x sbom-tool
+          mkdir -p artifacts/sbom
+          ./sbom-tool generate \
+            -b . \
+            -bc . \
+            -pn CrestApps.OrchardCore \
+            -pv ${{ github.sha }} \
+            -ps CrestApps \
+            -nsb https://crestapps.com/${{ github.repository }} \
+            -m artifacts/sbom
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: artifacts/sbom
+          if-no-files-found: error
+          retention-days: 90
+
+  container-scan:
+    name: Container Image Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The Asterisk image is built from the repository, so it is scanned as built rather than pulled.
+          - name: asterisk
+            build: true
+            image: crestapps/asterisk-webrtc:ci-scan
+          - name: redis
+            build: false
+            image: redis:7.4.2
+          - name: coturn
+            build: false
+            image: coturn/coturn:4.6.3
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build the Asterisk image
+        if: matrix.build
+        run: docker build -t ${{ matrix.image }} src/Startup/CrestApps.Aspire.AppHost/Asterisk
+      # The gate blocks only on images this repository builds, because those are the only findings it can
+      # actually remediate. Pulled upstream images are still scanned and still published to code scanning
+      # through the SARIF upload below, but they cannot fail the build: a CVE in `coturn/coturn` or `redis`
+      # is fixed by the upstream maintainer, and for coturn in particular every tag checked (4.6.3, 4.7.0,
+      # alpine) still reports CRITICAL/HIGH findings, so blocking on them would leave the pipeline
+      # permanently red without improving security. Raise the pinned tags when upstream ships a cleaner one.
+      - name: Scan ${{ matrix.name }}
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: ${{ matrix.build && '1' || '0' }}
+      - name: Upload scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}

@@ -1,0 +1,121 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.ContactCenter
+@using CrestApps.OrchardCore.Omnichannel.Core
+@model AgentWorkspaceIndexViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    var initial = string.IsNullOrWhiteSpace(Model.DisplayName) ? "?" : Model.DisplayName.Trim().Substring(0, 1);
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
+    var completeActivityUrlTemplate = Url.Action(
+        "Complete",
+        "Activities",
+        new
+        {
+            area = OmnichannelConstants.Features.Managements,
+            id = "__activityId__",
+            returnUrl = workspaceUrl,
+        });
+
+    var config = new Dictionary<string, object>
+    {
+        ["hubUrl"] = Model.HubUrl,
+        ["stateUrl"] = Model.StateUrl,
+        ["setPresenceUrl"] = Model.SetPresenceUrl,
+        ["acceptOfferUrl"] = Model.AcceptOfferUrl,
+        ["declineOfferUrl"] = Model.DeclineOfferUrl,
+        ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
+        ["antiForgeryToken"] = antiForgeryToken,
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["noQueues"] = T["Not signed in to any queue"].Value,
+            ["incomingOffer"] = T["Incoming"].Value,
+            ["unknownCaller"] = T["Unknown caller"].Value,
+            ["accept"] = T["Accept"].Value,
+            ["decline"] = T["Decline"].Value,
+            ["respondIn"] = T["Respond in"].Value,
+            ["noActiveCall"] = T["You have no active interaction. Available work will ring here."].Value,
+            ["inbound"] = T["Inbound"].Value,
+            ["outbound"] = T["Outbound"].Value,
+            ["status"] = T["Status"].Value,
+            ["talkTime"] = T["Talk time"].Value,
+            ["openContact"] = T["Open customer record"].Value,
+            ["completeWork"] = T["Complete activity"].Value,
+            ["acceptFailed"] = T["The offer could not be accepted. It may have been re-offered."].Value,
+            ["declineFailed"] = T["The offer could not be declined. Refresh the workspace and try again."].Value,
+            ["noHistory"] = T["No recent interactions."].Value,
+            ["connected"] = T["Connected"].Value,
+            ["reconnecting"] = T["Connection lost. Reconnecting..."].Value,
+            ["disconnected"] = T["Disconnected. Live updates are paused."].Value,
+            ["presenceMenuLabel"] = T["Change your presence"].Value,
+        },
+    };
+}
+
+<style asp-name="contact-center-workspace"></style>
+<script asp-name="contact-center-agent-workspace" at="Foot"></script>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["My workspace"])</h1></zone>
+
+<div class="cc-workspace" data-cc-workspace data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
+    <div class="cc-topbar">
+        <div class="cc-topbar__identity">
+            <span class="cc-avatar">@initial</span>
+            <span>@Model.DisplayName</span>
+        </div>
+
+        <div class="cc-presence" data-cc-presence>
+            <button type="button" class="cc-presence__button" data-cc-presence-button aria-haspopup="menu" aria-expanded="false" aria-controls="ccPresenceMenu">
+                <span class="cc-presence__dot" data-cc-presence-dot aria-hidden="true"></span>
+                <span data-cc-presence-label>@T["Loading..."]</span>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="cc-menu" id="ccPresenceMenu" role="menu" aria-label="@T["Change your presence"]" data-cc-presence-menu>
+                <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="Available">
+                    <span class="cc-presence__dot is-available" aria-hidden="true"></span> @T["Available"]
+                </button>
+                @foreach (var reason in Model.ReasonCodes)
+                {
+                    <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="@reason.Id" data-cc-reason="@reason.Name">
+                        <span class="cc-presence__dot is-@reason.Id.ToLowerInvariant()" aria-hidden="true"></span> @reason.Name
+                    </button>
+                }
+                <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak">
+                    <span class="cc-presence__dot is-break" aria-hidden="true"></span> @T["Request break"]
+                </button>
+            </div>
+        </div>
+
+        <span class="cc-connection" data-cc-connection role="status" aria-live="polite"></span>
+
+        @if (Model.CanMonitor && !string.IsNullOrEmpty(Model.SupervisorDashboardUrl))
+        {
+            <a class="btn btn-sm btn-outline-secondary" href="@Model.SupervisorDashboardUrl">
+                <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> @T["Live dashboard"]
+            </a>
+        }
+
+        <div class="cc-topbar__queues" data-cc-queues role="status" aria-live="polite" aria-label="@T["Signed-in queues"]"></div>
+    </div>
+
+    <div class="cc-error" data-cc-error role="alert" aria-live="assertive" hidden></div>
+
+    <div class="cc-grid">
+        <div class="cc-stack">
+            <div data-cc-offer role="alert" aria-live="assertive" aria-atomic="true" hidden></div>
+
+            <div class="cc-panel">
+                <div class="cc-panel__header" id="ccActiveHeader">@T["Active interaction"]</div>
+                <div class="cc-panel__body" data-cc-active aria-live="polite" aria-labelledby="ccActiveHeader"></div>
+            </div>
+        </div>
+
+        <div class="cc-panel">
+            <div class="cc-panel__header" id="ccHistoryHeader">@T["Recent activity"]</div>
+            <div class="cc-panel__body">
+                <ul class="cc-history" data-cc-history aria-labelledby="ccHistoryHeader"></ul>
+            </div>
+        </div>
+    </div>
+</div>

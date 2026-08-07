@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.DialPad;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
@@ -20,5 +21,17 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = DialPadConstants.Feature.ContactCenterVoice,
+    Name = "DialPad Contact Center Voice",
+    Description = "Enables the DialPad provider to place outbound contact center calls and handle their real-time call events.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        DialPadConstants.Feature.Area,
+        ContactCenterConstants.Feature.Voice,
     ]
 )]

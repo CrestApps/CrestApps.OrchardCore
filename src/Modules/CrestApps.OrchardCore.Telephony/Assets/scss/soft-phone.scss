@@ -271,6 +271,48 @@
         }
     }
 
+    &__number-iti {
+        display: block;
+        width: 100%;
+
+        .telephony-soft-phone__number {
+            width: 100%;
+        }
+    }
+
+    &__dial-mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+        padding: 0.15rem 0.5rem;
+        border: 1px solid transparent;
+        border-radius: 0.35rem;
+        background-color: transparent;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.75rem;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--telephony-accent, #0d6efd);
+        }
+
+        &[aria-pressed="true"] {
+            border-color: var(--telephony-accent, #0d6efd);
+            color: var(--telephony-accent, #0d6efd);
+        }
+    }
+
+    &--extension {
+        .iti__country-container {
+            display: none;
+        }
+
+        .telephony-soft-phone__number {
+            padding-left: 0.65rem !important;
+        }
+    }
+
     &__connect {
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);
@@ -283,6 +325,13 @@
         margin-bottom: 0.75rem;
         font-size: 0.85rem;
         color: var(--bs-secondary-color, #6c757d);
+    }
+
+    &__connect-error {
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.78rem;
+        text-align: left;
     }
 
     &__error {
@@ -702,4 +751,12 @@
             flex: 1 1 0;
         }
     }
+}
+
+// intl-tel-input detaches the country dropdown to <body> (class .iti--detached-country-selector,
+// z-index 1060 by default), but the floating soft phone panel sits at z-index 1080. Without this
+// override the country list opens behind the panel and appears to be missing. Lift it above the
+// panel and the incoming-call overlay so the country selector is always visible.
+.iti--detached-country-selector {
+    z-index: 1100;
 }

@@ -1,7 +1,9 @@
 namespace CrestApps.OrchardCore.DialPad.Models;
 
 /// <summary>
-/// Represents the DialPad provider site settings.
+/// Represents the DialPad provider site settings. Production and sandbox credentials are configured
+/// independently, and the active <see cref="Environment"/> selects which credential set the provider uses
+/// when connecting.
 /// </summary>
 public sealed class DialPadSettings
 {
@@ -11,73 +13,39 @@ public sealed class DialPadSettings
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
-    /// endpoints.
+    /// Gets or sets the active DialPad environment (production or sandbox) the provider connects to.
     /// </summary>
     public DialPadEnvironment Environment { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional internal override for the DialPad REST API base address. When empty the
-    /// default endpoint is used.
+    /// Gets or sets the credentials and options for the production DialPad environment.
     /// </summary>
-    public string ApiBaseUrl { get; set; }
+    public DialPadEnvironmentSettings Production { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the identifier of the DialPad user that places outbound calls.
+    /// Gets or sets the credentials and options for the sandbox DialPad environment.
     /// </summary>
-    public string UserId { get; set; }
+    public DialPadEnvironmentSettings Sandbox { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the caller identifier presented on outbound calls.
+    /// Gets the credentials for the specified DialPad environment, creating an empty set when none exists.
     /// </summary>
-    public string OutboundCallerId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the protected DialPad API key used when API key authentication is selected. The value is
-    /// stored encrypted using the data protection provider.
-    /// </summary>
-    public string ApiToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the DialPad authentication type.
-    /// </summary>
-    public DialPadAuthenticationType AuthenticationType { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether each user authenticates with DialPad through the OAuth 2.0
-    /// authorization code flow instead of using a shared API key.
-    /// </summary>
-    public bool UseOAuth
+    /// <param name="environment">The environment whose credentials are requested.</param>
+    /// <returns>The credentials for the environment.</returns>
+    public DialPadEnvironmentSettings GetEnvironmentSettings(DialPadEnvironment environment)
     {
-        get
+        if (environment == DialPadEnvironment.Sandbox)
         {
-            return AuthenticationType == DialPadAuthenticationType.OAuth2;
+            return Sandbox ??= new DialPadEnvironmentSettings();
         }
-        set
-        {
-            AuthenticationType = value ? DialPadAuthenticationType.OAuth2 : DialPadAuthenticationType.ApiKey;
-        }
+
+        return Production ??= new DialPadEnvironmentSettings();
     }
 
     /// <summary>
-    /// Gets or sets the OAuth client identifier issued by DialPad.
+    /// Gets the credentials for the active environment selected by <see cref="Environment"/>.
     /// </summary>
-    public string ClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the protected OAuth client secret issued by DialPad. The value is stored encrypted
-    /// using the data protection provider.
-    /// </summary>
-    public string ClientSecret { get; set; }
-
-    /// <summary>
-    /// Gets or sets the space-separated OAuth scopes requested during authorization.
-    /// </summary>
-    public string Scopes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the protected secret DialPad uses to sign call-event webhooks (JWT HS256). The value
-    /// is stored encrypted using the data protection provider. Inbound webhooks are rejected when empty.
-    /// </summary>
-    public string WebhookSigningSecret { get; set; }
+    /// <returns>The credentials for the active environment.</returns>
+    public DialPadEnvironmentSettings GetActiveEnvironmentSettings()
+        => GetEnvironmentSettings(Environment);
 }

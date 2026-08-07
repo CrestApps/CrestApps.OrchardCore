@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 public sealed class DefaultTelephonyService : ITelephonyService
 {
     private readonly ITelephonyProviderResolver _resolver;
+    private readonly IOutboundCallScreeningService _screeningService;
 
     internal readonly IStringLocalizer S;
 
@@ -17,21 +18,45 @@ public sealed class DefaultTelephonyService : ITelephonyService
     /// Initializes a new instance of the <see cref="DefaultTelephonyService"/> class.
     /// </summary>
     /// <param name="resolver">The provider resolver.</param>
+    /// <param name="screeningService">The outbound origination screening gate.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultTelephonyService(
         ITelephonyProviderResolver resolver,
+        IOutboundCallScreeningService screeningService,
         IStringLocalizer<DefaultTelephonyService> stringLocalizer)
     {
         _resolver = resolver;
+        _screeningService = screeningService;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync<ITelephonyCallControlProvider>(
+    /// <inheritdoc/>
+    public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Every origination passes the shared compliance gate before it can reach a provider, so a soft-phone
+        // dial cannot bypass the do-not-call and calling-window rules that a compliance module contributes.
+        var screening = await _screeningService.ScreenAsync(
+            new OutboundCallScreeningContext
+            {
+                Request = request,
+                Origin = OutboundCallOrigin.SoftPhone,
+            },
+            cancellationToken);
+
+        if (screening is null || !screening.IsAllowed)
+        {
+            return TelephonyResult.Failed(
+                screening?.Description ?? S["This call cannot be placed because it did not pass outbound compliance screening."].Value);
+        }
+
+        return await InvokeAsync<ITelephonyCallControlProvider>(
             TelephonyCapabilities.Dial,
             (provider, token) => provider.DialAsync(request, token),
             cancellationToken);
+    }
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)

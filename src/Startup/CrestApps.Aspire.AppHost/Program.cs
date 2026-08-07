@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 const string ollamaModelName = "deepseek-v2:16b";
@@ -17,16 +19,38 @@ ollama.AddModel(ollamaModelName);
 
 var redis = builder.AddRedis("Redis");
 
+var asterisk = builder.AddContainer("Asterisk", "crestapps/asterisk-webrtc", "22.6.0-dev")
+    .WithDockerfile("Asterisk")
+    .WithHttpEndpoint(port: 8088, targetPort: 8088, name: "HttpAsterisk")
+    .WithEndpoint(port: 8089, targetPort: 8089, scheme: "https", name: "WssAsterisk")
+    .WithBindMount("Asterisk/http.conf", "/etc/asterisk/http.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/ari.conf", "/etc/asterisk/ari.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/extensions.conf", "/etc/asterisk/extensions.conf", isReadOnly: true)
+    .WithBindMount("Asterisk/pjsip.conf", "/etc/asterisk/pjsip.conf", isReadOnly: true);
+
+var coturn = builder.AddContainer("Coturn", "coturn/coturn", "4.6.3")
+    .WithEndpoint(port: 3478, targetPort: 3478, scheme: "turn", name: "TurnTcp")
+    .WithEndpoint(port: 3478, targetPort: 3478, scheme: "turn", name: "TurnUdp", protocol: ProtocolType.Udp)
+    .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsTcp")
+    .WithEndpoint(port: 5349, targetPort: 5349, scheme: "turns", name: "TurnsUdp", protocol: ProtocolType.Udp)
+    // Aspire 13.4.6 builds dashboard URL snapshots by matching each resource URL to a single DCP endpoint
+    // (ResourceSnapshotBuilder.GetUrls uses SingleOrDefault). Coturn publishes the same port over both TCP and
+    // UDP, which resolves to more than one endpoint and throws, killing the DCP watch tasks and preventing every
+    // resource in the app host from starting. Clearing the generated URLs skips that lookup. The endpoints are
+    // still published, so TURN keeps working; only the clickable dashboard links for Coturn are omitted.
+    .WithUrls(context => context.Urls.Clear())
+    .WithBindMount("Coturn/turnserver.conf", "/etc/coturn/turnserver.conf", isReadOnly: true);
+
 var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
-// .WithReference(redis)
+    .WithReference(redis)
 // .WithReference(ollama)
-// .WaitFor(redis)
+    .WaitFor(redis)
+    .WaitFor(asterisk)
+    .WaitFor(coturn)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
+    .WithEnvironment("OrchardCore__OrchardCore_Redis__Configuration", ReferenceExpression.Create($"{redis.Resource.ConnectionStringExpression},allowAdmin=true"))
     .WithEnvironment((options) =>
     {
-        // Configure the Redis connection.
-        options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Redis__Configuration", "localhost,allowAdmin=true");
-
         // Configure the Elasticsearch connection.
         // options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__ConnectionType", "SingleNodeConnectionPool");
         // options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Url", "http://localhost");
@@ -59,6 +83,16 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__McpServer__AuthenticationType", "None");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__AuthenticationType", "None");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__A2AHost__ExposeAgentsAsSkill", "false");
+
+        // Configure the configuration-backed default Asterisk telephony provider.
+        // The Cms.Web launch profile also injects these keys, and Aspire applies the launch profile
+        // before this callback runs, so assign by indexer instead of Add to avoid a duplicate-key crash.
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__BaseUrl"] = "http://localhost:8088/ari/";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__UserName"] = "crestapps";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__Password"] = "crestapps-dev";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__ApplicationName"] = "crestapps-telephony";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__EndpointTemplate"] = "Local/{number}@default";
+        options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds"] = "30";
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
@@ -72,6 +106,29 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientS
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
+
+builder.AddProject<Projects.CrestApps_OrchardCore_Asterisk_Web>("AsteriskWeb")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WaitFor(asterisk)
+    .WithHttpsEndpoint(5004, name: "HttpsAsteriskWeb")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("AsteriskWeb__OrchardBaseUrl", "https://localhost:5001")
+    .WithEnvironment("AsteriskWeb__LoginPath", "/Login")
+    .WithEnvironment("AsteriskWeb__InboundPath", "/api/contact-center/voice/inbound")
+    .WithEnvironment("AsteriskWeb__ProviderName", "Default Asterisk")
+    .WithEnvironment("AsteriskWeb__AsteriskDestination", "1000")
+    .WithEnvironment("AsteriskWeb__TwoPartyEndpointA", "Local/2001@crestapps-simulation")
+    .WithEnvironment("AsteriskWeb__TwoPartyCallerIdA", "Simulation Party A <2001>")
+    .WithEnvironment("AsteriskWeb__TwoPartyEndpointB", "Local/2002@crestapps-simulation")
+    .WithEnvironment("AsteriskWeb__TwoPartyCallerIdB", "Simulation Party B <2002>")
+    .WithEnvironment("AsteriskWeb__AsteriskBaseUrl", "http://localhost:8088/ari/")
+    .WithEnvironment("AsteriskWeb__AsteriskEndpointTemplate", "Local/{number}@default")
+    .WithEnvironment("AsteriskWeb__AsteriskApplicationName", "crestapps-dashboard")
+    .WithEnvironment("AsteriskWeb__AsteriskTimeoutSeconds", "30")
+    .WithEnvironment("AsteriskWeb__SimulationTimeoutSeconds", "45")
+    .WithEnvironment("AsteriskWeb__AsteriskUserName", "crestapps")
+    .WithEnvironment("AsteriskWeb__AsteriskPassword", "crestapps-dev");
 
 var app = builder.Build();
 

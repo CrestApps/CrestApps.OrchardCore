@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ActivityQueueGroup>
+
+<h5>@Model.Value.Name</h5>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted">@Model.Value.Description</div>
+}
