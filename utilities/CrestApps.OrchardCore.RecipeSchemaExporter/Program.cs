@@ -13,8 +13,12 @@ using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Localization;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
@@ -60,6 +64,28 @@ internal sealed class Program
         "Moderator",
     ];
 
+    private static readonly string[] _contentTypeNames =
+    [
+        "Article",
+        "BlogPost",
+        "Page",
+    ];
+
+    private static readonly string[] _cultureNames =
+    [
+        "en",
+        "en-US",
+        "fr",
+        "fr-FR",
+    ];
+
+    private static readonly string[] _indexProfileNames =
+    [
+        "articles",
+        "blogposts",
+        "pages",
+    ];
+
     private static readonly string[] _fieldTypeNames =
     [
         "BooleanField",
@@ -93,9 +119,11 @@ internal sealed class Program
         Console.WriteLine($"Discovered {_eventActivityNames.Length} workflow events, {_taskActivityNames.Length} workflow tasks, and {_permissionNames.Length} permissions.");
 
         var outputPath = ResolveOutputPath(args, repositoryRoot);
-        var recipeSteps = CreateRecipeSteps()
+        var recipeSteps = CreateRecipeSteps(out var recipeStepServiceProvider)
             .OrderBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        await using var _ = recipeStepServiceProvider;
 
         Directory.CreateDirectory(outputPath);
         ClearGeneratedArtifacts(outputPath);
@@ -232,7 +260,7 @@ internal sealed class Program
         return $"{safeName}.schema.json";
     }
 
-    private static IRecipeStep[] CreateRecipeSteps()
+    private static IRecipeStep[] CreateRecipeSteps(out ServiceProvider serviceProvider)
     {
         var schemaDefinitions = CreateContentSchemaDefinitions();
         var partNames = schemaDefinitions
@@ -242,14 +270,16 @@ internal sealed class Program
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        using var serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+        serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+
+        var provider = serviceProvider;
 
         return typeof(IRecipeStep).Assembly.ExportedTypes
             .Where(type =>
                 typeof(IRecipeStep).IsAssignableFrom(type) &&
                     type is { IsAbstract: false, IsInterface: false })
                     .OrderBy(type => type.Name, StringComparer.Ordinal)
-                    .Select(type => CreateRecipeStep(type, serviceProvider))
+                    .Select(type => CreateRecipeStep(type, provider))
                     .ToArray();
     }
 
@@ -281,7 +311,7 @@ internal sealed class Program
     {
         var services = new ServiceCollection();
         var siteSettingsSchemaDefinitions = CreateSiteSettingsSchemaDefinitions();
-        var contentDefinitionManager = CreateContentDefinitionManager();
+        var contentDefinitionManager = CreateContentDefinitionManager(partNames);
         var contentSchemaProvider = new StubContentSchemaProvider(partNames, _fieldTypeNames);
         var contentItemSchemaService = new ContentItemSchemaService(contentDefinitionManager, schemaDefinitions);
 
@@ -293,9 +323,40 @@ internal sealed class Program
         services.AddSingleton(CreateShellFeaturesManager());
         services.AddSingleton(CreatePermissionService());
         services.AddSingleton(CreateRoleService());
+        services.AddSingleton(contentDefinitionManager);
+        services.AddSingleton(CreateLocalizationService());
+        services.AddSingleton(CreateIndexProfileStore());
         services.AddSingleton(CreateActivityLibrary());
+        services.AddSingleton<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
         services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
         RegisterWorkflowActivitySchemaDefinitions(services);
+
+        services.AddSingleton<IRuleSchemaService, RuleSchemaService>();
+        RegisterRuleConditionSchemaDefinitions(services);
+        RegisterRuleConditionOperatorSchemaDefinitions(services);
+
+        services.AddSingleton<ISitemapSchemaService, SitemapSchemaService>();
+        RegisterSitemapSourceSchemaDefinitions(services);
+
+        services.AddSingleton<IAdminMenuSchemaService, AdminMenuSchemaService>();
+        RegisterAdminNodeSchemaDefinitions(services);
+
+        services.AddSingleton<IQuerySchemaService, QuerySchemaService>();
+        RegisterQuerySourceSchemaDefinitions(services);
+
+        services.AddSingleton<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
+        RegisterRewriteRuleSourceSchemaDefinitions(services);
+
+        services.AddSingleton<IPlacementSchemaService, PlacementSchemaService>();
+        RegisterPlacementNodeFilterSchemaDefinitions(services);
+
+        foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
+        {
+            services.AddSingleton(deploymentStepFactory);
+        }
+
+        services.AddSingleton<IDeploymentSchemaService, DeploymentSchemaService>();
+        RegisterDeploymentStepSchemaDefinitions(services);
 
         foreach (var schemaDefinition in schemaDefinitions)
         {
@@ -322,13 +383,48 @@ internal sealed class Program
         return (IRecipeStep)ActivatorUtilities.CreateInstance(serviceProvider, stepType);
     }
 
-    private static IContentDefinitionManager CreateContentDefinitionManager()
+    private static IContentDefinitionManager CreateContentDefinitionManager(IReadOnlyList<string> partNames)
     {
+        var typeDefinitions = _contentTypeNames
+            .Select(name => new ContentTypeDefinition(name, name))
+            .ToArray();
+
+        var partDefinitions = partNames
+            .Select(name => new ContentPartDefinition(name))
+            .ToArray();
+
         var manager = new Mock<IContentDefinitionManager>();
         manager.Setup(service => service.ListTypeDefinitionsAsync())
-            .ReturnsAsync(Array.Empty<ContentTypeDefinition>());
+            .ReturnsAsync(typeDefinitions);
+        manager.Setup(service => service.ListPartDefinitionsAsync())
+            .ReturnsAsync(partDefinitions);
 
         return manager.Object;
+    }
+
+    private static ILocalizationService CreateLocalizationService()
+    {
+        var localizationService = new Mock<ILocalizationService>();
+        localizationService.Setup(service => service.GetSupportedCulturesAsync())
+            .ReturnsAsync(_cultureNames);
+
+        return localizationService.Object;
+    }
+
+    private static IIndexProfileStore CreateIndexProfileStore()
+    {
+        var profiles = _indexProfileNames
+            .Select(name => new IndexProfile
+            {
+                Name = name,
+            })
+            .ToArray();
+
+        var indexProfileStore = new Mock<IIndexProfileStore>();
+        indexProfileStore.Setup(service => service.GetAllAsync())
+            .ReturnsAsync(profiles);
+
+        return indexProfileStore.Object;
     }
 
     private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
@@ -342,6 +438,132 @@ internal sealed class Program
         {
             services.AddSingleton(definitionType, implementation);
         }
+    }
+
+    private static void RegisterRuleConditionSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRuleConditionOperatorSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionOperatorSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterSitemapSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(ISitemapSourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterDeploymentStepSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterAdminNodeSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IAdminNodeSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterQuerySourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IQuerySourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRewriteRuleSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRewriteRuleSourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterPlacementNodeFilterSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IPlacementNodeFilterSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static IEnumerable<IDeploymentStepFactory> CreateDeploymentStepFactories()
+    {
+        foreach (var stepType in GetDeploymentStepDefinitionNames())
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(stepType);
+            yield return factory.Object;
+        }
+    }
+
+    private static IEnumerable<string> GetDeploymentStepDefinitionNames()
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IDeploymentStepSchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.StepType)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
     }
 
     private static IActivityLibrary CreateActivityLibrary()

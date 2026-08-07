@@ -14,6 +14,7 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
 {
     private readonly IActivityLibrary _activityLibrary;
     private readonly IEnumerable<IWorkflowActivitySchemaDefinition> _definitions;
+    private readonly IRecipeSchemaExampleService _exampleService;
 
     private IReadOnlyList<WorkflowActivityDescriptor> _cachedDescriptors;
     private JsonSchemaBuilder _cachedActivitySchema;
@@ -23,12 +24,15 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
     /// </summary>
     /// <param name="activityLibrary">The workflow activity library.</param>
     /// <param name="definitions">The registered workflow activity schema definitions.</param>
+    /// <param name="exampleService">The service that supplies live tenant example values.</param>
     public WorkflowActivitySchemaService(
         IActivityLibrary activityLibrary,
-        IEnumerable<IWorkflowActivitySchemaDefinition> definitions)
+        IEnumerable<IWorkflowActivitySchemaDefinition> definitions,
+        IRecipeSchemaExampleService exampleService)
     {
         _activityLibrary = activityLibrary;
         _definitions = definitions;
+        _exampleService = exampleService;
     }
 
     /// <inheritdoc />
@@ -46,6 +50,8 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
 
         var descriptors = new List<WorkflowActivityDescriptor>();
 
+        var examples = await _exampleService.GetExamplesAsync(cancellationToken);
+
         foreach (var activity in _activityLibrary.ListActivities().OrderBy(activity => activity.Name, StringComparer.Ordinal))
         {
             var context = new WorkflowActivitySchemaContext
@@ -55,6 +61,7 @@ public sealed class WorkflowActivitySchemaService : IWorkflowActivitySchemaServi
                 IsTask = activity is ITask,
                 Category = activity.Category?.Value,
                 DisplayText = activity.DisplayText?.Value,
+                Examples = examples,
             };
 
             if (!definitions.TryGetValue(activity.Name, out var definition))

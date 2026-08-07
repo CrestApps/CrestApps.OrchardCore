@@ -26,7 +26,7 @@ public sealed class SetOutputTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["OutputName"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("OutputName", WorkflowActivitySchemaBuilders.String("The name of the workflow output entry to write to."));
         yield return ("Value", WorkflowActivitySchemaBuilders.ScriptExpression("The value to store in the specified output entry. Required when 'Syntax' is 'JavaScript'."));

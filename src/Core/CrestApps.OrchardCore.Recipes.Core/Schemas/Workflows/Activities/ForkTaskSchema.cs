@@ -26,7 +26,7 @@ public sealed class ForkTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["Forks"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Forks", WorkflowActivitySchemaBuilders.StringArray("The fork names. Each entry becomes an outcome of this activity and can be used as a 'Transitions[].SourceOutcomeName'."));
     }

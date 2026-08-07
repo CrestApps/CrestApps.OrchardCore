@@ -26,7 +26,7 @@ public sealed class LiquidTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["Expression"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Expression", WorkflowActivitySchemaBuilders.LiquidExpression("The Liquid template to evaluate. The rendered value becomes the workflow last result."));
     }

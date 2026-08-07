@@ -23,7 +23,7 @@ public sealed class PublishContentTaskSchema : WorkflowActivitySchemaDefinitionB
     protected override IEnumerable<string> Outcomes => ["Published", "Noop"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Content", WorkflowActivitySchemaBuilders.ScriptExpression("A JavaScript expression that evaluates to the content item (or its ContentItemId) to publish. For example: input('ContentItem'). If omitted, the workflow's ContentItem input variable or property is used."));
     }

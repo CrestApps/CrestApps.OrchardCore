@@ -23,7 +23,7 @@ public sealed class HttpRedirectTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Location", WorkflowActivitySchemaBuilders.LiquidExpression("The URL to redirect to."));
         yield return ("Permanent", WorkflowActivitySchemaBuilders.Boolean("When true, sends a 301 Permanent Redirect; otherwise sends a 302 Temporary Redirect. Defaults to false."));

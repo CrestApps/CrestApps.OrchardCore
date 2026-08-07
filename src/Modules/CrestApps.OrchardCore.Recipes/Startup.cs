@@ -1,8 +1,16 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Placements.Filters;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.UrlRewriting.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +28,7 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<RecipeExecutionService>();
         services.AddScoped<RecipeSchemaService>();
+        services.AddScoped<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
         services.AddScoped<IContentItemSchemaService, ContentItemSchemaService>();
         services.AddSingleton<IViewLocationExpanderProvider, DeploymentJsonViewLocationExpander>();
 
@@ -387,6 +396,31 @@ public sealed class LayersRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IRuleSchemaService, RuleSchemaService>();
+
+        services
+            .AddRuleConditionSchema<AllConditionGroupSchema>()
+            .AddRuleConditionSchema<AnyConditionGroupSchema>()
+            .AddRuleConditionSchema<BooleanConditionSchema>()
+            .AddRuleConditionSchema<ContentTypeConditionSchema>()
+            .AddRuleConditionSchema<CultureConditionSchema>()
+            .AddRuleConditionSchema<HomepageConditionSchema>()
+            .AddRuleConditionSchema<IsAnonymousConditionSchema>()
+            .AddRuleConditionSchema<IsAuthenticatedConditionSchema>()
+            .AddRuleConditionSchema<JavascriptConditionSchema>()
+            .AddRuleConditionSchema<RoleConditionSchema>()
+            .AddRuleConditionSchema<UrlConditionSchema>();
+
+        services
+            .AddRuleConditionOperatorSchema<StringContainsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringEndsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringEqualsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotContainsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotEndsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotEqualsOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringNotStartsWithOperatorSchema>()
+            .AddRuleConditionOperatorSchema<StringStartsWithOperatorSchema>();
+
         services.AddScoped<IRecipeStep, LayersRecipeStep>();
     }
 }
@@ -399,7 +433,45 @@ public sealed class QueriesRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IQuerySchemaService, QuerySchemaService>();
+
         services.AddScoped<IRecipeStep, QueriesRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the SQL queries feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Queries.Sql")]
+public sealed class QueriesSqlRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<SqlQuerySourceSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the Lucene feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Lucene")]
+public sealed class QueriesLuceneRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<LuceneQuerySourceSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the query source schema contributed by the Elasticsearch feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Queries", "OrchardCore.Elasticsearch")]
+public sealed class QueriesElasticsearchRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddQuerySourceSchema<ElasticsearchQuerySourceSchema>();
     }
 }
 
@@ -436,7 +508,24 @@ public sealed class PlacementsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IPlacementSchemaService, PlacementSchemaService>();
+
+        services.AddPlacementNodeFilterSchema<PathPlacementNodeFilterSchema>();
+
         services.AddScoped<IRecipeStep, PlacementsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the placement node filters contributed by the content features.
+/// </summary>
+[RequireFeatures("OrchardCore.Placements", "OrchardCore.Contents")]
+public sealed class PlacementsContentsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPlacementNodeFilterSchema<ContentTypePlacementNodeFilterSchema>();
+        services.AddPlacementNodeFilterSchema<ContentPartPlacementNodeFilterSchema>();
     }
 }
 
@@ -448,7 +537,37 @@ public sealed class AdminMenuRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAdminMenuSchemaService, AdminMenuSchemaService>();
+
+        services
+            .AddAdminNodeSchema<LinkAdminNodeSchema>()
+            .AddAdminNodeSchema<PlaceholderAdminNodeSchema>();
+
         services.AddScoped<IRecipeStep, AdminMenuRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the admin menu node schema contributed by the content types feature.
+/// </summary>
+[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Contents")]
+public sealed class AdminMenuContentsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAdminNodeSchema<ContentTypesAdminNodeSchema>();
+    }
+}
+
+/// <summary>
+/// Registers the admin menu node schema contributed by the lists feature.
+/// </summary>
+[RequireFeatures("OrchardCore.AdminMenu", "OrchardCore.Lists")]
+public sealed class AdminMenuListsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAdminNodeSchema<ListsAdminNodeSchema>();
     }
 }
 
@@ -460,6 +579,40 @@ public sealed class DeploymentRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IDeploymentSchemaService, DeploymentSchemaService>();
+
+        services.AddDeploymentStepSchema<AllContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentItemDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ReplaceContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<DeleteContentDefinitionDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomFileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<RecipeFileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<JsonRecipeDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<DeploymentPlanDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<MediaDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CustomUserSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<QueryBasedContentDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllTemplatesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllAdminTemplatesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AllFeaturesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<SiteSettingsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<TranslationsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LuceneIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ElasticsearchIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexRebuildDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<AzureAISearchIndexResetDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<IndexProfileDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<ResetIndexDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<RebuildIndexDeploymentStepSchema>();
+
         services.AddScoped<IRecipeStep, DeploymentRecipeStep>();
     }
 }
@@ -472,6 +625,13 @@ public sealed class SitemapsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<ISitemapSchemaService, SitemapSchemaService>();
+
+        services
+            .AddSitemapSourceSchema<ContentTypesSitemapSourceSchema>()
+            .AddSitemapSourceSchema<CustomPathSitemapSourceSchema>()
+            .AddSitemapSourceSchema<SitemapIndexSourceSchema>();
+
         services.AddScoped<IRecipeStep, SitemapsRecipeStep>();
     }
 }
@@ -484,6 +644,11 @@ public sealed class UrlRewritingRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
+
+        services.AddRewriteRuleSourceSchema<UrlRedirectRuleSourceSchema>();
+        services.AddRewriteRuleSourceSchema<UrlRewriteRuleSourceSchema>();
+
         services.AddScoped<IRecipeStep, UrlRewritingRecipeStep>();
     }
 }

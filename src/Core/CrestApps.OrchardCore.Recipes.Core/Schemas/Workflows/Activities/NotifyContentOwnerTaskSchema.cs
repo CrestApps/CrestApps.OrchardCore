@@ -26,7 +26,7 @@ public sealed class NotifyContentOwnerTaskSchema : WorkflowActivitySchemaDefinit
     protected override IEnumerable<string> RequiredProperties => ["Subject"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Subject", WorkflowActivitySchemaBuilders.LiquidExpression("The subject line of the notification."));
         yield return ("Summary", WorkflowActivitySchemaBuilders.LiquidExpression("The HTML summary for the notification."));

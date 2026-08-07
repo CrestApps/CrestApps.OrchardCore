@@ -43,7 +43,7 @@ public sealed class Startup : StartupBase
         // Registered before AddCoreAIDocumentProcessing() so it wins over the framework's NoOpUploadedFileScanner,
         // which is added with TryAddSingleton.
         services.TryAddTransient<FileCreationService>();
-        services.AddSingleton<IUploadedFileScanner, OrchardUploadedFileScanner>();
+        services.AddScoped<IUploadedFileScanner, OrchardUploadedFileScanner>();
 
         services.AddCoreAIDocumentProcessing()
             .AddCoreAIDocumentReferenceDownloads()
