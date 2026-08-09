@@ -70,6 +70,7 @@ public sealed class Startup : StartupBase
                     && options.AgentSessionRetentionDays >= 0
                     && options.CallbackRequestRetentionDays >= 0
                     && options.EventMetricRetentionDays >= 0
+                    && options.SecureCaptureRetentionDays >= 0
                     && options.ProcessedEventRetentionDays >= 0
                     && options.WorkStateRetentionDays >= 0,
                 "Every 'CrestApps_ContactCenter:Retention' window must be zero or greater. Use zero to keep that entity indefinitely.")

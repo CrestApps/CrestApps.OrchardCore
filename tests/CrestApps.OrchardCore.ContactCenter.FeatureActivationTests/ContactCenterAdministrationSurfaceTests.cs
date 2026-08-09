@@ -93,6 +93,9 @@ public sealed class ContactCenterAdministrationSurfaceTests
         ContactCenterConstants.Feature.Recording,
         "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterRecordingSettingsDisplayDriver")]
     [InlineData(
+        ContactCenterConstants.Feature.SecureCapture,
+        "CrestApps.OrchardCore.ContactCenter.Drivers.SecureCaptureSettingsDisplayDriver")]
+    [InlineData(
         ContactCenterConstants.Feature.InboundVoice,
         "CrestApps.OrchardCore.ContactCenter.Controllers.EntryPointsController")]
     public async Task ConfigurableCapability_RegistersItsAdministrationSurface(

@@ -44,6 +44,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             "ProviderCommandRecoveryBackgroundTask",
             "ReservationExpiryBackgroundTask",
             "SecurePauseAutoResumeBackgroundTask",
+            "SecureCaptureExpiryBackgroundTask",
             "ContactCenterVoiceLifecycleParticipant",
             "ContactCenterHub",
             "AsteriskContactCenterVoiceProvider",

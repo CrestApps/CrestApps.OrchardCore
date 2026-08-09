@@ -212,6 +212,16 @@
       "reEnable": "The fresh shell reopens admission and the scheduled sweep resumes, auto-resuming any recording still paused past the configured secure-pause ceiling.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "implemented-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.SecureCapture",
+      "component": "SecureCaptureExpiryBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "The pre-disable participant closes base Contact Center admission before descriptor mutation; new expiry sweeps return without claiming collecting captures.",
+      "drain": "Disable waits up to the configured tenant drain timeout for the admitted expiry sweep to release its lock.",
+      "reEnable": "The fresh shell reopens admission and the scheduled sweep resumes, expiring any capture still collecting past its window and resuming a recording pause it engaged.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "implemented-r3"
     }
   ]
 }

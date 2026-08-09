@@ -68,5 +68,10 @@ public static partial class ContactCenterConstants
         /// The real-time agent and supervisor experience component.
         /// </summary>
         public const string RealTime = "RealTime";
+
+        /// <summary>
+        /// The agent-assisted secure data capture component.
+        /// </summary>
+        public const string SecureCapture = "SecureCapture";
     }
 }

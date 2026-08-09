@@ -108,6 +108,13 @@ public sealed class ContactCenterRetentionOptions
     public int EventMetricRetentionDays { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of days to retain secure capture sessions that have reached a terminal state
+    /// (completed, cancelled, or expired), measured from the time they settled. A collecting capture is never
+    /// purged; only settled captures, which hold no raw sensitive value, are eligible.
+    /// </summary>
+    public int SecureCaptureRetentionDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of days to retain event deduplication markers. A marker may only be purged once
     /// no redelivery of the same event can still arrive, so this window is raised to the outbox delivery
     /// envelope described by <see cref="ProcessedEventDeliveryEnvelopeDays"/> when that envelope is longer.

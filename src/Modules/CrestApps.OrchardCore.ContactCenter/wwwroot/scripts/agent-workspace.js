@@ -234,7 +234,8 @@
       var showSecurePause = config.canSecurePause === true && active.supportsSecurePause === true;
       var recordingBadge = showSecurePause ? '<span class="cc-recording ' + (isPaused ? 'is-paused' : 'is-active') + '" data-cc-recording-badge>' + '<i class="fa-solid ' + (isPaused ? 'fa-circle-pause' : 'fa-circle') + '" aria-hidden="true"></i> ' + escapeHtml(isPaused ? label('recordingPaused', 'Recording paused for sensitive-data capture') : label('recordingActive', 'Recording')) + '</span>' : '';
       var secureButton = showSecurePause ? '<button type="button" class="btn btn-sm ' + (isPaused ? 'btn-success' : 'btn-outline-warning') + '" data-cc-secure-pause="' + (isPaused ? 'resume' : 'pause') + '" data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid ' + (isPaused ? 'fa-play' : 'fa-pause') + '"></i> ' + escapeHtml(isPaused ? label('secureResume', 'Resume recording') : label('securePause', 'Pause recording')) + '</button>' : '';
-      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + secureButton + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
+      var secureCaptureButton = config.canInitiateSecureCapture === true ? '<button type="button" class="btn btn-sm btn-outline-primary" data-cc-secure-capture="begin" data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid fa-shield-halved"></i> ' + escapeHtml(label('secureCapture', 'Collect data securely')) + '</button>' : '';
+      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + secureButton + secureCaptureButton + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
     }
     function renderHistory() {
       if (!refs.history || !state) {
@@ -364,6 +365,51 @@
         setSecureButtonDisabled(false);
       });
     }
+    function beginSecureCapture(interactionId) {
+      if (!config.beginSecureCaptureUrl || !interactionId) {
+        return;
+      }
+      setSecureButtonDisabled(true);
+      post(config.beginSecureCaptureUrl, config.antiForgeryToken, {
+        interactionId: interactionId,
+        fields: config.secureCaptureFields || ''
+      }).then(function (response) {
+        if (!response.ok) {
+          showError(label('secureCaptureFailed', 'The secure capture could not be started. Refresh the workspace and try again.'));
+          return refresh();
+        }
+        return response.json().then(function (result) {
+          if (!result || result.succeeded !== true || !result.captureUrl) {
+            showError(label('secureCaptureFailed', 'The secure capture could not be started. Refresh the workspace and try again.'));
+          } else {
+            clearError();
+            presentSecureCaptureLink(absoluteUrl(result.captureUrl));
+          }
+          return refresh();
+        }, function () {
+          return refresh();
+        });
+      }).catch(function () {
+        showError(label('secureCaptureFailed', 'The secure capture could not be started. Refresh the workspace and try again.'));
+        setSecureButtonDisabled(false);
+      });
+    }
+    function presentSecureCaptureLink(url) {
+      if (window.navigator && window.navigator.clipboard && window.navigator.clipboard.writeText) {
+        window.navigator.clipboard.writeText(url).then(function () {}, function () {});
+      }
+      window.prompt(label('secureCaptureStarted', 'Share this one-time secure link with the customer:'), url);
+    }
+    function absoluteUrl(url) {
+      if (!url) {
+        return url;
+      }
+      try {
+        return new URL(url, window.location.origin).toString();
+      } catch (error) {
+        return url;
+      }
+    }
     function handleSecureResponse(response, failureKey, failureFallback) {
       if (!response.ok) {
         showError(label(failureKey, failureFallback));
@@ -384,7 +430,7 @@
       if (!refs.active) {
         return;
       }
-      refs.active.querySelectorAll('[data-cc-secure-pause]').forEach(function (button) {
+      refs.active.querySelectorAll('[data-cc-secure-pause],[data-cc-secure-capture]').forEach(function (button) {
         button.disabled = disabled;
       });
     }
@@ -393,6 +439,12 @@
         return;
       }
       refs.active.addEventListener('click', function (event) {
+        var captureButton = event.target.closest ? event.target.closest('[data-cc-secure-capture]') : null;
+        if (captureButton) {
+          event.preventDefault();
+          beginSecureCapture(captureButton.getAttribute('data-cc-interaction-id'));
+          return;
+        }
         var button = event.target.closest ? event.target.closest('[data-cc-secure-pause]') : null;
         if (!button) {
           return;

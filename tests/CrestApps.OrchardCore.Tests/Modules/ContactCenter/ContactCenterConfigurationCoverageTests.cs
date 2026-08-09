@@ -37,6 +37,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["ProviderCommand"] = "Runtime state. Commands issued to a telephony provider for a live call.",
         ["ProviderWebhookInboxMessage"] = "Runtime state. Provider callbacks awaiting processing.",
         ["QueueItem"] = "Runtime state. Work currently waiting in a queue.",
+        ["SecureCaptureSession"] = "Runtime state. One bounded capture of sensitive data a customer entered on a secure page; it is produced by traffic, holds no raw value, and must never travel between environments.",
     };
 
     /// <summary>

@@ -74,6 +74,12 @@ public sealed class AgentWorkspaceController : Controller
         var canSecurePause = recordingSettings.AllowAgentSecurePause &&
             await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SecurePauseRecording);
 
+        var secureCaptureSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<SecureCaptureSettings>();
+        var beginSecureCaptureUrl = Url.RouteUrl(SecureCaptureEndpoints.BeginRouteName);
+        var canInitiateSecureCapture = secureCaptureSettings.Enabled &&
+            beginSecureCaptureUrl is not null &&
+            await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.InitiateSecureCapture);
+
         var viewModel = new AgentWorkspaceIndexViewModel
         {
             DisplayName = displayName,
@@ -85,6 +91,9 @@ public sealed class AgentWorkspaceController : Controller
             ResumeRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.ResumeRecordingRouteName),
             CanSecurePause = canSecurePause,
             RequirePauseReason = recordingSettings.RequirePauseReason,
+            BeginSecureCaptureUrl = beginSecureCaptureUrl,
+            CanInitiateSecureCapture = canInitiateSecureCapture,
+            SecureCaptureFields = "CreditCardNumber,CardExpiry,CardSecurityCode",
             AcceptOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.AcceptOfferRouteName),
             DeclineOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.DeclineOfferRouteName),
             SupervisorDashboardUrl = Url.Action(nameof(SupervisorDashboardController.Index), "SupervisorDashboard"),

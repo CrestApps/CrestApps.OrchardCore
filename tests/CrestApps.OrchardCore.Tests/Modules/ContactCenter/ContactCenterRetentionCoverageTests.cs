@@ -55,6 +55,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterProcessedEvent"] = "ProcessedUtc",
         ["CallbackRequest"] = "ModifiedUtc",
         ["ContactCenterWorkState"] = "ModifiedUtc",
+        ["SecureCaptureSession"] = "ModifiedUtc",
     };
 
     /// <summary>
@@ -84,6 +85,9 @@ public sealed class ContactCenterRetentionCoverageTests
         // Promotion hands the work to an activity, which is the durable record from then on, so a promoted
         // callback is settled. Nothing yet moves a callback to an outcome status.
         ["CallbackRequest"] = ["CallbackRequestStatus.Scheduled", "CallbackRequestStatus.Completed", "CallbackRequestStatus.Canceled", "CallbackRequestStatus.Failed"],
+        // A capture is settled once the customer completed it, the agent cancelled it, or its window expired; a
+        // collecting capture is the live claim and is never purged.
+        ["SecureCaptureSession"] = ["SecureCaptureState.Completed", "SecureCaptureState.Cancelled", "SecureCaptureState.Expired"],
     };
 
     /// <summary>
@@ -174,6 +178,12 @@ public sealed class ContactCenterRetentionCoverageTests
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterWorkStateService.cs", "MutateAsync", "workState.ModifiedUtc = "),
         ],
+        ["SecureCaptureSession"] =
+        [
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "SubmitAsync", "session.ModifiedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "CancelAsync", "session.ModifiedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "ExpireDueAsync", "session.ModifiedUtc = "),
+        ],
     };
 
     /// <summary>
@@ -199,6 +209,9 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterEventMetric"] = (false, false, 0),
         ["ContactCenterEventMetricDelta"] = (false, false, 0),
         ["ContactCenterWorkState"] = (false, false, 0),
+        // A settled capture holds no raw sensitive value, only a masked representation, and its audit trail is
+        // held under the same legal hold as the interaction it belongs to.
+        ["SecureCaptureSession"] = (true, false, 0),
     };
 
     [Fact]
@@ -646,6 +659,7 @@ public sealed class ContactCenterRetentionCoverageTests
             EventMetricRetentionDays = 1,
             ProcessedEventRetentionDays = 1,
             WorkStateRetentionDays = 1,
+            SecureCaptureRetentionDays = 1,
             ProcessedEventDeliveryEnvelopeDays = 3,
             ProjectionReplayHorizonDays = replayHorizonDays,
             LegalHoldMinimumDays = legalHoldDays,

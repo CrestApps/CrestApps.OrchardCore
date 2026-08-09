@@ -293,5 +293,23 @@ public static partial class ContactCenterConstants
         /// Raised when a supervisor stops a monitoring, whisper, or barge engagement on a live call.
         /// </summary>
         public const string SupervisorMonitorStopped = "SupervisorMonitorStopped";
+
+        /// <summary>
+        /// Raised when an agent starts an agent-assisted secure capture, sending the customer to a secure page to
+        /// enter sensitive data (such as a payment card or a national identifier) so it is masked from the agent
+        /// and never enters the recording.
+        /// </summary>
+        public const string SecureCaptureStarted = "SecureCaptureStarted";
+
+        /// <summary>
+        /// Raised when a customer completes a secure capture. The event carries only the masked representation and
+        /// the tokenization reference; the raw sensitive value is never part of the event.
+        /// </summary>
+        public const string SecureCaptureCompleted = "SecureCaptureCompleted";
+
+        /// <summary>
+        /// Raised when a secure capture is cancelled by the agent or expires before the customer completes it.
+        /// </summary>
+        public const string SecureCaptureCancelled = "SecureCaptureCancelled";
     }
 }

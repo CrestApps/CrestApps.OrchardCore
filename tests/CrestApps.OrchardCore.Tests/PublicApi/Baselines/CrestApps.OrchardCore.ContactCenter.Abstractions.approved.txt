@@ -25,6 +25,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Queues = "Queues";
             public const string RealTime = "RealTime";
             public const string Routing = "Routing";
+            public const string SecureCapture = "SecureCapture";
             public const string Voice = "Voice";
         }
         public static class ConferenceMetadata
@@ -77,6 +78,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string QueueItemOverflowed = "QueueItemOverflowed";
             public const string QueueItemReserved = "QueueItemReserved";
             public const string RecordingAccessed = "RecordingAccessed";
+            public const string RecordingAutoResumed = "RecordingAutoResumed";
             public const string RecordingDenied = "RecordingDenied";
             public const string RecordingErased = "RecordingErased";
             public const string RecordingErasureDenied = "RecordingErasureDenied";
@@ -86,6 +88,9 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string RecordingStarted = "RecordingStarted";
             public const string RecordingStopped = "RecordingStopped";
             public const string RoutingDecisionMade = "RoutingDecisionMade";
+            public const string SecureCaptureCancelled = "SecureCaptureCancelled";
+            public const string SecureCaptureCompleted = "SecureCaptureCompleted";
+            public const string SecureCaptureStarted = "SecureCaptureStarted";
             public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";
             public const string SupervisorMonitorStopped = "SupervisorMonitorStopped";
         }
@@ -101,6 +106,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
             public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
             public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
+            public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
             public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
             public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
             public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
@@ -219,6 +225,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.Task NotifyOfferRevokedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyPresenceChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyQueueStatsChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.QueueStatsNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyRecordingStateChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingStateNotification notification, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterVoiceAttendedTransferProvider
     {
@@ -328,6 +335,10 @@ namespace CrestApps.OrchardCore.ContactCenter
     public interface IRecordingErasureGuard
     {
         System.Threading.Tasks.Task<bool> IsRecordingErasedAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISecureCaptureTokenSink
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models
@@ -523,6 +534,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Monitor = 512,
         Whisper = 1024,
         Barge = 2048,
+        RecordingPause = 4096,
+        SecureCapture = 8192,
+        SecureCaptureMasking = 16384,
     }
     public sealed class ContactCenterVoiceProviderResult
     {
@@ -719,6 +733,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string QueueId { get; set; }
         public int WaitingCount { get; set; }
     }
+    public sealed class RecordingStateNotification
+    {
+        public RecordingStateNotification() { }
+        public string AgentId { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsSecurePauseActive { get; set; }
+        public string RecordingState { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+        public string UserId { get; set; }
+    }
     public enum ReservationStatus
     {
         Pending = 0,
@@ -726,6 +750,34 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Rejected = 2,
         Expired = 3,
         Canceled = 4,
+    }
+    public enum SecureCaptureField
+    {
+        CreditCardNumber = 0,
+        CardExpiry = 1,
+        CardSecurityCode = 2,
+        BankAccountNumber = 3,
+        NationalId = 4,
+        Custom = 5,
+    }
+    public enum SecureCaptureState
+    {
+        Collecting = 0,
+        Completed = 1,
+        Cancelled = 2,
+        Expired = 3,
+    }
+    public sealed class SecureCaptureTokenResult
+    {
+        public SecureCaptureTokenResult() { }
+        public string ErrorMessage { get; set; }
+        public bool IsRetainable { get; set; }
+        public string MaskedValue { get; set; }
+        public bool Succeeded { get; set; }
+        public string Token { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult Success(string token, string maskedValue) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult SuccessNonRetainable() { }
     }
     public enum UnansweredOfferAction
     {

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Tests.Framework.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -385,6 +386,14 @@ public sealed class ContactCenterOptionsValidationTests
         if (parameterType.IsGenericType && parameterType.GetGenericTypeDefinition() == typeof(IStringLocalizer<>))
         {
             return CreateLocalizer(parameterType);
+        }
+
+        if (parameterType == typeof(IHostEnvironment))
+        {
+            var hostEnvironment = new Mock<IHostEnvironment>();
+            hostEnvironment.SetupGet(e => e.EnvironmentName).Returns(Environments.Production);
+
+            return hostEnvironment.Object;
         }
 
         Assert.Fail(

@@ -135,6 +135,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.SecureCapture,
+    Name = "Contact Center Secure Data Capture",
+    Description = "Adds agent-assisted secure data capture: an agent sends a live customer to a dedicated secure page to enter sensitive data (such as a card number), which is tokenized at submission so the agent, the supervisor, and the recording never see the raw value.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.AgentDesktop,
+        ContactCenterConstants.Feature.Recording,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Supervision,
     Name = "Contact Center Supervision & Live Dashboard",
     Description = "Adds the real-time supervisor dashboard with live queue and agent monitoring, plus provider-gated monitor, whisper, and barge actions.",

@@ -53,6 +53,12 @@ public static partial class ContactCenterConstants
         public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
 
         /// <summary>
+        /// The identifier of the agent-assisted secure data capture feature that lets a customer enter sensitive
+        /// data on a secure page so it is masked from the agent and never enters the recording.
+        /// </summary>
+        public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
+
+        /// <summary>
         /// The identifier of the CRM-integrated agent desktop feature.
         /// </summary>
         public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";

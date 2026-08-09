@@ -329,6 +329,31 @@
       "OrchardCore.Resources",
       "OrchardCore.Users",
       "OrchardCore.Workflows"
+    ],
+    "CrestApps.OrchardCore.ContactCenter.SecureCapture": [
+      "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+      "CrestApps.OrchardCore.ContactCenter.Agents",
+      "CrestApps.OrchardCore.ContactCenter.Queues",
+      "CrestApps.OrchardCore.ContactCenter.RealTime",
+      "CrestApps.OrchardCore.ContactCenter.Recording",
+      "CrestApps.OrchardCore.ContactCenter.Voice",
+      "CrestApps.OrchardCore.ContentFields",
+      "CrestApps.OrchardCore.Omnichannel",
+      "CrestApps.OrchardCore.Omnichannel.Activities",
+      "CrestApps.OrchardCore.Omnichannel.Managements",
+      "CrestApps.OrchardCore.PhoneNumbers",
+      "CrestApps.OrchardCore.Resources",
+      "CrestApps.OrchardCore.SignalR",
+      "CrestApps.OrchardCore.Telephony",
+      "CrestApps.OrchardCore.Telephony.SoftPhone",
+      "CrestApps.OrchardCore.TimeZones",
+      "CrestApps.OrchardCore.Users",
+      "OrchardCore.ContentTypes",
+      "OrchardCore.Contents",
+      "OrchardCore.Flows",
+      "OrchardCore.Resources",
+      "OrchardCore.Users"
     ]
   }
 }

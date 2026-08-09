@@ -54,6 +54,22 @@ public sealed class AgentWorkspaceIndexViewModel
     public bool RequirePauseReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the URL that begins an agent-assisted secure data capture on the agent's own live interaction.
+    /// </summary>
+    public string BeginSecureCaptureUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current agent may begin a secure data capture, combining the
+    /// agent's permission with the tenant secure-capture setting and whether the feature is enabled.
+    /// </summary>
+    public bool CanInitiateSecureCapture { get; set; }
+
+    /// <summary>
+    /// Gets or sets the comma-separated field kinds a secure capture collects by default, in submission order.
+    /// </summary>
+    public string SecureCaptureFields { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL that accepts an offered inbound call and connects the media.
     /// </summary>
     public string AcceptOfferUrl { get; set; }

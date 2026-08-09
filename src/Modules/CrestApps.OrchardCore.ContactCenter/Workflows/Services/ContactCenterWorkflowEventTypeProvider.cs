@@ -34,6 +34,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
         var calls = new SelectListGroup { Name = S["Call"].Value };
         var recording = new SelectListGroup { Name = S["Recording"].Value };
         var supervision = new SelectListGroup { Name = S["Supervision"].Value };
+        var secureCapture = new SelectListGroup { Name = S["Secure capture"].Value };
 
         return
         [
@@ -104,6 +105,10 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
 
             new SelectListItem(S["Supervisor monitor started"].Value, ContactCenterConstants.Events.SupervisorMonitorStarted) { Group = supervision },
             new SelectListItem(S["Supervisor monitor stopped"].Value, ContactCenterConstants.Events.SupervisorMonitorStopped) { Group = supervision },
+
+            new SelectListItem(S["Secure capture started"].Value, ContactCenterConstants.Events.SecureCaptureStarted) { Group = secureCapture },
+            new SelectListItem(S["Secure capture completed"].Value, ContactCenterConstants.Events.SecureCaptureCompleted) { Group = secureCapture },
+            new SelectListItem(S["Secure capture cancelled"].Value, ContactCenterConstants.Events.SecureCaptureCancelled) { Group = secureCapture },
         ];
     }
 }

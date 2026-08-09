@@ -29,6 +29,9 @@
         ["resumeRecordingUrl"] = Model.ResumeRecordingUrl,
         ["canSecurePause"] = Model.CanSecurePause,
         ["requirePauseReason"] = Model.RequirePauseReason,
+        ["beginSecureCaptureUrl"] = Model.BeginSecureCaptureUrl,
+        ["canInitiateSecureCapture"] = Model.CanInitiateSecureCapture,
+        ["secureCaptureFields"] = Model.SecureCaptureFields,
         ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
         ["antiForgeryToken"] = antiForgeryToken,
         ["strings"] = new Dictionary<string, string>
@@ -60,6 +63,9 @@
             ["pauseReasonPrompt"] = T["Enter a reason for pausing recording"].Value,
             ["securePauseFailed"] = T["The recording could not be paused. Refresh the workspace and try again."].Value,
             ["secureResumeFailed"] = T["The recording could not be resumed. Refresh the workspace and try again."].Value,
+            ["secureCapture"] = T["Collect data securely"].Value,
+            ["secureCaptureStarted"] = T["Share this one-time secure link with the customer:"].Value,
+            ["secureCaptureFailed"] = T["The secure capture could not be started. Refresh the workspace and try again."].Value,
         },
     };
 }
