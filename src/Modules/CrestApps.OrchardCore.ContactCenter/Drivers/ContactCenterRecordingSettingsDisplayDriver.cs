@@ -59,6 +59,9 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
                 model.RequireExplicitConsent = settings.RequireExplicitConsent;
                 model.RetentionDays = settings.RetentionDays;
                 model.LegalHoldByDefault = settings.LegalHoldByDefault;
+                model.AllowAgentSecurePause = settings.AllowAgentSecurePause;
+                model.MaxSecurePauseSeconds = settings.MaxSecurePauseSeconds;
+                model.RequirePauseReason = settings.RequirePauseReason;
             })
             .Location("Content:4#Recording governance")
             .OnGroup(SettingsGroupId)
@@ -98,6 +101,9 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
             settings.RequireExplicitConsent = model.RequireExplicitConsent;
             settings.RetentionDays = Math.Clamp(model.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
             settings.LegalHoldByDefault = model.LegalHoldByDefault;
+            settings.AllowAgentSecurePause = model.AllowAgentSecurePause;
+            settings.MaxSecurePauseSeconds = Math.Clamp(model.MaxSecurePauseSeconds, 0, ContactCenterRecordingSettings.MaxSecurePauseSecondsLimit);
+            settings.RequirePauseReason = model.RequirePauseReason;
         }
 
         return Edit(site, settings, context);

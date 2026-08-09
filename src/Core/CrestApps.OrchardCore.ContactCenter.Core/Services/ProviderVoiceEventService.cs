@@ -556,8 +556,28 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         if (providerEvent.RecordingState.HasValue)
         {
+            var previousRecordingState = interaction.RecordingState;
+
             session.RecordingState = providerEvent.RecordingState.Value;
             interaction.RecordingState = providerEvent.RecordingState.Value;
+
+            // Maintain the same secure-pause invariants the recording service enforces, so a provider-reported
+            // pause is visible to the auto-resume guard (which selects on a non-null timestamp) and a provider
+            // resume or stop never leaves a stale pause timestamp or justification behind. Stamp the pause time
+            // only on the transition into paused: a provider that re-emits Paused on ordinary call updates must
+            // not keep pushing the auto-resume deadline forward and let a pause outlive its configured window.
+            if (providerEvent.RecordingState.Value == RecordingState.Paused)
+            {
+                if (previousRecordingState != RecordingState.Paused || interaction.RecordingPausedUtc is null)
+                {
+                    interaction.RecordingPausedUtc = now;
+                }
+            }
+            else
+            {
+                interaction.RecordingPausedUtc = null;
+                interaction.RecordingPauseReason = null;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(providerEvent.RecordingReference))

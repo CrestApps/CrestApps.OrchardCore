@@ -244,6 +244,12 @@ public static partial class ContactCenterConstants
         public const string RecordingResumed = "RecordingResumed";
 
         /// <summary>
+        /// Raised when a paused recording is automatically resumed by the platform after the tenant's maximum
+        /// secure-pause window elapses, so a sensitive-data pause can never silently suppress capture forever.
+        /// </summary>
+        public const string RecordingAutoResumed = "RecordingAutoResumed";
+
+        /// <summary>
         /// Raised when call recording stops.
         /// </summary>
         public const string RecordingStopped = "RecordingStopped";

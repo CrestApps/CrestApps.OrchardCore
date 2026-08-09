@@ -245,7 +245,8 @@
         onPresenceChanged: refresh,
         onOfferReceived: refresh,
         onOfferRevoked: refresh,
-        onQueueStatsChanged: refresh
+        onQueueStatsChanged: refresh,
+        onRecordingStateChanged: refresh
       });
     }
     refresh();

@@ -124,6 +124,19 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         await _hubContext.Clients.Group(UserGroup(userId)).MembershipChanged();
     }
 
+    /// <inheritdoc/>
+    public async Task NotifyRecordingStateChangedAsync(RecordingStateNotification notification, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        if (!string.IsNullOrEmpty(notification.UserId))
+        {
+            await _hubContext.Clients.Group(UserGroup(notification.UserId)).RecordingStateChanged(notification);
+        }
+
+        await _hubContext.Clients.Group(SupervisorsGroup).RecordingStateChanged(notification);
+    }
+
     private string SupervisorsGroup
     {
         get

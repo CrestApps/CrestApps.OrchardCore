@@ -20,6 +20,8 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageSkills,
         ContactCenterPermissions.ManageDialer,
         ContactCenterPermissions.SignIntoQueues,
+        ContactCenterPermissions.SecurePauseRecording,
+        ContactCenterPermissions.InitiateSecureCapture,
         ContactCenterPermissions.MonitorContactCenter,
         ContactCenterPermissions.TransferExternally,
         ContactCenterPermissions.ViewReports,
@@ -41,6 +43,8 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
                 [
                     ContactCenterPermissions.ViewInteractions,
                     ContactCenterPermissions.SignIntoQueues,
+                    ContactCenterPermissions.SecurePauseRecording,
+                    ContactCenterPermissions.InitiateSecureCapture,
                 ],
             },
             new PermissionStereotype

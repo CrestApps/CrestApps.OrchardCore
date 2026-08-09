@@ -281,6 +281,7 @@ public sealed class RecordingErasurePersistenceTests
         await interactionMigration.UpdateFrom2Async();
         await interactionMigration.UpdateFrom3Async();
         await interactionMigration.UpdateFrom4Async();
+        await interactionMigration.UpdateFrom5Async();
         await callSessionMigration.CreateAsync();
         await eventMigration.CreateAsync();
         await eventMigration.UpdateFrom2Async();

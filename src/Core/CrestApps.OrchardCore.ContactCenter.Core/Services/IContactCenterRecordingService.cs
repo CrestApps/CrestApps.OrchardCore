@@ -33,6 +33,16 @@ public interface IContactCenterRecordingService
     Task<RecordingCommandResult> ResumeAsync(string interactionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Resumes a paused recording as an automatic platform action after the tenant's maximum secure-pause window
+    /// elapses, publishing the auto-resume event instead of the agent-driven resume event so the audit trail
+    /// distinguishes a supervised resume from a safety-guard resume.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The outcome of the recording state change, including an explicit indeterminate result when the command was interrupted.</returns>
+    Task<RecordingCommandResult> AutoResumeAsync(string interactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Stops recording the interaction.
     /// </summary>
     /// <param name="interactionId">The interaction identifier.</param>

@@ -46,4 +46,12 @@ public interface IContactCenterRealTimeNotifier
         string userId,
         IEnumerable<string> removedQueueIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Broadcasts a recording state change for a live interaction to the handling agent's connections and to
+    /// supervisors, so both audiences can reflect a sensitive-data pause in real time.
+    /// </summary>
+    /// <param name="notification">The recording state change.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task NotifyRecordingStateChangedAsync(RecordingStateNotification notification, CancellationToken cancellationToken = default);
 }

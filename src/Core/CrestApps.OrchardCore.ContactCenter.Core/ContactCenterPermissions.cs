@@ -53,6 +53,18 @@ public static class ContactCenterPermissions
     public static readonly Permission SignIntoQueues = new("ContactCenterSignIntoQueues", "Sign in to Contact Center queues and campaigns");
 
     /// <summary>
+    /// Grants an agent the ability to pause and resume recording on their own live interaction to suppress
+    /// capture while sensitive customer data (such as a payment card or a national identifier) is handled.
+    /// </summary>
+    public static readonly Permission SecurePauseRecording = new("ContactCenterSecurePauseRecording", "Pause recording on own live interactions", [SignIntoQueues]);
+
+    /// <summary>
+    /// Grants an agent the ability to start an agent-assisted secure capture of sensitive customer input on
+    /// their own live interaction so the data is masked from the agent and never enters the recording.
+    /// </summary>
+    public static readonly Permission InitiateSecureCapture = new("ContactCenterInitiateSecureCapture", "Initiate secure capture on own live interactions", [SignIntoQueues]);
+
+    /// <summary>
     /// Grants read-only, real-time visibility into queues, agents, and live interactions for supervisors.
     /// </summary>
     public static readonly Permission MonitorContactCenter = new("MonitorContactCenter", "Monitor the Contact Center in real time", [ManageContactCenter]);

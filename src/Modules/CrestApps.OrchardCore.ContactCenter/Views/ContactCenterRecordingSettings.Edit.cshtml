@@ -43,3 +43,28 @@
         <span class="hint d-block">@T["When enabled, captured recordings begin under legal hold and are exempt from retention-driven and subject-request erasure until the hold is released."]</span>
     </div>
 </div>
+
+<h5 class="mt-4">@T["Agent secure pause"]</h5>
+<p class="hint">@T["Secure pause lets an agent suppress recording during a sensitive-data capture, such as a card or Social Security number, so the sensitive audio is never captured. Every pause and resume is authorized against the agent's own live interaction and recorded as an audit event."]</p>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="AllowAgentSecurePause" class="form-check-input" />
+        <label asp-for="AllowAgentSecurePause" class="form-check-label">@T["Allow agents to pause recording"]</label>
+        <span class="hint d-block">@T["When disabled, only automation or the provider may suppress capture, and the agent-facing secure-pause control is never shown."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MaxSecurePauseSeconds" class="form-label">@T["Maximum secure-pause window (seconds)"]</label>
+    <input type="number" min="0" asp-for="MaxSecurePauseSeconds" class="form-control" />
+    <span class="hint">@T["The number of seconds a recording may remain paused before the platform automatically resumes it, so a pause that is never resumed cannot suppress capture for the rest of the call. Zero keeps a pause active until it is explicitly resumed."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" asp-for="RequirePauseReason" class="form-check-input" />
+        <label asp-for="RequirePauseReason" class="form-check-label">@T["Require a reason to pause"]</label>
+        <span class="hint d-block">@T["When enabled, an agent must supply a reason when pausing recording, so the suppression gap is always accompanied by an auditable justification."]</span>
+    </div>
+</div>

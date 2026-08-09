@@ -128,4 +128,17 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The oldest active provider-backed interactions bounded by <paramref name="maxCount"/>.</returns>
     Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists interactions whose recording has been paused since at or before the specified cutoff, oldest pause
+    /// first and bounded for the secure-pause auto-resume sweep.
+    /// </summary>
+    /// <param name="pausedBeforeUtc">The exclusive-of-newer cutoff; only pauses at or before this instant are returned.</param>
+    /// <param name="maxCount">The maximum number of interactions to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The oldest paused-recording interactions bounded by <paramref name="maxCount"/>.</returns>
+    Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+        DateTime pausedBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default);
 }

@@ -43,6 +43,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             "ProviderCallStateReconciliationBackgroundTask",
             "ProviderCommandRecoveryBackgroundTask",
             "ReservationExpiryBackgroundTask",
+            "SecurePauseAutoResumeBackgroundTask",
             "ContactCenterVoiceLifecycleParticipant",
             "ContactCenterHub",
             "AsteriskContactCenterVoiceProvider",

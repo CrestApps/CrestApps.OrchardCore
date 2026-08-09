@@ -61,4 +61,21 @@ public sealed class WorkspaceActiveInteractionViewModel
     /// Gets or sets the UTC time the interaction was answered or connected.
     /// </summary>
     public DateTime? AnsweredUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recording state of the interaction, expressed as its stable name, so the desktop can
+    /// present the correct secure-pause control state.
+    /// </summary>
+    public string RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether recording is currently paused for a sensitive-data capture.
+    /// </summary>
+    public bool IsRecordingPaused { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the interaction's voice provider supports agent secure pause, so
+    /// the desktop shows the control only when a pause could actually be executed.
+    /// </summary>
+    public bool SupportsSecurePause { get; set; }
 }

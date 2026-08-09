@@ -220,7 +220,7 @@
         return;
       }
       var active = state.activeInteraction;
-      var signature = active ? active.interactionId + ':' + active.status : null;
+      var signature = active ? active.interactionId + ':' + active.status + ':' + (active.recordingState || '') : null;
       if (signature === activeSignature) {
         return;
       }
@@ -230,7 +230,11 @@
         return;
       }
       var inbound = active.direction === 'Inbound';
-      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
+      var isPaused = active.isRecordingPaused === true;
+      var showSecurePause = config.canSecurePause === true && active.supportsSecurePause === true;
+      var recordingBadge = showSecurePause ? '<span class="cc-recording ' + (isPaused ? 'is-paused' : 'is-active') + '" data-cc-recording-badge>' + '<i class="fa-solid ' + (isPaused ? 'fa-circle-pause' : 'fa-circle') + '" aria-hidden="true"></i> ' + escapeHtml(isPaused ? label('recordingPaused', 'Recording paused for sensitive-data capture') : label('recordingActive', 'Recording')) + '</span>' : '';
+      var secureButton = showSecurePause ? '<button type="button" class="btn btn-sm ' + (isPaused ? 'btn-success' : 'btn-outline-warning') + '" data-cc-secure-pause="' + (isPaused ? 'resume' : 'pause') + '" data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid ' + (isPaused ? 'fa-play' : 'fa-pause') + '"></i> ' + escapeHtml(isPaused ? label('secureResume', 'Resume recording') : label('securePause', 'Pause recording')) + '</button>' : '';
+      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + secureButton + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
     }
     function renderHistory() {
       if (!refs.history || !state) {
@@ -324,6 +328,84 @@
         return refresh();
       }).catch(function () {});
     }
+    function securePause(interactionId) {
+      if (!config.pauseRecordingUrl || !interactionId) {
+        return;
+      }
+      var reason = '';
+      if (config.requirePauseReason === true) {
+        reason = window.prompt(label('pauseReasonPrompt', 'Enter a reason for pausing recording'), '') || '';
+        if (!reason.trim()) {
+          return;
+        }
+      }
+      setSecureButtonDisabled(true);
+      post(config.pauseRecordingUrl, config.antiForgeryToken, {
+        interactionId: interactionId,
+        reason: reason
+      }).then(function (response) {
+        return handleSecureResponse(response, 'securePauseFailed', 'The recording could not be paused. Refresh the workspace and try again.');
+      }).catch(function () {
+        showError(label('securePauseFailed', 'The recording could not be paused. Refresh the workspace and try again.'));
+        setSecureButtonDisabled(false);
+      });
+    }
+    function secureResume(interactionId) {
+      if (!config.resumeRecordingUrl || !interactionId) {
+        return;
+      }
+      setSecureButtonDisabled(true);
+      post(config.resumeRecordingUrl, config.antiForgeryToken, {
+        interactionId: interactionId
+      }).then(function (response) {
+        return handleSecureResponse(response, 'secureResumeFailed', 'The recording could not be resumed. Refresh the workspace and try again.');
+      }).catch(function () {
+        showError(label('secureResumeFailed', 'The recording could not be resumed. Refresh the workspace and try again.'));
+        setSecureButtonDisabled(false);
+      });
+    }
+    function handleSecureResponse(response, failureKey, failureFallback) {
+      if (!response.ok) {
+        showError(label(failureKey, failureFallback));
+        return refresh();
+      }
+      return response.json().then(function (result) {
+        if (!result || result.succeeded !== true) {
+          showError(label(failureKey, failureFallback));
+        } else {
+          clearError();
+        }
+        return refresh();
+      }, function () {
+        return refresh();
+      });
+    }
+    function setSecureButtonDisabled(disabled) {
+      if (!refs.active) {
+        return;
+      }
+      refs.active.querySelectorAll('[data-cc-secure-pause]').forEach(function (button) {
+        button.disabled = disabled;
+      });
+    }
+    function bindSecureControls() {
+      if (!refs.active) {
+        return;
+      }
+      refs.active.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-cc-secure-pause]') : null;
+        if (!button) {
+          return;
+        }
+        event.preventDefault();
+        var interactionId = button.getAttribute('data-cc-interaction-id');
+        if (button.getAttribute('data-cc-secure-pause') === 'resume') {
+          secureResume(interactionId);
+        } else {
+          securePause(interactionId);
+        }
+      });
+    }
     function bindPresenceMenu() {
       var button = refs.presenceButton;
       var menu = refs.presenceMenu;
@@ -389,6 +471,7 @@
       });
     }
     bindPresenceMenu();
+    bindSecureControls();
     if (window.contactCenterRealTime && config.hubUrl) {
       window.contactCenterRealTime.connect({
         hubUrl: config.hubUrl,
@@ -417,7 +500,8 @@
           refresh();
         },
         onOfferRevoked: refresh,
-        onQueueStatsChanged: refresh
+        onQueueStatsChanged: refresh,
+        onRecordingStateChanged: refresh
       });
     }
     refresh();

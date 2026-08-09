@@ -1,5 +1,6 @@
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
@@ -26,6 +28,7 @@ public sealed class AgentWorkspaceController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly HubRouteManager _hubRouteManager;
+    private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentWorkspaceController"/> class.
@@ -35,18 +38,21 @@ public sealed class AgentWorkspaceController : Controller
     /// <param name="userManager">The user manager used to resolve the current Orchard user.</param>
     /// <param name="displayNameProvider">The display name provider used to render the agent's full name.</param>
     /// <param name="hubRouteManager">The hub route manager used to resolve the real-time hub URL.</param>
+    /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
     public AgentWorkspaceController(
         IAuthorizationService authorizationService,
         IAgentStateReasonCodeManager reasonCodeManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        HubRouteManager hubRouteManager)
+        HubRouteManager hubRouteManager,
+        ISiteService siteService)
     {
         _authorizationService = authorizationService;
         _reasonCodeManager = reasonCodeManager;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _hubRouteManager = hubRouteManager;
+        _siteService = siteService;
     }
 
     /// <summary>
@@ -64,6 +70,10 @@ public sealed class AgentWorkspaceController : Controller
         var reasonCodes = await _reasonCodeManager.ListEnabledAsync();
         var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
 
+        var recordingSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterRecordingSettings>();
+        var canSecurePause = recordingSettings.AllowAgentSecurePause &&
+            await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SecurePauseRecording);
+
         var viewModel = new AgentWorkspaceIndexViewModel
         {
             DisplayName = displayName,
@@ -71,6 +81,10 @@ public sealed class AgentWorkspaceController : Controller
             HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
             StateUrl = Url.RouteUrl(AgentWorkspaceEndpoints.StateRouteName),
             SetPresenceUrl = Url.RouteUrl(AgentWorkspaceEndpoints.SetPresenceRouteName),
+            PauseRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.PauseRecordingRouteName),
+            ResumeRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.ResumeRecordingRouteName),
+            CanSecurePause = canSecurePause,
+            RequirePauseReason = recordingSettings.RequirePauseReason,
             AcceptOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.AcceptOfferRouteName),
             DeclineOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.DeclineOfferRouteName),
             SupervisorDashboardUrl = Url.Action(nameof(SupervisorDashboardController.Index), "SupervisorDashboard"),

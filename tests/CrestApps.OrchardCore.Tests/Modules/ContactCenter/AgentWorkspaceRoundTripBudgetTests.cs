@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -232,6 +233,7 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                 _contentManager.Object,
                 MockUserManager(),
                 _displayNameProvider.Object,
+                Mock.Of<IContactCenterVoiceProviderResolver>(),
                 new StubClock(),
                 CreateLinkGenerator(),
                 CreateHttpContext());

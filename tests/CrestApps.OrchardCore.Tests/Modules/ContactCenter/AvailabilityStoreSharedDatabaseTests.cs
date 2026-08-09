@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -235,7 +236,9 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             .Column<DateTime>("EndedUtc")
             .Column<DateTime>("WrapUpStartedUtc")
             .Column<DateTime>("WrapUpCompletedUtc")
-            .Column<bool>("RecordingLegalHold"),
+            .Column<bool>("RecordingLegalHold")
+            .Column<RecordingState>("RecordingState")
+            .Column<DateTime>("RecordingPausedUtc"),
             collection: ContactCenterStorage.CollectionName);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

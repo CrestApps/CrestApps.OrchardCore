@@ -1,5 +1,6 @@
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 
@@ -88,4 +89,16 @@ public sealed class InteractionIndex : CatalogItemIndex
     /// are excluded from age-based retention so the query never fetches a record it is not allowed to delete.
     /// </summary>
     public bool RecordingLegalHold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recording state of the interaction. The secure-pause auto-resume guard filters on this so
+    /// it scans only paused interactions rather than every recorded interaction.
+    /// </summary>
+    public RecordingState RecordingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC instant at which recording was most recently paused, or <see langword="null"/> when
+    /// recording is not paused. The auto-resume guard orders by this to find pauses that outlived their window.
+    /// </summary>
+    public DateTime? RecordingPausedUtc { get; set; }
 }

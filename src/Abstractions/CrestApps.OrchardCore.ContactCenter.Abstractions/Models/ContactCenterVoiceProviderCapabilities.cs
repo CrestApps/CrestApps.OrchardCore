@@ -71,4 +71,25 @@ public enum ContactCenterVoiceProviderCapabilities
     /// The provider can barge into a live call so all parties hear the supervisor.
     /// </summary>
     Barge = 1 << 11,
+
+    /// <summary>
+    /// The provider can pause and resume recording media capture mid-call without stopping the recording
+    /// session. This is distinct from <see cref="Recording"/>: a provider can support starting and stopping a
+    /// recording without being able to suppress a single sensitive segment in the middle of it.
+    /// </summary>
+    RecordingPause = 1 << 12,
+
+    /// <summary>
+    /// The provider can capture sensitive customer input (such as a payment card or a national identifier) on a
+    /// live call so that the digits are masked from the agent's audio and never enter the recording. This backs
+    /// the agent-assisted secure-capture experience that keeps personal data out of Contact Center scope.
+    /// </summary>
+    SecureCapture = 1 << 13,
+
+    /// <summary>
+    /// The provider suppresses (flattens) the DTMF tones of a secure capture so the digits cannot be recovered
+    /// from the agent audio or the recording. Advertised together with <see cref="SecureCapture"/> by providers
+    /// that mask entry rather than only diverting the caller.
+    /// </summary>
+    SecureCaptureMasking = 1 << 14,
 }

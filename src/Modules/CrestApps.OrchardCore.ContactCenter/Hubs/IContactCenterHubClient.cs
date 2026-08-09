@@ -36,4 +36,11 @@ public interface IContactCenterHubClient
     /// Notifies the client that its queue or campaign memberships changed outside the current connection.
     /// </summary>
     Task MembershipChanged();
+
+    /// <summary>
+    /// Notifies the client that the recording state of a live interaction changed, so agent and supervisor
+    /// surfaces can reflect a sensitive-data pause in real time.
+    /// </summary>
+    /// <param name="notification">The recording state change.</param>
+    Task RecordingStateChanged(RecordingStateNotification notification);
 }

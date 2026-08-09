@@ -69,4 +69,9 @@ public enum CallControlVerb
     /// Engages a live call as a supervisor.
     /// </summary>
     SupervisorEngage,
+
+    /// <summary>
+    /// Controls the recording state of a live call (for example an agent pausing capture around sensitive data).
+    /// </summary>
+    RecordingControl,
 }

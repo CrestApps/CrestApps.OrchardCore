@@ -30,7 +30,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -66,7 +67,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -99,7 +101,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Deny(
-                ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled)));
+                ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled)),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -143,7 +146,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
                 new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                legalHold: true)));
+                legalHold: true)),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -181,7 +185,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
                 new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                legalHold: true)));
+                legalHold: true)),
+            new StubClock());
 
         // Act
         var changed = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
@@ -214,7 +219,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy(RecordingGovernanceDecision.Allow(retainUntil, legalHold: true)));
+            CreateGovernancePolicy(RecordingGovernanceDecision.Allow(retainUntil, legalHold: true)),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -272,7 +278,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateResolver(provider).Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", callerCancellation.Token);
@@ -306,7 +313,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -338,7 +346,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateResolver(provider).Object,
             publisher.Object,
             new TimeoutTelephonyCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -375,7 +384,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateResolver(provider).Object,
             publisher.Object,
             new NotAdmittedTelephonyCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -406,7 +416,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateResolver(provider).Object,
             publisher.Object,
             new ShutdownInterruptedTelephonyCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -450,7 +461,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -481,7 +493,8 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             resolver.Object,
             publisher.Object,
             CreateCommandExecutor(),
-            CreateGovernancePolicy());
+            CreateGovernancePolicy(),
+            new StubClock());
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);

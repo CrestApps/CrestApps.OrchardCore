@@ -337,6 +337,16 @@ Declare the result once the run passes:
 
 Because the unverified-audio risk compounds with the recording media-lifecycle and erasure risk, **recording is disabled by default** (`ContactCenterRecordingSettings.RecordingEnabled` defaults to `false`). A fresh tenant records nothing until an operator enables it in the Recording governance section of the Contact Center settings screen (which requires the separate **Contact Center Recording – Administration** feature to be enabled), which should happen only after the base-voice acceptance run passes for the deployment. The `Recording` provider capability stays advertised — the media path is implemented — and `Monitor`, `Whisper`, and `Barge` remain advertised and enabled; only the recording *policy* defaults off.
 
+### Agent secure pause for sensitive-data capture
+
+The same Recording settings screen exposes an **agent secure pause** control that lets an agent suppress recording while a customer reads out a card number, a national identity number, or another sensitive value, then resume it — an industry-standard PCI/PII descoping practice. It is governed by three settings on `ContactCenterRecordingSettings`, all off or neutral by default so an upgraded tenant gains no new behavior until an operator opts in:
+
+- **`AllowAgentSecurePause`** (default `false`) — turns the whole capability on. While it is off, the agent desktop never shows the pause control and the server refuses any pause or resume request.
+- **`RequirePauseReason`** (default `false`) — when on, an agent must supply a reason to pause. The reason is stored on the interaction for the audit trail and never enters the recording.
+- **`MaxSecurePauseSeconds`** (default `0`, clamped to at most one day) — the automatic-resume safety window. A background guard resumes any recording still paused past this window and publishes a distinct `RecordingAutoResumed` audit event, so a pause can never silently outlive its purpose. Leaving it at `0` disables the automatic guard and lets a pause persist until it is explicitly resumed.
+
+Two server-side protections apply whenever recording is paused, independent of the agent UI: supervisor **Monitor/Whisper/Barge** fails closed so a coach cannot hear the secured segment, and the automatic-resume guard bounds the pause. The agent needs the `SecurePauseRecording` permission, the provider must advertise the `RecordingPause` capability (the Asterisk provider does), and every pause is ownership-checked against the agent's own live interaction before the provider is contacted.
+
 ## Multi-node real-time backplane
 
 The Contact Center real-time hub is backplane-agnostic. It is hosted through `HubRouteManager.MapHub<ContactCenterHub>` and addresses connections through tenant-qualified `TenantSignalRGroupName` groups, so the same code path serves both single-node and multi-node deployments without change. What makes it correct across nodes is the shared backplane, not the hub.

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -15,6 +16,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IRecordingGovernancePolicy _governancePolicy;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRecordingService"/> class.
@@ -24,45 +26,59 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="governancePolicy">The recording governance policy that gates recording and resolves retention metadata.</param>
+    /// <param name="clock">The clock used to stamp the secure-pause timestamp read by the auto-resume guard.</param>
     public ContactCenterRecordingService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
-        IRecordingGovernancePolicy governancePolicy)
+        IRecordingGovernancePolicy governancePolicy,
+        IClock clock)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
         _governancePolicy = governancePolicy;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
     public Task<RecordingCommandResult> StartAsync(string interactionId, CancellationToken cancellationToken = default)
     {
-        return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingStarted, cancellationToken);
+        return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingStarted, sourceStateGuard: null, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<RecordingCommandResult> PauseAsync(string interactionId, CancellationToken cancellationToken = default)
     {
-        return SetStateAsync(interactionId, RecordingState.Paused, ContactCenterConstants.Events.RecordingPaused, cancellationToken);
+        return SetStateAsync(interactionId, RecordingState.Paused, ContactCenterConstants.Events.RecordingPaused, previous => previous == RecordingState.Recording, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<RecordingCommandResult> ResumeAsync(string interactionId, CancellationToken cancellationToken = default)
     {
-        return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingResumed, cancellationToken);
+        return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingResumed, previous => previous == RecordingState.Paused, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<RecordingCommandResult> AutoResumeAsync(string interactionId, CancellationToken cancellationToken = default)
+    {
+        return SetStateAsync(interactionId, RecordingState.Recording, ContactCenterConstants.Events.RecordingAutoResumed, previous => previous == RecordingState.Paused, cancellationToken);
     }
 
     /// <inheritdoc/>
     public Task<RecordingCommandResult> StopAsync(string interactionId, CancellationToken cancellationToken = default)
     {
-        return SetStateAsync(interactionId, RecordingState.Stopped, ContactCenterConstants.Events.RecordingStopped, cancellationToken);
+        return SetStateAsync(interactionId, RecordingState.Stopped, ContactCenterConstants.Events.RecordingStopped, sourceStateGuard: null, cancellationToken);
     }
 
-    private async Task<RecordingCommandResult> SetStateAsync(string interactionId, RecordingState state, string eventType, CancellationToken cancellationToken)
+    private async Task<RecordingCommandResult> SetStateAsync(
+        string interactionId,
+        RecordingState state,
+        string eventType,
+        Func<RecordingState, bool> sourceStateGuard,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(interactionId))
         {
@@ -74,6 +90,14 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         if (interaction is null || interaction.RecordingState == state)
         {
             return RecordingCommandResult.Failure("The interaction could not be found or is already in the requested recording state.");
+        }
+
+        // Enforce the legal source state for the transition so a pause can only suppress an actively-recording
+        // call and a resume (agent-driven or the auto-resume safety guard) can only lift a real pause. Without
+        // this guard the agent-facing resume endpoint could drive an idle call into Recording and start capture.
+        if (sourceStateGuard is not null && !sourceStateGuard(interaction.RecordingState))
+        {
+            return RecordingCommandResult.Failure("The interaction is not in a recording state that allows the requested change.");
         }
 
         var previousState = interaction.RecordingState;
@@ -155,6 +179,19 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         }
 
         interaction.RecordingState = state;
+
+        // Maintain the secure-pause timestamp the auto-resume guard reads: stamp it when capture is suppressed and
+        // clear it (with any pause reason) the moment capture leaves the paused state, so a resumed or stopped
+        // recording is never mistaken for a pause that has outlived its window.
+        if (state == RecordingState.Paused)
+        {
+            interaction.RecordingPausedUtc = _clock.UtcNow;
+        }
+        else
+        {
+            interaction.RecordingPausedUtc = null;
+            interaction.RecordingPauseReason = null;
+        }
 
         // Determine initial capture from the persisted pre-transition state rather than the calling entry point,
         // so invoking Start on an already paused interaction (or any resume) cannot re-stamp the capture-time

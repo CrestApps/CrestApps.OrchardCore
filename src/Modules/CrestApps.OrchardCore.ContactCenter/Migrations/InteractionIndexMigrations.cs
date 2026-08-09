@@ -124,4 +124,32 @@ internal sealed class InteractionIndexMigrations : DataMigration
 
         return 5;
     }
+
+    /// <summary>
+    /// Adds the recording-state columns and the covering index the secure-pause auto-resume guard scans. The guard
+    /// force-resumes a recording that has stayed paused past the tenant's maximum secure-pause window; without a
+    /// predicate-led index on the paused state and pause time, that periodic sweep would scan every interaction the
+    /// contact center has ever recorded to find the handful currently paused.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table =>
+        {
+            table.AddColumn<int>("RecordingState", column => column.WithDefault(0));
+            table.AddColumn<DateTime>("RecordingPausedUtc");
+        },
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table => table
+            .CreateIndex(
+                "IDX_InteractionIndex_SecurePause",
+                "RecordingState",
+                "RecordingPausedUtc",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 6;
+    }
 }

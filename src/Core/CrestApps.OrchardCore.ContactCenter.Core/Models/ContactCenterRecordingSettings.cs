@@ -13,6 +13,12 @@ public sealed class ContactCenterRecordingSettings
     public const int MaxRetentionDays = 36500;
 
     /// <summary>
+    /// The maximum number of seconds a recording may be configured to remain paused before automatic resume,
+    /// bounding the secure-pause window to a single day so a misconfiguration cannot suppress capture indefinitely.
+    /// </summary>
+    public const int MaxSecurePauseSecondsLimit = 86400;
+
+    /// <summary>
     /// Gets or sets a value indicating whether recording is permitted for this tenant. When disabled the
     /// governance policy fails closed and no interaction may start recording regardless of provider capability.
     /// </summary>
@@ -46,4 +52,24 @@ public sealed class ContactCenterRecordingSettings
     /// hold is exempt from retention-driven and subject-request erasure until the hold is released.
     /// </summary>
     public bool LegalHoldByDefault { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent may pause and resume recording on their own live
+    /// interaction from the agent desktop. When disabled, only automation (workflow tasks) or the provider may
+    /// suppress capture, and the agent-facing secure-pause control is never shown.
+    /// </summary>
+    public bool AllowAgentSecurePause { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of seconds a recording may remain paused for a sensitive-data capture
+    /// before the platform automatically resumes it. A value of zero means no automatic resume guard is applied
+    /// and a pause persists until it is explicitly resumed.
+    /// </summary>
+    public int MaxSecurePauseSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent must supply a reason when pausing recording, so the
+    /// suppression gap in the recording is always accompanied by an auditable justification.
+    /// </summary>
+    public bool RequirePauseReason { get; set; }
 }

@@ -39,6 +39,7 @@
     connection.on('OfferReceived', options.onOfferReceived || noop);
     connection.on('OfferRevoked', options.onOfferRevoked || noop);
     connection.on('QueueStatsChanged', options.onQueueStatsChanged || noop);
+    connection.on('RecordingStateChanged', options.onRecordingStateChanged || noop);
     connection.on('MembershipChanged', function () {
       loadSnapshot().catch(function () {});
     });

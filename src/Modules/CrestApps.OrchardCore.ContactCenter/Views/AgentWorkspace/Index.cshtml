@@ -25,6 +25,10 @@
         ["setPresenceUrl"] = Model.SetPresenceUrl,
         ["acceptOfferUrl"] = Model.AcceptOfferUrl,
         ["declineOfferUrl"] = Model.DeclineOfferUrl,
+        ["pauseRecordingUrl"] = Model.PauseRecordingUrl,
+        ["resumeRecordingUrl"] = Model.ResumeRecordingUrl,
+        ["canSecurePause"] = Model.CanSecurePause,
+        ["requirePauseReason"] = Model.RequirePauseReason,
         ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
         ["antiForgeryToken"] = antiForgeryToken,
         ["strings"] = new Dictionary<string, string>
@@ -49,6 +53,13 @@
             ["reconnecting"] = T["Connection lost. Reconnecting..."].Value,
             ["disconnected"] = T["Disconnected. Live updates are paused."].Value,
             ["presenceMenuLabel"] = T["Change your presence"].Value,
+            ["securePause"] = T["Pause recording"].Value,
+            ["secureResume"] = T["Resume recording"].Value,
+            ["recordingPaused"] = T["Recording paused for sensitive-data capture"].Value,
+            ["recordingActive"] = T["Recording"].Value,
+            ["pauseReasonPrompt"] = T["Enter a reason for pausing recording"].Value,
+            ["securePauseFailed"] = T["The recording could not be paused. Refresh the workspace and try again."].Value,
+            ["secureResumeFailed"] = T["The recording could not be resumed. Refresh the workspace and try again."].Value,
         },
     };
 }

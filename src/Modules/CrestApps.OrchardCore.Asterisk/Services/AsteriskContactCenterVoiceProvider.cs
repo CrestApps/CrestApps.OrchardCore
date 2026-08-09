@@ -82,6 +82,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         => ContactCenterVoiceProviderCapabilities.DialerDial |
             ContactCenterVoiceProviderCapabilities.AgentConnect |
             ContactCenterVoiceProviderCapabilities.Recording |
+            ContactCenterVoiceProviderCapabilities.RecordingPause |
             ContactCenterVoiceProviderCapabilities.Monitor |
             ContactCenterVoiceProviderCapabilities.Whisper |
             ContactCenterVoiceProviderCapabilities.Barge |

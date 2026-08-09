@@ -195,4 +195,20 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
 
         return interactions;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+        DateTime pausedBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var interactions = await _store.ListPausedRecordingsOlderThanAsync(pausedBeforeUtc, maxCount, cancellationToken);
+
+        foreach (var interaction in interactions)
+        {
+            await LoadAsync(interaction, cancellationToken);
+        }
+
+        return interactions;
+    }
 }

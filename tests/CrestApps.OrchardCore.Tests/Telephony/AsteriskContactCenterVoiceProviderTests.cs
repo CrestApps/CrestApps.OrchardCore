@@ -29,6 +29,7 @@ public sealed class AsteriskContactCenterVoiceProviderTests
             ContactCenterVoiceProviderCapabilities.DialerDial |
             ContactCenterVoiceProviderCapabilities.AgentConnect |
             ContactCenterVoiceProviderCapabilities.Recording |
+            ContactCenterVoiceProviderCapabilities.RecordingPause |
             ContactCenterVoiceProviderCapabilities.Monitor |
             ContactCenterVoiceProviderCapabilities.Whisper |
             ContactCenterVoiceProviderCapabilities.Barge |

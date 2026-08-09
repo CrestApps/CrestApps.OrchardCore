@@ -33,6 +33,27 @@ public sealed class AgentWorkspaceIndexViewModel
     public string SetPresenceUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the URL that pauses recording on the agent's own live interaction for a sensitive-data capture.
+    /// </summary>
+    public string PauseRecordingUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URL that resumes recording on the agent's own live interaction after a sensitive-data capture.
+    /// </summary>
+    public string ResumeRecordingUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current agent may pause recording, combining the agent's
+    /// permission with the tenant secure-pause setting so the control is hidden when either forbids it.
+    /// </summary>
+    public bool CanSecurePause { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent must supply a reason when pausing recording.
+    /// </summary>
+    public bool RequirePauseReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL that accepts an offered inbound call and connects the media.
     /// </summary>
     public string AcceptOfferUrl { get; set; }

@@ -94,6 +94,19 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public RecordingState RecordingState { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC instant at which recording was most recently paused, or <see langword="null"/> when
+    /// recording is not currently paused. The secure-pause auto-resume guard reads this to force-resume a pause
+    /// that has outlived the tenant's maximum secure-pause window.
+    /// </summary>
+    public DateTime? RecordingPausedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason an agent supplied when pausing recording for a sensitive-data capture, or
+    /// <see langword="null"/> when no reason was supplied. It documents the justification for the suppression gap.
+    /// </summary>
+    public string RecordingPauseReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC instant at which explicit party consent to record this interaction was captured, when
     /// the tenant recording governance policy requires it.
     /// </summary>

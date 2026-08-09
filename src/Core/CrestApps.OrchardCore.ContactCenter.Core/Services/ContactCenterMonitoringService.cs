@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -116,6 +117,14 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         if (interaction is null)
         {
             return SupervisorEngagementResult.Failure("The interaction could not be found.");
+        }
+
+        // Fail closed while recording is paused for a sensitive-data capture: a supervisor who engaged during the
+        // secured segment would hear the very card or identity data the pause exists to keep out of reach, so no
+        // new monitor, whisper, or barge leg may be brought up until capture resumes.
+        if (interaction.RecordingState == RecordingState.Paused)
+        {
+            return SupervisorEngagementResult.Failure("A sensitive-data capture is in progress on this interaction. Monitoring is unavailable until it completes.");
         }
 
         var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
@@ -336,6 +345,110 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             return SupervisorEngagementResult.Unknown(
                 $"Stopping the '{mode}' engagement was interrupted before the provider outcome could be confirmed.");
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> ForceDisengageAllAsync(
+        string interactionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(interactionId))
+        {
+            return 0;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return 0;
+        }
+
+        var callSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        if (callSession is null)
+        {
+            return 0;
+        }
+
+        // Snapshot the live engagements up front: RecordEngagementStoppedAsync mutates the collection as it ends
+        // each session, so enumerating the live view directly would skip entries.
+        var activeSessions = callSession.ActiveMonitorSessions.ToArray();
+
+        if (activeSessions.Length == 0)
+        {
+            return 0;
+        }
+
+        var provider = _voiceProviderResolver.Get(interaction.ProviderName);
+        var providerCallId = interaction.ProviderInteractionId;
+        var stopped = 0;
+
+        foreach (var monitorSession in activeSessions)
+        {
+            // A supervisor leg can only be honestly declared gone when the provider confirms the stop. If the
+            // provider cannot be reached, returns an unknown outcome, or the command times out, the engagement is
+            // left live and un-published so the platform never reports a supervisor as removed while their media
+            // leg may still be up and audible. The recording is already suppressed, so the primary privacy
+            // guarantee holds; a lingering leg is reconciled by later provider events or when the call ends.
+            if (provider is not IContactCenterVoiceMonitoringProvider monitoringProvider ||
+                string.IsNullOrEmpty(providerCallId))
+            {
+                continue;
+            }
+
+            ContactCenterVoiceProviderResult providerResult;
+
+            try
+            {
+                providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+                    monitoringProvider.StopAsync(new ContactCenterVoiceMonitoringRequest
+                    {
+                        InteractionId = interaction.ItemId,
+                        ProviderCallId = providerCallId,
+                        SupervisorId = monitorSession.SupervisorUserId,
+                        Mode = monitorSession.Mode,
+                    }, commandCancellationToken));
+            }
+            catch (TimeoutException)
+            {
+                continue;
+            }
+            catch (OperationCanceledException)
+            {
+                continue;
+            }
+
+            if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
+            {
+                continue;
+            }
+
+            await RecordEngagementStoppedAsync(interaction.ItemId, monitorSession.SupervisorUserId, cancellationToken);
+
+            var interactionEvent = new InteractionEvent
+            {
+                EventType = ContactCenterConstants.Events.SupervisorMonitorStopped,
+                InteractionId = interaction.ItemId,
+                AggregateType = nameof(Interaction),
+                AggregateId = interaction.ItemId,
+                ActorId = monitorSession.SupervisorUserId,
+                SourceComponent = ContactCenterConstants.Components.RealTime,
+            };
+
+            interactionEvent.SetData(new Dictionary<string, string>
+            {
+                ["mode"] = monitorSession.Mode.ToString(),
+                ["supervisorId"] = monitorSession.SupervisorUserId,
+                ["reason"] = "secure-pause",
+            });
+
+            await _publisher.PublishAsync(interactionEvent, CancellationToken.None);
+
+            stopped++;
+        }
+
+        return stopped;
     }
 
     private async Task RecordEngagementStartedAsync(

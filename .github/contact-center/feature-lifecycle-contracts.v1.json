@@ -202,6 +202,16 @@
       "reEnable": "The fresh shell reopens admission and the resolver creates scoped adapters normally.",
       "idleStatus": "verified-idle",
       "activeWorkStatus": "implemented-r3"
+    },
+    {
+      "featureId": "CrestApps.OrchardCore.ContactCenter.Recording",
+      "component": "SecurePauseAutoResumeBackgroundTask",
+      "kind": "background-task",
+      "quiesce": "The pre-disable participant closes base Contact Center admission before descriptor mutation; new auto-resume sweeps return without claiming paused recordings.",
+      "drain": "Disable waits up to the configured tenant drain timeout for the admitted auto-resume sweep to release its lock.",
+      "reEnable": "The fresh shell reopens admission and the scheduled sweep resumes, auto-resuming any recording still paused past the configured secure-pause ceiling.",
+      "idleStatus": "verified-idle",
+      "activeWorkStatus": "implemented-r3"
     }
   ]
 }

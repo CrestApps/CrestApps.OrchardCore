@@ -2,6 +2,7 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Dapper;
 using YesSql;
@@ -270,6 +271,24 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
             collection: ContactCenterStorage.CollectionName)
             .Where(index => index.ProviderInteractionId != null && index.ProviderInteractionId != string.Empty)
             .OrderBy(index => index.CreatedUtc)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+        DateTime pausedBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
+
+        return (await Session.Query<Interaction, InteractionIndex>(
+            index => index.RecordingState == RecordingState.Paused &&
+                index.RecordingPausedUtc != null &&
+                index.RecordingPausedUtc <= pausedBeforeUtc,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderBy(index => index.RecordingPausedUtc)
             .Take(take)
             .ListAsync(cancellationToken)).ToArray();
     }

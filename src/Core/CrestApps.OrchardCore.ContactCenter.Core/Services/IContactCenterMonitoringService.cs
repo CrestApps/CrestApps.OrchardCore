@@ -65,4 +65,17 @@ public interface IContactCenterMonitoringService
         ClaimsPrincipal principal,
         MonitorMode mode,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Force-stops every live supervisor engagement on an interaction on behalf of the platform, without a
+    /// supervisor principal or per-supervisor authorization. This is the enforcement path a secure pause uses to
+    /// evict a supervisor who was already listening before a sensitive-data capture began, so the coaching legs
+    /// are released along with the recording rather than only blocking new engagements.
+    /// </summary>
+    /// <param name="interactionId">The interaction identifier whose supervisor engagements should be released.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The number of live supervisor engagements the provider confirmed as stopped.</returns>
+    Task<int> ForceDisengageAllAsync(
+        string interactionId,
+        CancellationToken cancellationToken = default);
 }

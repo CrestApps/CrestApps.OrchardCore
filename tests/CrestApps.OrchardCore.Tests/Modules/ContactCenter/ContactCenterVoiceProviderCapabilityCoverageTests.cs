@@ -19,7 +19,9 @@ public sealed class ContactCenterVoiceProviderCapabilityCoverageTests
         ContactCenterVoiceProviderCapabilities.AgentCallAssignment |
         ContactCenterVoiceProviderCapabilities.ProviderQueue |
         ContactCenterVoiceProviderCapabilities.QueueEvents |
-        ContactCenterVoiceProviderCapabilities.AgentPresenceSync;
+        ContactCenterVoiceProviderCapabilities.AgentPresenceSync |
+        ContactCenterVoiceProviderCapabilities.SecureCapture |
+        ContactCenterVoiceProviderCapabilities.SecureCaptureMasking;
 
     [Fact]
     public void EveryCapabilityBit_IsAdvertisedByAnInTreeProvider_OrExplicitlyReserved()

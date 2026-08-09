@@ -31,4 +31,22 @@ public class ContactCenterRecordingSettingsViewModel
     /// Gets or sets a value indicating whether captured recordings begin under legal hold.
     /// </summary>
     public bool LegalHoldByDefault { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent may pause and resume recording on their own live
+    /// interaction from the agent desktop for a sensitive-data capture.
+    /// </summary>
+    public bool AllowAgentSecurePause { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of seconds a recording may remain paused for a sensitive-data capture
+    /// before the platform automatically resumes it. Zero disables the automatic resume guard.
+    /// </summary>
+    public int MaxSecurePauseSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent must supply a reason when pausing recording, so the
+    /// suppression gap is always accompanied by an auditable justification.
+    /// </summary>
+    public bool RequirePauseReason { get; set; }
 }

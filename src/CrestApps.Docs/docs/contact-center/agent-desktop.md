@@ -60,7 +60,7 @@ It shows three sections:
 
 Use it to spot a backing-up queue, an SLA breach, or too few available agents, and then rebalance staffing, adjust queue priorities, or open a campaign.
 
-When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, or **Barge** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement.
+When an agent has a live interaction, the agent card shows only the **Monitor**, **Whisper**, or **Barge** actions for which the active provider both advertises the matching capability and implements the executable monitoring contract. Each action invokes the provider first; the audited Contact Center event is published only after the provider confirms success. Missing contracts, provider failures, and unknown outcomes stay hidden or return failure without recording a successful engagement. While an agent has paused recording for a sensitive-data capture, all three actions fail closed on the server, so a supervisor can never listen in on the secured segment.
 
 ## For contact center managers: inbound routing runbook
 
@@ -163,6 +163,25 @@ If a prior terminal provider event was already recorded in the call session but 
 
 For inbound server-side calls, a provider may report the caller leg as connected before an agent accepts the Contact Center offer. Ended-offer cleanup therefore uses the accepted reservation or assigned queue item—not the provider leg's answered timestamp—to decide whether the work reached an agent. A terminal call that was only waiting or reserved is removed and releases the agent so routing can continue to the next live call.
 
+#### Secure pause for sensitive-data capture
+
+When a customer must read out a card number, a national identity number, or another piece of sensitive data, the agent can suppress recording for that segment so the value never enters the recording, and resume it as soon as the customer finishes. This mirrors the "pause and resume" descoping control used by state-of-the-art contact center platforms to keep sensitive input out of recorded media.
+
+The **Pause recording** control appears on the active interaction only when every one of these is true:
+
+- The **Recording** feature is enabled and the tenant has turned on **Allow agents to pause recording for sensitive data** in *Interaction Center → Settings → Recording*.
+- The agent holds the `SecurePauseRecording` permission (granted to the built-in **Agent** stereotype).
+- The active voice provider advertises the **RecordingPause** capability and implements the executable recording contract for the live call (for example, the Asterisk provider).
+
+When the agent pauses, the server re-checks the setting, the reason policy, the provider capability, and—most importantly—that the agent owns the live interaction before it asks the provider to pause. If the tenant requires a reason, the agent must supply one; the reason is stored on the interaction for the audit trail but never appears in the recording. A paused recording shows a clear **Recording paused** badge to the agent, and the control switches to **Resume recording**.
+
+Two safeguards protect the customer even if the agent forgets to resume:
+
+- **Supervisor monitoring is blocked while recording is paused.** A supervisor cannot start Monitor, Whisper, or Barge on an interaction whose recording is paused, so a coach can never listen in on the secured segment. The block is enforced on the server before the provider is ever contacted. If a supervisor was already engaged when the agent starts the pause, that live engagement is force-stopped as part of the pause, so an in-progress coach is evicted along with the recording rather than only being kept out afterward.
+- **Automatic resume** returns recording to the active state after the tenant's configured maximum pause window elapses, so a pause can never silently outlive its purpose. The automatic resume is published as a distinct audit event so a safety-net resume is always distinguishable from an agent-driven resume. Setting the maximum window to `0` disables the automatic guard and lets a pause persist until it is explicitly resumed.
+
+The agent desktop and the Supervisor Dashboard both reflect the pause and resume in real time through the hub, so every audience sees the same recording state without refreshing.
+
 ### 4. Complete the activity in the CRM
 
 When the conversation ends, click **Complete activity** in the active panel. This opens the shared Omnichannel completion page for the assigned activity, so contact-center work follows the same CRM experience as manual activities:
@@ -195,5 +214,6 @@ The **Recent activity** panel lists your most recent interactions with their dir
 | Permission | Grants |
 | --- | --- |
 | `ContactCenterSignIntoQueues` | Sign in to queues/campaigns, change own presence, and use the Agent Workspace (accept/decline offers, complete work). |
+| `SecurePauseRecording` | Pause and resume recording on the agent's own live interaction to keep sensitive customer data out of the recording. Included in the **Agent** stereotype. |
 | `MonitorContactCenter` | Open the Supervisor Dashboard and watch queues in real time. Included in the **Supervisor** role. |
 | `ManageContactCenterQueues`, `ManageContactCenterAgents`, `ManageContactCenterSkills`, `ManageContactCenterDialer` | Configure the routing environment (queues, agents, skills, dialer). See [Agents, Queues & Dialer](agents-queues-dialer.md). |

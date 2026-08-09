@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,8 @@ internal static class AgentWorkspaceEndpoints
     public const string StateRouteName = "ContactCenterAgentWorkspaceState";
     public const string SetPresenceRouteName = "ContactCenterAgentWorkspacePresence";
     public const string CompleteRouteName = "ContactCenterAgentWorkspaceComplete";
+    public const string PauseRecordingRouteName = "ContactCenterAgentWorkspacePauseRecording";
+    public const string ResumeRecordingRouteName = "ContactCenterAgentWorkspaceResumeRecording";
 
     public static IEndpointRouteBuilder AddAgentWorkspaceEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -39,6 +42,12 @@ internal static class AgentWorkspaceEndpoints
 
         builder.MapPost("Admin/contact-center/workspace/complete", HandleCompleteAsync)
             .WithName(CompleteRouteName);
+
+        builder.MapPost("Admin/contact-center/workspace/recording/pause", HandlePauseRecordingAsync)
+            .WithName(PauseRecordingRouteName);
+
+        builder.MapPost("Admin/contact-center/workspace/recording/resume", HandleResumeRecordingAsync)
+            .WithName(ResumeRecordingRouteName);
 
         return builder;
     }
@@ -59,6 +68,7 @@ internal static class AgentWorkspaceEndpoints
         IContentManager contentManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
         IClock clock,
         LinkGenerator linkGenerator,
         HttpContext httpContext)
@@ -126,7 +136,7 @@ internal static class AgentWorkspaceEndpoints
         var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
-        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, userManager, displayNameProvider, linkGenerator, httpContext, httpContext.RequestAborted);
+        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, userManager, displayNameProvider, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
@@ -231,6 +241,99 @@ internal static class AgentWorkspaceEndpoints
         });
     }
 
+    private static async Task<IResult> HandlePauseRecordingAsync(
+        [FromForm] RecordingControlRequest request,
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IEnumerable<IAgentRecordingControlService> recordingControlServices,
+        HttpContext httpContext)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SecurePauseRecording))
+        {
+            return TypedResults.Forbid();
+        }
+
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        if (string.IsNullOrEmpty(request.InteractionId))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var recordingControlService = recordingControlServices.FirstOrDefault();
+
+        if (recordingControlService is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var result = await recordingControlService.PauseAsync(
+            request.InteractionId,
+            userId,
+            httpContext.User,
+            request.Reason,
+            httpContext.RequestAborted);
+
+        return TypedResults.Ok(new
+        {
+            result.Succeeded,
+            result.OutcomeUnknown,
+            result.Reason,
+            result.IsPaused,
+        });
+    }
+
+    private static async Task<IResult> HandleResumeRecordingAsync(
+        [FromForm] RecordingControlRequest request,
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IEnumerable<IAgentRecordingControlService> recordingControlServices,
+        HttpContext httpContext)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SecurePauseRecording))
+        {
+            return TypedResults.Forbid();
+        }
+
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        if (string.IsNullOrEmpty(request.InteractionId))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var recordingControlService = recordingControlServices.FirstOrDefault();
+
+        if (recordingControlService is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var result = await recordingControlService.ResumeAsync(
+            request.InteractionId,
+            userId,
+            httpContext.User,
+            httpContext.RequestAborted);
+
+        return TypedResults.Ok(new
+        {
+            result.Succeeded,
+            result.OutcomeUnknown,
+            result.Reason,
+            result.IsPaused,
+        });
+    }
+
     private static async Task<WorkspaceOfferViewModel> BuildOfferAsync(
         string agentId,
         DateTime now,
@@ -275,6 +378,7 @@ internal static class AgentWorkspaceEndpoints
         IContentManager contentManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
         LinkGenerator linkGenerator,
         HttpContext httpContext,
         CancellationToken cancellationToken)
@@ -311,7 +415,22 @@ internal static class AgentWorkspaceEndpoints
             CompleteUrl = await BuildCompleteActivityUrlAsync(activity, authorizationService, linkGenerator, httpContext, cancellationToken),
             StartedUtc = interaction.StartedUtc,
             AnsweredUtc = interaction.AnsweredUtc,
+            RecordingState = interaction.RecordingState.ToString(),
+            IsRecordingPaused = interaction.RecordingState == RecordingState.Paused,
+            SupportsSecurePause = SupportsSecurePause(interaction, voiceProviderResolver),
         };
+    }
+
+    private static bool SupportsSecurePause(
+        Interaction interaction,
+        IContactCenterVoiceProviderResolver voiceProviderResolver)
+    {
+        var provider = voiceProviderResolver.Get(interaction.ProviderName);
+
+        return provider is IContactCenterVoiceRecordingProvider &&
+            provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.Recording) &&
+            provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.RecordingPause) &&
+            !string.IsNullOrEmpty(interaction.ProviderInteractionId);
     }
 
     private static async Task<bool> AgentOwnsWorkAsync(
@@ -527,5 +646,12 @@ internal static class AgentWorkspaceEndpoints
         public string Notes { get; set; }
 
         public IDictionary<string, DateTime?> ActionScheduleDates { get; set; }
+    }
+
+    private sealed class RecordingControlRequest
+    {
+        public string InteractionId { get; set; }
+
+        public string Reason { get; set; }
     }
 }
