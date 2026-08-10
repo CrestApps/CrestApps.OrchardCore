@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,14 +16,20 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 /// </summary>
 internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDriver<AIToolInstance>
 {
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AlgoliaDocumentationToolInstanceDisplayDriver"/> class.
     /// </summary>
+    /// <param name="dataProtectionProvider">The data protection provider used to protect the stored API key.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public AlgoliaDocumentationToolInstanceDisplayDriver(IStringLocalizer<AlgoliaDocumentationToolInstanceDisplayDriver> stringLocalizer)
+    public AlgoliaDocumentationToolInstanceDisplayDriver(
+        IDataProtectionProvider dataProtectionProvider,
+        IStringLocalizer<AlgoliaDocumentationToolInstanceDisplayDriver> stringLocalizer)
     {
+        _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
     }
 
@@ -79,7 +86,9 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
 
         var apiKey = string.IsNullOrWhiteSpace(model.ApiKey)
             ? existing.ApiKey
-            : model.ApiKey.Trim();
+            : _dataProtectionProvider
+                .CreateProtector(DocumentationToolConstants.AlgoliaDataProtectionPurpose)
+                .Protect(model.ApiKey.Trim());
 
         instance.Put(new AlgoliaDocumentationToolSettings
         {

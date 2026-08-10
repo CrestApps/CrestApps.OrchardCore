@@ -45,17 +45,34 @@
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
         const authSelect = document.querySelector('[name$="AuthenticationType"]');
-        if (!authSelect) return;
 
-        function toggleAuthSections() {
-            const value = authSelect.value;
+        if (authSelect) {
+            function toggleAuthSections() {
+                const value = authSelect.value;
 
-            document.querySelectorAll('[data-auth-section]').forEach(section => {
-                section.classList.toggle('d-none', section.dataset.authSection !== value);
-            });
+                document.querySelectorAll('[data-auth-section]').forEach(section => {
+                    section.classList.toggle('d-none', section.dataset.authSection !== value);
+                });
+            }
+
+            authSelect.addEventListener('change', toggleAuthSections);
+            toggleAuthSections();
         }
 
-        authSelect.addEventListener('change', toggleAuthSections);
-        toggleAuthSections();
+        const exposeAllTools = document.getElementById('mcpServerExposeAllTools');
+
+        if (exposeAllTools) {
+            const toolSelectors = [
+                document.querySelector('.tool-groups-container')?.closest('.ocat-wrapper'),
+                document.querySelector('[id^="tool-instance-"]')?.closest('.ocat-wrapper'),
+            ].filter(Boolean);
+
+            function toggleToolSelectors() {
+                toolSelectors.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+            }
+
+            exposeAllTools.addEventListener('change', toggleToolSelectors);
+            toggleToolSelectors();
+        }
     });
 </script>

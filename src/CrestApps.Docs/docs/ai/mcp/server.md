@@ -37,7 +37,7 @@ Tool exposure is **opt-in**. Nothing is listed or callable by default: the serve
 
 You configure the exposed tools from the **Settings → Artificial Intelligence** page, on the **MCP Server** card. The card has two ways to control exposure:
 
-- **Expose all tools** — when enabled, every non-hidden tool and every configured tool instance is exposed and the selection below is ignored. Use this only when you trust every client of the server.
+- **Expose all tools** — when enabled, every non-hidden tool and every configured tool instance is exposed and the selection below is ignored. Enabling it hides the **Tools** and **Tool instances** selectors, because the selection no longer applies. Use this only when you trust every client of the server.
 - **Tools** and **Tool instances** selectors — when **Expose all tools** is disabled (the default), only the tools and tool instances you select are exposed. The selectors list only the tools and instances the current user is allowed to access, exactly like the AI Profile editor.
 
 Both code-registered tools and stored tool instances participate in the same allow-list, so you can, for example, expose a documentation search instance without exposing any content-editing tools.
