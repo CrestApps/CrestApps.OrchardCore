@@ -52,12 +52,14 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var range = context.Filter.GetDateRange();
+        var toUtc = range.ToUtc.GetValueOrDefault();
         var fromUtc = _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
             ? DateTime.MinValue
-            : context.FromUtc;
+            : range.FromUtc.GetValueOrDefault();
 
         var activities = (await _session.QueryIndex<OmnichannelActivityIndex>(
-            index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= context.ToUtc,
+            index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken))
             .ToArray();
@@ -86,8 +88,8 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
         return _definition.Kind switch
         {
-            EnterpriseActivityReportKind.Backlog => BuildBacklog(filteredActivities, context.ToUtc),
-            EnterpriseActivityReportKind.Aging => BuildAging(filteredActivities, context.ToUtc),
+            EnterpriseActivityReportKind.Backlog => BuildBacklog(filteredActivities, toUtc),
+            EnterpriseActivityReportKind.Aging => BuildAging(filteredActivities, toUtc),
             EnterpriseActivityReportKind.SourcePerformance => BuildProgress(filteredActivities, S["Source"].Value, activity => Display(activity.Source)),
             EnterpriseActivityReportKind.ChannelPerformance => BuildProgress(filteredActivities, S["Channel"].Value, activity => Display(activity.Channel)),
             EnterpriseActivityReportKind.KindPerformance => BuildProgress(filteredActivities, S["Activity kind"].Value, activity => activity.Kind.ToString()),
@@ -149,7 +151,7 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture)),
             EnterpriseActivityReportKind.OverdueByUser => BuildOverdueByDimension(
                 filteredActivities,
-                context.ToUtc,
+                toUtc,
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
                 activity => ResolveUser(activity.AssignedToId, userNames)),
