@@ -89,11 +89,14 @@ public sealed class ContactCenterReportCapabilityDegradationTests
                 .Select(feature => feature.Id)
                 .ToHashSet(StringComparer.Ordinal);
 
-            var context = new ReportContext(new ReportFilter
+            var filter = new ReportFilter();
+            filter.SetDateRange(new ReportDateRange
             {
                 FromUtc = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 ToUtc = new DateTime(2024, 12, 31, 23, 59, 59, DateTimeKind.Utc),
             });
+
+            var context = new ReportContext(filter);
 
             var guarded = new List<string>();
             var leaked = new List<string>();
@@ -178,11 +181,14 @@ public sealed class ContactCenterReportCapabilityDegradationTests
                 .SelectMany(entry => entry.Labels)
                 .ToArray();
 
-            var context = new ReportContext(new ReportFilter
+            var filter = new ReportFilter();
+            filter.SetDateRange(new ReportDateRange
             {
                 FromUtc = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 ToUtc = new DateTime(2024, 12, 31, 23, 59, 59, DateTimeKind.Utc),
             });
+
+            var context = new ReportContext(filter);
 
             var executed = 0;
             var leaked = new List<string>();

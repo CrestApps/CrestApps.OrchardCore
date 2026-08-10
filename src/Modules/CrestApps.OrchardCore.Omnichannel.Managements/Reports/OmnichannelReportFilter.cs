@@ -1,6 +1,6 @@
 using CrestApps.Core.Services;
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
@@ -20,11 +20,11 @@ internal static class OmnichannelReportFilter
     {
         var criteria = new OmnichannelReportCriteria
         {
-            CampaignId = GetString(filter, CampaignId),
-            CampaignGroupId = GetString(filter, CampaignGroupId),
-            Channel = GetString(filter, Channel),
-            Source = GetString(filter, Source),
-            Status = GetStatus(filter),
+            CampaignId = filter.GetOrDefault<string>(CampaignId),
+            CampaignGroupId = filter.GetOrDefault<string>(CampaignGroupId),
+            Channel = filter.GetOrDefault<string>(Channel),
+            Source = filter.GetOrDefault<string>(Source),
+            Status = filter.TryGet<ActivityStatus>(Status, out var status) ? status : null,
         };
 
         if (!string.IsNullOrEmpty(criteria.CampaignGroupId))
@@ -36,34 +36,6 @@ internal static class OmnichannelReportFilter
         }
 
         return criteria;
-    }
-
-    public static string GetString(ReportFilter filter, string key)
-    {
-        return filter.Properties.TryGetPropertyValue(key, out var value)
-            ? value?.GetValue<string>()
-            : null;
-    }
-
-    public static void SetString(ReportFilter filter, string key, string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            filter.Properties.Remove(key);
-
-            return;
-        }
-
-        filter.Properties[key] = JsonValue.Create(value);
-    }
-
-    private static ActivityStatus? GetStatus(ReportFilter filter)
-    {
-        var value = GetString(filter, Status);
-
-        return Enum.TryParse<ActivityStatus>(value, ignoreCase: true, out var status)
-            ? status
-            : null;
     }
 }
 

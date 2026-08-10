@@ -54,9 +54,10 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var range = context.Filter.GetDateRange();
         var report = await ReportingService.GetCampaignSummaryAsync(
-            context.FromUtc,
-            context.ToUtc,
+            range.FromUtc.GetValueOrDefault(),
+            range.ToUtc.GetValueOrDefault(),
             ContactCenterReportFilter.GetCriteria(context.Filter),
             cancellationToken);
 

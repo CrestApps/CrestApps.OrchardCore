@@ -105,10 +105,14 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             [ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording],
             cancellationToken)];
 
-        ContactCenterReportingService.EnsureRangeWithinLimit(context.FromUtc, context.ToUtc, _maximumReportRange);
+        var range = context.Filter.GetDateRange();
+        var fromUtc = range.FromUtc.GetValueOrDefault();
+        var toUtc = range.ToUtc.GetValueOrDefault();
+
+        ContactCenterReportingService.EnsureRangeWithinLimit(fromUtc, toUtc, _maximumReportRange);
 
         var interactions = (await _session.Query<Interaction, InteractionIndex>(
-            index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
+            index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken))
             .ToArray();
@@ -1222,10 +1226,13 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         // Legs belong to the call session, which the voice topology projector owns. The report reads them from
         // there rather than from the interaction, because the interaction never carried them.
+        var range = context.Filter.GetDateRange();
+        var fromUtc = range.FromUtc.GetValueOrDefault();
+        var toUtc = range.ToUtc.GetValueOrDefault();
         var callSessions = interactionIds.Count == 0
             ? []
             : (await _session.Query<CallSession, CallSessionIndex>(
-                index => index.CreatedUtc >= context.FromUtc && index.CreatedUtc <= context.ToUtc,
+                index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
                 collection: ContactCenterStorage.CollectionName)
                 .ListAsync(cancellationToken))
                 .Where(callSession => interactionIds.Contains(callSession.InteractionId))

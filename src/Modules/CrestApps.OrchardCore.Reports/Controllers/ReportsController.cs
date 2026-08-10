@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Reports.Controllers;
 
@@ -16,16 +15,12 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 [Admin]
 public sealed class ReportsController : Controller
 {
-    private const int DefaultRangeDays = 30;
-
     private readonly IReportManager _reportManager;
     private readonly IReportExportManager _exportManager;
     private readonly IDisplayManager<ReportFilter> _filterDisplayManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ReportDisplayValueResolver _displayValueResolver;
-    private readonly IClock _clock;
-    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
@@ -36,17 +31,13 @@ public sealed class ReportsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor used to bind the filter from the request.</param>
     /// <param name="displayValueResolver">The resolver for typed report values.</param>
-    /// <param name="clock">The clock used to compute the default reporting period.</param>
-    /// <param name="localClock">The tenant local clock used to resolve default date boundaries.</param>
     public ReportsController(
         IReportManager reportManager,
         IReportExportManager exportManager,
         IDisplayManager<ReportFilter> filterDisplayManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        ReportDisplayValueResolver displayValueResolver,
-        IClock clock,
-        ILocalClock localClock)
+        ReportDisplayValueResolver displayValueResolver)
     {
         _reportManager = reportManager;
         _exportManager = exportManager;
@@ -54,8 +45,6 @@ public sealed class ReportsController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayValueResolver = displayValueResolver;
-        _clock = clock;
-        _localClock = localClock;
     }
 
     /// <summary>
@@ -114,8 +103,6 @@ public sealed class ReportsController : Controller
             ExportFormats = _exportManager.ListFormats(),
             FilterShape = filterShape,
             Document = document,
-            FromUtc = filter.FromUtc.GetValueOrDefault(),
-            ToUtc = filter.ToUtc.GetValueOrDefault(),
         });
     }
 
@@ -153,7 +140,8 @@ public sealed class ReportsController : Controller
 
         await _displayValueResolver.ResolveAsync(document);
         var content = exportFormat.Serialize(document);
-        var fileName = $"{id}-{filter.FromUtc:yyyyMMdd}-to-{filter.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";
+        var range = filter.GetDateRange();
+        var fileName = $"{id}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";
 
         return File(content, exportFormat.ContentType, fileName);
     }
@@ -167,28 +155,6 @@ public sealed class ReportsController : Controller
 
         await _filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
 
-        await NormalizeRangeAsync(filter);
-
         return filter;
-    }
-
-    private async Task NormalizeRangeAsync(ReportFilter filter)
-    {
-        var localNow = await _localClock.ConvertToLocalAsync(_clock.UtcNow);
-        var localDate = localNow.Date;
-        var defaultFromLocal = DateTime.SpecifyKind(localDate.AddDays(-(DefaultRangeDays - 1)), DateTimeKind.Unspecified);
-        var defaultToLocal = DateTime.SpecifyKind(localDate.AddDays(1).AddTicks(-1), DateTimeKind.Unspecified);
-        var defaultFromUtc = await _localClock.ConvertToUtcAsync(defaultFromLocal);
-        var defaultToUtc = await _localClock.ConvertToUtcAsync(defaultToLocal);
-        var to = filter.ToUtc ?? defaultToUtc;
-        var from = filter.FromUtc ?? defaultFromUtc;
-
-        if (from > to)
-        {
-            (from, to) = (to, from);
-        }
-
-        filter.FromUtc = DateTime.SpecifyKind(from, DateTimeKind.Utc);
-        filter.ToUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc);
     }
 }

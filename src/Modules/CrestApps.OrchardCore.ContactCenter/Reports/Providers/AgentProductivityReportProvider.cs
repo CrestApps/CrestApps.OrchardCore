@@ -55,9 +55,10 @@ public sealed class AgentProductivityReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var range = context.Filter.GetDateRange();
         var report = await ReportingService.GetAgentProductivityAsync(
-            context.FromUtc,
-            context.ToUtc,
+            range.FromUtc.GetValueOrDefault(),
+            range.ToUtc.GetValueOrDefault(),
             ContactCenterReportFilter.GetCriteria(context.Filter),
             cancellationToken);
 

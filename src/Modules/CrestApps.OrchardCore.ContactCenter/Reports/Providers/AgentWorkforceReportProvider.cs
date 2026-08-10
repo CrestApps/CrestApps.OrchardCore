@@ -62,6 +62,10 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             return _capabilityGuard.DescribeUnavailable(missingFeatures);
         }
 
+        var range = context.Filter.GetDateRange();
+        var fromUtc = range.FromUtc.GetValueOrDefault();
+        var toUtc = range.ToUtc.GetValueOrDefault();
+
         // The event log is read through the store rather than queried directly, because a payload written by an
         // earlier release deserializes into today's type without complaint and the store is where the stored
         // schema version is brought to the one this release understands.
@@ -72,7 +76,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                 ContactCenterConstants.Events.AgentSignedOut,
                 ContactCenterConstants.Events.AgentPresenceChanged,
             ],
-            context.ToUtc,
+            toUtc,
             cancellationToken))
             .ToArray();
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
@@ -86,7 +90,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 
         var agents = (await _agentManager.GetAllAsync(cancellationToken))
             .ToDictionary(agent => agent.ItemId, StringComparer.Ordinal);
-        var intervals = BuildIntervals(events, context.FromUtc, context.ToUtc);
+        var intervals = BuildIntervals(events, fromUtc, toUtc);
         var campaignNames = (await _campaignManager.GetAllAsync(cancellationToken))
             .Where(campaign => !string.IsNullOrEmpty(campaign.ItemId))
             .ToDictionary(
@@ -104,7 +108,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             AgentWorkforceReportKind.Utilization => BuildUtilization(intervals, agents, occupancy: false),
             AgentWorkforceReportKind.Occupancy => BuildUtilization(intervals, agents, occupancy: true),
             AgentWorkforceReportKind.ReasonBreakdown => BuildReasonBreakdown(intervals),
-            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(events, agents, context.FromUtc, context.ToUtc),
+            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(events, agents, fromUtc, toUtc),
             AgentWorkforceReportKind.QueueMembershipHours => BuildMembershipHours(intervals, queueMembership: true),
             AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false, campaignNames),
             AgentWorkforceReportKind.PayrollTimecard => BuildPayrollTimecard(intervals, agents),

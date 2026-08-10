@@ -176,11 +176,14 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
 
     private static ReportContext CreateContext(DateTime fromUtc, DateTime toUtc)
     {
-        return new ReportContext(new ReportFilter
+        var filter = new ReportFilter();
+        filter.SetDateRange(new ReportDateRange
         {
             FromUtc = fromUtc,
             ToUtc = toUtc,
         });
+
+        return new ReportContext(filter);
     }
 
     private static async Task<(IStore Store, string DatabasePath)> CreateSeededStoreAsync(CancellationToken cancellationToken)
