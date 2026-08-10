@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.SignalR;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 /// and overrides hooks to integrate with OrchardCore's scoping, authorization, localization,
 /// analytics, and citation systems.
 /// </summary>
-[AllowApiTokenAuthentication]
+[Authorize(AuthenticationSchemes = "Api,Identity.Application")]
 public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     private readonly IStringLocalizer S;
