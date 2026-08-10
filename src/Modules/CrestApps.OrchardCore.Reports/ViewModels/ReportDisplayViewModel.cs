@@ -28,14 +28,4 @@ public sealed class ReportDisplayViewModel
     /// Gets or sets the report document to render.
     /// </summary>
     public ReportDocument Document { get; set; }
-
-    /// <summary>
-    /// Gets or sets the resolved inclusive lower UTC bound of the reporting period.
-    /// </summary>
-    public DateTime FromUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the resolved inclusive upper UTC bound of the reporting period.
-    /// </summary>
-    public DateTime ToUtc { get; set; }
 }
