@@ -29,7 +29,7 @@ public sealed class HttpRequestTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["Url"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Url", WorkflowActivitySchemaBuilders.LiquidExpression("The URL to send the request to."));
         yield return ("HttpMethod", WorkflowActivitySchemaBuilders.String("The HTTP method to use, for example GET, POST, PUT, PATCH, or DELETE. Defaults to GET."));

@@ -3,16 +3,27 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.AdminMenu.Nodes;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Fields;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Placements.Filters;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Queries.Sources;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Conditions;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Rules.Operators;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Sitemaps.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.UrlRewriting.Sources;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Services;
@@ -102,6 +113,124 @@ public sealed class BuiltInRecipeStepTests
         options.AddOrUpdate("PostgreSQL", new("PostgreSQL", "PostgreSQL"), new("Read source documents from a PostgreSQL table.", "Read source documents from a PostgreSQL table."));
 
         return Options.Create(options);
+    }
+
+    private static RuleSchemaService CreateRuleSchemaService()
+    {
+        var conditions = new IRuleConditionSchemaDefinition[]
+        {
+            new AllConditionGroupSchema(),
+            new AnyConditionGroupSchema(),
+            new BooleanConditionSchema(),
+            new ContentTypeConditionSchema(),
+            new CultureConditionSchema(),
+            new HomepageConditionSchema(),
+            new IsAnonymousConditionSchema(),
+            new IsAuthenticatedConditionSchema(),
+            new JavascriptConditionSchema(),
+            new RoleConditionSchema(),
+            new UrlConditionSchema(),
+        };
+
+        var operators = new IRuleConditionOperatorSchemaDefinition[]
+        {
+            new StringContainsOperatorSchema(),
+            new StringEndsWithOperatorSchema(),
+            new StringEqualsOperatorSchema(),
+            new StringNotContainsOperatorSchema(),
+            new StringNotEndsWithOperatorSchema(),
+            new StringNotEqualsOperatorSchema(),
+            new StringNotStartsWithOperatorSchema(),
+            new StringStartsWithOperatorSchema(),
+        };
+
+        return new RuleSchemaService(conditions, operators, new FakeRecipeSchemaExampleService());
+    }
+
+    private static SitemapSchemaService CreateSitemapSchemaService()
+    {
+        var sources = new ISitemapSourceSchemaDefinition[]
+        {
+            new ContentTypesSitemapSourceSchema(),
+            new CustomPathSitemapSourceSchema(),
+            new SitemapIndexSourceSchema(),
+        };
+
+        return new SitemapSchemaService(sources, new FakeRecipeSchemaExampleService());
+    }
+
+    private static AdminMenuSchemaService CreateAdminMenuSchemaService()
+    {
+        var nodes = new IAdminNodeSchemaDefinition[]
+        {
+            new LinkAdminNodeSchema(),
+            new PlaceholderAdminNodeSchema(),
+            new ContentTypesAdminNodeSchema(),
+            new ListsAdminNodeSchema(),
+        };
+
+        return new AdminMenuSchemaService(nodes, new FakeRecipeSchemaExampleService());
+    }
+
+    private static QuerySchemaService CreateQuerySchemaService()
+    {
+        var sources = new IQuerySourceSchemaDefinition[]
+        {
+            new SqlQuerySourceSchema(),
+            new LuceneQuerySourceSchema(),
+            new ElasticsearchQuerySourceSchema(),
+        };
+
+        return new QuerySchemaService(sources, new FakeRecipeSchemaExampleService());
+    }
+
+    private static RewriteRuleSchemaService CreateRewriteRuleSchemaService()
+    {
+        var sources = new IRewriteRuleSourceSchemaDefinition[]
+        {
+            new UrlRedirectRuleSourceSchema(),
+            new UrlRewriteRuleSourceSchema(),
+        };
+
+        return new RewriteRuleSchemaService(sources);
+    }
+
+    private static PlacementSchemaService CreatePlacementSchemaService()
+    {
+        var filters = new IPlacementNodeFilterSchemaDefinition[]
+        {
+            new PathPlacementNodeFilterSchema(),
+            new ContentTypePlacementNodeFilterSchema(),
+            new ContentPartPlacementNodeFilterSchema(),
+        };
+
+        return new PlacementSchemaService(filters);
+    }
+
+    private static DeploymentSchemaService CreateDeploymentSchemaService()
+    {
+        var definitions = new IDeploymentStepSchemaDefinition[]
+        {
+            new ContentDeploymentStepSchema(),
+            new CustomFileDeploymentStepSchema(),
+            new MediaDeploymentStepSchema(),
+        };
+
+        var factories = new[]
+        {
+            "ContentDeploymentStep",
+            "CustomFileDeploymentStep",
+            "MediaDeploymentStep",
+            "AllRolesDeploymentStep",
+        }.Select(name =>
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(name);
+
+            return factory.Object;
+        });
+
+        return new DeploymentSchemaService(factories, definitions, new FakeRecipeSchemaExampleService());
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateAllSiteSettingsSchemaDefinitions()
@@ -206,14 +335,7 @@ public sealed class BuiltInRecipeStepTests
 
         if (stepType == typeof(AdminMenuRecipeStep))
         {
-            var schemaService = new Mock<IContentItemSchemaService>();
-            schemaService
-                .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
-
-            return new AdminMenuRecipeStep(schemaService.Object);
+            return new AdminMenuRecipeStep(CreateAdminMenuSchemaService());
         }
 
         if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
@@ -237,6 +359,41 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(AIDataSourceRecipeStep))
         {
             return new AIDataSourceRecipeStep(CreateAIDataSourceSourceOptions());
+        }
+
+        if (stepType == typeof(LayersRecipeStep))
+        {
+            return new LayersRecipeStep(CreateRuleSchemaService());
+        }
+
+        if (stepType == typeof(SitemapsRecipeStep))
+        {
+            return new SitemapsRecipeStep(CreateSitemapSchemaService());
+        }
+
+        if (stepType == typeof(DeploymentRecipeStep))
+        {
+            return new DeploymentRecipeStep(CreateDeploymentSchemaService());
+        }
+
+        if (stepType == typeof(QueriesRecipeStep))
+        {
+            return new QueriesRecipeStep(CreateQuerySchemaService());
+        }
+
+        if (stepType == typeof(UrlRewritingRecipeStep))
+        {
+            return new UrlRewritingRecipeStep(CreateRewriteRuleSchemaService());
+        }
+
+        if (stepType == typeof(PlacementsRecipeStep))
+        {
+            return new PlacementsRecipeStep(CreatePlacementSchemaService());
+        }
+
+        if (stepType == typeof(TranslationsRecipeStep))
+        {
+            return new TranslationsRecipeStep(new FakeRecipeSchemaExampleService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
@@ -706,17 +863,10 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task AdminMenuRecipeStep_SchemaContainsMenuItems()
     {
-        var schemaService = new Mock<IContentItemSchemaService>();
-        schemaService
-            .Setup(x => x.GetGenericSchemaAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String))));
-
-        var step = new AdminMenuRecipeStep(schemaService.Object);
+        var step = new AdminMenuRecipeStep(CreateAdminMenuSchemaService());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
         Assert.Contains("\"MenuItems\"", json);
-        Assert.Contains("\"ContentType\"", json);
+        Assert.Contains("LinkAdminNode", json);
     }
 
     [Fact]
@@ -1509,12 +1659,19 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task TranslationsRecipeStep_SchemaContainsNewFormatTranslationEntries()
     {
-        var step = new TranslationsRecipeStep();
+        var examples = new RecipeSchemaExamples
+        {
+            CultureNames = ["en-US", "fr"],
+        };
+
+        var step = new TranslationsRecipeStep(new FakeRecipeSchemaExampleService(examples));
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("\"translations\"", json);
         Assert.Contains("\"culture\"", json);
         Assert.Contains("\"key\"", json);
+        Assert.Contains("\"en-US\"", json);
+        Assert.Contains("\"fr\"", json);
     }
 
     [Fact]

@@ -26,6 +26,8 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
 | [SignalR](signalr) | `CrestApps.OrchardCore.SignalR` | Real-time communication via SignalR |
+| [SignalR Redis Backplane](signalr) | `CrestApps.OrchardCore.SignalR.Redis` | Redis backplane for scaling SignalR across nodes |
+| [SignalR Azure Backplane](signalr) | `CrestApps.OrchardCore.SignalR.Azure` | Azure SignalR Service backplane for scaling SignalR across nodes |
 | [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
 | [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
 

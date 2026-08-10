@@ -23,9 +23,9 @@ public sealed class ValidateUserTaskSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> Outcomes => ["Anonymous", "Authenticated", "InRole"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("SetUserName", WorkflowActivitySchemaBuilders.Boolean("When true and the user is authenticated, stores the user's name in the 'UserName' workflow property. Defaults to true."));
-        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles to check. The 'InRole' outcome is triggered if the authenticated user belongs to at least one of these roles."));
+        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles to check. The 'InRole' outcome is triggered if the authenticated user belongs to at least one of these roles.", context.Examples.RoleNames));
     }
 }

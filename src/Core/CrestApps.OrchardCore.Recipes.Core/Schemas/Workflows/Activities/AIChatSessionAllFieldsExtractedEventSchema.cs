@@ -23,7 +23,7 @@ public sealed class AIChatSessionAllFieldsExtractedEventSchema : WorkflowActivit
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("ProfileId", WorkflowActivitySchemaBuilders.String("Optionally filter this event to a specific AI chat profile. Leave empty to trigger for any profile."));
     }

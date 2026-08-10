@@ -23,7 +23,7 @@ public sealed class DisableTenantTaskSchema : WorkflowActivitySchemaDefinitionBa
     protected override IEnumerable<string> Outcomes => ["Disabled", "Failed"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("TenantName", WorkflowActivitySchemaBuilders.LiquidExpression("The name of the tenant to disable."));
     }

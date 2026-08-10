@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows.Activities;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -41,6 +42,30 @@ public sealed class WorkflowActivitySchemaServiceTests
         Assert.Empty(undescribed.Outcomes);
         Assert.Equal("Custom", undescribed.Category);
         Assert.Equal("Undescribed Task", undescribed.DisplayText);
+    }
+
+    [Fact]
+    public async Task GetActivityDescriptorsAsync_SurfacesContentTypesAsSuggestions()
+    {
+        // Arrange
+        var examples = new RecipeSchemaExamples
+        {
+            ContentTypeNames = ["Article", "BlogPost"],
+        };
+
+        var service = CreateService(examples);
+
+        // Act
+        var descriptors = await service.GetActivityDescriptorsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var contentPublished = Assert.Single(descriptors, descriptor => descriptor.Name == "ContentPublishedEvent");
+
+        var schemaNode = JsonSerializer.SerializeToNode(contentPublished.Properties.Build());
+        var examplesNode = schemaNode?["properties"]?["ContentTypeFilter"]?["items"]?["examples"]?.AsArray();
+
+        Assert.NotNull(examplesNode);
+        Assert.Equal(examples.ContentTypeNames, examplesNode.Select(example => example.GetValue<string>()).ToArray());
     }
 
     [Fact]
@@ -350,6 +375,9 @@ public sealed class WorkflowActivitySchemaServiceTests
     }
 
     private static WorkflowActivitySchemaService CreateService()
+        => CreateService(RecipeSchemaExamples.Empty);
+
+    private static WorkflowActivitySchemaService CreateService(RecipeSchemaExamples examples)
     {
         var activities = new[]
         {
@@ -368,7 +396,7 @@ public sealed class WorkflowActivitySchemaServiceTests
             new EmailTaskSchema(),
         };
 
-        return new WorkflowActivitySchemaService(library.Object, definitions);
+        return new WorkflowActivitySchemaService(library.Object, definitions, new FakeRecipeSchemaExampleService(examples));
     }
 
     private static IActivity CreateActivity<TActivity>(string name, string category, string displayText)

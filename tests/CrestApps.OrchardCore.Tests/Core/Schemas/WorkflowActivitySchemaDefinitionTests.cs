@@ -646,7 +646,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
 
         protected override string Category => "Testing";
 
-        protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+        protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
             => [];
 
         protected override async ValueTask<WorkflowActivitySchema> BuildActivitySchemaAsync(
@@ -667,7 +667,7 @@ public sealed class WorkflowActivitySchemaDefinitionTests
     {
         public override string Name { get; } = "FallbackTask";
 
-        protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+        protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
             => [];
     }
 }

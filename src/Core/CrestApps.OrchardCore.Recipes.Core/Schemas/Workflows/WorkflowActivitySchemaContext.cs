@@ -29,4 +29,9 @@ public sealed class WorkflowActivitySchemaContext
     /// Gets the localized display text reported by the activity, when the activity library resolved one.
     /// </summary>
     public string DisplayText { get; init; }
+
+    /// <summary>
+    /// Gets the example values from the current tenant that activities surface as non-restrictive suggestions.
+    /// </summary>
+    public RecipeSchemaExamples Examples { get; init; } = RecipeSchemaExamples.Empty;
 }
