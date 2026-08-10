@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -62,22 +63,22 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         var model = new OmnichannelReportFilterViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.CampaignId, model.CampaignId);
-        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.CampaignGroupId, model.CampaignGroupId);
-        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Channel, model.Channel);
-        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Source, model.Source);
-        OmnichannelReportFilter.SetString(filter, OmnichannelReportFilter.Status, model.Status);
+        filter.Set(OmnichannelReportFilter.CampaignId, model.CampaignId);
+        filter.Set(OmnichannelReportFilter.CampaignGroupId, model.CampaignGroupId);
+        filter.Set(OmnichannelReportFilter.Channel, model.Channel);
+        filter.Set(OmnichannelReportFilter.Source, model.Source);
+        filter.Set(OmnichannelReportFilter.Status, model.Status);
 
         return Edit(filter, context);
     }
 
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)
     {
-        model.CampaignId = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.CampaignId);
-        model.CampaignGroupId = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.CampaignGroupId);
-        model.Channel = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Channel);
-        model.Source = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Source);
-        model.Status = OmnichannelReportFilter.GetString(filter, OmnichannelReportFilter.Status);
+        model.CampaignId = filter.Get<string>(OmnichannelReportFilter.CampaignId);
+        model.CampaignGroupId = filter.Get<string>(OmnichannelReportFilter.CampaignGroupId);
+        model.Channel = filter.Get<string>(OmnichannelReportFilter.Channel);
+        model.Source = filter.Get<string>(OmnichannelReportFilter.Source);
+        model.Status = filter.Get<string>(OmnichannelReportFilter.Status);
 
         var campaigns = await _campaignManager.GetAllAsync();
 

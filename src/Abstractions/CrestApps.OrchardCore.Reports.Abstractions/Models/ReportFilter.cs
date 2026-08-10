@@ -3,9 +3,11 @@ using OrchardCore.Entities;
 namespace CrestApps.OrchardCore.Reports.Models;
 
 /// <summary>
-/// Represents the filter applied when running a report. Every report shares the built-in from/to date
-/// range; additional, report-specific filters are contributed through display drivers and stored in the
-/// extensible entity <see cref="Entity.Properties"/> bag.
+/// Represents the filter applied when running a report. A report declares no fixed dimensions of its own;
+/// every filter (including the built-in date range) is contributed through display drivers and stored in
+/// the extensible entity <see cref="Entity.Properties"/> bag, so reports that do not need a given filter
+/// simply do not contribute it. Use the <see cref="ReportFilterExtensions"/> helpers to read and write
+/// typed values.
 /// </summary>
 public sealed class ReportFilter : Entity
 {
@@ -14,20 +16,4 @@ public sealed class ReportFilter : Entity
     /// decide whether they apply to the current report.
     /// </summary>
     public string ReportName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the inclusive lower UTC bound of the reporting period.
-    /// </summary>
-    public DateTime? FromUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the inclusive upper UTC bound of the reporting period.
-    /// </summary>
-    public DateTime? ToUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the selected date-range preset key (for example <c>today</c>, <c>last30</c>, or
-    /// <c>custom</c>) used to restore the picker's selected option when the report is reloaded.
-    /// </summary>
-    public string DateRangeKey { get; set; }
 }

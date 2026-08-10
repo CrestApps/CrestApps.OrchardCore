@@ -25,24 +25,26 @@ public sealed class ReportContext
     public ReportFilter Filter { get; }
 
     /// <summary>
-    /// Gets the inclusive lower UTC bound of the reporting period.
+    /// Gets the inclusive lower UTC bound of the reporting period, as contributed by the built-in
+    /// date-range filter. Returns the default value when the report does not contribute a date range.
     /// </summary>
     public DateTime FromUtc
     {
         get
         {
-            return Filter.FromUtc.GetValueOrDefault();
+            return Filter.GetDateRange().FromUtc.GetValueOrDefault();
         }
     }
 
     /// <summary>
-    /// Gets the inclusive upper UTC bound of the reporting period.
+    /// Gets the inclusive upper UTC bound of the reporting period, as contributed by the built-in
+    /// date-range filter. Returns the default value when the report does not contribute a date range.
     /// </summary>
     public DateTime ToUtc
     {
         get
         {
-            return Filter.ToUtc.GetValueOrDefault();
+            return Filter.GetDateRange().ToUtc.GetValueOrDefault();
         }
     }
 }
