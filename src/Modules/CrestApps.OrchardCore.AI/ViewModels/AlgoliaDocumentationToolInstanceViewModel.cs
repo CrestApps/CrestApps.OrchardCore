@@ -16,6 +16,11 @@ public class AlgoliaDocumentationToolInstanceViewModel
     public string ApiKey { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an API key is already stored for the instance.
+    /// </summary>
+    public bool HasApiKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the Algolia index name to query.
     /// </summary>
     public string IndexName { get; set; }

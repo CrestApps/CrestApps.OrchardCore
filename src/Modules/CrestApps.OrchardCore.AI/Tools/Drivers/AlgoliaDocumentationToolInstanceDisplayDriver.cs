@@ -38,9 +38,9 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
             var settings = instance.GetOrCreate<AlgoliaDocumentationToolSettings>();
 
             model.ApplicationId = settings.ApplicationId;
-            model.ApiKey = settings.ApiKey;
             model.IndexName = settings.IndexName;
             model.MaxResults = settings.MaxResults;
+            model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
         }).Location("Content:5");
     }
 
@@ -55,12 +55,14 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var existing = instance.GetOrCreate<AlgoliaDocumentationToolSettings>();
+
         if (string.IsNullOrWhiteSpace(model.ApplicationId))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApplicationId), S["The application id is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.ApiKey))
+        if (string.IsNullOrWhiteSpace(model.ApiKey) && string.IsNullOrEmpty(existing.ApiKey))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["The search-only API key is required."]);
         }
@@ -75,10 +77,14 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxResults), S["The maximum results must be greater than zero."]);
         }
 
+        var apiKey = string.IsNullOrWhiteSpace(model.ApiKey)
+            ? existing.ApiKey
+            : model.ApiKey.Trim();
+
         instance.Put(new AlgoliaDocumentationToolSettings
         {
             ApplicationId = model.ApplicationId?.Trim(),
-            ApiKey = model.ApiKey?.Trim(),
+            ApiKey = apiKey,
             IndexName = model.IndexName?.Trim(),
             MaxResults = model.MaxResults,
         });

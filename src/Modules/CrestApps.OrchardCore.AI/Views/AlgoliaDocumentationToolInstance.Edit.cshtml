@@ -14,9 +14,18 @@
 <div class="ocat-wrapper">
     <label asp-for="ApiKey" class="ocat-label">@T["Search-only API key"]</label>
     <div class="ocat-end">
-        <input asp-for="ApiKey" class="form-control" autocomplete="off" />
+        <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
-        <span class="hint">@T["The public search-only API key. Do not use an admin API key."]</span>
+        <span class="hint">
+            @if (Model.HasApiKey)
+            {
+                @T["An API key is securely stored. Enter a new value to replace it, or leave it blank to keep the current one."]
+            }
+            else
+            {
+                @T["The public search-only API key. Do not use an admin API key."]
+            }
+        </span>
     </div>
 </div>
 
