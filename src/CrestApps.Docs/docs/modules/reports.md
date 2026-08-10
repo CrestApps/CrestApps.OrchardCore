@@ -104,6 +104,35 @@ services.AddScoped<IReport, MyReport>();
 
 `RunAsync` builds a `ReportDocument` from the resolved period (`context.Filter.GetDateRange()`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, `ReportSection.ForBars`, and `ReportSection.ForChart` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently. Charts accept ordered labels plus one or more numeric datasets; `Width` places sections on the shared responsive twelve-column layout.
 
+## Color-coding table cells
+
+Report table sections can color-code their headers and cells with `ReportStyle`, which carries a font **color**, a **background color**, and a **bold** flag. Apply it in three places:
+
+- **Header cells** — pass a `HeaderStyle` to `ReportColumn`.
+- **Whole rows** — call `ReportRow.WithStyle(...)`, useful for subtotal and grand-total rows.
+- **Individual cells** — call `ReportRow.WithCellStyle(index, ...)`, which overrides the row style for that one cell.
+
+Supply colors as hexadecimal values (for example `#2563EB`) so the same style renders in the browser **and** exports to Excel. The HTML renderer also accepts simple named colors, but only hexadecimal colors are carried into the Excel workbook.
+
+```csharp
+var columns = new[]
+{
+    new ReportColumn(S["Queue"].Value, ReportColumnAlign.Start, ReportStyle.Create("#FFFFFF", "#2563EB", bold: true)),
+    new ReportColumn(S["Completed"].Value, ReportColumnAlign.End),
+};
+
+var rows = new List<ReportRow>
+{
+    new ReportRow(["Support", "18"]).WithCellStyle(1, ReportStyle.Create("#B91C1C")),
+    new ReportRow(["All queues", "18"], ReportRowKind.GrandTotal).WithStyle(ReportStyle.Create(backgroundColor: "#EFF6FF")),
+};
+
+return new ReportDocument()
+    .Add(ReportSection.ForTable(S["Queues"].Value, columns, rows));
+```
+
+When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. CSV has no native styling, so it always exports values only.
+
 ## Enable via recipe
 
 ```json

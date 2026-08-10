@@ -17,10 +17,12 @@ public sealed class ReportColumn
     /// </summary>
     /// <param name="label">The column header label.</param>
     /// <param name="align">The column alignment.</param>
-    public ReportColumn(string label, ReportColumnAlign align = ReportColumnAlign.Start)
+    /// <param name="headerStyle">The optional style applied to the column header cell.</param>
+    public ReportColumn(string label, ReportColumnAlign align = ReportColumnAlign.Start, ReportStyle headerStyle = null)
     {
         Label = label;
         Align = align;
+        HeaderStyle = headerStyle;
     }
 
     /// <summary>
@@ -32,4 +34,10 @@ public sealed class ReportColumn
     /// Gets or sets the column alignment.
     /// </summary>
     public ReportColumnAlign Align { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional style applied to the column header cell, allowing headers to be
+    /// color-coded. Ignored by export formats that do not support styling.
+    /// </summary>
+    public ReportStyle HeaderStyle { get; set; }
 }
