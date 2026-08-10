@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+
+@model McpServerSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+    <div class="ocat-end">
+        <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select"></select>
+        <span class="hint">@T["Controls how MCP clients authenticate with the server. Use OpenID Connect or API key in production, and None only for local development."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-auth-section="ApiKey">
+    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApiKey" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey ? T["Leave blank to keep the current API key."] : T["Enter an API key."])" />
+        <span class="hint">@T["The API key MCP clients must send in the Authorization header. Required when the API key authentication type is selected."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-auth-section="OpenId">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RequireAccessPermission" />
+            <label class="form-check-label" asp-for="RequireAccessPermission">
+                @T["Require access permission"]
+            </label>
+            <span class="hint dashed">@T["When enabled, authenticated callers must also hold the Access the MCP Server permission. Applies only to OpenID Connect authentication."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" id="mcpServerExposeAllTools" />
+            <label class="form-check-label" asp-for="ExposeAllTools">
+                @T["Expose all tools"]
+            </label>
+            <span class="hint dashed">@T["When enabled, every non-hidden tool and configured tool instance is exposed to MCP clients and the selection below is ignored. Leave disabled to expose only the tools you select."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const authSelect = document.querySelector('[name$="AuthenticationType"]');
+
+        if (authSelect) {
+            function toggleAuthSections() {
+                const value = authSelect.value;
+
+                document.querySelectorAll('[data-auth-section]').forEach(section => {
+                    section.classList.toggle('d-none', section.dataset.authSection !== value);
+                });
+            }
+
+            authSelect.addEventListener('change', toggleAuthSections);
+            toggleAuthSections();
+        }
+
+        const exposeAllTools = document.getElementById('mcpServerExposeAllTools');
+
+        if (exposeAllTools) {
+            const toolSelectors = [
+                document.querySelector('.tool-groups-container')?.closest('.ocat-wrapper'),
+                document.querySelector('[id^="tool-instance-"]')?.closest('.ocat-wrapper'),
+            ].filter(Boolean);
+
+            function toggleToolSelectors() {
+                toolSelectors.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
+            }
+
+            exposeAllTools.addEventListener('change', toggleToolSelectors);
+            toggleToolSelectors();
+        }
+    });
+</script>

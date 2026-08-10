@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Migrations;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -148,6 +149,11 @@ public sealed class McpServerStartup : StartupBase
         // so the shared WithCrestAppsHandlers() can resolve them.
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
+
+        // Register the MCP server site settings editor so operators can configure authentication and
+        // opt in the tools and tool instances exposed to MCP clients.
+        services.AddSiteDisplayDriver<McpServerSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Register the authorization handler for MCP server.
         services.AddScoped<IAuthorizationHandler, McpServerAuthorizationHandler>();
