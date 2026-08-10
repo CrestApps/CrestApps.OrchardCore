@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -136,7 +137,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<InteractionIndex>(table =>
         {
-            table.AddColumn<int>("RecordingState", column => column.WithDefault(0));
+            table.AddColumn<RecordingState>("RecordingState", column => column.WithDefault((int)RecordingState.None));
             table.AddColumn<DateTime>("RecordingPausedUtc");
         },
             collection: ContactCenterStorage.CollectionName

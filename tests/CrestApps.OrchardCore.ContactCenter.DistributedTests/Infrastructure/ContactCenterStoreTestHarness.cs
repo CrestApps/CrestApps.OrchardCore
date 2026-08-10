@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
@@ -72,7 +73,7 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<DateTime>("WrapUpStartedUtc")
             .Column<DateTime>("WrapUpCompletedUtc")
             .Column<bool>("RecordingLegalHold")
-            .Column<int>("RecordingState")
+            .Column<RecordingState>("RecordingState")
             .Column<DateTime>("RecordingPausedUtc"),
             collection: ContactCenterStorage.CollectionName);
     }
