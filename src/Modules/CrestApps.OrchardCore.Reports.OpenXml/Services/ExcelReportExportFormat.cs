@@ -54,6 +54,7 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
 
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             var usedSheetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var styleRegistry = new ExcelStyleRegistry();
             uint sheetId = 1;
 
             if (document.Sections.Count == 0)
@@ -78,10 +79,14 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
                         sheetId,
                         i + 1);
 
-                    WriteSection(sheetData, section);
+                    WriteSection(sheetData, section, styleRegistry);
                     sheetId++;
                 }
             }
+
+            var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+            stylesPart.Stylesheet = styleRegistry.Build();
+            stylesPart.Stylesheet.Save();
 
             workbookPart.Workbook.Save();
         }
@@ -158,7 +163,7 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
         return sanitized;
     }
 
-    private static void WriteSection(SheetData sheetData, ReportSection section)
+    private static void WriteSection(SheetData sheetData, ReportSection section, ExcelStyleRegistry styleRegistry)
     {
         if (!string.IsNullOrWhiteSpace(section.Description))
         {
@@ -172,7 +177,7 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
                 WriteMetricsSection(sheetData, section);
                 break;
             case ReportSectionKind.Table:
-                WriteTableSection(sheetData, section);
+                WriteTableSection(sheetData, section, styleRegistry);
                 break;
             case ReportSectionKind.Bars:
                 WriteBarsSection(sheetData, section);
@@ -195,17 +200,72 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
         }
     }
 
-    private static void WriteTableSection(SheetData sheetData, ReportSection section)
+    private static void WriteTableSection(SheetData sheetData, ReportSection section, ExcelStyleRegistry styleRegistry)
     {
         if (section.Columns.Count > 0)
         {
-            AppendTextRow(sheetData, [.. section.Columns.Select(column => column.Label)]);
+            var headerRow = new Row();
+
+            foreach (var column in section.Columns)
+            {
+                var headerStyle = EnsureBold(column.HeaderStyle);
+
+                headerRow.Append(CreateCell(column.Label, styleRegistry.GetCellFormatIndex(headerStyle)));
+            }
+
+            sheetData.Append(headerRow);
         }
 
         foreach (var row in section.Rows)
         {
-            AppendTextRow(sheetData, [.. row.Cells]);
+            var dataRow = new Row();
+            var emphasize = row.Kind != ReportRowKind.Detail;
+
+            for (var i = 0; i < row.Cells.Count; i++)
+            {
+                var cellStyle = row.GetCellStyle(i);
+
+                if (emphasize)
+                {
+                    cellStyle = EnsureBold(cellStyle);
+                }
+
+                dataRow.Append(CreateCell(row.Cells[i], styleRegistry.GetCellFormatIndex(cellStyle)));
+            }
+
+            sheetData.Append(dataRow);
         }
+    }
+
+    private static ReportStyle EnsureBold(ReportStyle style)
+    {
+        if (style is null)
+        {
+            return ReportStyle.Create(bold: true);
+        }
+
+        if (style.Bold)
+        {
+            return style;
+        }
+
+        return ReportStyle.Create(style.Color, style.BackgroundColor, bold: true);
+    }
+
+    private static Cell CreateCell(string value, uint styleIndex)
+    {
+        var cell = new Cell
+        {
+            DataType = CellValues.InlineString,
+            InlineString = new InlineString(new Text(value ?? string.Empty)),
+        };
+
+        if (styleIndex != 0)
+        {
+            cell.StyleIndex = styleIndex;
+        }
+
+        return cell;
     }
 
     private static void WriteBarsSection(SheetData sheetData, ReportSection section)

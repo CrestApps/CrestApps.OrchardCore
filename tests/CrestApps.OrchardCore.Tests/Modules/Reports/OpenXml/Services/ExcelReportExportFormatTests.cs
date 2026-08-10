@@ -127,6 +127,94 @@ public sealed class ExcelReportExportFormatTests
         Assert.Equal(["All queues", "2"], GetCellValues(rows[3]));
     }
 
+    [Fact]
+    public void Serialize_WhenTableCellsAreStyled_ShouldApplyFontColorFillAndBold()
+    {
+        // Arrange
+        var document = new ReportDocument()
+            .Add(ReportSection.ForTable(
+                "Queues",
+                [
+                    new ReportColumn("Queue", ReportColumnAlign.Start, ReportStyle.Create("#FFFFFF", "#2563EB", bold: true)),
+                    new ReportColumn("Count"),
+                ],
+                [
+                    new ReportRow(["Support", "2"]).WithCellStyle(1, ReportStyle.Create("#FF0000")),
+                ]));
+        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+
+        // Act
+        var content = exportFormat.Serialize(document);
+
+        // Assert
+        using var stream = new MemoryStream(content);
+        using var spreadsheetDocument = SpreadsheetDocument.Open(stream, false);
+        var workbookPart = spreadsheetDocument.WorkbookPart;
+
+        Assert.NotNull(workbookPart);
+        Assert.NotNull(workbookPart.WorkbookStylesPart);
+
+        var stylesheet = workbookPart.WorkbookStylesPart.Stylesheet;
+        var sheet = Assert.Single(workbookPart.Workbook.Sheets.Elements<Sheet>());
+        var rows = GetSheetRows(workbookPart, sheet);
+
+        var headerCell = rows[0].Elements<Cell>().First();
+        var headerFont = GetFont(stylesheet, headerCell);
+        var headerFill = GetFill(stylesheet, headerCell);
+
+        Assert.NotNull(headerFont.Bold);
+        Assert.Equal("FFFFFFFF", headerFont.Color.Rgb.Value);
+        Assert.Equal("FF2563EB", headerFill.PatternFill.ForegroundColor.Rgb.Value);
+
+        var styledCell = rows[1].Elements<Cell>().ElementAt(1);
+        var styledFont = GetFont(stylesheet, styledCell);
+
+        Assert.Equal("FFFF0000", styledFont.Color.Rgb.Value);
+    }
+
+    [Fact]
+    public void Serialize_WhenTableRowIsEmphasized_ShouldMakeCellsBold()
+    {
+        // Arrange
+        var document = new ReportDocument()
+            .Add(ReportSection.ForTable(
+                "Queues",
+                [new ReportColumn("Queue"), new ReportColumn("Count")],
+                [new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal)]));
+        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+
+        // Act
+        var content = exportFormat.Serialize(document);
+
+        // Assert
+        using var stream = new MemoryStream(content);
+        using var spreadsheetDocument = SpreadsheetDocument.Open(stream, false);
+        var workbookPart = spreadsheetDocument.WorkbookPart;
+
+        Assert.NotNull(workbookPart);
+
+        var stylesheet = workbookPart.WorkbookStylesPart.Stylesheet;
+        var sheet = Assert.Single(workbookPart.Workbook.Sheets.Elements<Sheet>());
+        var rows = GetSheetRows(workbookPart, sheet);
+        var totalCell = rows[1].Elements<Cell>().First();
+
+        Assert.NotNull(GetFont(stylesheet, totalCell).Bold);
+    }
+
+    private static Font GetFont(Stylesheet stylesheet, Cell cell)
+    {
+        var cellFormat = stylesheet.CellFormats.Elements<CellFormat>().ElementAt((int)(cell.StyleIndex?.Value ?? 0));
+
+        return stylesheet.Fonts.Elements<Font>().ElementAt((int)(cellFormat.FontId?.Value ?? 0));
+    }
+
+    private static Fill GetFill(Stylesheet stylesheet, Cell cell)
+    {
+        var cellFormat = stylesheet.CellFormats.Elements<CellFormat>().ElementAt((int)(cell.StyleIndex?.Value ?? 0));
+
+        return stylesheet.Fills.Elements<Fill>().ElementAt((int)(cellFormat.FillId?.Value ?? 0));
+    }
+
     private static Row[] GetSheetRows(WorkbookPart workbookPart, Sheet sheet)
     {
         var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
