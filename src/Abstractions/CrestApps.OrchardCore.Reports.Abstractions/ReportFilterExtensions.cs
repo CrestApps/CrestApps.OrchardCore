@@ -74,7 +74,7 @@ public static class ReportFilterExtensions
     /// <param name="filter">The report filter.</param>
     /// <param name="key">The property key.</param>
     /// <returns>The deserialized value, or the default of <typeparamref name="T"/> when absent.</returns>
-    public static T Get<T>(this ReportFilter filter, string key)
+    public static T GetOrDefault<T>(this ReportFilter filter, string key)
     {
         return filter.TryGet<T>(key, out var value) ? value : default;
     }
@@ -131,7 +131,7 @@ public static class ReportFilterExtensions
             ToUtc = filter.TryGet<DateTime>(ToUtcKey, out var to)
                 ? DateTime.SpecifyKind(to, DateTimeKind.Utc)
                 : null,
-            Key = filter.Get<string>(DateRangeKey),
+            Key = filter.GetOrDefault<string>(DateRangeKey),
         };
     }
 

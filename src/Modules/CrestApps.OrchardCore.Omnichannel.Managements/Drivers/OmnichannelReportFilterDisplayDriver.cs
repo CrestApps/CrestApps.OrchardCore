@@ -74,11 +74,11 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
 
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)
     {
-        model.CampaignId = filter.Get<string>(OmnichannelReportFilter.CampaignId);
-        model.CampaignGroupId = filter.Get<string>(OmnichannelReportFilter.CampaignGroupId);
-        model.Channel = filter.Get<string>(OmnichannelReportFilter.Channel);
-        model.Source = filter.Get<string>(OmnichannelReportFilter.Source);
-        model.Status = filter.Get<string>(OmnichannelReportFilter.Status);
+        model.CampaignId = filter.GetOrDefault<string>(OmnichannelReportFilter.CampaignId);
+        model.CampaignGroupId = filter.GetOrDefault<string>(OmnichannelReportFilter.CampaignGroupId);
+        model.Channel = filter.GetOrDefault<string>(OmnichannelReportFilter.Channel);
+        model.Source = filter.GetOrDefault<string>(OmnichannelReportFilter.Source);
+        model.Status = filter.GetOrDefault<string>(OmnichannelReportFilter.Status);
 
         var campaigns = await _campaignManager.GetAllAsync();
 

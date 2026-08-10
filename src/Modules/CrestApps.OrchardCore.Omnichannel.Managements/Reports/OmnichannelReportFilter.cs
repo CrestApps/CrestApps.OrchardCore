@@ -20,10 +20,10 @@ internal static class OmnichannelReportFilter
     {
         var criteria = new OmnichannelReportCriteria
         {
-            CampaignId = filter.Get<string>(CampaignId),
-            CampaignGroupId = filter.Get<string>(CampaignGroupId),
-            Channel = filter.Get<string>(Channel),
-            Source = filter.Get<string>(Source),
+            CampaignId = filter.GetOrDefault<string>(CampaignId),
+            CampaignGroupId = filter.GetOrDefault<string>(CampaignGroupId),
+            Channel = filter.GetOrDefault<string>(Channel),
+            Source = filter.GetOrDefault<string>(Source),
             Status = filter.TryGet<ActivityStatus>(Status, out var status) ? status : null,
         };
 

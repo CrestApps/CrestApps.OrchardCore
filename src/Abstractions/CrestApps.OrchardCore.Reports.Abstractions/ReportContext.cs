@@ -3,15 +3,15 @@ using CrestApps.OrchardCore.Reports.Models;
 namespace CrestApps.OrchardCore.Reports;
 
 /// <summary>
-/// Provides the context passed to a report when it runs, exposing the resolved reporting period and the
-/// full filter (including any report-specific values contributed by filter display drivers).
+/// Provides the context passed to a report when it runs, exposing the full filter (including any values
+/// contributed by filter display drivers, such as the built-in date range).
 /// </summary>
 public sealed class ReportContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportContext"/> class.
     /// </summary>
-    /// <param name="filter">The report filter. Its from/to values are guaranteed to be set by the caller.</param>
+    /// <param name="filter">The report filter.</param>
     public ReportContext(ReportFilter filter)
     {
         ArgumentNullException.ThrowIfNull(filter);
@@ -20,31 +20,9 @@ public sealed class ReportContext
     }
 
     /// <summary>
-    /// Gets the report filter, including the extensible property bag of report-specific filter values.
+    /// Gets the report filter, including the extensible property bag of filter values. Read the date
+    /// range with <see cref="ReportFilterExtensions.GetDateRange(ReportFilter)"/> and other filter
+    /// values with the typed <see cref="ReportFilterExtensions"/> helpers.
     /// </summary>
     public ReportFilter Filter { get; }
-
-    /// <summary>
-    /// Gets the inclusive lower UTC bound of the reporting period, as contributed by the built-in
-    /// date-range filter. Returns the default value when the report does not contribute a date range.
-    /// </summary>
-    public DateTime FromUtc
-    {
-        get
-        {
-            return Filter.GetDateRange().FromUtc.GetValueOrDefault();
-        }
-    }
-
-    /// <summary>
-    /// Gets the inclusive upper UTC bound of the reporting period, as contributed by the built-in
-    /// date-range filter. Returns the default value when the report does not contribute a date range.
-    /// </summary>
-    public DateTime ToUtc
-    {
-        get
-        {
-            return Filter.GetDateRange().ToUtc.GetValueOrDefault();
-        }
-    }
 }

@@ -29,7 +29,7 @@ The implementation is split into three layers:
 ## Concepts
 
 - **`IReport`** — a report definition. It declares a technical `Name`, a `DisplayName`, a `Description`, a `Category` (used to group reports in the menu), a `Permission`, and a `RunAsync` method that returns a `ReportDocument` for a given `ReportContext`.
-- **`ReportFilter`** — the filter applied when a report runs. A report declares no fixed dimensions of its own: every filter is contributed with a display driver and stored in the extensible `ReportFilter.Properties` bag. The built-in tenant-local from/to date range is contributed the same way — it is just a filter — so a report that does not need a date selector can omit it. Use the `TryGet<T>`, `Get<T>`, and `Set<T>` helpers to read and write typed values, and `GetDateRange()` / `SetDateRange()` for the resolved period.
+- **`ReportFilter`** — the filter applied when a report runs. A report declares no fixed dimensions of its own: every filter is contributed with a display driver and stored in the extensible `ReportFilter.Properties` bag. The built-in tenant-local from/to date range is contributed the same way — it is just a filter — so a report that does not need a date selector can omit it. Use the `TryGet<T>`, `GetOrDefault<T>`, and `Set<T>` helpers to read and write typed values, and `GetDateRange()` / `SetDateRange()` for the resolved period.
 - **`ReportDocument`** — the uniform result. It is an ordered list of **sections**, where each section is a set of metric cards, a table (with optional emphasized totals rows for aggregated reports), horizontal bars, or a responsive Chart.js line, bar, stacked-bar, or doughnut chart. The same document is rendered in the browser and serialized by every exporter; chart exports use a label-and-dataset table so the underlying values remain portable.
 - **`IReportExportFormat`** — an export format. CSV ships in the box; the optional **Reports (OpenXml)** add-on adds Excel (`.xlsx`); and any module can add more formats by registering another implementation.
 
@@ -65,7 +65,7 @@ public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>
 
         return Initialize<MyQueueFilterViewModel>("MyQueueFilter_Edit", model =>
         {
-            model.QueueId = filter.Get<string>("QueueId");
+            model.QueueId = filter.GetOrDefault<string>("QueueId");
         }).Location("Content:2");
     }
 
@@ -88,9 +88,9 @@ public sealed class MyQueueFilterDisplayDriver : DisplayDriver<ReportFilter>
 Read and write filter values with the typed `ReportFilter` helpers instead of touching the property bag directly:
 
 - `bool TryGet<T>(string key, out T value)` — reads a value when present (also parses enums stored as strings).
-- `T Get<T>(string key)` — reads a value or returns the default when absent.
+- `T GetOrDefault<T>(string key)` — reads a value or returns the default when absent.
 - `void Set<T>(string key, T value)` — writes a value, or removes the key when the value is `null` or an empty string.
-- `ReportDateRange GetDateRange()` / `void SetDateRange(ReportDateRange range)` — read or write the built-in date-range filter; `context.FromUtc` and `context.ToUtc` expose the resolved bounds.
+- `ReportDateRange GetDateRange()` / `void SetDateRange(ReportDateRange range)` — read or write the built-in date-range filter. The date range is stored like any other filter, so read it from `context.Filter.GetDateRange()` when the report runs.
 
 The report reads the bound values when it runs. Because browser display and export use the same filter-building path, custom filter values are applied consistently in both outputs.
 
@@ -102,7 +102,7 @@ Implement `IReport` and register it as a scoped service:
 services.AddScoped<IReport, MyReport>();
 ```
 
-`RunAsync` builds a `ReportDocument` from the resolved period (`context.FromUtc` / `context.ToUtc`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, `ReportSection.ForBars`, and `ReportSection.ForChart` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently. Charts accept ordered labels plus one or more numeric datasets; `Width` places sections on the shared responsive twelve-column layout.
+`RunAsync` builds a `ReportDocument` from the resolved period (`context.Filter.GetDateRange()`) and any report-specific filter values. Use `ReportSection.ForMetrics`, `ReportSection.ForTable`, `ReportSection.ForBars`, and `ReportSection.ForChart` to compose the document, and `ReportFormat` to format numbers, durations, and percentages consistently. Charts accept ordered labels plus one or more numeric datasets; `Width` places sections on the shared responsive twelve-column layout.
 
 ## Enable via recipe
 

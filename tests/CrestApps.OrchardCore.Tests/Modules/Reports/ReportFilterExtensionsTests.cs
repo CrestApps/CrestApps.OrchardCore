@@ -42,6 +42,33 @@ public sealed class ReportFilterExtensionsTests
     }
 
     [Fact]
+    public void GetOrDefault_WhenKeyIsMissing_ShouldReturnDefault()
+    {
+        // Arrange
+        var filter = new ReportFilter();
+
+        // Act
+        var value = filter.GetOrDefault<string>("Missing");
+
+        // Assert
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public void GetOrDefault_WhenKeyIsPresent_ShouldReturnValue()
+    {
+        // Arrange
+        var filter = new ReportFilter();
+        filter.Set("Take", 25);
+
+        // Act
+        var value = filter.GetOrDefault<int>("Take");
+
+        // Assert
+        Assert.Equal(25, value);
+    }
+
+    [Fact]
     public void SetThenTryGet_WithInteger_ShouldRoundTrip()
     {
         // Arrange

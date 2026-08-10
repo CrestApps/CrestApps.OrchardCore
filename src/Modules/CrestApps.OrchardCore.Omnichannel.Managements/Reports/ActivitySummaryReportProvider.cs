@@ -49,10 +49,11 @@ public sealed class ActivitySummaryReportProvider : OmnichannelReportBase
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var range = context.Filter.GetDateRange();
         var activities = await OmnichannelReportQuery.GetCreatedAsync(
             _session,
-            context.FromUtc,
-            context.ToUtc,
+            range.FromUtc.GetValueOrDefault(),
+            range.ToUtc.GetValueOrDefault(),
             await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, cancellationToken),
             cancellationToken);
         var data = OmnichannelReportAggregator.BuildActivitySummary(activities);
