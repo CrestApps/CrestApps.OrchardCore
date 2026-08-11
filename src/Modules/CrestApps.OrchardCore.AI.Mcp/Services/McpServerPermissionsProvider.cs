@@ -1,4 +1,5 @@
-﻿using OrchardCore.Security.Permissions;
+﻿using OrchardCore;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
@@ -9,9 +10,12 @@ public sealed class McpServerPermissionsProvider : IPermissionProvider
 {
     public static readonly Permission AccessMcpServer = new("AccessMcpServer", "Access the MCP Server", isSecurityCritical: true);
 
+    public static readonly Permission ManageMcpServerSettings = new("ManageMcpServerSettings", "Manage the MCP Server settings", isSecurityCritical: true);
+
     private readonly IEnumerable<Permission> _allPermissions =
     [
         AccessMcpServer,
+        ManageMcpServerSettings,
     ];
 
     /// <summary>
@@ -23,6 +27,12 @@ public sealed class McpServerPermissionsProvider : IPermissionProvider
     /// <summary>
     /// Retrieves the default stereotypes.
     /// </summary>
-    public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
-        => [];
+    public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
+    [
+        new PermissionStereotype
+        {
+            Name = OrchardCoreConstants.Roles.Administrator,
+            Permissions = [ManageMcpServerSettings],
+        },
+    ];
 }

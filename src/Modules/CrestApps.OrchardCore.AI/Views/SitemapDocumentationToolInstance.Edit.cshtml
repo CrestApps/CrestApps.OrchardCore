@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model SitemapDocumentationToolInstanceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" class="form-control" placeholder="https://core.crestapps.com" />
+        <span asp-validation-for="BaseUrl" class="text-danger"></span>
+        <span class="hint">@T["The root URL of the documentation site. The crawler discovers pages through the site's sitemap.xml."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SitemapUrl" class="ocat-label">@T["Sitemap URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="SitemapUrl" class="form-control" placeholder="https://core.crestapps.com/sitemap.xml" />
+        <span asp-validation-for="SitemapUrl" class="text-danger"></span>
+        <span class="hint">@T["An explicit sitemap URL. Leave it empty to derive it from the base URL as {BaseUrl}/sitemap.xml."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxResults" class="ocat-label">@T["Maximum results"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxResults" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxResults" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of passages returned for a single search. Leave it empty to use the default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxPages" class="ocat-label">@T["Maximum pages"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxPages" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxPages" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of pages the crawler indexes for this site. Leave it empty to use the default."]</span>
+    </div>
+</div>
