@@ -172,7 +172,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     public async Task<int> UpdateFrom6Async()
     {
         await EnsureDefaultContactIndexTableAsync();
-        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
         return 9;
     }
@@ -184,7 +183,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     {
         await EnsureDefaultContactIndexTableAsync();
         await DropLegacyPhoneIndexTableAsync();
-        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
         return 9;
     }
@@ -196,7 +194,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     {
         await EnsureDefaultContactIndexTableAsync();
         await RemoveRedundantNationalPhoneColumnsAsync();
-        ShellScope.AddDeferredTask(ReindexContactVersionsAsync);
 
         return 9;
     }
@@ -723,56 +720,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         {
             logger.LogInformation(
                 "Reindexed {ReindexedCount} published omnichannel contact content item(s) after repairing the default contact index table.",
-                reindexedCount);
-        }
-    }
-
-    private static async Task ReindexContactVersionsAsync(ShellScope scope)
-    {
-        var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<OmnichannelContactsMigrations>>();
-        var store = scope.ServiceProvider.GetRequiredService<IStore>();
-        var contentTypes = await GetContentTypesWithOmnichannelContactPartAsync(contentDefinitionManager);
-
-        if (contentTypes.Length == 0)
-        {
-            return;
-        }
-
-        var documentId = 0L;
-        var reindexedCount = 0;
-
-        while (true)
-        {
-            await using var session = store.CreateSession();
-
-            var batch = await session.Query<ContentItem, ContentItemIndex>(index =>
-                (index.Published || index.Latest) &&
-                index.ContentType.IsIn(contentTypes) &&
-                index.DocumentId > documentId)
-                .OrderBy(index => index.DocumentId)
-                .Take(ReindexBatchSize)
-                .ListAsync();
-
-            if (!batch.Any())
-            {
-                break;
-            }
-
-            foreach (var contentItem in batch)
-            {
-                documentId = Math.Max(documentId, contentItem.Id);
-                await session.SaveAsync(contentItem);
-                reindexedCount++;
-            }
-
-            await session.SaveChangesAsync();
-        }
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Reindexed {ReindexedCount} published or latest omnichannel contact content item version(s) after upgrading the shared contact index.",
                 reindexedCount);
         }
     }
