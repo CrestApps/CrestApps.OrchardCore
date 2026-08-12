@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
+using CrestApps.Core.AI.Tooling.Instances.Documentation;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
@@ -389,6 +390,7 @@ public sealed class ToolInstancesStartup : StartupBase
             .AddAISuite(ai => ai
                 .AddToolInstances(toolInstances => toolInstances
                     .AddHttpApiRequestSource()
+                    .AddDocumentationSearchSources()
                     .AddYesSqlStores(),
                     useDefaultRegistry: false)
             )
@@ -400,6 +402,9 @@ public sealed class ToolInstancesStartup : StartupBase
             .AddDataMigration<AIToolInstanceIndexMigrations>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, SitemapDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, SearchIndexDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, AlgoliaDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
             .AddNavigationProvider<AIToolInstanceAdminMenu>()

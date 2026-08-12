@@ -1,0 +1,48 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AlgoliaDocumentationToolInstanceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ApplicationId" class="ocat-label">@T["Application id"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApplicationId" class="form-control" autocomplete="off" />
+        <span asp-validation-for="ApplicationId" class="text-danger"></span>
+        <span class="hint">@T["The Algolia application id that hosts the DocSearch index."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ApiKey" class="ocat-label">@T["Search-only API key"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApiKey" type="password" class="form-control" autocomplete="new-password" />
+        <span asp-validation-for="ApiKey" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.HasApiKey)
+            {
+                @T["An API key is securely stored. Enter a new value to replace it, or leave it blank to keep the current one."]
+            }
+            else
+            {
+                @T["The public search-only API key. Do not use an admin API key."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="IndexName" class="ocat-label">@T["Index name"]</label>
+    <div class="ocat-end">
+        <input asp-for="IndexName" class="form-control" autocomplete="off" />
+        <span asp-validation-for="IndexName" class="text-danger"></span>
+        <span class="hint">@T["The Algolia index queried for documentation results."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxResults" class="ocat-label">@T["Maximum results"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxResults" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxResults" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of passages returned for a single search. Leave it empty to use the default."]</span>
+    </div>
+</div>
