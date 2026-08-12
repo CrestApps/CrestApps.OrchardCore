@@ -27,7 +27,6 @@
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="YesSql.Abstractions" />
-    <PackageReference Include="CrestApps.Core.SignalR" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,6 +42,7 @@
       functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
 </Project>

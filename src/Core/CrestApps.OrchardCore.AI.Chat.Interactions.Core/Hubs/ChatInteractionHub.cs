@@ -6,7 +6,6 @@ using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +23,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 /// <see cref="ChatInteractionHubBase"/> and overrides hooks to integrate with
 /// OrchardCore's scoping, authorization, localization, analytics, and citation systems.
 /// </summary>
-[AllowApiTokenAuthentication]
+[Authorize]
 public class ChatInteractionHub : ChatInteractionHubBase
 {
     private readonly IStringLocalizer S;

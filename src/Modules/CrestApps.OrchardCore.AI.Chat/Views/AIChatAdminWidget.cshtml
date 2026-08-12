@@ -1,16 +1,16 @@
+@using System.Text.Json
 @using CrestApps.Core
+@using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.Core.AI.Models
-@using CrestApps.Core.AI.Deployments
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.Core.SignalR.Services
+@using CrestApps.OrchardCore.AI.Core.Services
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
 @using OrchardCore.Entities
 @using OrchardCore.Environment.Shell
 @using OrchardCore.Environment.Shell.Scope
-@using Microsoft.Extensions.DependencyInjection
-@using Microsoft.Extensions.Options
-@using System.Text.Json
 
 @inject HubRouteManager HubRouteManager
 @inject ShellSettings ShellSettings

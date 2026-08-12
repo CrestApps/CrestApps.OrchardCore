@@ -71,6 +71,7 @@
 
   <ItemGroup>
     <Folder Include="Modules\Omnichannel\Managements\Migrations\" />
+    <Folder Include="Modules\SignalR\" />
   </ItemGroup>
 
 </Project>

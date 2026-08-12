@@ -12,7 +12,6 @@ using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.SignalR;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
@@ -35,7 +34,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 /// and overrides hooks to integrate with OrchardCore's scoping, authorization, localization,
 /// analytics, and citation systems.
 /// </summary>
-[Authorize(AuthenticationSchemes = "Api,Identity.Application")]
+[Authorize]
 public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     private readonly IStringLocalizer S;
