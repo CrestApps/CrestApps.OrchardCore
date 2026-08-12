@@ -44,13 +44,11 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Scripting;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -289,13 +287,6 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services.TryAddScoped(sp =>
-        {
-            var shellSettings = sp.GetRequiredService<ShellSettings>();
-            var siteService = sp.GetRequiredService<ISiteService>();
-
-            return new HubRouteManager(shellSettings.RequestUrlPrefix, () => siteService.GetSiteSettings().BaseUrl);
-        });
     }
 }
 

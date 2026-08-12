@@ -22,7 +22,6 @@
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject IAIProfileStore ProfilesCatalog
-@inject HubRouteManager HubRouteManager
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
 
@@ -221,7 +220,7 @@
 
     var chatConfigJson = JsonSerializer.Serialize(new
     {
-        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        signalRHubUrl = Html.SignalRHubUrl<AIChatHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
         chatContainerElementSelector = $"#{chatContainerHtmlId}",
         inputElementSelector = $"#{userPromptHtmlId}",

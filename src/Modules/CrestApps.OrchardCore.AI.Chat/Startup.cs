@@ -3,7 +3,7 @@ using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Services;
-using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -86,7 +86,7 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         app.UseAIAnonymousVisitorCookie();
-        HubRouteManager.MapHub<AIChatHub>(routes);
+        routes.MapHub<AIChatHub>(SignalRHubRoutes.GetHubPath<AIChatHub>());
     }
 }
 

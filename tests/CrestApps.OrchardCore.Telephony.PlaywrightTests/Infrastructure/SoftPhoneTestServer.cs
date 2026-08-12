@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCoreSignalRStartup = OrchardCore.SignalR.Startup;
 
 namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 
@@ -14,6 +15,8 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 /// </summary>
 public sealed class SoftPhoneTestServer : IAsyncDisposable
 {
+    private const string SignalRResourceName = "OrchardCore.SignalR.wwwroot>Scripts>signalr.js";
+
     private WebApplication _app;
 
     public string BaseUrl { get; private set; }
@@ -39,7 +42,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             BuildHtml(context.Request.Query.ContainsKey("browserAudio")),
             "text/html; charset=utf-8"));
         app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
-        app.MapGet("/signalr.js", () => ServeAsset("signalr.js"));
+        app.MapGet("/signalr.js", ServeSignalRAsset);
 
         await app.StartAsync();
 
@@ -61,6 +64,17 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         var path = Path.Combine(AppContext.BaseDirectory, "assets", name);
 
         return Results.File(path, "application/javascript");
+    }
+
+    private static IResult ServeSignalRAsset()
+    {
+        var stream = typeof(OrchardCoreSignalRStartup).Assembly.GetManifestResourceStream(SignalRResourceName);
+        if (stream is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Stream(stream, "application/javascript");
     }
 
     private static string BuildHtml(bool browserAudio)

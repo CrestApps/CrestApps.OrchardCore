@@ -5,14 +5,12 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Services
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Options
 @using OrchardCore.Entities
 @using OrchardCore.Environment.Shell
 @using OrchardCore.Environment.Shell.Scope
 
-@inject HubRouteManager HubRouteManager
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
 @{
@@ -21,7 +19,7 @@
     var maxSessions = (int)Model.MaxSessions;
     var primaryColor = (string)Model.PrimaryColor;
 
-    var hubLink = HubRouteManager.GetPathByHub<AIChatHub>();
+    var hubLink = Html.SignalRHubUrl<AIChatHub>();
     var showHistory = maxSessions > 0;
 
     var baseId = "AiAdminWidget";

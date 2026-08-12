@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -10,16 +10,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Telephony;
 
@@ -46,19 +43,11 @@ public sealed class Startup : StartupBase
         services
             .AddPermissionProvider<TelephonyPermissionProvider>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
-
-        services.TryAddScoped(sp =>
-        {
-            var shellSettings = sp.GetRequiredService<ShellSettings>();
-            var siteService = sp.GetRequiredService<ISiteService>();
-
-            return new HubRouteManager(shellSettings.RequestUrlPrefix, () => siteService.GetSiteSettings().BaseUrl);
-        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.MapHub<TelephonyHub>("/Communication/Hub/TelephonyHub");
+        routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
 
         routes.MapAreaControllerRoute(
             name: TelephonyConstants.RouteNames.OAuthConnect,

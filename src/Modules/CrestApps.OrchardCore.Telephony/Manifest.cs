@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.Users",
-        "CrestApps.OrchardCore.SignalR",
+        "OrchardCore.SignalR",
     ]
 )]
 

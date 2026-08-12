@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -65,7 +66,7 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        HubRouteManager.MapHub<ChatInteractionHub>(routes);
+        routes.MapHub<ChatInteractionHub>(SignalRHubRoutes.GetHubPath<ChatInteractionHub>());
     }
 }
 

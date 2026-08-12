@@ -83,6 +83,7 @@
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.SignalR" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings" Version="$(OrchardCoreVersion)" />
@@ -129,7 +130,6 @@
     <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Elasticsearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Infrastructure" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.SignalR" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Support" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Templates" Version="$(CrestAppsCoreVersion)" />
   </ItemGroup>
