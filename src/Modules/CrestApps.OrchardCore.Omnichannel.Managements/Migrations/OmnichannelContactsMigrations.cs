@@ -264,41 +264,49 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await using var connection = _dbConnectionAccessor.CreateConnection();
         await connection.OpenAsync();
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Ensuring the default-collection OmnichannelContactIndex schema using the '{SqlDialect}' SQL dialect with table prefix '{TablePrefix}'.",
+                _store.Configuration.SqlDialect.Name,
+                _store.Configuration.TablePrefix);
+        }
+
         await ApplyIsolatedSchemaChangeAsync(connection,
             CreateContactIndexTableAsync,
-            "The default-collection OmnichannelContactIndex table may already exist.");
+            "create the table");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<bool>("Published", column => column.NotNull().WithDefault(false))),
-            "The 'Published' column may already exist on the default-collection OmnichannelContactIndex table.");
+            "add the 'Published' column");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<bool>("Latest", column => column.NotNull().WithDefault(false))),
-            "The 'Latest' column may already exist on the default-collection OmnichannelContactIndex table.");
+            "add the 'Latest' column");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))),
-            "The 'NormalizedPrimaryCellPhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
+            "add the 'NormalizedPrimaryCellPhoneNumber' column");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))),
-            "The 'NormalizedPrimaryHomePhoneNumber' column may already exist on the default-collection OmnichannelContactIndex table.");
+            "add the 'NormalizedPrimaryHomePhoneNumber' column");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.AddColumn<string>("TimeZoneId", column => column.WithLength(64))),
-            "The 'TimeZoneId' column may already exist on the default-collection OmnichannelContactIndex table.");
+            "add the 'TimeZoneId' column");
 
         foreach (var (name, columns) in _contactIndexIndexes)
         {
             await ApplyIsolatedSchemaChangeAsync(connection,
                 builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                     table.CreateIndex(name, columns)),
-                $"The '{name}' index may already exist on the default-collection OmnichannelContactIndex table.");
+                $"create the '{name}' index");
         }
     }
 
@@ -310,28 +318,28 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropIndex("IDX_OCIndex_NationalCell")),
-            "The obsolete 'IDX_OCIndex_NationalCell' index may already be removed.");
+            "drop the obsolete 'IDX_OCIndex_NationalCell' index");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropIndex("IDX_OCIndex_NationalHome")),
-            "The obsolete 'IDX_OCIndex_NationalHome' index may already be removed.");
+            "drop the obsolete 'IDX_OCIndex_NationalHome' index");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropColumn("NationalPrimaryCellPhoneNumber")),
-            "The obsolete 'NationalPrimaryCellPhoneNumber' column may already be removed.");
+            "drop the obsolete 'NationalPrimaryCellPhoneNumber' column");
 
         await ApplyIsolatedSchemaChangeAsync(connection,
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
                 table.DropColumn("NationalPrimaryHomePhoneNumber")),
-            "The obsolete 'NationalPrimaryHomePhoneNumber' column may already be removed.");
+            "drop the obsolete 'NationalPrimaryHomePhoneNumber' column");
     }
 
     private async Task ApplyIsolatedSchemaChangeAsync(
         DbConnection connection,
         Func<ISchemaBuilder, Task> schemaChange,
-        string warningMessage)
+        string operation)
     {
         await using var transaction = await connection.BeginTransactionAsync();
 
@@ -340,10 +348,27 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             var schemaBuilder = new SchemaBuilder(_store.Configuration, transaction);
             await schemaChange(schemaBuilder);
             await transaction.CommitAsync();
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Applied the isolated schema change to {SchemaChangeOperation} on the default-collection OmnichannelContactIndex table.",
+                    operation);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "A schema change could not be applied and was skipped: {SchemaChangeWarning}", warningMessage);
+            // Each idempotent change runs in its own transaction so a failure here (most often because the
+            // object already exists) cannot poison the shared migration transaction. This is expected during
+            // upgrades, so it is logged at Debug with the exception to keep normal upgrades quiet while still
+            // preserving a full trace when production logging runs at Debug.
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    ex,
+                    "Skipped the isolated schema change to {SchemaChangeOperation} on the default-collection OmnichannelContactIndex table because it could not be applied; it most likely already exists.",
+                    operation);
+            }
 
             try
             {
@@ -351,7 +376,13 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             }
             catch (Exception rollbackException)
             {
-                _logger.LogDebug(rollbackException, "Failed to roll back the isolated schema change transaction.");
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        rollbackException,
+                        "Failed to roll back the isolated schema change transaction for the operation to {SchemaChangeOperation}.",
+                        operation);
+                }
             }
         }
     }
