@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -21,7 +20,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 /// <summary>
 /// Defines database migrations for the Migrations module.
 /// </summary>
-public sealed class OmnichannelContactsMigrations : DataMigration
+public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 {
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
     private const int ReindexBatchSize = 100;
@@ -42,9 +41,6 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IStore _store;
-    private readonly IDbConnectionAccessor _dbConnectionAccessor;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactsMigrations"/> class.
@@ -58,11 +54,9 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         IStore store,
         IDbConnectionAccessor dbConnectionAccessor,
         ILogger<OmnichannelContactsMigrations> logger)
+        : base(store, dbConnectionAccessor, logger)
     {
         _contentDefinitionManager = contentDefinitionManager;
-        _store = store;
-        _dbConnectionAccessor = dbConnectionAccessor;
-        _logger = logger;
     }
 
     /// <summary>
@@ -122,7 +116,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     /// </summary>
     public async Task<int> UpdateFrom2Async()
     {
-        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await using var connection = DbConnectionAccessor.CreateConnection();
         await connection.OpenAsync();
 
         await ApplyIsolatedSchemaChangeAsync(connection,
@@ -225,7 +219,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
     private void ScheduleContactDefinitionRepair()
     {
-        _logger.LogDebug("Scheduling deferred omnichannel contact definition repair.");
+        Logger.LogDebug("Scheduling deferred omnichannel contact definition repair.");
 
         ShellScope.AddDeferredTask(scope =>
             scope.ServiceProvider
@@ -261,15 +255,15 @@ public sealed class OmnichannelContactsMigrations : DataMigration
     {
         await RemoveLegacyCollectionContactIndexTableAsync();
 
-        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await using var connection = DbConnectionAccessor.CreateConnection();
         await connection.OpenAsync();
 
-        if (_logger.IsEnabled(LogLevel.Information))
+        if (Logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation(
+            Logger.LogInformation(
                 "Ensuring the default-collection OmnichannelContactIndex schema using the '{SqlDialect}' SQL dialect with table prefix '{TablePrefix}'.",
-                _store.Configuration.SqlDialect.Name,
-                _store.Configuration.TablePrefix);
+                Store.Configuration.SqlDialect.Name,
+                Store.Configuration.TablePrefix);
         }
 
         await ApplyIsolatedSchemaChangeAsync(connection,
@@ -312,7 +306,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
     private async Task RemoveRedundantNationalPhoneColumnsAsync()
     {
-        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await using var connection = DbConnectionAccessor.CreateConnection();
         await connection.OpenAsync();
 
         await ApplyIsolatedSchemaChangeAsync(connection,
@@ -336,81 +330,30 @@ public sealed class OmnichannelContactsMigrations : DataMigration
             "drop the obsolete 'NationalPrimaryHomePhoneNumber' column");
     }
 
-    private async Task ApplyIsolatedSchemaChangeAsync(
-        DbConnection connection,
-        Func<ISchemaBuilder, Task> schemaChange,
-        string operation)
-    {
-        await using var transaction = await connection.BeginTransactionAsync();
-
-        try
-        {
-            var schemaBuilder = new SchemaBuilder(_store.Configuration, transaction);
-            await schemaChange(schemaBuilder);
-            await transaction.CommitAsync();
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    "Applied the isolated schema change to {SchemaChangeOperation} on the default-collection OmnichannelContactIndex table.",
-                    operation);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Each idempotent change runs in its own transaction so a failure here (most often because the
-            // object already exists) cannot poison the shared migration transaction. This is expected during
-            // upgrades, so it is logged at Debug with the exception to keep normal upgrades quiet while still
-            // preserving a full trace when production logging runs at Debug.
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    ex,
-                    "Skipped the isolated schema change to {SchemaChangeOperation} on the default-collection OmnichannelContactIndex table because it could not be applied; it most likely already exists.",
-                    operation);
-            }
-
-            try
-            {
-                await transaction.RollbackAsync();
-            }
-            catch (Exception rollbackException)
-            {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        rollbackException,
-                        "Failed to roll back the isolated schema change transaction for the operation to {SchemaChangeOperation}.",
-                        operation);
-                }
-            }
-        }
-    }
-
     private async Task DropLegacyPhoneIndexTableAsync()
     {
-        var dialect = _store.Configuration.SqlDialect;
-        var table = $"{_store.Configuration.TablePrefix}{LegacyPhoneIndexTableName}";
-        var quotedTable = dialect.QuoteForTableName(table, _store.Configuration.Schema);
+        var dialect = Store.Configuration.SqlDialect;
+        var table = $"{Store.Configuration.TablePrefix}{LegacyPhoneIndexTableName}";
+        var quotedTable = dialect.QuoteForTableName(table, Store.Configuration.Schema);
 
         try
         {
-            await using var connection = _dbConnectionAccessor.CreateConnection();
+            await using var connection = DbConnectionAccessor.CreateConnection();
             await connection.OpenAsync();
             await connection.ExecuteAsync($"drop table {quotedTable}");
 
-            if (_logger.IsEnabled(LogLevel.Information))
+            if (Logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation(
+                Logger.LogInformation(
                     "Dropped the obsolete default-collection contact phone index table '{TableName}'.",
                     table);
             }
         }
         catch (Exception ex)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (Logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug(
+                Logger.LogDebug(
                     ex,
                     "The obsolete default-collection contact phone index table '{TableName}' was not dropped because it was unavailable or already removed.",
                     table);
@@ -420,12 +363,12 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
     private async Task RemoveLegacyCollectionContactIndexTableAsync()
     {
-        var dialect = _store.Configuration.SqlDialect;
-        var tableName = _store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex), OmnichannelConstants.CollectionName);
-        var table = $"{_store.Configuration.TablePrefix}{tableName}";
-        var quotedTable = dialect.QuoteForTableName(table, _store.Configuration.Schema);
+        var dialect = Store.Configuration.SqlDialect;
+        var tableName = Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex), OmnichannelConstants.CollectionName);
+        var table = $"{Store.Configuration.TablePrefix}{tableName}";
+        var quotedTable = dialect.QuoteForTableName(table, Store.Configuration.Schema);
 
-        await using var connection = _dbConnectionAccessor.CreateConnection();
+        await using var connection = DbConnectionAccessor.CreateConnection();
         await connection.OpenAsync();
 
         try
@@ -434,7 +377,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
             if (rowCount > 0)
             {
-                _logger.LogWarning(
+                Logger.LogWarning(
                     "Skipping removal of the legacy Omnichannel collection contact index table because it still contains {RowCount} row(s).",
                     rowCount);
 
@@ -443,18 +386,18 @@ public sealed class OmnichannelContactsMigrations : DataMigration
 
             await connection.ExecuteAsync($"drop table {quotedTable}");
 
-            if (_logger.IsEnabled(LogLevel.Information))
+            if (Logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation(
+                Logger.LogInformation(
                     "Dropped the legacy Omnichannel collection contact index table '{TableName}' so the default-collection contact index can be recreated.",
                     table);
             }
         }
         catch (Exception ex)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (Logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug(ex, "The legacy Omnichannel collection contact index table '{TableName}' was not removed because it was not available for cleanup.", table);
+                Logger.LogDebug(ex, "The legacy Omnichannel collection contact index table '{TableName}' was not removed because it was not available for cleanup.", table);
             }
         }
     }
