@@ -46,7 +46,7 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
         {
             var users = await GetNextBatchAsync(step, currentBatch);
 
-            var totalUsers = users.Count;
+            var totalUsers = users.Count();
 
             if (totalUsers == 0)
             {
@@ -64,7 +64,7 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
         }
     }
 
-    private Task<IReadOnlyList<User>> GetNextBatchAsync(UpdateUserRecipeStepModel step, int currentBatch)
+    private Task<IEnumerable<User>> GetNextBatchAsync(UpdateUserRecipeStepModel step, int currentBatch)
     {
         if (step.IncludeDisabledUsers)
         {

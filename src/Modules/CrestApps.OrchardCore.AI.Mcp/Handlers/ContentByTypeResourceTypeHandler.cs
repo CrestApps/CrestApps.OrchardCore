@@ -61,7 +61,7 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Found {Count} content items of type {ContentType}", contentItems.Count, contentType);
+            _logger.LogDebug("Found {Count} content items of type {ContentType}", contentItems.Count(), contentType);
         }
 
         var json = JsonSerializer.Serialize(contentItems, _jsonOptions.SerializerOptions);

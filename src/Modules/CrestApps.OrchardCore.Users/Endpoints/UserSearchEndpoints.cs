@@ -63,7 +63,7 @@ internal static class UserSearchEndpoints
         }
 
         var users = await searchQuery.Take(50).ListAsync(cancellationToken);
-        var items = new List<UserSearchItem>(users.Count);
+        var items = new List<UserSearchItem>(users.Count());
 
         foreach (var user in users)
         {
