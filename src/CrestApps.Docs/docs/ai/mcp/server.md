@@ -14,7 +14,7 @@ Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-co
 
 ## Overview
 
-The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication.
+The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the Streamable HTTP transport type, enabling MCP-compatible clients to communicate through the tenant-relative `/mcp` endpoint.
 
 The Orchard Core server feature builds on the shared `AddCoreAIMcpServer()` registrations from `CrestApps.Core.AI.Mcp`, then layers Orchard-specific prompt, resource, admin, and permission services on top.
 
@@ -26,10 +26,41 @@ The MCP server exposes the following capabilities:
 
 | Capability | Description |
 |-----------|-------------|
-| **Tools** | All registered AI tools in Orchard Core are exposed as MCP tools that clients can discover and invoke |
+| **Tools** | AI tools and configured [tool instances](../tool-instances.md) that you explicitly opt in are exposed as MCP tools that clients can discover and invoke. Nothing is exposed by default. |
 | **Prompts** | MCP prompts registered in Orchard Core are exposed so clients can list and invoke prompts via `ListPrompts` and `GetPrompt`. Prompts can be added and managed via the admin UI. |
 | **Resources** | MCP resources registered in Orchard Core are exposed, allowing clients to access various data sources. Resources can be added and managed via the admin UI. |
 | **Templated Resources** | Resources with URI variable placeholders (e.g., `{fileName}`, `{contentType}`) that resolve dynamically based on client requests |
+
+## Tool exposure
+
+Tool exposure is **opt-in**. Nothing is listed or callable by default: the server only exposes the AI tools and configured [tool instances](../tool-instances.md) that you explicitly allow. The allow-list is enforced by both the list and the call handlers, so a tool that is not exposed can neither be discovered nor invoked.
+
+You configure the exposed tools from the **Settings → Artificial Intelligence** page, on the **MCP Server** card. The card has two ways to control exposure:
+
+- **Expose all tools** — when enabled, every *selectable* tool and every configured tool instance is exposed and the selection below is ignored. System tools and hidden tools are never exposed, even in this mode. Enabling it hides the **Tools** and **Tool instances** selectors, because the selection no longer applies. Use this only when you trust every client of the server.
+- **Tools** and **Tool instances** selectors — when **Expose all tools** is disabled (the default), only the tools and tool instances you select are exposed. The selectors list only the tools and instances the current user is allowed to access, exactly like the AI Profile editor.
+
+Both code-registered tools and stored tool instances participate in the same allow-list, so you can, for example, expose a documentation search instance without exposing any content-editing tools.
+
+The settings are stored as site settings, so a change takes effect after the tenant reloads — the settings page shows a reload warning when you save.
+
+### Usage case: expose documentation sites to MCP clients
+
+A common reason to run an MCP server is to let an external AI agent answer questions from your documentation. The [documentation search sources](../tool-instances.md#the-documentation-search-sources) let you declare a documentation site as a tool instance and scan it on demand, and the MCP server then exposes only the instances you choose.
+
+The following steps expose three documentation sites — [core.crestapps.com](https://core.crestapps.com), [orchardcore.crestapps.com](https://orchardcore.crestapps.com), and [docs.orchardcore.net](https://docs.orchardcore.net) — to MCP clients:
+
+1. Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstances`). This registers the built-in documentation search sources alongside the HTTP API request source.
+2. Navigate to **Artificial Intelligence → Tool Instances** and add one instance per site. All three sites are Docusaurus sites that publish a standard `sitemap.xml`, so use the **Documentation search (sitemap)** source for each:
+   - **Name** `crestapps-core-docs`, **Description** "Search the CrestApps Core documentation.", **Base URL** `https://core.crestapps.com`.
+   - **Name** `crestapps-orchardcore-docs`, **Description** "Search the CrestApps OrchardCore documentation.", **Base URL** `https://orchardcore.crestapps.com`.
+   - **Name** `orchardcore-docs`, **Description** "Search the Orchard Core framework documentation.", **Base URL** `https://docs.orchardcore.net`.
+3. Enable the **MCP Server** feature and configure its authentication.
+4. Navigate to **Settings → Artificial Intelligence**, open the **MCP Server** card, leave **Expose all tools** disabled, and select the three documentation instances under **Tool instances**. Save.
+
+MCP clients now discover exactly three tools — one per documentation site — and can search each site on demand, while every other tool and instance stays private.
+
+Because the sites are public, no headers, API keys, or credentials are involved. The first search of a site crawls it and caches the corpus, and later searches reuse the cache until the instance settings change.
 
 ## Authentication and authorization
 
@@ -45,7 +76,9 @@ When `OpenId` is used, you can also require the `AccessMcpServer` permission for
 
 ## Configuration
 
-Configure the MCP server in `appsettings.json`:
+You can configure the MCP server from the admin **Settings → Artificial Intelligence** page (on the **MCP Server** card) without redeploying. The stored site settings are also the source of the [tool exposure](#tool-exposure) allow-list.
+
+For deployment scenarios, the same options can be set in `appsettings.json`, which overrides the stored site settings:
 
 ```json
 {
@@ -69,6 +102,8 @@ Configure the MCP server in `appsettings.json`:
 | `AuthenticationType` | `string` | `OpenId` | Authentication type: `OpenId`, `ApiKey`, or `None` |
 | `ApiKey` | `string` | `null` | API key for `ApiKey` authentication |
 | `RequireAccessPermission` | `bool` | `true` | Whether to require the `AccessMcpServer` permission in `OpenId` mode |
+| `ExposeAllTools` | `bool` | `false` | When `true`, every non-hidden tool and tool instance is exposed and the `Tools` allow-list is ignored |
+| `Tools` | `string[]` | `[]` | The allow-list of tool and tool instance names exposed when `ExposeAllTools` is `false`. Matching is case-insensitive |
 
 ### Authentication types
 
@@ -133,21 +168,22 @@ Use only for local development and testing.
 1. Enable **Model Context Protocol (MCP) Server** under **Tools -> Features**.
 2. Choose and configure an authentication mode.
 3. Grant the `AccessMcpServer` permission when you use `OpenId` with access checks enabled.
-4. Connect an MCP client to the SSE endpoint.
+4. Opt in the tools and tool instances to expose from **Settings → Artificial Intelligence** on the **MCP Server** card. Nothing is exposed until you select it (or enable **Expose all tools**).
+5. Connect an MCP client to the server endpoint.
 
 ## MCP endpoint
 
-The server exposes a single SSE endpoint:
+The server exposes a single Streamable HTTP endpoint:
 
 | Endpoint | Method | Description |
 | --- | --- | --- |
-| `/mcp/sse` | POST | SSE transport for MCP communication |
+| `/mcp` | POST, GET, DELETE | Streamable HTTP transport for MCP communication |
 
 Example request:
 
 ```text
-POST /mcp/sse
-Authorization: Bearer <your-token-or-api-key>
+POST /mcp
+Authorization: Bearer <access-token-or-api-key>
 ```
 
 ## Example client configuration
@@ -159,10 +195,10 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "https://your-orchard-site.com/mcp/sse",
+        "type": "http",
+        "url": "https://your-orchard-site.com/mcp",
         "headers": {
-          "Authorization": "Bearer <your-oauth-token>"
+          "Authorization": "Bearer <access-token>"
         }
       }
     }
@@ -177,8 +213,8 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "https://your-orchard-site.com/mcp/sse",
+        "type": "http",
+        "url": "https://your-orchard-site.com/mcp",
         "headers": {
           "Authorization": "ApiKey <your-api-key>"
         }
@@ -195,8 +231,8 @@ Authorization: Bearer <your-token-or-api-key>
   "mcpServers": {
     "orchard-core": {
       "transport": {
-        "type": "sse",
-        "url": "http://localhost:5000/mcp/sse"
+        "type": "http",
+        "url": "http://localhost:5000/mcp"
       }
     }
   }
@@ -367,6 +403,8 @@ Resources can be exported and imported via recipes:
 
 - Verify the required Orchard Core and CrestApps features are enabled.
 - Check that the expected AI tools, prompts, or resources are registered.
+- Confirm the tool or tool instance is opted in on the **MCP Server** card under **Settings → Artificial Intelligence** (or that **Expose all tools** is enabled). Tools are not exposed until you select them.
+- Confirm the calling identity is authorized for the tool, because exposed tools still respect Orchard Core permissions.
 
 ### Configuration does not apply
 
