@@ -180,6 +180,8 @@
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
+    <!-- Pinned to the patched release for GHSA-q939-rpr3-3284 (SCP directory traversal); versions <= 2025.1.0 are vulnerable. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Sample Packages -->
