@@ -22,7 +22,6 @@
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.AI.Abstractions" />
     <PackageReference Include="CrestApps.Core.AI.Chat" />
-    <PackageReference Include="CrestApps.Core.SignalR" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 

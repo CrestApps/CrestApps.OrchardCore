@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19102</OrchardCoreVersion>
+    <OrchardCoreVersion>4.0.0-preview-19108</OrchardCoreVersion>
     <CrestAppsCoreVersion>1.1.0-preview.214</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.0.0</ModelContextProtocolVersion>
   </PropertyGroup>
@@ -20,7 +20,7 @@
     <PackageVersion Include="NLog" Version="6.1.4" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.1.4" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="NuGet.Versioning" Version="7.6.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />
     <PackageVersion Include="YesSql.Core" Version="6.0.0" />
@@ -83,6 +83,7 @@
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.SignalR" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings" Version="$(OrchardCoreVersion)" />
@@ -129,7 +130,6 @@
     <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Elasticsearch" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Infrastructure" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.SignalR" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Support" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Templates" Version="$(CrestAppsCoreVersion)" />
   </ItemGroup>
@@ -137,18 +137,18 @@
     <!-- Microsoft Packages -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Azure.SignalR" Version="1.33.1" />
     <PackageVersion Include="Microsoft.Extensions.Compliance.Abstractions" Version="10.8.0" />
     <PackageVersion Include="Microsoft.Extensions.Compliance.Redaction" Version="10.8.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
-    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
   </ItemGroup>
   <ItemGroup>
     <!-- Testing Packages -->
@@ -174,8 +174,8 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
-    <PackageVersion Include="System.Memory.Data" Version="10.0.10" />
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+    <PackageVersion Include="System.Memory.Data" Version="10.0.11" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.11" />
     <PackageVersion Include="AngleSharp" Version="1.7.0" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
     <!-- Pinned to the patched release for GHSA-q939-rpr3-3284 (SCP directory traversal); versions <= 2025.1.0 are vulnerable. -->

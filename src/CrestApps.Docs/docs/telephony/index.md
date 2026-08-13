@@ -62,14 +62,17 @@ Each provider also advertises the operations it supports through the `Capabiliti
 
 ## SignalR hub
 
-The hub is registered with the [SignalR](../modules/signalr) module's `HubRouteManager`:
+The hub is registered with the Orchard Core [SignalR](../modules/signalr) module:
 
 ```csharp
 public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
 {
-    HubRouteManager.MapHub<TelephonyHub>(routes);
+    routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
 }
 ```
+
+The soft phone view uses `Html.SignalRHubUrl<TelephonyHub>()` so the generated hub URL includes the
+current tenant path base.
 
 Every hub method runs in its own Orchard Core shell scope and is authorized against the
 `Use the telephony soft phone` permission. The hub returns a `TelephonyResult` to the caller and

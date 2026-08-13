@@ -1,4 +1,4 @@
-using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -47,7 +47,7 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        HubRouteManager.MapHub<TelephonyHub>(routes);
+        routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
 
         routes.MapAreaControllerRoute(
             name: TelephonyConstants.RouteNames.OAuthConnect,
