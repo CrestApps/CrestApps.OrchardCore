@@ -20,7 +20,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
         AIConstants.Feature.ChatCore,
-        "CrestApps.OrchardCore.SignalR",
+        "OrchardCore.SignalR",
         AIConstants.Feature.Area,
     ]
 )]

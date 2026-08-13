@@ -62,12 +62,12 @@ Each provider also advertises the operations it supports through the `Capabiliti
 
 ## SignalR hub
 
-The hub is registered with the [SignalR](../modules/signalr) module's `HubRouteManager`:
+The hub is registered with the [SignalR](../modules/signalr) route helper:
 
 ```csharp
 public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
 {
-    HubRouteManager.MapHub<TelephonyHub>(routes);
+    routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
 }
 ```
 

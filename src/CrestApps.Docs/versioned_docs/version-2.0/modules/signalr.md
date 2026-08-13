@@ -17,15 +17,14 @@ Provides real-time messaging capabilities using SignalR.
 
 To create a SignalR hub in your module, first install the `Microsoft.AspNetCore.SignalR.Core` package using the NuGet Package Manager. Then, follow the official SignalR documentation to implement your hub.
 
-To register the hub within your module, we recommend utilizing the `HubRouteManager` as shown below:
+Register the hub with the shared SignalR route helper:
 
 ```csharp
 public sealed class ChatStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-        hubRouteManager.MapHub<AIChatHub>(routes);
+        routes.MapHub<AIChatHub>(SignalRHubRoutes.GetHubPath<AIChatHub>());
     }
 }
 ```
@@ -46,12 +45,10 @@ services.Configure<HubOptions<AIChatHub>>(options =>
 
 ## Generating the Hub URL
 
-To obtain the SignalR hub URL dynamically within a client, inject `HubRouteManager` and generate the link as demonstrated below:
+To obtain the SignalR hub URL dynamically within a client, generate it from the view helper:
 
 ```csharp
-@inject HubRouteManager HubRouteManager
-
-var url = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
+var url = Html.SignalRHubUrl<AIChatHub>();
 ```
 
 Then, initialize the SignalR connection using JavaScript:

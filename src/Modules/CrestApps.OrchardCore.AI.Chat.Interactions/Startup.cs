@@ -2,7 +2,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.SignalR.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -65,7 +66,7 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        HubRouteManager.MapHub<ChatInteractionHub>(routes);
+        routes.MapHub<ChatInteractionHub>(SignalRHubRoutes.GetHubPath<ChatInteractionHub>());
     }
 }
 

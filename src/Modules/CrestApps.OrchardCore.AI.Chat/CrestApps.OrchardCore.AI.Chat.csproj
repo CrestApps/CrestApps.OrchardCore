@@ -23,6 +23,7 @@
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.SignalR" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,12 +35,11 @@
 
   <ItemGroup>
     <!-- 
-      Ensure this module directly depends on the required packages so that when someone installs it, 
-      they won't need to manually include the AI and SignalR packages. 
+      Ensure this module directly depends on the required packages so that when someone installs it,
+      they won't need to manually include the AI package.
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
-    <ProjectReference Include="../CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

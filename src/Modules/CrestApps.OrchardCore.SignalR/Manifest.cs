@@ -13,8 +13,36 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = SignalRConstants.Feature.Area,
-    Name = "SignalR",
-    Description = "Provides SignalR hub routing, JSON protocol configuration, and client resources.",
-    Category = "Communication"
+    Name = "SignalR (Deprecated)",
+    Description = "This feature has been migrated to the Orchard Core Framework and should no longer be used. Instead, use the 'OrchardCore.SignalR' feature.",
+    Category = "Communication",
+    Dependencies =
+    [
+        "OrchardCore.SignalR",
+    ]
 )]
 
+[assembly: Feature(
+    Id = SignalRConstants.Feature.RedisBackplane,
+    Name = "SignalR Redis Backplane (Deprecated)",
+    Description = "This feature has been migrated to the Orchard Core Framework and should no longer be used. Instead, use the 'OrchardCore.SignalR.Redis' feature.",
+    Category = "Communication",
+    Dependencies =
+    [
+        SignalRConstants.Feature.Area,
+        "OrchardCore.Redis",
+        "OrchardCore.SignalR.Redis",
+    ]
+)]
+
+[assembly: Feature(
+    Id = SignalRConstants.Feature.AzureBackplane,
+    Name = "SignalR Azure Backplane (Deprecated)",
+    Description = "This feature has been migrated to the Orchard Core Framework and should no longer be used. Instead, use the 'OrchardCore.SignalR.Azure' feature.",
+    Category = "Communication",
+    Dependencies =
+    [
+        SignalRConstants.Feature.Area,
+        "OrchardCore.SignalR.Azure",
+    ]
+)]
