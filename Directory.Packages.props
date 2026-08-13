@@ -178,6 +178,8 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.11" />
     <PackageVersion Include="AngleSharp" Version="1.7.0" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
+    <!-- Pinned to the patched release for GHSA-q939-rpr3-3284 (SCP directory traversal); versions <= 2025.1.0 are vulnerable. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Sample Packages -->
