@@ -49,7 +49,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -87,5 +87,30 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
             "add the 'CreatedUtc' column to the omnichannel activity batch index");
 
         return 3;
+    }
+
+    /// <summary>
+    /// Repairs databases whose migration version was recorded at or above the step that added the
+    /// <c>Source</c> and <c>CreatedUtc</c> columns while the physical columns were rolled back with a failed
+    /// sibling migration. Because the earlier version-gated steps no longer run on those databases, this
+    /// step verifies each column and adds only the ones that are missing, so the activity batches screen can
+    /// order by <c>CreatedUtc</c> again.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
+            OmnichannelConstants.CollectionName,
+            "Source",
+            table => table.AddColumn<string>("Source", column => column.WithLength(50)),
+            "ensure the 'Source' column exists on the omnichannel activity batch index");
+
+        await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
+            OmnichannelConstants.CollectionName,
+            "CreatedUtc",
+            table => table.AddColumn<DateTime>("CreatedUtc"),
+            "ensure the 'CreatedUtc' column exists on the omnichannel activity batch index");
+
+        return 4;
     }
 }
