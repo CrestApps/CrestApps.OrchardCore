@@ -46,7 +46,7 @@ internal sealed class ContentTransferEntryManager : IContentTransferEntryManager
         entry.Error = null;
         entry.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(entry);
+        await _session.SaveAsync(entry, cancellationToken: cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 
@@ -69,7 +69,7 @@ internal sealed class ContentTransferEntryManager : IContentTransferEntryManager
         entry.CompletedUtc = null;
         entry.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(entry);
+        await _session.SaveAsync(entry, cancellationToken: cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 
@@ -88,7 +88,7 @@ internal sealed class ContentTransferEntryManager : IContentTransferEntryManager
         entry.Status = ContentTransferEntryStatus.Deleting;
         entry.ProcessSaveUtc = _clock.UtcNow;
 
-        _session.Save(entry);
+        await _session.SaveAsync(entry, cancellationToken: cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
     }
 

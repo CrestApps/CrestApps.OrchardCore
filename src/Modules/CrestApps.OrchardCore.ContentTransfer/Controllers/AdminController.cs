@@ -314,7 +314,7 @@ public sealed class AdminController : Controller, IUpdateModel
 
                 importContent.CopyPropertiesTo(entry);
 
-                _session.Save(entry);
+                await _session.SaveAsync(entry);
                 await _session.SaveChangesAsync();
                 TriggerImportProcessing(entry.EntryId);
 
@@ -515,7 +515,7 @@ public sealed class AdminController : Controller, IUpdateModel
                 });
             }
 
-            _session.Save(entry);
+            await _session.SaveAsync(entry);
             await _session.SaveChangesAsync();
             TriggerExportProcessing(entry.EntryId);
 

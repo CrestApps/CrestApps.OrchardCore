@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>[3.0.0, 3.1.0)</OrchardCoreVersion>
-    <CrestAppsCoreVersion>1.0.0</CrestAppsCoreVersion>
-    <ModelContextProtocolVersion>1.4.0</ModelContextProtocolVersion>
+    <CrestAppsCoreVersion>1.1.0</CrestAppsCoreVersion>
+    <ModelContextProtocolVersion>2.0.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
@@ -22,10 +22,10 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.6.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
-    <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
-    <PackageVersion Include="YesSql.Core" Version="5.4.7" />
-    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="5.4.7" />
-    <PackageVersion Include="YesSql.Provider.Sqlite" Version="5.4.7" />
+    <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />
+    <PackageVersion Include="YesSql.Core" Version="6.0.0" />
+    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="6.0.0" />
+    <PackageVersion Include="YesSql.Provider.Sqlite" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -112,19 +112,19 @@
     <PackageVersion Include="CrestApps.Core.AI" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Abstractions" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.A2A" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="1.0.0" />
     <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Claude" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Mcp.Ftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Ftp" Version="1.0.0" />
     <PackageVersion Include="CrestApps.Core.AI.Markdown" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Mcp" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Ollama" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Ollama" Version="1.0.0" />
     <PackageVersion Include="CrestApps.Core.AI.OpenAI" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.OpenAI.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Documents.OpenXml" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Documents.Pdf" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Mcp.Sftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Sftp" Version="1.0.0" />
     <PackageVersion Include="CrestApps.Core.AI.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />
@@ -178,7 +178,7 @@
     <PackageVersion Include="AngleSharp" Version="1.7.0" />
     <PackageVersion Include="MessagePack" Version="3.1.7" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
     <!-- Pinned to the patched release for GHSA-q939-rpr3-3284 (SCP directory traversal); versions <= 2025.1.0 are vulnerable. -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />

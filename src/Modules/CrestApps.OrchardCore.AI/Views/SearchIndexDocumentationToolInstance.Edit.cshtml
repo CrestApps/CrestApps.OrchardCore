@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model SearchIndexDocumentationToolInstanceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseUrl" class="form-control" placeholder="https://docs.orchardcore.net" />
+        <span asp-validation-for="BaseUrl" class="text-danger"></span>
+        <span class="hint">@T["The root URL of the documentation site. It is used to resolve the returned passages into absolute links."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="IndexUrl" class="ocat-label">@T["Index URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="IndexUrl" class="form-control" placeholder="https://docs.orchardcore.net/en/latest/search/search_index.json" />
+        <span asp-validation-for="IndexUrl" class="text-danger"></span>
+        <span class="hint">@T["An explicit prebuilt search index URL. Leave it empty to derive it from the base URL."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxResults" class="ocat-label">@T["Maximum results"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxResults" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxResults" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of passages returned for a single search. Leave it empty to use the default."]</span>
+    </div>
+</div>
