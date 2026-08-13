@@ -23,7 +23,7 @@ public sealed class TimerEventSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("CronExpression", WorkflowActivitySchemaBuilders.String("The CRON expression defining the recurring schedule. Defaults to '*/5 * * * *'."));
         yield return ("UseLocalTime", WorkflowActivitySchemaBuilders.Boolean("When true, evaluates the CRON expression against the site's configured time zone instead of UTC. Defaults to false."));

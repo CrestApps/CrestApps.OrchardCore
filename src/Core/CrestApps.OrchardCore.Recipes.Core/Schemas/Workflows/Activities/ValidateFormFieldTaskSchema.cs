@@ -26,7 +26,7 @@ public sealed class ValidateFormFieldTaskSchema : WorkflowActivitySchemaDefiniti
     protected override IEnumerable<string> RequiredProperties => ["FieldName", "ErrorMessage"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("FieldName", WorkflowActivitySchemaBuilders.String("The name of the form field to validate."));
         yield return ("ErrorMessage", WorkflowActivitySchemaBuilders.String("The validation error message to display when the field is empty."));

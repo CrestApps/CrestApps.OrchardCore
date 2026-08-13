@@ -26,9 +26,9 @@ public sealed class GetUsersByRoleTaskSchema : WorkflowActivitySchemaDefinitionB
     protected override IEnumerable<string> RequiredProperties => ["OutputKeyName", "Roles"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("OutputKeyName", WorkflowActivitySchemaBuilders.LiquidExpression("The key name used to store the retrieved users dictionary in the workflow output, enabling access to the list later in the workflow."));
-        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles used to identify users. All users that belong to at least one of the specified roles are included in the result."));
+        yield return ("Roles", WorkflowActivitySchemaBuilders.StringArray("The roles used to identify users. All users that belong to at least one of the specified roles are included in the result.", context.Examples.RoleNames));
     }
 }

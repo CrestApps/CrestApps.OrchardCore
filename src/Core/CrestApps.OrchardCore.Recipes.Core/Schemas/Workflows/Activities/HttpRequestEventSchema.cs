@@ -26,7 +26,7 @@ public sealed class HttpRequestEventSchema : WorkflowActivitySchemaDefinitionBas
     protected override IEnumerable<string> RequiredProperties => ["HttpMethod", "TokenLifeSpan"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("HttpMethod", WorkflowActivitySchemaBuilders.String("The HTTP method to match, for example GET or POST. The event only triggers when the incoming request uses this method, so it must be supplied."));
         yield return ("Url", WorkflowActivitySchemaBuilders.String("The signed URL path that triggers this event. The recipe step regenerates it, including a fresh token, only when the workflow type does not already exist and 'TokenLifeSpan' is present. When an existing workflow type is replaced the imported value is kept as is, so an exported URL should be included."));

@@ -23,6 +23,6 @@ public sealed class CommitTransactionTaskSchema : WorkflowActivitySchemaDefiniti
     protected override IEnumerable<string> Outcomes => ["Done", "Valid", "Invalid"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
         => [];
 }

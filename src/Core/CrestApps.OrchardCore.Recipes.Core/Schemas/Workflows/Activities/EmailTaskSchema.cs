@@ -26,7 +26,7 @@ public sealed class EmailTaskSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> RequiredProperties => ["Recipients"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("Author", WorkflowActivitySchemaBuilders.LiquidExpression("The author's email address that defines who the email is from. Leave blank to use the configured email address."));
         yield return ("Sender", WorkflowActivitySchemaBuilders.LiquidExpression("The sender's email address. Required only when it differs from the 'Author' email address."));

@@ -23,7 +23,7 @@ public sealed class SignalEventSchema : WorkflowActivitySchemaDefinitionBase
     protected override IEnumerable<string> Outcomes => ["Done"];
 
     /// <inheritdoc />
-    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions()
+    protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return ("SignalName", WorkflowActivitySchemaBuilders.LiquidExpression("The name of the signal that triggers this event."));
     }
