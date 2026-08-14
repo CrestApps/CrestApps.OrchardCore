@@ -99,9 +99,9 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
             if (!string.IsNullOrWhiteSpace(model.LivePrivateSecret))
             {
-                if (!model.LivePublishableKey.StartsWith("sk_live_", StringComparison.Ordinal))
+                if (!model.LivePrivateSecret.StartsWith("sk_live_", StringComparison.Ordinal))
                 {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePublishableKey), S["Production secret key must start with: {0}", "sk_live_"]);
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePrivateSecret), S["Production secret key must start with: {0}", "sk_live_"]);
                 }
                 else
                 {

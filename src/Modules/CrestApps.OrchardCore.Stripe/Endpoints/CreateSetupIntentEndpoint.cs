@@ -43,6 +43,7 @@ public static class CreateSetupIntentEndpoint
 
         var intentRequest = new CreateSetupIntentRequest
         {
+            CustomerId = model.CustomerId,
             PaymentMethodId = model.PaymentMethodId,
             Metadata = model.Metadata ?? [],
         };

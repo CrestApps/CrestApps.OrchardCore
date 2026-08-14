@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
 using Moq;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
@@ -63,6 +64,91 @@ public class SubscriptionPaymentHandlerWebhookTests
         stripeService.Verify(
             s => s.ConfirmAsync(It.IsAny<CrestApps.OrchardCore.Stripe.Core.Models.ConfirmPaymentIntentRequest>()),
             Times.Never);
+    }
+
+    // Regression: recurring 'subscription_cycle' renewal payments were previously dropped by an early
+    // return that only allowed 'SubscriptionCreate'. Renewals must be recorded on the session and remain
+    // idempotent under at-least-once webhook delivery.
+    [Fact]
+    public async Task PaymentSucceeded_SubscriptionCycle_RecordsRenewalPaymentIdempotently()
+    {
+        var paymentSession = PaymentTestHelpers.CreatePaymentSession();
+
+        var session = new SubscriptionSession
+        {
+            SessionId = "session-cycle-1",
+            Status = SubscriptionSessionStatus.Completed,
+        };
+
+        var sessionStore = new Mock<ISubscriptionSessionStore>();
+        sessionStore.Setup(s => s.GetAsync(session.SessionId)).ReturnsAsync(session);
+
+        var stripeService = new Mock<IStripePaymentIntentService>();
+
+        var handler = new SubscriptionPaymentHandler(
+            paymentSession,
+            stripeService.Object,
+            sessionStore.Object);
+
+        var context = new PaymentSucceededContext
+        {
+            Reason = PaymentReason.SubscriptionCycle,
+            TransactionId = "in_renew_1",
+            AmountPaid = 30.00,
+            Currency = Currency,
+            GatewayId = "stripe",
+            Subscription = new SubscriptionPaymentInfo
+            {
+                SubscriptionId = "sub_1",
+            },
+        };
+        context.Data["sessionId"] = session.SessionId;
+
+        // Same renewal webhook delivered twice.
+        await handler.PaymentSucceededAsync(context);
+        await handler.PaymentSucceededAsync(context);
+
+        Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
+        Assert.Single(metadata.Payments);
+        Assert.True(metadata.Payments.ContainsKey("in_renew_1"));
+        Assert.Equal(30.00, metadata.Payments["in_renew_1"].Amount, 2);
+        Assert.Equal(PaymentStatus.Succeeded, metadata.Payments["in_renew_1"].Status);
+        Assert.Equal("sub_1", metadata.Payments["in_renew_1"].SubscriptionId);
+
+        sessionStore.Verify(s => s.SaveAsync(session), Times.AtLeastOnce);
+        stripeService.Verify(
+            s => s.ConfirmAsync(It.IsAny<CrestApps.OrchardCore.Stripe.Core.Models.ConfirmPaymentIntentRequest>()),
+            Times.Never);
+    }
+
+    // Unrelated one-off payment reasons must be ignored so they do not pollute subscription history.
+    [Fact]
+    public async Task PaymentSucceeded_ManualReason_IsIgnored()
+    {
+        var paymentSession = PaymentTestHelpers.CreatePaymentSession();
+
+        var sessionStore = new Mock<ISubscriptionSessionStore>();
+        var stripeService = new Mock<IStripePaymentIntentService>();
+
+        var handler = new SubscriptionPaymentHandler(
+            paymentSession,
+            stripeService.Object,
+            sessionStore.Object);
+
+        var context = new PaymentSucceededContext
+        {
+            Reason = PaymentReason.Manual,
+            TransactionId = "in_manual_1",
+            AmountPaid = 10.00,
+            Currency = Currency,
+            GatewayId = "stripe",
+        };
+        context.Data["sessionId"] = "session-x";
+
+        await handler.PaymentSucceededAsync(context);
+
+        // A manual reason must not even attempt to load a session.
+        sessionStore.Verify(s => s.GetAsync(It.IsAny<string>()), Times.Never);
     }
 
     private static PaymentSucceededContext CreateContext(string sessionId, string subscriptionId, string transactionId, double amount)

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -28,7 +30,8 @@ public static class CreatePayLaterEndpoint
         [FromBody] PayLaterRequest model,
         IClock clock,
         ISubscriptionSessionStore subscriptionSessionStore,
-        SubscriptionPaymentSession subscriptionPaymentSession)
+        SubscriptionPaymentSession subscriptionPaymentSession,
+        IHostEnvironment hostEnvironment)
     {
         if (string.IsNullOrEmpty(model?.SessionId))
         {
@@ -51,6 +54,11 @@ public static class CreatePayLaterEndpoint
             return TypedResults.NotFound();
         }
 
+        // Reflect the deployment environment instead of always reporting 'Live', which would mislabel
+        // test transactions. Pay Later has no external gateway, so a non-production deployment records
+        // its offline commitments as test data.
+        var gatewayMode = hostEnvironment.IsProduction() ? GatewayMode.Live : GatewayMode.Testing;
+
         var now = clock.UtcNow;
 
         var collection = new SubscriptionsMetadata()
@@ -62,7 +70,7 @@ public static class CreatePayLaterEndpoint
         collection.Subscriptions.Add(new SubscriptionInfo
         {
             Gateway = SubscriptionConstants.PayLaterProcessorKey,
-            GatewayMode = Payments.GatewayMode.Live,
+            GatewayMode = gatewayMode,
             StartedAt = now,
             ExpiresAt = null,
         });
@@ -74,7 +82,7 @@ public static class CreatePayLaterEndpoint
             TransactionId = IdGenerator.GenerateId(),
             Amount = invoice.InitialPaymentAmount ?? 0,
             Currency = invoice.Currency,
-            GatewayMode = Payments.GatewayMode.Live,
+            GatewayMode = gatewayMode,
             GatewayId = SubscriptionConstants.PayLaterProcessorKey,
         });
 
@@ -102,7 +110,7 @@ public static class CreatePayLaterEndpoint
                 SubscriptionId = subscriptionId,
                 Currency = invoice.Currency,
                 Amount = subscription.Value.Sum(x => x.GetLineTotal()),
-                GatewayMode = Payments.GatewayMode.Live,
+                GatewayMode = gatewayMode,
                 GatewayId = SubscriptionConstants.PayLaterProcessorKey,
                 Status = PaymentStatus.Succeeded,
             };
@@ -112,7 +120,7 @@ public static class CreatePayLaterEndpoint
                 SubscriptionId = subscriptionId,
                 StartedAt = now,
                 ExpiresAt = BillingSchedule.GetNextBillingDate(now, subscription.Key.Type, subscription.Key.Duration),
-                GatewayMode = Payments.GatewayMode.Live,
+                GatewayMode = gatewayMode,
                 Gateway = SubscriptionConstants.PayLaterProcessorKey,
             });
         }

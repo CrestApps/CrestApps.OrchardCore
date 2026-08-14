@@ -45,7 +45,11 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.Reason != PaymentReason.SubscriptionCreate)
+        // Record the initial subscription payment as well as recurring renewal ('cycle') and update
+        // payments. Only unrelated reasons (e.g. one-off manual charges) are ignored here.
+        if (context.Reason != PaymentReason.SubscriptionCreate &&
+            context.Reason != PaymentReason.SubscriptionCycle &&
+            context.Reason != PaymentReason.SubscriptionUpdate)
         {
             return;
         }
@@ -77,10 +81,11 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         }
         else
         {
-            // Save additional payments.
+            // Save additional (renewal/update) payments. Provider webhooks are delivered at-least-once,
+            // so keep this idempotent by keying on the transaction id and ignoring repeat deliveries.
             session.Alter<PaymentsMetadata>(metadata =>
             {
-                metadata.Payments.Add(context.TransactionId, new PaymentInfo()
+                metadata.Payments.TryAdd(context.TransactionId, new PaymentInfo()
                 {
                     TransactionId = context.TransactionId,
                     Amount = context.AmountPaid,
