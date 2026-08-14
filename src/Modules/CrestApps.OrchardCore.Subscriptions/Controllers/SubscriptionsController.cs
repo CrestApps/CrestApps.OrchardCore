@@ -16,6 +16,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -32,6 +33,7 @@ public sealed class SubscriptionsController : Controller
     private readonly IClock _clock;
     private readonly ISession _session;
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
+    private readonly IDistributedLock _distributedLock;
 
     internal readonly IHtmlLocalizer H;
 
@@ -45,6 +47,7 @@ public sealed class SubscriptionsController : Controller
         IClock clock,
         ISession session,
         SubscriptionPaymentSession subscriptionPaymentSession,
+        IDistributedLock distributedLock,
         IHtmlLocalizer<SubscriptionsController> htmlLocalizer)
     {
         _updateModelAccessor = updateModelAccessor;
@@ -56,6 +59,7 @@ public sealed class SubscriptionsController : Controller
         _clock = clock;
         _session = session;
         _subscriptionPaymentSession = subscriptionPaymentSession;
+        _distributedLock = distributedLock;
         H = htmlLocalizer;
     }
 
@@ -352,6 +356,40 @@ public sealed class SubscriptionsController : Controller
     /// </summary>
     public async Task<IActionResult> CheckoutReturn(string sessionId, string checkoutSessionId)
     {
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            return NotFound();
+        }
+
+        // Serialize finalization per local session so two concurrent returns (duplicate redirects,
+        // double clicks, or a ret/replay) cannot both pass validation and run the completion handlers,
+        // which would otherwise double-provision (users, content, tenants) or race the session status.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+            $"SUBSCRIPTION_CHECKOUT_RETURN_{sessionId}",
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(5));
+
+        if (!locked)
+        {
+            await _notifier.ErrorAsync(H["Your payment is still being processed. Please wait a moment before trying again."]);
+
+            return RedirectToAction(nameof(Display), new
+            {
+                sessionId,
+                step = SubscriptionConstants.StepKey.Payment,
+            });
+        }
+
+        await using (locker)
+        {
+            return await CheckoutReturnCoreAsync(sessionId, checkoutSessionId);
+        }
+    }
+
+    private async Task<IActionResult> CheckoutReturnCoreAsync(string sessionId, string checkoutSessionId)
+    {
+        // Loaded as Pending inside the lock: once the first finalize flips the status to Completed, a
+        // concurrent/duplicate return re-reads null here and stops, so finalization runs exactly once.
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
 
         if (subscriptionSession == null)
@@ -375,13 +413,23 @@ public sealed class SubscriptionsController : Controller
 
         var details = await checkoutService.GetAsync(checkoutSessionId);
 
+        subscriptionSession.TryGet<Invoice>(out var invoice);
+
         // Never trust a client-supplied checkout id: only finalize when Stripe confirms this exact session
-        // is complete, paid and references this local session.
-        if (details == null ||
-            !details.IsPaid ||
-            string.IsNullOrEmpty(details.SubscriptionId) ||
-            !subscriptionSession.TryGet<Invoice>(out var invoice))
+        // is complete, paid, references THIS local session (via the client reference id we set at creation)
+        // and was charged in the invoice currency. Binding to the client reference id prevents a valid
+        // checkout for one session from being replayed to finalize a different local session.
+        var validation = HostedCheckoutReturnValidator.Validate(details, subscriptionSession.SessionId, invoice?.Currency);
+
+        if (validation != CheckoutReturnValidation.Valid || invoice == null)
         {
+            if (validation == CheckoutReturnValidation.CurrencyMismatch)
+            {
+                _logger.LogWarning(
+                    "Checkout return for session '{SessionId}' rejected: Stripe currency '{StripeCurrency}' does not match invoice currency '{InvoiceCurrency}'.",
+                    subscriptionSession.SessionId, details.Currency, invoice?.Currency);
+            }
+
             await _notifier.ErrorAsync(H["Your payment could not be confirmed. Please try again."]);
 
             return RedirectToAction(nameof(Display), new
