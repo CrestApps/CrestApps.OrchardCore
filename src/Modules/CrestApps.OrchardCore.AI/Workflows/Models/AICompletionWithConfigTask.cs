@@ -86,7 +86,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Drew Blank"], S["Failed"]);
+        return Outcome(S["Done"], S["Drew Blank"], S["Failed"]);
     }
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
@@ -97,7 +97,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         {
             _logger.LogWarning("The generated prompt from the template is empty.");
 
-            return Outcomes("Failed");
+            return Outcome("Failed");
         }
 
         try
@@ -114,7 +114,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
             {
                 _logger.LogWarning("Unable to resolve the selected chat deployment with a valid connection. Deployment: '{DeploymentName}'.", context.ChatDeploymentName);
 
-                return Outcomes("Failed");
+                return Outcome("Failed");
             }
 
             var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
@@ -123,7 +123,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
             if (string.IsNullOrEmpty(bestChoice?.Text))
             {
-                return Outcomes("Drew Blank");
+                return Outcome("Drew Blank");
             }
 
             var value = new AIResponseMessage
@@ -133,13 +133,13 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
             workflowContext.Output[ResultPropertyName ?? "ChatResponse"] = value;
 
-            return Outcomes("Done");
+            return Outcome("Done");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while completing the AI task.");
 
-            return Outcomes("Failed");
+            return Outcome("Failed");
         }
     }
 }

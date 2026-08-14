@@ -81,7 +81,7 @@ public sealed class A2AHostStartup : StartupBase
             .AddScheme<A2AApiKeyAuthenticationOptions, A2AApiKeyAuthenticationHandler>(
                 A2AApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
 
-        services.AddSingleton(A2ATaskManagerFactory.Create);
+        services.AddSingleton<IA2ARequestHandler, OrchardCoreA2ARequestHandler>();
 
         services.AddAuthorizationBuilder()
             .AddPolicy(A2AHostPolicyName, policy =>
@@ -93,7 +93,7 @@ public sealed class A2AHostStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var taskManager = serviceProvider.GetRequiredService<ITaskManager>();
+        var requestHandler = serviceProvider.GetRequiredService<IA2ARequestHandler>();
 
         // The well-known endpoint is always public so clients can discover agents and auth requirements.
         routes.MapGet("/.well-known/agent-card.json", A2AWellKnownEndpointHandler.HandleAsync);
@@ -101,7 +101,7 @@ public sealed class A2AHostStartup : StartupBase
         // Always apply the authorization policy. The A2AHostAuthorizationHandler dynamically
         // checks A2AHostOptions.AuthenticationType on every request, allowing the "None" mode
         // to pass through without credentials.
-        routes.MapA2A(taskManager, "a2a")
+        routes.MapA2A(requestHandler, "a2a")
             .RequireAuthorization(A2AHostPolicyName);
     }
 }

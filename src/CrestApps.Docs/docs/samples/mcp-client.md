@@ -29,6 +29,8 @@ The easiest way to run this sample is using the **Aspire AppHost** project:
    - **orchardcore** — Opens the Orchard Core CMS application (on port 5001).
    - **mcpclientsample** — Opens the MCP Client sample UI (on port 5002).
 
+The direct project launch profile also uses `https://localhost:5002`, so the browser opens the same URL whether you start the sample directly or through Aspire.
+
 :::note
 
 The Aspire AppHost orchestrates several services including **Ollama** (AI model host), **Elasticsearch**, **Redis**, and both the Orchard Core app and MCP Client sample. All service dependencies and environment variables are configured automatically.

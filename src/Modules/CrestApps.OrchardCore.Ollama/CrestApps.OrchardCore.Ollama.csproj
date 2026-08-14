@@ -31,9 +31,20 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.AI.Ollama" />
+    <PackageReference Include="OllamaSharp" ExcludeAssets="analyzers" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Analyzer Remove="$(NuGetPackageRoot)ollamasharp/**/OllamaSharp.SourceGenerators.dll" />
+  </ItemGroup>
+
+  <Target Name="RemoveOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <!-- 

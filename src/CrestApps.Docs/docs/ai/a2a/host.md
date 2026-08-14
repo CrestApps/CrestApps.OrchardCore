@@ -22,7 +22,7 @@ The A2A Host supports two modes for how agents are exposed:
 
 ### Multi-Agent Mode (Default)
 
-Each Agent AI Profile is exposed as its own independent agent card. The `/.well-known/agent-card.json` endpoint returns a **JSON array** of agent cards. Each card has its own `url` property pointing to `/a2a?agent={agentName}`.
+Each Agent AI Profile is exposed as its own independent agent card. The `/.well-known/agent-card.json` endpoint returns a **JSON array** of agent cards. Each card advertises a `supportedInterfaces` entry that points to `/a2a?agent={agentName}`.
 
 ### Skill Mode
 
@@ -39,6 +39,8 @@ When the A2A Host feature is enabled, the following endpoints become available:
 | `/.well-known/agent-card.json` | Returns agent card(s) for discovery (array in multi-agent mode, single object in skill mode) |
 | `/a2a` | The A2A JSON-RPC endpoint for sending messages to agents |
 | `/a2a?agent={name}` | Routes to a specific agent in multi-agent mode |
+
+The host emits A2A 1.0-style agent cards. Clients should read the endpoint URL from the card's `supportedInterfaces` collection instead of the deprecated top-level `url` field.
 
 ### Sending Messages
 
