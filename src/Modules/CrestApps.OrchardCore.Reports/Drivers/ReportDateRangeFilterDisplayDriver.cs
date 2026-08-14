@@ -14,8 +14,6 @@ namespace CrestApps.OrchardCore.Reports.Drivers;
 /// </summary>
 public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
-    private const int DefaultRangeDays = 30;
-
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
 
@@ -56,11 +54,17 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var fromUtc = model.From.HasValue
-            ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(model.From.Value, DateTimeKind.Unspecified))
+        var fromLocal = model.From.HasValue
+            ? DateTime.SpecifyKind(model.From.Value, DateTimeKind.Unspecified)
             : (DateTime?)null;
-        var toUtc = model.To.HasValue
-            ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(model.To.Value, DateTimeKind.Unspecified))
+        var toLocal = model.To.HasValue
+            ? NormalizeUpperBound(model.To.Value)
+            : (DateTime?)null;
+        var fromUtc = fromLocal.HasValue
+            ? await _localClock.ConvertToUtcAsync(fromLocal.Value)
+            : (DateTime?)null;
+        var toUtc = toLocal.HasValue
+            ? await _localClock.ConvertToUtcAsync(toLocal.Value)
             : (DateTime?)null;
 
         var range = await NormalizeAsync(fromUtc, toUtc, model.Range);
@@ -74,7 +78,7 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
     {
         var localNow = await _localClock.ConvertToLocalAsync(_clock.UtcNow);
         var localDate = localNow.Date;
-        var defaultFromLocal = DateTime.SpecifyKind(localDate.AddDays(-(DefaultRangeDays - 1)), DateTimeKind.Unspecified);
+        var defaultFromLocal = DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified);
         var defaultToLocal = DateTime.SpecifyKind(localDate.AddDays(1).AddTicks(-1), DateTimeKind.Unspecified);
         var defaultFromUtc = await _localClock.ConvertToUtcAsync(defaultFromLocal);
         var defaultToUtc = await _localClock.ConvertToUtcAsync(defaultToLocal);
@@ -92,5 +96,20 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
             ToUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc),
             Key = key,
         };
+    }
+
+    private static DateTime NormalizeUpperBound(DateTime value)
+    {
+        var localValue = DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
+
+        if (localValue.Hour == 23 &&
+            localValue.Minute == 59 &&
+            localValue.Second == 0 &&
+            localValue.Millisecond == 0)
+        {
+            return localValue.AddSeconds(59);
+        }
+
+        return localValue;
     }
 }
