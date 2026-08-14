@@ -149,10 +149,16 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         }
 
         // When this succeed, the webhook will trigger the 'PaymentIntentSucceededAsync' event.
+        // The key is bound to the payment intent and method so a duplicate confirmation (e.g. a
+        // replayed webhook or retried request) resolves to the original result instead of a second call.
         await _stripePaymentService.ConfirmAsync(new ConfirmPaymentIntentRequest
         {
             PaymentIntentId = stripeMetadata.PaymentIntentId,
             PaymentMethodId = stripeMetadata.PaymentMethodId,
+            IdempotencyKey = StripeIdempotencyKey.Compute(
+                "sub_pi_confirm",
+                stripeMetadata.PaymentIntentId,
+                stripeMetadata.PaymentMethodId),
         });
     }
 }

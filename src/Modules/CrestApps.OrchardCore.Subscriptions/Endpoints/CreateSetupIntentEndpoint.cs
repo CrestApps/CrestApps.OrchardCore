@@ -72,6 +72,10 @@ public static class CreateSetupIntentEndpoint
         {
             PaymentMethodId = model.PaymentMethodId,
             Metadata = model.Metadata ?? [],
+            IdempotencyKey = StripeIdempotencyKey.Compute(
+                "sub_cust",
+                model.SessionId,
+                model.PaymentMethodId),
         };
 
         customerRequest.Metadata["sessionId"] = model.SessionId;
@@ -116,6 +120,11 @@ public static class CreateSetupIntentEndpoint
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = customerResult.CustomerId,
             Metadata = model.Metadata ?? [],
+            IdempotencyKey = StripeIdempotencyKey.Compute(
+                "sub_si",
+                model.SessionId,
+                customerResult.CustomerId,
+                model.PaymentMethodId),
         };
         intentRequest.Metadata["sessionId"] = model.SessionId;
 

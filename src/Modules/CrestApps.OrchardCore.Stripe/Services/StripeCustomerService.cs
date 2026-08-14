@@ -35,7 +35,7 @@ public sealed class StripeCustomerService : IStripeCustomerService
 
         try
         {
-            var customer = await _customerService.CreateAsync(customerOptions);
+            var customer = await _customerService.CreateAsync(customerOptions, model.ToRequestOptions());
 
             return new CreateCustomerResponse()
             {

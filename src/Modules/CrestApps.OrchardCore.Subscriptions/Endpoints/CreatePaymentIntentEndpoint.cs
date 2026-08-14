@@ -85,6 +85,16 @@ public static class CreatePaymentIntentEndpoint
             Metadata = model.Metadata ?? [],
             Amount = invoice.InitialPaymentAmount ?? 0,
             Currency = invoice.Currency,
+            // Bind the idempotency key to the session and the exact charge parameters. A network retry
+            // or double submit collapses into one charge; a genuine re-attempt with a different payment
+            // method or amount produces a new key.
+            IdempotencyKey = StripeIdempotencyKey.Compute(
+                "sub_pi",
+                model.SessionId,
+                model.CustomerId,
+                model.PaymentMethodId,
+                invoice.InitialPaymentAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                invoice.Currency),
         };
 
         request.Metadata["sessionId"] = model.SessionId;

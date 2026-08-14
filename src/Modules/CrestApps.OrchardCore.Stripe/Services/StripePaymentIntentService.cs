@@ -22,7 +22,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             confirmOptions.PaymentMethod = model.PaymentMethodId;
         }
 
-        var result = await _paymentIntentService.ConfirmAsync(model.PaymentIntentId, confirmOptions);
+        var result = await _paymentIntentService.ConfirmAsync(model.PaymentIntentId, confirmOptions, model.ToRequestOptions());
 
         return new ConfirmPaymentIntentResponse
         {
@@ -53,7 +53,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Metadata = model.Metadata,
         };
 
-        var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions);
+        var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
 
         return new CreatePaymentIntentResponse()
         {

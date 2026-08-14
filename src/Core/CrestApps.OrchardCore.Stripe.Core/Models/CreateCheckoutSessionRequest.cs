@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.Core.Models;
 /// <summary>
 /// Describes a Stripe Checkout Session to create for a hosted (redirect) or embedded checkout.
 /// </summary>
-public sealed class CreateCheckoutSessionRequest
+public sealed class CreateCheckoutSessionRequest : StripeWriteRequest
 {
     /// <summary>
     /// The Stripe mode of the session. Defaults to <c>subscription</c>.

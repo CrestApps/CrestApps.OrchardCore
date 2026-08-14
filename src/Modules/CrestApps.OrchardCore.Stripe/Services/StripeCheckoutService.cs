@@ -21,7 +21,7 @@ public sealed class StripeCheckoutService : IStripeCheckoutService
         var options = BuildOptions(request);
 
         var sessionService = new SessionService(_stripeClient);
-        var session = await sessionService.CreateAsync(options);
+        var session = await sessionService.CreateAsync(options, request.ToRequestOptions());
 
         return new CreateCheckoutSessionResponse
         {

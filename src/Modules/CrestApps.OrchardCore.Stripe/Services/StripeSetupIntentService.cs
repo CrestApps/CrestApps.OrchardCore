@@ -25,7 +25,7 @@ public sealed class StripeSetupIntentService : IStripeSetupIntentService
 
         var setupIntentService = new SetupIntentService(_stripeClient);
 
-        var setupIntent = await setupIntentService.CreateAsync(setupIntentOptions);
+        var setupIntent = await setupIntentService.CreateAsync(setupIntentOptions, model.ToRequestOptions());
 
         return new CreateSetupIntentResponse()
         {

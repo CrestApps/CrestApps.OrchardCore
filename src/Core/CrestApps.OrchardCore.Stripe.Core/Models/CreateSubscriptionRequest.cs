@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Payments.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
-public class CreateSubscriptionRequest
+public class CreateSubscriptionRequest : StripeWriteRequest
 {
     public string CustomerId { get; set; }
 

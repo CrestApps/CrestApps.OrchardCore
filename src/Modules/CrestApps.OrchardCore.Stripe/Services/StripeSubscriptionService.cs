@@ -51,7 +51,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
         }
 
         var subscriptionService = new SubscriptionService(_stripeClient);
-        var subscription = await subscriptionService.CreateAsync(subscriptionOptions);
+        var subscription = await subscriptionService.CreateAsync(subscriptionOptions, model.ToRequestOptions());
 
         if (model.BillingCycles.HasValue && model.BillingCycles.Value > 0)
         {
@@ -86,6 +86,12 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             };
 
             var subscriptionScheduleService = new SubscriptionScheduleService(_stripeClient);
+
+            // The schedule is created 'FromSubscription', so it is inherently bound to the (idempotent)
+            // subscription created above; Stripe rejects a second schedule for the same subscription.
+            // We intentionally do NOT attach an idempotency key here: the schedule's StartDate is derived
+            // from the current time, so replaying a stored key with a later timestamp would trigger a
+            // Stripe idempotency-parameter-mismatch error instead of returning the original schedule.
             await subscriptionScheduleService.CreateAsync(subscriptionScheduleOptions);
         }
 

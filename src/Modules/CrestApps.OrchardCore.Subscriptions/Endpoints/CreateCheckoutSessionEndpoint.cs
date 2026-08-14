@@ -118,6 +118,13 @@ public static class CreateCheckoutSessionEndpoint
             successUrl: successUrl,
             cancelUrl: cancelUrl);
 
+        // Bind the key to the session and its line items so a retried checkout-session creation reuses
+        // the same Stripe session instead of creating duplicates.
+        request.IdempotencyKey = StripeIdempotencyKey.Compute(
+            "sub_cs",
+            model.SessionId,
+            string.Join(',', lineItems.Select(x => $"{x.PriceId}:{x.Quantity}")));
+
         var response = await stripeCheckoutService.CreateAsync(request);
 
         if (string.IsNullOrEmpty(response?.Url))

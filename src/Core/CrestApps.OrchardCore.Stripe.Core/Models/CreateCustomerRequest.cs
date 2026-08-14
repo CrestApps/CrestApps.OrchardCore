@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
-public class CreateCustomerRequest
+public class CreateCustomerRequest : StripeWriteRequest
 {
     public string PaymentMethodId { get; set; }
 

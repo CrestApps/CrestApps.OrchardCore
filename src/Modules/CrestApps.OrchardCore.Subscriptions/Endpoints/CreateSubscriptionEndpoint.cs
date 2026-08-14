@@ -137,6 +137,17 @@ public static class CreateSubscriptionEndpoint
                 continue;
             }
 
+            // Bind the key to the session, customer, payment method and the exact set of priced line
+            // items so retries of this subscription creation never produce duplicates, while distinct
+            // subscription groups within the same session each get their own key.
+            stripeCreateRequest.IdempotencyKey = StripeIdempotencyKey.Compute(
+                "sub_sub",
+                model.SessionId,
+                model.CustomerId,
+                model.PaymentMethodId,
+                $"{subscription.Key.Type}:{subscription.Key.Duration}",
+                string.Join(',', stripeCreateRequest.LineItems.Select(x => $"{x.PriceId}:{x.Quantity}")));
+
             var result = await stripeSubscriptionService.CreateAsync(stripeCreateRequest);
 
             results.Add(new
