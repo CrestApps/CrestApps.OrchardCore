@@ -155,63 +155,107 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         var info = node.Deserialize<TenantOnboardingStep>(_documentJsonSerializerOptions.SerializerOptions);
 
-        var recipes = await _setupService.GetSetupRecipesAsync();
-        using var shellSettings = await CreateTenantAsync(info);
-
-        var setupContext = new SetupContext
-        {
-            ShellSettings = shellSettings,
-            EnabledFeatures = [],
-            Errors = new Dictionary<string, string>(),
-            Recipe = recipes.FirstOrDefault(x => x.Name == info.RecipeName) ?? recipes.First(),
-            Properties = new Dictionary<string, object>
-            {
-                { SetupConstants.SiteName, shellSettings.Name },
-                { SetupConstants.AdminUsername, info.AdminUsername },
-                { SetupConstants.AdminEmail, info.AdminEmail },
-                { SetupConstants.AdminPassword, info.AdminPassword},
-                { SetupConstants.SiteTimeZone, _clock.GetSystemTimeZone() },
-                { SetupConstants.DatabaseProvider, shellSettings["DatabaseProvider"] },
-                { SetupConstants.DatabaseConnectionString, shellSettings["ConnectionString"] },
-                { SetupConstants.DatabaseTablePrefix, shellSettings["TablePrefix"] },
-                { SetupConstants.DatabaseSchema, shellSettings["Schema"] },
-            }
-        };
-
-        await _setupService.SetupAsync(setupContext);
-
         // Lazily resolve the workflow manager as it may not be registered.
         var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
 
-        // Check if a component in the Setup failed.
-        if (setupContext.Errors.Count > 0)
+        // Payment has already succeeded by the time we reach this point. Any failure while
+        // provisioning the tenant must be captured and surfaced through a durable workflow event
+        // (rather than thrown) so operators can remediate (retry, refund, contact the customer)
+        // without the subscriber being left with a charge and no site.
+        var tenantName = info?.TenantName;
+
+        // Only provisioning is wrapped in the try/catch. The success/failure workflow event is then
+        // dispatched afterwards so a fault while raising one event can never be mistaken for a
+        // provisioning fault, nor cause a second (escaping) event dispatch.
+        IDictionary<string, string> failureErrors = null;
+
+        try
         {
-            _logger.LogError("Unable to auto setup a new subscribed tenant. Errors: {Errors}", string.Join(';', setupContext.Errors));
+            var recipes = await _setupService.GetSetupRecipesAsync();
+            using var shellSettings = await CreateTenantAsync(info);
+            tenantName = shellSettings.Name;
 
-            if (workflowManager != null)
+            var setupContext = new SetupContext
             {
-                var input = new Dictionary<string, object>
+                ShellSettings = shellSettings,
+                EnabledFeatures = [],
+                Errors = new Dictionary<string, string>(),
+                Recipe = recipes.FirstOrDefault(x => x.Name == info.RecipeName) ?? recipes.First(),
+                Properties = new Dictionary<string, object>
                 {
-                    { "TenantName", shellSettings.Name },
-                    { "Errors", setupContext.Errors },
-                };
+                    { SetupConstants.SiteName, shellSettings.Name },
+                    { SetupConstants.AdminUsername, info.AdminUsername },
+                    { SetupConstants.AdminEmail, info.AdminEmail },
+                    { SetupConstants.AdminPassword, info.AdminPassword},
+                    { SetupConstants.SiteTimeZone, _clock.GetSystemTimeZone() },
+                    { SetupConstants.DatabaseProvider, shellSettings["DatabaseProvider"] },
+                    { SetupConstants.DatabaseConnectionString, shellSettings["ConnectionString"] },
+                    { SetupConstants.DatabaseTablePrefix, shellSettings["TablePrefix"] },
+                    { SetupConstants.DatabaseSchema, shellSettings["Schema"] },
+                }
+            };
 
-                await workflowManager.TriggerEventAsync(SubscribedTenantFailedSetupEvent.EventName, input, correlationId: $"TenantAutoSetup_{shellSettings.Name}");
+            await _setupService.SetupAsync(setupContext);
+
+            if (setupContext.Errors.Count > 0)
+            {
+                failureErrors = setupContext.Errors;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Preserve cancellation semantics rather than reporting a provisioning failure.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unexpected error occurred while provisioning the subscribed tenant '{TenantName}' after a successful payment.", tenantName);
+
+            failureErrors = new Dictionary<string, string>
+            {
+                { "Exception", ex.Message },
+            };
+        }
+
+        if (failureErrors != null)
+        {
+            _logger.LogError("Unable to auto setup a new subscribed tenant '{TenantName}'. Errors: {Errors}", tenantName, string.Join(';', failureErrors));
+
+            await TriggerTenantSetupEventAsync(workflowManager, SubscribedTenantFailedSetupEvent.EventName, tenantName, failureErrors);
         }
         else
         {
-            _logger.LogInformation("New subscribed tenant was auto setup successfully.");
+            _logger.LogInformation("New subscribed tenant '{TenantName}' was auto setup successfully.", tenantName);
 
-            if (workflowManager != null)
-            {
-                var input = new Dictionary<string, object>
-                {
-                    { "TenantName", shellSettings.Name },
-                };
+            await TriggerTenantSetupEventAsync(workflowManager, SubscribedTenantSetupSucceededEvent.EventName, tenantName, errors: null);
+        }
+    }
 
-                await workflowManager.TriggerEventAsync(SubscribedTenantSetupSucceededEvent.EventName, input, correlationId: $"TenantAutoSetup_{shellSettings.Name}");
-            }
+    private async Task TriggerTenantSetupEventAsync(IWorkflowManager workflowManager, string eventName, string tenantName, IDictionary<string, string> errors)
+    {
+        if (workflowManager == null)
+        {
+            return;
+        }
+
+        var input = new Dictionary<string, object>
+        {
+            { "TenantName", tenantName },
+        };
+
+        if (errors != null)
+        {
+            input["Errors"] = errors;
+        }
+
+        try
+        {
+            await workflowManager.TriggerEventAsync(eventName, input, correlationId: $"TenantAutoSetup_{tenantName}");
+        }
+        catch (Exception ex)
+        {
+            // A failure to raise the notification must never escape post-payment completion.
+            _logger.LogError(ex, "Failed to trigger the '{EventName}' workflow event for tenant '{TenantName}'.", eventName, tenantName);
         }
     }
 
