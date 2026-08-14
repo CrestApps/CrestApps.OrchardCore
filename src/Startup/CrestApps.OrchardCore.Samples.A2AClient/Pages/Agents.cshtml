@@ -32,6 +32,7 @@
             var headerId = $"header-agent-{i}";
             var resultId = $"result-agent-{i}";
             var hasSkills = card.Skills?.Count > 0;
+            var agentUrl = card.SupportedInterfaces?.FirstOrDefault()?.Url;
 
             <div class="accordion-item searchable-item" data-search-text="@card.Name?.ToLowerInvariant() @card.Description?.ToLowerInvariant()">
                 <h2 class="accordion-header" id="@headerId">
@@ -61,7 +62,7 @@
                             </div>
                         }
 
-                        <div class="agent-form" data-agent-url="@card.Url" data-agent-name="@card.Name" data-result-target="#@resultId">
+                        <div class="agent-form" data-agent-url="@agentUrl" data-agent-name="@card.Name" data-result-target="#@resultId">
                             <div class="mb-2">
                                 <label class="form-label small mb-0">Message <span class="text-danger">*</span></label>
                                 <textarea class="form-control form-control-sm agent-message" rows="3" placeholder="Type a message to send to this agent…" required></textarea>

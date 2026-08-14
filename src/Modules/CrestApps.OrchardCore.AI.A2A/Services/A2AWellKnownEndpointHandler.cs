@@ -32,7 +32,7 @@ internal static class A2AWellKnownEndpointHandler
 
         if (options.ExposeAgentsAsSkill)
         {
-            var card = A2ATaskManagerFactory.BuildSkillModeCard($"{baseUrl}/a2a", profiles);
+            var card = OrchardCoreA2ARequestHandler.BuildSkillModeCard($"{baseUrl}/a2a", profiles);
             ApplySecuritySchemes(card, options, baseUrl);
             await context.Response.WriteAsJsonAsync(card, A2AJsonOptions.Default, context.RequestAborted);
         }
@@ -55,7 +55,7 @@ internal static class A2AWellKnownEndpointHandler
         foreach (var profile in profiles)
         {
             var agentUrl = $"{baseUrl}/a2a?agent={Uri.EscapeDataString(profile.Name)}";
-            var card = A2ATaskManagerFactory.BuildAgentCard(profile, agentUrl);
+            var card = OrchardCoreA2ARequestHandler.BuildAgentCard(profile, agentUrl);
             ApplySecuritySchemes(card, options, baseUrl);
             cards.Add(card);
         }
@@ -64,7 +64,7 @@ internal static class A2AWellKnownEndpointHandler
     }
 
     /// <summary>
-    /// Populates the <see cref="AgentCard.SecuritySchemes"/> and <see cref="AgentCard.Security"/>
+    /// Populates the <see cref="AgentCard.SecuritySchemes"/> and <see cref="AgentCard.SecurityRequirements"/>
     /// fields based on the configured authentication type so clients know how to authenticate.
     /// </summary>
     private static void ApplySecuritySchemes(AgentCard card, A2AHostOptions options, string baseUrl)
@@ -74,29 +74,57 @@ internal static class A2AWellKnownEndpointHandler
             case A2AHostAuthenticationType.ApiKey:
                 card.SecuritySchemes = new Dictionary<string, SecurityScheme>
                 {
-                    ["apiKey"] = new ApiKeySecurityScheme(
-                        name: "Authorization",
-                        keyLocation: "header",
-                        description: "API key authentication. Send as 'Bearer {key}' or 'ApiKey {key}' in the Authorization header."),
+                    ["apiKey"] = new()
+                    {
+                        ApiKeySecurityScheme = new ApiKeySecurityScheme
+                        {
+                            Name = "Authorization",
+                            Location = "header",
+                            Description = "API key authentication. Send as 'Bearer {key}' or 'ApiKey {key}' in the Authorization header.",
+                        },
+                    },
                 };
 
-                card.Security =
+                card.SecurityRequirements =
                 [
-                    new Dictionary<string, string[]> { ["apiKey"] = [] },
+                    new SecurityRequirement
+                    {
+                        Schemes = new Dictionary<string, StringList>
+                        {
+                            ["apiKey"] = new()
+                            {
+                                List = [],
+                            },
+                        },
+                    },
                 ];
                 break;
 
             case A2AHostAuthenticationType.OpenId:
                 card.SecuritySchemes = new Dictionary<string, SecurityScheme>
                 {
-                    ["openId"] = new OpenIdConnectSecurityScheme(
-                        openIdConnectUrl: new Uri($"{baseUrl}/.well-known/openid-configuration"),
-                    description: "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token."),
+                    ["openId"] = new()
+                    {
+                        OpenIdConnectSecurityScheme = new OpenIdConnectSecurityScheme
+                        {
+                            OpenIdConnectUrl = $"{baseUrl}/.well-known/openid-configuration",
+                            Description = "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token.",
+                        },
+                    },
                 };
 
-                card.Security =
+                card.SecurityRequirements =
                 [
-                    new Dictionary<string, string[]> { ["openId"] = [] },
+                    new SecurityRequirement
+                    {
+                        Schemes = new Dictionary<string, StringList>
+                        {
+                            ["openId"] = new()
+                            {
+                                List = [],
+                            },
+                        },
+                    },
                 ];
                 break;
 

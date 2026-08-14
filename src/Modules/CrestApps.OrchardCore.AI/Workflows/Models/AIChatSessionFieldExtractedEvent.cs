@@ -38,23 +38,20 @@ public sealed class AIChatSessionFieldExtractedEvent : EventActivity
         WorkflowExecutionContext workflowContext,
         ActivityContext activityContext)
     {
-        return new ValueTask<IEnumerable<Outcome>>(
-        [
-            Outcome(S["Done"]),
-            ]);
+        return ValueTask.FromResult<IEnumerable<Outcome>>(Outcome(S["Done"]));
     }
 
     public override ActivityExecutionResult Resume(
     WorkflowExecutionContext workflowContext,
     ActivityContext activityContext)
     {
-        return Outcomes("Done");
+        return Outcome("Done");
     }
 
     public override ActivityExecutionResult Execute(
     WorkflowExecutionContext workflowContext,
     ActivityContext activityContext)
     {
-        return Outcomes("Done");
+        return Outcome("Done");
     }
 }

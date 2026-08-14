@@ -48,4 +48,4 @@ The A2A endpoint is configured via `A2A:Endpoint`. Aspire sets it automatically,
 }
 ```
 
-The agent card is automatically discovered at `/.well-known/agent-card.json` relative to the endpoint.
+The agent card is automatically discovered at `/.well-known/agent-card.json` relative to the endpoint. The sample reads each agent endpoint from the card's `supportedInterfaces` collection, which is the A2A 1.0 card shape.
