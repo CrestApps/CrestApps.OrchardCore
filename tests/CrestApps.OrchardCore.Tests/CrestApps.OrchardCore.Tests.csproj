@@ -60,7 +60,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.DialPad/CrestApps.OrchardCore.DialPad.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
   </ItemGroup>

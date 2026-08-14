@@ -1,29 +1,29 @@
-namespace CrestApps.OrchardCore.DialPad.Models;
+namespace CrestApps.OrchardCore.Dialpad.Models;
 
 /// <summary>
-/// Represents the DialPad provider site settings.
+/// Represents the Dialpad provider site settings.
 /// </summary>
-public sealed class DialPadSettings
+public sealed class DialpadSettings
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the DialPad provider is enabled.
+    /// Gets or sets a value indicating whether the Dialpad provider is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
+    /// Gets or sets the Dialpad environment (production or sandbox) used for the REST API and OAuth
     /// endpoints.
     /// </summary>
-    public DialPadEnvironment Environment { get; set; }
+    public DialpadEnvironment Environment { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional internal override for the DialPad REST API base address. When empty the
+    /// Gets or sets an optional internal override for the Dialpad REST API base address. When empty the
     /// default endpoint is used.
     /// </summary>
     public string ApiBaseUrl { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the DialPad user that places outbound calls.
+    /// Gets or sets the identifier of the Dialpad user that places outbound calls.
     /// </summary>
     public string UserId { get; set; }
 
@@ -33,39 +33,39 @@ public sealed class DialPadSettings
     public string OutboundCallerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the protected DialPad API key used when API key authentication is selected. The value is
+    /// Gets or sets the protected Dialpad API key used when API key authentication is selected. The value is
     /// stored encrypted using the data protection provider.
     /// </summary>
     public string ApiToken { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad authentication type.
+    /// Gets or sets the Dialpad authentication type.
     /// </summary>
-    public DialPadAuthenticationType AuthenticationType { get; set; }
+    public DialpadAuthenticationType AuthenticationType { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether each user authenticates with DialPad through the OAuth 2.0
+    /// Gets or sets a value indicating whether each user authenticates with Dialpad through the OAuth 2.0
     /// authorization code flow instead of using a shared API key.
     /// </summary>
     public bool UseOAuth
     {
         get
         {
-            return AuthenticationType == DialPadAuthenticationType.OAuth2;
+            return AuthenticationType == DialpadAuthenticationType.OAuth2;
         }
         set
         {
-            AuthenticationType = value ? DialPadAuthenticationType.OAuth2 : DialPadAuthenticationType.ApiKey;
+            AuthenticationType = value ? DialpadAuthenticationType.OAuth2 : DialpadAuthenticationType.ApiKey;
         }
     }
 
     /// <summary>
-    /// Gets or sets the OAuth client identifier issued by DialPad.
+    /// Gets or sets the OAuth client identifier issued by Dialpad.
     /// </summary>
     public string ClientId { get; set; }
 
     /// <summary>
-    /// Gets or sets the protected OAuth client secret issued by DialPad. The value is stored encrypted
+    /// Gets or sets the protected OAuth client secret issued by Dialpad. The value is stored encrypted
     /// using the data protection provider.
     /// </summary>
     public string ClientSecret { get; set; }
@@ -76,7 +76,7 @@ public sealed class DialPadSettings
     public string Scopes { get; set; }
 
     /// <summary>
-    /// Gets or sets the protected secret DialPad uses to sign call-event webhooks (JWT HS256). The value
+    /// Gets or sets the protected secret Dialpad uses to sign call-event webhooks (JWT HS256). The value
     /// is stored encrypted using the data protection provider. Inbound webhooks are rejected when empty.
     /// </summary>
     public string WebhookSigningSecret { get; set; }
