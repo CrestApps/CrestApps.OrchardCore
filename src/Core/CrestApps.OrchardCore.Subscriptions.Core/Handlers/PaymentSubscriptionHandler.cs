@@ -163,7 +163,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             {
                 var minAllowedValue = GetMinimumAllowed(invoice.Currency);
 
-                if (invoice.InitialPaymentAmount.HasValue && invoice.InitialPaymentAmount > minAllowedValue)
+                if (invoice.InitialPaymentAmount.HasValue && Money.IsGreaterThan(invoice.InitialPaymentAmount.Value, minAllowedValue))
                 {
                     var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId);
 
@@ -172,7 +172,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                         throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
                     }
 
-                    if (invoice.InitialPaymentAmount.Value != initialPaymentInfo.Amount)
+                    if (!Money.AreEqual(invoice.InitialPaymentAmount, initialPaymentInfo.Amount))
                     {
                         throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
                     }
@@ -188,7 +188,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                     });
                 }
 
-                if (invoice.FirstSubscriptionPaymentAmount.HasValue && invoice.FirstSubscriptionPaymentAmount > minAllowedValue)
+                if (invoice.FirstSubscriptionPaymentAmount.HasValue && Money.IsGreaterThan(invoice.FirstSubscriptionPaymentAmount.Value, minAllowedValue))
                 {
                     var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId);
 
@@ -199,7 +199,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
                     var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Where(x => x.Value.Status == PaymentStatus.Succeeded).Sum(x => x.Value.Amount);
 
-                    if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != totalSubscriptionPayments)
+                    if (Money.IsGreaterThan(invoice.FirstSubscriptionPaymentAmount.Value, 0) && !Money.AreEqual(invoice.FirstSubscriptionPaymentAmount.Value, totalSubscriptionPayments))
                     {
                         throw new PaymentValidationException($"The subscriptions payments received '{totalSubscriptionPayments}' did not match the expected amount of '{invoice.FirstSubscriptionPaymentAmount}'.");
                     }

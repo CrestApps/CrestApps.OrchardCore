@@ -98,12 +98,7 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
 
     private async Task ProcessFirstPaymentAsync(PaymentSucceededContext context, object sessionId, SubscriptionSession session, string subscriptionId)
     {
-        var newValue = new SubscriptionPaymentsMetadata
-        {
-            Payments = [],
-        };
-
-        newValue.Payments[subscriptionId] = new PaymentInfo
+        var payment = new PaymentInfo
         {
             TransactionId = context.TransactionId,
             SubscriptionId = subscriptionId,
@@ -114,14 +109,24 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             Status = PaymentStatus.Succeeded,
         };
 
+        var newValue = new SubscriptionPaymentsMetadata
+        {
+            Payments = new Dictionary<string, PaymentInfo>
+            {
+                [subscriptionId] = payment,
+            },
+        };
+
         var updatedValue = await _paymentSession.AddOrUpdateAsync(sessionId.ToString(), newValue, (existingValue) =>
         {
-            existingValue.Payments.TryGetValue(subscriptionId, out var payment);
+            existingValue.Payments ??= [];
 
-            existingValue.Payments[subscriptionId] = new PaymentInfo
-            {
-                Amount = (payment?.Amount ?? 0) + context.AmountPaid,
-            };
+            // Payment provider webhooks (e.g. Stripe) are delivered at-least-once, so the same
+            // 'subscription_create' payment can be received more than once. Keying by the subscription
+            // id and overwriting with the fully-populated payment keeps this idempotent: repeated
+            // deliveries neither double-count the amount nor drop fields such as the transaction id and
+            // 'Succeeded' status that later validation and reconciliation rely on.
+            existingValue.Payments[subscriptionId] = payment;
         });
 
         var stripeMetadata = session.As<StripeMetadata>();
