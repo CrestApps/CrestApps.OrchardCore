@@ -2,7 +2,6 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
 
@@ -167,7 +166,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
-        SignalRConstants.Feature.Area,
+        "OrchardCore.SignalR",
     ]
 )]
 

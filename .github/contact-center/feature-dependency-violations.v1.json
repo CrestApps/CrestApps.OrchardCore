@@ -9,8 +9,8 @@
     },
     {
       "feature": "CrestApps.OrchardCore.ContactCenter.RealTime",
-      "dependsOn": "CrestApps.OrchardCore.SignalR",
-      "reason": "Real-Time intentionally hosts the SignalR hub used by the agent desktop and supervisor dashboard."
+      "dependsOn": "OrchardCore.SignalR",
+      "reason": "Real-Time intentionally hosts the SignalR hub used by the agent desktop and supervisor dashboard, built on the Orchard Core SignalR framework feature."
     },
     {
       "feature": "CrestApps.OrchardCore.ContactCenter.Voice",
@@ -53,7 +53,8 @@
     "CrestApps.OrchardCore.Reports",
     "OrchardCore.Workflows",
     "CrestApps.OrchardCore.Omnichannel.Activities",
-    "OrchardCore.Resources"
+    "OrchardCore.Resources",
+    "OrchardCore.SignalR"
   ],
   "featureDependencyClosures": {
     "CrestApps.OrchardCore.ContactCenter": [
@@ -115,7 +116,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -123,6 +123,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Dialer.Paced": [
@@ -137,7 +138,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -145,6 +145,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Voice": [
@@ -157,7 +158,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -165,6 +165,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.InboundVoice": [
@@ -178,7 +179,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -186,6 +186,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Voice.Media": [
@@ -199,7 +200,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -207,6 +207,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Recording": [
@@ -220,7 +221,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -228,6 +228,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.AgentDesktop": [
@@ -242,7 +243,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.Telephony.SoftPhone",
       "CrestApps.OrchardCore.TimeZones",
@@ -251,6 +251,32 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
+      "OrchardCore.Users"
+    ],
+    "CrestApps.OrchardCore.ContactCenter.SecureCapture": [
+      "CrestApps.OrchardCore.ContactCenter",
+      "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+      "CrestApps.OrchardCore.ContactCenter.Agents",
+      "CrestApps.OrchardCore.ContactCenter.Queues",
+      "CrestApps.OrchardCore.ContactCenter.RealTime",
+      "CrestApps.OrchardCore.ContactCenter.Recording",
+      "CrestApps.OrchardCore.ContactCenter.Voice",
+      "CrestApps.OrchardCore.ContentFields",
+      "CrestApps.OrchardCore.Omnichannel",
+      "CrestApps.OrchardCore.Omnichannel.Activities",
+      "CrestApps.OrchardCore.Omnichannel.Managements",
+      "CrestApps.OrchardCore.PhoneNumbers",
+      "CrestApps.OrchardCore.Resources",
+      "CrestApps.OrchardCore.Telephony",
+      "CrestApps.OrchardCore.Telephony.SoftPhone",
+      "CrestApps.OrchardCore.TimeZones",
+      "CrestApps.OrchardCore.Users",
+      "OrchardCore.ContentTypes",
+      "OrchardCore.Contents",
+      "OrchardCore.Flows",
+      "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Supervision": [
@@ -265,7 +291,6 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.Telephony",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
@@ -273,6 +298,7 @@
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.RealTime": [
@@ -285,13 +311,13 @@
       "CrestApps.OrchardCore.Omnichannel.Managements",
       "CrestApps.OrchardCore.PhoneNumbers",
       "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
       "CrestApps.OrchardCore.TimeZones",
       "CrestApps.OrchardCore.Users",
       "OrchardCore.ContentTypes",
       "OrchardCore.Contents",
       "OrchardCore.Flows",
       "OrchardCore.Resources",
+      "OrchardCore.SignalR",
       "OrchardCore.Users"
     ],
     "CrestApps.OrchardCore.ContactCenter.Analytics": [
@@ -329,31 +355,6 @@
       "OrchardCore.Resources",
       "OrchardCore.Users",
       "OrchardCore.Workflows"
-    ],
-    "CrestApps.OrchardCore.ContactCenter.SecureCapture": [
-      "CrestApps.OrchardCore.ContactCenter",
-      "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
-      "CrestApps.OrchardCore.ContactCenter.Agents",
-      "CrestApps.OrchardCore.ContactCenter.Queues",
-      "CrestApps.OrchardCore.ContactCenter.RealTime",
-      "CrestApps.OrchardCore.ContactCenter.Recording",
-      "CrestApps.OrchardCore.ContactCenter.Voice",
-      "CrestApps.OrchardCore.ContentFields",
-      "CrestApps.OrchardCore.Omnichannel",
-      "CrestApps.OrchardCore.Omnichannel.Activities",
-      "CrestApps.OrchardCore.Omnichannel.Managements",
-      "CrestApps.OrchardCore.PhoneNumbers",
-      "CrestApps.OrchardCore.Resources",
-      "CrestApps.OrchardCore.SignalR",
-      "CrestApps.OrchardCore.Telephony",
-      "CrestApps.OrchardCore.Telephony.SoftPhone",
-      "CrestApps.OrchardCore.TimeZones",
-      "CrestApps.OrchardCore.Users",
-      "OrchardCore.ContentTypes",
-      "OrchardCore.Contents",
-      "OrchardCore.Flows",
-      "OrchardCore.Resources",
-      "OrchardCore.Users"
     ]
   }
 }

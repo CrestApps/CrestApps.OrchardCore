@@ -6,7 +6,7 @@
     "r both.", Id="CrestApps.OrchardCore.Telephony.SoftPhone", Name="Telephony Soft Phone")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
         "OrchardCore.Users",
-        "CrestApps.OrchardCore.SignalR"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
+        "OrchardCore.SignalR"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
     ".", Id="CrestApps.OrchardCore.Telephony", Name="Telephony")]
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Telephony", Description="Provides a provider-agnostic soft phone and SignalR hub for integrating telephony" +
     " providers.", Name="Telephony", Version="2.0.0", Website="https://www.crestapps.com")]
@@ -60,7 +60,6 @@ namespace CrestApps.OrchardCore.Telephony.Filters
 }
 namespace CrestApps.OrchardCore.Telephony.Hubs
 {
-    [CrestApps.OrchardCore.SignalR.AllowApiTokenAuthentication]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public sealed class TelephonyHub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.OrchardCore.Telephony.ITelephonyClient>
     {

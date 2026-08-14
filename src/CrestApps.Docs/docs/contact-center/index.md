@@ -111,9 +111,9 @@ The practical setup sequence is: create channel endpoints and campaigns in Omnic
 
 The Contact Center publishes its own real-time event stream over SignalR for agent desktops, supervisor dashboards, and queue monitors. It does not reuse the Telephony soft-phone hub for routing, queue, or supervisor data; voice call state continues to flow through Telephony and is projected into the interaction.
 
-The **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`, depends on **Work Distribution** and the **SignalR** module) is enabled by dependency only: it is not a feature you toggle directly but is switched on automatically whenever the **Agent Desktop** or **Supervision & Live Dashboard** capability is enabled. It adds:
+The **Contact Center Real-Time** feature (`CrestApps.OrchardCore.ContactCenter.RealTime`, depends on **Work Distribution** and the Orchard Core **SignalR** framework feature (`OrchardCore.SignalR`)) is enabled by dependency only: it is not a feature you toggle directly but is switched on automatically whenever the **Agent Desktop** or **Supervision & Live Dashboard** capability is enabled. It adds:
 
-- **`ContactCenterHub`** - a SignalR hub mapped through the SignalR module's `HubRouteManager`. Agents connect with the `ContactCenterSignIntoQueues` permission and join their own user group plus a group per signed-in queue; supervisors connect with the new `MonitorContactCenter` permission and join the supervisor group. Every user, queue, and supervisor destination is qualified by the immutable Orchard shell name before it reaches the SignalR backplane, preventing equal user or queue identifiers in different tenants from receiving each other's events. Supervisors can also call `WatchQueue`/`UnwatchQueue` to subscribe to a single queue's group for a wallboard.
+- **`ContactCenterHub`** - a SignalR hub mapped through the Orchard Core SignalR framework's `SignalRHubRoutes` helper. Agents connect with the `ContactCenterSignIntoQueues` permission and join their own user group plus a group per signed-in queue; supervisors connect with the new `MonitorContactCenter` permission and join the supervisor group. Every user, queue, and supervisor destination is qualified by the immutable Orchard shell name before it reaches the SignalR backplane, preventing equal user or queue identifiers in different tenants from receiving each other's events. Supervisors can also call `WatchQueue`/`UnwatchQueue` to subscribe to a single queue's group for a wallboard.
 - **Live agent sessions** - a volatile `AgentSession` aggregate, separate from the administrator-owned `AgentProfile`, that tracks an agent's open SignalR connections and last heartbeat. Splitting live state from configuration means a closed browser no longer leaves an agent `Available`.
 - **Heartbeat and stale-session cleanup** - the client sends a `Heartbeat` every 30 seconds. A per-minute background task signs out any agent whose heartbeat is older than 90 seconds and deletes the session, so routing stops targeting a dead client. A brief disconnect (for example a page refresh) is tolerated by the grace window.
 - **Reconnect snapshots** - the hub's `GetSnapshot` method returns an `AgentDesktopSnapshot` combining the durable profile (presence, reason, queue/campaign membership, active reservation) with live session state, so a reconnecting desktop restores itself without replaying the event history.
@@ -125,7 +125,7 @@ A small client helper (`contact-center-realtime` script resource, depending on t
 <script asp-name="contact-center-realtime" at="Foot"></script>
 <script at="Foot" depends-on="contact-center-realtime">
     const client = window.contactCenterRealTime.connect({
-        hubUrl: '@HubRouteManager.GetPathByHub<ContactCenterHub>()',
+        hubUrl: '@Html.SignalRHubUrl<ContactCenterHub>()',
         onSnapshot: (snapshot) => { /* restore desktop state */ },
         onPresenceChanged: (n) => { /* n.userId, n.status, n.reason */ },
         onOfferReceived: (n) => { /* show the offer until n.expiresUtc */ },

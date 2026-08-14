@@ -516,6 +516,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "CreateUniqueIndexAsync",
             "4179923c87cc7344",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
+            "OmnichannelIndexMigration",
+            "ColumnExistsAsync",
+            "910e21122df06321",
+            "Read-only column existence probe. Both branches only read metadata to test whether a column is present: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
     ];
 
     /// <summary>

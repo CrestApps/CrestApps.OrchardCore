@@ -452,7 +452,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
     }
-    public sealed class OmnichannelContactsMigrations : OrchardCore.Data.Migration.DataMigration
+    public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
         public OmnichannelContactsMigrations(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelContactsMigrations> logger) { }
         public System.Threading.Tasks.Task<int> CreateAsync() { }
@@ -466,6 +466,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom7Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom8Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom9Async() { }
+    }
+    public abstract class OmnichannelIndexMigration : OrchardCore.Data.Migration.DataMigration
+    {
+        protected OmnichannelIndexMigration(YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, Microsoft.Extensions.Logging.ILogger logger) { }
+        protected OrchardCore.Data.IDbConnectionAccessor DbConnectionAccessor { get; }
+        protected Microsoft.Extensions.Logging.ILogger Logger { get; }
+        protected YesSql.IStore Store { get; }
+        protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Data.Common.DbConnection connection, System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
+        protected System.Threading.Tasks.Task EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Models
