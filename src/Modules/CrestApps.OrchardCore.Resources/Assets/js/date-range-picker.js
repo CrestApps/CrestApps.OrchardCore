@@ -37,7 +37,7 @@
     }
 
     function endOfDay(date) {
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 0, 0);
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 0);
     }
 
     function addDays(date, days) {
@@ -135,7 +135,7 @@
 
     function formatMachine(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
-            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
     }
 
     function formatDisplay(date) {
@@ -184,30 +184,58 @@
         var priorPicker = null;
         var afterPicker = null;
 
+        function addSecondsToAltFormat(format) {
+            if (!format) {
+                return format;
+            }
+
+            if (format.indexOf('S') !== -1) {
+                return format;
+            }
+
+            if (format.indexOf('K') !== -1) {
+                return format.replace(/\s*K\b/, ':S K');
+            }
+
+            return format + ':S';
+        }
+
+        function withDefaultTime(config, hour, minute, second) {
+            return Object.assign({}, config, {
+                dateFormat: 'Y-m-d\\TH:i:S',
+                altFormat: addSecondsToAltFormat(config.altFormat),
+                enableSeconds: true,
+                defaultHour: hour,
+                defaultMinute: minute,
+                defaultSeconds: second
+            });
+        }
+
         if (typeof flatpickr === 'function') {
             var config = typeof flatpickrCulture !== 'undefined'
                 ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control flatpickr-input' })
-                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i:S' };
 
-            fromPicker = flatpickr(fromInput, Object.assign({}, config, { onChange: onCustomChange }));
-            toPicker = flatpickr(toInput, Object.assign({}, config, { onChange: onCustomChange }));
+            fromPicker = flatpickr(fromInput, Object.assign({}, withDefaultTime(config, 0, 0, 0), { onChange: onCustomFromChange }));
+            toPicker = flatpickr(toInput, Object.assign({}, withDefaultTime(config, 23, 59, 59), { onChange: onCustomToChange }));
 
             var priorConfig = typeof flatpickrCulture !== 'undefined'
                 ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control form-control-sm flatpickr-input' })
-                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i:S' };
 
             if (priorDateInput) {
-                priorPicker = flatpickr(priorDateInput, Object.assign({}, priorConfig, { defaultHour: 23, defaultMinute: 59, onChange: applyPrior }));
+                priorPicker = flatpickr(priorDateInput, Object.assign({}, withDefaultTime(priorConfig, 23, 59, 59), { onChange: applyPrior }));
             }
 
             if (afterDateInput) {
-                afterPicker = flatpickr(afterDateInput, Object.assign({}, priorConfig, { defaultHour: 0, defaultMinute: 0, onChange: applyAfter }));
+                afterPicker = flatpickr(afterDateInput, Object.assign({}, withDefaultTime(priorConfig, 0, 0, 0), { onChange: applyAfter }));
             }
         }
 
         function setInputValue(input, picker, date) {
             if (picker) {
                 picker.setDate(date, false);
+                input.value = date ? formatMachine(date) : '';
             } else {
                 input.value = date ? formatMachine(date) : '';
             }
@@ -227,6 +255,31 @@
             }
 
             return input.value ? new Date(input.value) : null;
+        }
+
+        function getTodayRange() {
+            var now = new Date();
+
+            return {
+                from: startOfDay(now),
+                to: endOfDay(now)
+            };
+        }
+
+        function withLowerBoundSeconds(date) {
+            if (!date) {
+                return null;
+            }
+
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), 0, 0);
+        }
+
+        function withUpperBoundSeconds(date) {
+            if (!date) {
+                return null;
+            }
+
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), 59, 0);
         }
 
         function describeRange(from, to) {
@@ -299,6 +352,26 @@
             }
         }
 
+        function onCustomFromChange() {
+            var date = withLowerBoundSeconds(readDate(fromInput, fromPicker));
+
+            if (date) {
+                setInputValue(fromInput, fromPicker, date);
+            }
+
+            onCustomChange();
+        }
+
+        function onCustomToChange() {
+            var date = withUpperBoundSeconds(readDate(toInput, toPicker));
+
+            if (date) {
+                setInputValue(toInput, toPicker, date);
+            }
+
+            onCustomChange();
+        }
+
         function labelForRadio(radio) {
             var wrapping = radio.closest('label');
 
@@ -312,31 +385,57 @@
         }
 
         function applyPrior() {
-            var date = priorPicker && priorPicker.selectedDates.length
+            var date = withUpperBoundSeconds(priorPicker && priorPicker.selectedDates.length
                 ? priorPicker.selectedDates[0]
-                : (priorDateInput && priorDateInput.value ? new Date(priorDateInput.value) : null);
+                : (priorDateInput && priorDateInput.value ? new Date(priorDateInput.value) : null));
 
             if (!date) {
                 return;
             }
 
+            setInputValue(priorDateInput, priorPicker, date);
             setInputValue(toInput, toPicker, date);
             clearInput(fromInput, fromPicker);
             updateLabelFromInputs();
         }
 
         function applyAfter() {
-            var date = afterPicker && afterPicker.selectedDates.length
+            var date = withLowerBoundSeconds(afterPicker && afterPicker.selectedDates.length
                 ? afterPicker.selectedDates[0]
-                : (afterDateInput && afterDateInput.value ? new Date(afterDateInput.value) : null);
+                : (afterDateInput && afterDateInput.value ? new Date(afterDateInput.value) : null));
 
             if (!date) {
                 return;
             }
 
+            setInputValue(afterDateInput, afterPicker, date);
             setInputValue(fromInput, fromPicker, date);
             clearInput(toInput, toPicker);
             updateLabelFromInputs();
+        }
+
+        function ensureCustomDefaults() {
+            var range = getTodayRange();
+
+            if (!readDate(fromInput, fromPicker)) {
+                setInputValue(fromInput, fromPicker, range.from);
+            }
+
+            if (!readDate(toInput, toPicker)) {
+                setInputValue(toInput, toPicker, range.to);
+            }
+        }
+
+        function ensurePriorDefault() {
+            if (!readDate(priorDateInput, priorPicker)) {
+                setInputValue(priorDateInput, priorPicker, getTodayRange().to);
+            }
+        }
+
+        function ensureAfterDefault() {
+            if (!readDate(afterDateInput, afterPicker)) {
+                setInputValue(afterDateInput, afterPicker, getTodayRange().from);
+            }
         }
 
         function onRadioChange(radio) {
@@ -346,6 +445,7 @@
 
             if (key === 'custom') {
                 showPanel('custom');
+                ensureCustomDefaults();
                 updateLabelFromInputs(labelForRadio(radio));
 
                 return;
@@ -353,6 +453,7 @@
 
             if (key === 'prior') {
                 showPanel('prior');
+                ensurePriorDefault();
                 applyPrior();
 
                 return;
@@ -360,6 +461,7 @@
 
             if (key === 'after') {
                 showPanel('after');
+                ensureAfterDefault();
                 applyAfter();
 
                 return;
@@ -424,6 +526,7 @@
 
             if (key === 'custom') {
                 showPanel('custom');
+                ensureCustomDefaults();
                 updateLabelFromInputs();
 
                 return true;
@@ -432,12 +535,16 @@
             if (key === 'prior') {
                 showPanel('prior');
 
-                if (priorPicker) {
-                    priorPicker.setDate(toInput.value || null, false);
+                var priorDate = readDate(toInput, toPicker);
+
+                if (priorDate) {
+                    setInputValue(priorDateInput, priorPicker, priorDate);
                 } else if (priorDateInput) {
-                    priorDateInput.value = toInput.value || '';
+                    priorDateInput.value = '';
                 }
 
+                ensurePriorDefault();
+                applyPrior();
                 updateLabelFromInputs();
 
                 return true;
@@ -446,12 +553,16 @@
             if (key === 'after') {
                 showPanel('after');
 
-                if (afterPicker) {
-                    afterPicker.setDate(fromInput.value || null, false);
+                var afterDate = readDate(fromInput, fromPicker);
+
+                if (afterDate) {
+                    setInputValue(afterDateInput, afterPicker, afterDate);
                 } else if (afterDateInput) {
-                    afterDateInput.value = fromInput.value || '';
+                    afterDateInput.value = '';
                 }
 
+                ensureAfterDefault();
+                applyAfter();
                 updateLabelFromInputs();
 
                 return true;

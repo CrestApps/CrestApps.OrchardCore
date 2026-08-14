@@ -39,13 +39,13 @@ Enabling the feature adds a top-level **Reports** item to the admin menu. Report
 
 ## Date range filter
 
-The built-in **Date range** filter is contributed by the `ReportDateRangeFilterDisplayDriver`, which is registered for `ReportFilter` and therefore renders for every report by default. It is an ordinary filter: it stores the resolved from/to bounds and the selected preset key in the report filter property bag (through `SetDateRange`), so a report that does not need a date selector can be built without one. The driver also applies the default period (the last 30 days) and swaps the bounds when they are inverted.
+The built-in **Date range** filter is contributed by the `ReportDateRangeFilterDisplayDriver`, which is registered for `ReportFilter` and therefore renders for every report by default. It is an ordinary filter: it stores the resolved from/to bounds and the selected preset key in the report filter property bag (through `SetDateRange`), so a report that does not need a date selector can be built without one. The driver also applies the default period (today from `00:00:00` through `23:59:59`) and swaps the bounds when they are inverted.
 
 Every report shares this single tenant-local **Date range** control. Instead of two separate date inputs, it is a dropdown that offers common presets grouped into **Relative days** (**Today**, **Yesterday**, **Last 7 Days**, **Last 30 Days**, **Last 90 Days**), **Calendar periods** (**This Week**, **Last Week**, **This Month**, **Last Month**, **This Quarter**, **Last Quarter**, **This Year**, **Last Year**), and **Rolling months** (**Last 3 Months**, **Last 6 Months**, **Last 12 Months**) — plus:
 
-- **Custom Range** — two date-time inputs (from and to) editable with [Flatpickr](https://flatpickr.js.org/).
-- **On or before** — a single date-time picker that sets only the upper bound, leaving the start open.
-- **On or after** — a single date-time picker that sets only the lower bound, leaving the end open.
+- **Custom Range** — two date-time inputs (from and to) editable with [Flatpickr](https://flatpickr.js.org/). When the inputs are empty, the from value defaults to today's local date at `00:00:00`, and the to value defaults to today's local date at `23:59:59`.
+- **On or before** — a single date-time picker that sets only the upper bound, leaving the start open. An empty picker defaults to today's local date at `23:59:59`.
+- **On or after** — a single date-time picker that sets only the lower bound, leaving the end open. An empty picker defaults to today's local date at `00:00:00`.
 
 The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_, _On or before Jan 31, 2026_, or a preset name followed by its resolved range). Presets are computed in the browser using the current culture's first day of the week, and the selected range is written into the underlying from/to fields, which are converted to UTC before the report runs. The control is rendered by the reusable `DateRangePicker` view component (backed by the `date-range-picker` resource) provided by the **CrestApps Resources** feature, so every report presents the same date-range experience and any module can reuse it. See the [Resources](resources.md#date-range-picker) documentation for details.
 

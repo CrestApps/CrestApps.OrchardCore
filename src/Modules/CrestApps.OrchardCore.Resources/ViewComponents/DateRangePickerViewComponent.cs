@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Resources.ViewComponents;
 /// </summary>
 public sealed class DateRangePickerViewComponent : ViewComponent
 {
-    private const string MachineFormat = "yyyy-MM-ddTHH:mm";
+    private const string MachineFormat = "yyyy-MM-ddTHH:mm:ss";
 
     /// <summary>
     /// Renders the date-range picker for the provided from/to inputs.

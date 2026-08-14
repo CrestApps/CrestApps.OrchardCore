@@ -14,8 +14,6 @@ namespace CrestApps.OrchardCore.Reports.Drivers;
 /// </summary>
 public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
-    private const int DefaultRangeDays = 30;
-
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
 
@@ -74,7 +72,7 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
     {
         var localNow = await _localClock.ConvertToLocalAsync(_clock.UtcNow);
         var localDate = localNow.Date;
-        var defaultFromLocal = DateTime.SpecifyKind(localDate.AddDays(-(DefaultRangeDays - 1)), DateTimeKind.Unspecified);
+        var defaultFromLocal = DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified);
         var defaultToLocal = DateTime.SpecifyKind(localDate.AddDays(1).AddTicks(-1), DateTimeKind.Unspecified);
         var defaultFromUtc = await _localClock.ConvertToUtcAsync(defaultFromLocal);
         var defaultToUtc = await _localClock.ConvertToUtcAsync(defaultToLocal);
