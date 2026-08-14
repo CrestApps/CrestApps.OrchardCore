@@ -21,6 +21,8 @@ The easiest way to run this sample is using the **Aspire AppHost** project:
    - **orchardcore** — Opens the Orchard Core CMS application (on port 5001).
    - **a2aclientsample** — Opens the A2A Client sample UI (on port 5003).
 
+The direct project launch profile also uses `https://localhost:5003`, so the browser opens the same URL whether you start the sample directly or through Aspire.
+
 :::note
 
 The Aspire AppHost orchestrates several services including **Ollama** (AI model host), **Elasticsearch**, **Redis**, and both the Orchard Core app and the sample clients. All service dependencies and environment variables are configured automatically.
