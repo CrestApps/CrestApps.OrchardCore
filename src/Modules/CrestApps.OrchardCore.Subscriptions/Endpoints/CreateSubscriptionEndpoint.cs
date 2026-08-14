@@ -63,7 +63,7 @@ public static class CreateSubscriptionEndpoint
             return TypedResults.NotFound();
         }
 
-        var stripeMetadata = session.As<StripeMetadata>();
+        var stripeMetadata = session.GetOrCreate<StripeMetadata>();
 
         if (stripeMetadata.CustomerId != model.CustomerId ||
             stripeMetadata.PaymentMethodId != model.PaymentMethodId)

@@ -26,7 +26,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         return CombineAsync(
             Initialize<DisplaySubscriptionViewModel>(GetDisplayShapeType(context), model =>
             {
-                var price = part.ContentItem.As<ProductPart>();
+                var price = part.ContentItem.GetOrCreate<ProductPart>();
 
                 model.Price = price?.Price ?? 0;
                 model.DurationType = part.DurationType;

@@ -24,7 +24,7 @@ public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<Subscriptio
     {
         return Initialize<SubscriptionsMetadata>("SubscriptionsMetadata_Edit", model =>
         {
-            var metadata = subscription.As<SubscriptionsMetadata>();
+            var metadata = subscription.GetOrCreate<SubscriptionsMetadata>();
 
             model.Subscriptions = metadata.Subscriptions;
 

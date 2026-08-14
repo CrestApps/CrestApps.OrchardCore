@@ -155,7 +155,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         // If we don't receive confirmation within this time frame, the payment is considered failed.
         var attemptCount = 0;
 
-        var paymentsMetadata = context.Flow.Session.As<PaymentsMetadata>();
+        var paymentsMetadata = context.Flow.Session.GetOrCreate<PaymentsMetadata>();
 
         do
         {
@@ -232,7 +232,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                     throw;
                 }
 
-                _logger.LogDebug(ex, "Delaying 1 second before attempt number: {AttemptCount}", attemptCount);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(ex, "Delaying 1 second before attempt number: {AttemptCount}", attemptCount);
+                }
 
                 await Task.Delay(1_000);
             }

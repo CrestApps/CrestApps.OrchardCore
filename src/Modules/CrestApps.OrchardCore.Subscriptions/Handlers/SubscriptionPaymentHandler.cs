@@ -129,7 +129,7 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             existingValue.Payments[subscriptionId] = payment;
         });
 
-        var stripeMetadata = session.As<StripeMetadata>();
+        var stripeMetadata = session.GetOrCreate<StripeMetadata>();
 
         if (string.IsNullOrEmpty(stripeMetadata.PaymentIntentId))
         {

@@ -25,7 +25,7 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
         return Combine(
-            View("PaymentStepInvoice_Edit", flow.Session.As<Invoice>())
+            View("PaymentStepInvoice_Edit", flow.Session.GetOrCreate<Invoice>())
             .Location("Content"),
 
             Initialize<PaymentMethodsViewModel>("PaymentMethods_Edit", model =>

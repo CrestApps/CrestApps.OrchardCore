@@ -23,7 +23,7 @@ public sealed class SubscriptionSummaryWidgetMigrations : DataMigration
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(SubscriptionConstants.SubscriptionSummaryWidgetType, type => type
             .Stereotype("DashboardWidget")
-            .DisplayedAs("Subscription Summary")
+            .WithDisplayName("Subscription Summary")
             .WithDescription("Shows subscription totals and revenue on the admin dashboard.")
             .Draftable(false)
             .Versionable(false)
