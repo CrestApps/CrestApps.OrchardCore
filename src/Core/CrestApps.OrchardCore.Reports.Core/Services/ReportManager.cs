@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Reports;
-
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>

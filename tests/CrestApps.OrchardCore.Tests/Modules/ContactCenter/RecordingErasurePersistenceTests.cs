@@ -11,7 +11,6 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;

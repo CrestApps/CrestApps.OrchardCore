@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Dialpad.Drivers;
 using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Services;
-using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;

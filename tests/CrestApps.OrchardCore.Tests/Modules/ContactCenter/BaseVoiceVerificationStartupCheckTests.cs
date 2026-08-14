@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

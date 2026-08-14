@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;

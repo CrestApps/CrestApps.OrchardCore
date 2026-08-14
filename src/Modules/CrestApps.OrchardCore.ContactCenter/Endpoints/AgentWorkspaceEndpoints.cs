@@ -136,7 +136,7 @@ internal static class AgentWorkspaceEndpoints
         var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
-        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, userManager, displayNameProvider, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
+        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
@@ -361,7 +361,7 @@ internal static class AgentWorkspaceEndpoints
             ActivityItemId = reservation.ActivityItemId,
             QueueId = reservation.QueueId,
             QueueName = queue?.Name,
-            CustomerLabel = await ResolveCustomerLabelAsync(activity, null, contentManager, cancellationToken),
+            CustomerLabel = await ResolveCustomerLabelAsync(activity, null, contentManager),
             CustomerAddress = activity?.PreferredDestination,
             ExpiresUtc = reservation.ExpiresUtc,
             ServerTimeUtc = now,
@@ -376,8 +376,6 @@ internal static class AgentWorkspaceEndpoints
         IOmnichannelActivityManager activityManager,
         IActivityQueueManager queueManager,
         IContentManager contentManager,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         LinkGenerator linkGenerator,
         HttpContext httpContext,
@@ -408,11 +406,11 @@ internal static class AgentWorkspaceEndpoints
             ActivityItemId = interaction.ActivityItemId,
             Direction = interaction.Direction.ToString(),
             Status = interaction.Status.ToString(),
-            CustomerLabel = await ResolveCustomerLabelAsync(activity, interaction.CustomerAddress, contentManager, cancellationToken),
+            CustomerLabel = await ResolveCustomerLabelAsync(activity, interaction.CustomerAddress, contentManager),
             CustomerAddress = interaction.CustomerAddress,
             QueueName = queue?.Name,
             ContactUrl = BuildContactUrl(activity, linkGenerator, httpContext),
-            CompleteUrl = await BuildCompleteActivityUrlAsync(activity, authorizationService, linkGenerator, httpContext, cancellationToken),
+            CompleteUrl = await BuildCompleteActivityUrlAsync(activity, authorizationService, linkGenerator, httpContext),
             StartedUtc = interaction.StartedUtc,
             AnsweredUtc = interaction.AnsweredUtc,
             RecordingState = interaction.RecordingState.ToString(),
@@ -514,8 +512,7 @@ internal static class AgentWorkspaceEndpoints
     private static async Task<string> ResolveCustomerLabelAsync(
         OmnichannelActivity activity,
         string fallback,
-        IContentManager contentManager,
-        CancellationToken cancellationToken)
+        IContentManager contentManager)
     {
         if (activity is not null && !string.IsNullOrEmpty(activity.ContactContentItemId))
         {
@@ -551,8 +548,7 @@ internal static class AgentWorkspaceEndpoints
         OmnichannelActivity activity,
         IAuthorizationService authorizationService,
         LinkGenerator linkGenerator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
+        HttpContext httpContext)
     {
         if (activity is null ||
             string.IsNullOrEmpty(activity.ItemId) ||

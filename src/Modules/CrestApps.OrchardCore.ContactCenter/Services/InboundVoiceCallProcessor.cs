@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -27,6 +26,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private const string TargetQueueMissingReasonCode = "target_queue_missing";
     private const string TargetQueueDisabledReasonCode = "target_queue_disabled";
     private const string InboundQueueUnavailableReasonCode = "inbound_queue_unavailable";
+
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IOmnichannelActivityManager _activityManager;

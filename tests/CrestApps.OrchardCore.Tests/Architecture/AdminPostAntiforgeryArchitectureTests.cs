@@ -1,7 +1,7 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.Tests.Architecture;
 

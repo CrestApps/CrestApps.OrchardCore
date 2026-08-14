@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;

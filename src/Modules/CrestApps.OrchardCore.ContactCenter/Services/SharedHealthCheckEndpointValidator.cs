@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;

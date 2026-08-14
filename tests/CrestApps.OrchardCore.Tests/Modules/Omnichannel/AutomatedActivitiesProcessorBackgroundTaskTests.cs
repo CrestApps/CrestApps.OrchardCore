@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
