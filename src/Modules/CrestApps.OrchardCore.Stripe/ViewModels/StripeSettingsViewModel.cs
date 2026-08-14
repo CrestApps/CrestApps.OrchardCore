@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Stripe.Core;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Stripe.ViewModels;
@@ -5,6 +6,8 @@ namespace CrestApps.OrchardCore.Stripe.ViewModels;
 public class StripeSettingsViewModel
 {
     public bool IsLive { get; set; }
+
+    public StripeCheckoutMode CheckoutMode { get; set; }
 
     public string LivePublishableKey { get; set; }
 

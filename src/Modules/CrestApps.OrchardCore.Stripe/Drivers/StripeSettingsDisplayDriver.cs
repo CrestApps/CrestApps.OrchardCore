@@ -55,6 +55,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
         {
             model.IsLive = settings.IsLive;
+            model.CheckoutMode = settings.CheckoutMode;
             model.LivePublishableKey = settings.LivePublishableKey;
             model.HasLivePrivateSecret = !string.IsNullOrEmpty(settings.LivePrivateSecret);
             model.HasLiveWebhookSecret = !string.IsNullOrEmpty(settings.LiveWebhookSecret);
@@ -81,6 +82,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         _shellReleaseManager.RequestRelease();
 
         settings.IsLive = model.IsLive;
+        settings.CheckoutMode = model.CheckoutMode;
 
         if (model.IsLive)
         {

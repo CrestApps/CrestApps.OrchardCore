@@ -1,14 +1,21 @@
+using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -24,6 +31,7 @@ public sealed class SubscriptionsController : Controller
     private readonly INotifier _notifier;
     private readonly IClock _clock;
     private readonly ISession _session;
+    private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
 
     internal readonly IHtmlLocalizer H;
 
@@ -36,6 +44,7 @@ public sealed class SubscriptionsController : Controller
         INotifier notifier,
         IClock clock,
         ISession session,
+        SubscriptionPaymentSession subscriptionPaymentSession,
         IHtmlLocalizer<SubscriptionsController> htmlLocalizer)
     {
         _updateModelAccessor = updateModelAccessor;
@@ -46,6 +55,7 @@ public sealed class SubscriptionsController : Controller
         _notifier = notifier;
         _clock = clock;
         _session = session;
+        _subscriptionPaymentSession = subscriptionPaymentSession;
         H = htmlLocalizer;
     }
 
@@ -196,41 +206,14 @@ public sealed class SubscriptionsController : Controller
                     }
                 }
 
-                try
+                if (await TryCompleteFlowAsync(flow, subscriptionSession, now))
                 {
-                    // The 'CompletingAsync' could throw exception, do not use 'InvokeAsync'
-                    // to catch exceptions here and rollback.
-                    var completingContext = new SubscriptionFlowCompletingContext(flow);
-
-                    foreach (var handler in _subscriptionHandlers)
-                    {
-                        await handler.CompletingAsync(completingContext);
-                    }
-
-                    subscriptionSession.Status = SubscriptionSessionStatus.Completed;
-                    subscriptionSession.CompletedUtc = now;
-
-                    await _subscriptionSessionStore.SaveAsync(subscriptionSession);
-                    await _session.SaveChangesAsync();
-
-                    await _subscriptionHandlers.InvokeAsync(
-                        (handler, context) => handler.CompletedAsync(context), new SubscriptionFlowCompletedContext(flow), _logger);
-
                     cookieManager.Remove(model.ContentItemId);
 
                     return RedirectToAction(nameof(Confirmation), new
                     {
                         sessionId = subscriptionSession.SessionId,
                     });
-                }
-                catch (Exception ex)
-                {
-                    await _session.CancelAsync();
-                    await _subscriptionHandlers.InvokeAsync(
-                        (handler, context) => handler.FailedAsync(context), new SubscriptionFlowFailedContext(flow), _logger);
-                    _logger.LogError(ex, "Unable to completed a subscription");
-
-                    await _notifier.ErrorAsync(H["Unable to process the subscription at this time. If the issue persists, please contact support."]);
                 }
             }
 
@@ -319,6 +302,188 @@ public sealed class SubscriptionsController : Controller
         var confirmation = await _subscriptionFlowDisplayManager.BuildDisplayAsync(flow, _updateModelAccessor.ModelUpdater, "Confirmation");
 
         return View(confirmation);
+    }
+
+    /// <summary>
+    /// Completes a subscription flow: runs the completing handlers, marks the session completed and
+    /// runs the completed handlers. On failure it rolls back and notifies the user. This is shared by
+    /// the standard form post and by the hosted-checkout return so both finalize identically.
+    /// </summary>
+    private async Task<bool> TryCompleteFlowAsync(SubscriptionFlow flow, SubscriptionSession session, DateTime now)
+    {
+        try
+        {
+            // The 'CompletingAsync' could throw exception, do not use 'InvokeAsync'
+            // to catch exceptions here and rollback.
+            var completingContext = new SubscriptionFlowCompletingContext(flow);
+
+            foreach (var handler in _subscriptionHandlers)
+            {
+                await handler.CompletingAsync(completingContext);
+            }
+
+            session.Status = SubscriptionSessionStatus.Completed;
+            session.CompletedUtc = now;
+
+            await _subscriptionSessionStore.SaveAsync(session);
+            await _session.SaveChangesAsync();
+
+            await _subscriptionHandlers.InvokeAsync(
+                (handler, context) => handler.CompletedAsync(context), new SubscriptionFlowCompletedContext(flow), _logger);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await _session.CancelAsync();
+            await _subscriptionHandlers.InvokeAsync(
+                (handler, context) => handler.FailedAsync(context), new SubscriptionFlowFailedContext(flow), _logger);
+            _logger.LogError(ex, "Unable to completed a subscription");
+
+            await _notifier.ErrorAsync(H["Unable to process the subscription at this time. If the issue persists, please contact support."]);
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The URL Stripe redirects to after a customer completes (or the browser returns from) a hosted
+    /// Stripe Checkout. It records the Stripe subscription against the local session and finalizes the flow.
+    /// </summary>
+    public async Task<IActionResult> CheckoutReturn(string sessionId, string checkoutSessionId)
+    {
+        var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
+
+        if (subscriptionSession == null)
+        {
+            return NotFound();
+        }
+
+        var subscriptionContentItem = await GetSubscriptionVersion(subscriptionSession.ContentItemVersionId);
+
+        if (subscriptionContentItem == null)
+        {
+            return NotFound();
+        }
+
+        var checkoutService = HttpContext.RequestServices.GetService<IStripeCheckoutService>();
+
+        if (checkoutService == null || string.IsNullOrEmpty(checkoutSessionId))
+        {
+            return NotFound();
+        }
+
+        var details = await checkoutService.GetAsync(checkoutSessionId);
+
+        // Never trust a client-supplied checkout id: only finalize when Stripe confirms this exact session
+        // is complete, paid and references this local session.
+        if (details == null ||
+            !details.IsPaid ||
+            string.IsNullOrEmpty(details.SubscriptionId) ||
+            !subscriptionSession.TryGet<Invoice>(out var invoice))
+        {
+            await _notifier.ErrorAsync(H["Your payment could not be confirmed. Please try again."]);
+
+            return RedirectToAction(nameof(Display), new
+            {
+                sessionId = subscriptionSession.SessionId,
+                step = SubscriptionConstants.StepKey.Payment,
+            });
+        }
+
+        var groups = invoice.GetSubscriptionGroups();
+
+        // A hosted checkout maps to a single Stripe subscription; this is enforced when the session is created.
+        if (groups.Count != 1)
+        {
+            await _notifier.ErrorAsync(H["This product cannot be completed with hosted checkout."]);
+
+            return RedirectToAction(nameof(Display), new
+            {
+                sessionId = subscriptionSession.SessionId,
+                step = SubscriptionConstants.StepKey.Payment,
+            });
+        }
+
+        var now = _clock.UtcNow;
+        var group = groups.First();
+        var expiresAt = BillingSchedule.GetNextBillingDate(now, group.Key.Type, group.Key.Duration);
+        var gatewayMode = details.Livemode ? GatewayMode.Live : GatewayMode.Testing;
+
+        await _subscriptionHandlers.InvokeAsync(
+            (handler, context) => handler.InitializingAsync(context), new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem), _logger);
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        await _subscriptionHandlers.InvokeAsync(
+            (handler, context) => handler.LoadingAsync(context), new SubscriptionFlowLoadingContext(flow), _logger);
+        await _subscriptionHandlers.InvokeAsync(
+            (handler, context) => handler.InitializedAsync(context), new SubscriptionFlowInitializedContext(flow), _logger);
+
+        // Record the Stripe subscription so the confirmation page, the subscriber dashboard and the
+        // subscription indexes all have the same data the Payment Elements flow would have produced.
+        var stripeMetadata = subscriptionSession.GetOrCreate<StripeMetadata>();
+        stripeMetadata.CustomerId = details.CustomerId;
+        stripeMetadata.Subscriptions ??= [];
+        stripeMetadata.Subscriptions[details.SubscriptionId] = new StripeSubscriptionMetadata
+        {
+            SubscriptionId = details.SubscriptionId,
+            CreatedAt = now,
+            ExpiresAt = expiresAt,
+        };
+        subscriptionSession.Put(stripeMetadata);
+
+        subscriptionSession.Put(new SubscriptionsMetadata
+        {
+            Subscriptions =
+            [
+                new SubscriptionInfo
+                {
+                    SubscriptionId = details.SubscriptionId,
+                    StartedAt = now,
+                    ExpiresAt = expiresAt,
+                    Gateway = StripeConstants.ProcessorKey,
+                    GatewayMode = gatewayMode,
+                    GatewayCustomerId = details.CustomerId,
+                    LineItems = group.Value.ToList(),
+                },
+            ],
+        });
+
+        // Populate the payment session so the completing handler can validate the payment immediately,
+        // without depending on the (eventually-consistent) invoice webhook having already arrived.
+        await _subscriptionPaymentSession.SetAsync(subscriptionSession.SessionId, new SubscriptionPaymentsMetadata
+        {
+            Payments = new Dictionary<string, PaymentInfo>
+            {
+                [details.SubscriptionId] = new PaymentInfo
+                {
+                    TransactionId = details.SubscriptionId,
+                    SubscriptionId = details.SubscriptionId,
+                    Amount = details.AmountTotal,
+                    Currency = invoice.Currency,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    GatewayMode = gatewayMode,
+                    Status = PaymentStatus.Succeeded,
+                },
+            },
+        });
+
+        await _subscriptionSessionStore.SaveAsync(subscriptionSession);
+
+        if (await TryCompleteFlowAsync(flow, subscriptionSession, now))
+        {
+            new SubscriptionCookieManager(HttpContext).Remove(subscriptionContentItem.ContentItemId);
+
+            return RedirectToAction(nameof(Confirmation), new
+            {
+                sessionId = subscriptionSession.SessionId,
+            });
+        }
+
+        return RedirectToAction(nameof(Display), new
+        {
+            sessionId = subscriptionSession.SessionId,
+            step = SubscriptionConstants.StepKey.Payment,
+        });
     }
 
     private async Task<ContentItem> GetSubscriptionVersion(string versionContentItemId)

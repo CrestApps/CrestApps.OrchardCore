@@ -1,8 +1,12 @@
+using CrestApps.OrchardCore.Stripe.Core;
+
 namespace CrestApps.OrchardCore.Stripe.Models;
 
 public sealed class StripeSettings
 {
     public bool IsLive { get; set; }
+
+    public StripeCheckoutMode CheckoutMode { get; set; } = StripeCheckoutMode.PaymentElements;
 
     public string LivePublishableKey { get; set; }
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Stripe.Core;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -12,4 +13,7 @@ public class StripePaymentMethodViewModel
 
     [BindNever]
     public string PublishableKey { get; set; }
+
+    [BindNever]
+    public StripeCheckoutMode CheckoutMode { get; set; }
 }

@@ -148,6 +148,13 @@ public sealed class Startup : StartupBase
             pattern: "Subscription/Step/{sessionId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
         );
+
+        routes.MapAreaControllerRoute(
+            name: "SubscriptionCheckoutReturn",
+            areaName: SubscriptionConstants.Features.Area,
+            pattern: "Subscription/CheckoutReturn/{sessionId}",
+            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.CheckoutReturn) }
+        );
     }
 }
 
@@ -187,7 +194,8 @@ public sealed class StripeStartup : StartupBase
     {
         routes.AddCreateStripeSubscriptionEndpoint()
             .AddCreatePaymentIntentEndpoint()
-            .AddStripeCreateSetupIntentEndpoint();
+            .AddStripeCreateSetupIntentEndpoint()
+            .AddCreateCheckoutSessionEndpoint();
     }
 }
 

@@ -15,6 +15,12 @@ public sealed class SubscriptionResourceManagementOptionsConfiguration : IConfig
             .DefineScript("subscription-payment-methods")
             .SetUrl("~/CrestApps.OrchardCore.Subscriptions/Scripts/payment-option-selection.min.js", "~/CrestApps.OrchardCore.Subscriptions/Scripts/payment-option-selection.js")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("stripe-subscription-checkout")
+            .SetUrl("~/CrestApps.OrchardCore.Subscriptions/Scripts/stripe-subscription-checkout.min.js", "~/CrestApps.OrchardCore.Subscriptions/Scripts/stripe-subscription-checkout.js")
+            .SetDependencies("subscription-payment-methods")
+            .SetVersion("1.0.0");
     }
 
     public void Configure(ResourceManagementOptions options)

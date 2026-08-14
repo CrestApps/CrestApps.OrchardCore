@@ -29,6 +29,7 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
         var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
 
         options.IsLive = settings.IsLive;
+        options.CheckoutMode = settings.CheckoutMode;
 
         if (settings.IsLive)
         {

@@ -33,6 +33,7 @@ public class Startup : StartupBase
         services.AddScoped<IStripePriceService, StripePriceService>();
         services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
+        services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<StripeOptions>>();

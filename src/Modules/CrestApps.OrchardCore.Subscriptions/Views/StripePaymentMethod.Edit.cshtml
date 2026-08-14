@@ -21,6 +21,36 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
 
 <div id="card-errors" role="alert" class="alert alert-danger d-none"></div>
 
+@if (Model.CheckoutMode == StripeCheckoutMode.HostedCheckout)
+{
+    <div class="alert alert-info" role="alert">
+        @T["You will be redirected to Stripe's secure checkout page to complete your payment."]
+    </div>
+
+    <script asp-name="subscription-payment-methods"></script>
+    <script asp-name="stripe-subscription-checkout" depends-on="subscription-payment-methods"></script>
+    <script at="Foot" depends-on="stripe-subscription-checkout,subscription-payment-methods">
+        const payButtonElement = document.getElementById('Subscription_Next_Button');
+        const config = {
+            processorKey: '@StripeConstants.ProcessorKey',
+            payButtonElement: payButtonElement,
+            formElement: document.getElementById('subscription-form'),
+            sessionId: '@Model.SessionId',
+            createCheckoutSessionEndpoint: '@Url.RouteUrl(SubscriptionConstants.RouteName.CreateCheckoutSessionEndpoint)',
+            errorElement: document.getElementById('card-errors'),
+            genericErrorMessage: '@T["Unable to start the secure checkout. Please try again."]'
+        };
+
+        config.enablePayButtonButton = (enable) => {
+            return enablePayButtonButton(payButtonElement, enable);
+        }
+
+        stripeSubscriptionCheckout.initialize(config);
+    </script>
+
+    return;
+}
+
 <!-- Additional input fields for billing details -->
 <div class="mb-1">
     <label for="NameOnBankCard" class="visually-hidden"></label>
