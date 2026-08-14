@@ -249,7 +249,8 @@ public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
             .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
 
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver>();
-        services.AddIndexProvider<SubscriptionTenantIndexProvider>();
+        services.AddIndexProvider<SubscriptionTenantIndexProvider>()
+            .AddDataMigration<SubscriptionTenantIndexMigrations>();
     }
 }
 

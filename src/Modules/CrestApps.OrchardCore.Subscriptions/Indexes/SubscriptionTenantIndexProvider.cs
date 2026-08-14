@@ -33,6 +33,7 @@ public sealed class SubscriptionTenantIndexProvider : IndexProvider<Subscription
             {
                 SessionId = session.SessionId,
                 TenantName = info.TenantName,
+                Recipe = info.RecipeName,
             };
         });
     }
