@@ -8,5 +8,5 @@ public static class SubscriptionPermissions
 
     public static readonly Permission ManageSubscriptions = new("ManageSubscriptions", "Manage subscriptions");
 
-    public static readonly Permission ManageOwnSubscriptions = new("ManageSubscriptions", "Manage subscriptions", [ManageSubscriptions]);
+    public static readonly Permission ManageOwnSubscriptions = new("ManageOwnSubscriptions", "Manage own subscriptions", [ManageSubscriptions]);
 }

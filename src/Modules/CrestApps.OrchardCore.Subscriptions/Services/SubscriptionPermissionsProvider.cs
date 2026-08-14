@@ -9,6 +9,8 @@ public class SubscriptionPermissionsProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         SubscriptionPermissions.ManageSubscriptionSettings,
+        SubscriptionPermissions.ManageSubscriptions,
+        SubscriptionPermissions.ManageOwnSubscriptions,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
@@ -20,6 +22,14 @@ public class SubscriptionPermissionsProvider : IPermissionProvider
         {
             Name = OrchardCoreConstants.Roles.Administrator,
             Permissions = _allPermissions,
+        },
+        new PermissionStereotype
+        {
+            Name = OrchardCoreConstants.Roles.Authenticated,
+            Permissions =
+            [
+                SubscriptionPermissions.ManageOwnSubscriptions,
+            ],
         },
     ];
 }

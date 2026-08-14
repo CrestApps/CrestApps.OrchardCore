@@ -142,8 +142,8 @@ public static class CreateSubscriptionEndpoint
             results.Add(new
             {
                 id = result.Id,
-                status = result.Status,
-                clientSecret = result.Status == "requires_action" ? result.ClientSecret : null,
+                status = result.RequiresAction ? "requires_action" : result.Status,
+                clientSecret = result.RequiresAction ? result.ClientSecret : null,
             });
 
             var stringSubscriptionMetadata = new StripeSubscriptionMetadata()

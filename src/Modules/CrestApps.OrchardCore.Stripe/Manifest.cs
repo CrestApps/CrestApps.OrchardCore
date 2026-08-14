@@ -17,6 +17,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Payment Providers",
     Dependencies =
     [
-        UsersConstants.Feature.Users,
+        UsersConstants.Feature.Area,
     ]
 )]

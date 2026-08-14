@@ -4,6 +4,8 @@ public static class SubscriptionConstants
 {
     public const string Stereotype = "Subscription";
 
+    public const string SubscriptionSummaryWidgetType = "SubscriptionSummaryWidget";
+
     public const string PayLaterProcessorKey = "PayLater";
 
     public const string InitialFeeIdPrefix = "__InitialFee";

@@ -21,7 +21,7 @@
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.1.4" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
-    <PackageVersion Include="Stripe.net" Version="47.4.0" />
+    <PackageVersion Include="Stripe.net" Version="52.3.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.0.0" />
     <PackageVersion Include="YesSql.Core" Version="6.0.0" />

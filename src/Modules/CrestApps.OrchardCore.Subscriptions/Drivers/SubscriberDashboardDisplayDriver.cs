@@ -73,9 +73,8 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
             var now = _clock.UtcNow;
             foreach (var session in sessions)
             {
-                var metadata = session.As<SubscriptionsMetadata>();
-
-                if (metadata?.Subscriptions == null || metadata.Subscriptions.Count == 0)
+                if (!session.TryGet<SubscriptionsMetadata>(out var metadata) ||
+                    metadata?.Subscriptions == null || metadata.Subscriptions.Count == 0)
                 {
                     continue;
                 }

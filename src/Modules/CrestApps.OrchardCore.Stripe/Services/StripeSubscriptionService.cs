@@ -34,7 +34,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             }).ToList(),
             PaymentBehavior = "allow_incomplete",
             DefaultPaymentMethod = model.PaymentMethodId,
-            // Expand = ["latest_invoice.payment_intent"],
+            Expand = ["latest_invoice.confirmation_secret"],
             Metadata = model.Metadata,
         };
 
@@ -62,6 +62,12 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
                     Quantity = x.Quantity,
                 }).ToList();
 
+            // Stripe.net removed the phase 'Iterations' property. To limit the schedule to a fixed
+            // number of billing cycles, we express the phase length as a duration derived from the
+            // recurring interval of the price. All line items in a subscription group share the same
+            // billing interval, so the first price is representative of the group.
+            var phaseDuration = await GetPhaseDurationAsync(model.LineItems[0].PriceId, model.BillingCycles.Value);
+
             var subscriptionScheduleOptions = new SubscriptionScheduleCreateOptions
             {
                 FromSubscription = subscription.Id,
@@ -74,7 +80,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
                     {
                         Items = phases,
                         StartDate = now,
-                        Iterations = model.BillingCycles.Value,
+                        Duration = phaseDuration,
                     }
                 ]
             };
@@ -83,13 +89,29 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             await subscriptionScheduleService.CreateAsync(subscriptionScheduleOptions);
         }
 
+        var confirmationSecret = subscription.LatestInvoice?.ConfirmationSecret;
+
         return new CreateSubscriptionResponse()
         {
             Id = subscription.Id,
             Status = subscription.Status,
-            ClientSecret = subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
-            ? subscription.LatestInvoice.PaymentIntent.ClientSecret
-            : null,
+            ClientSecret = confirmationSecret?.ClientSecret,
+        };
+    }
+
+    private async Task<SubscriptionSchedulePhaseDurationOptions> GetPhaseDurationAsync(string priceId, int billingCycles)
+    {
+        var priceService = new PriceService(_stripeClient);
+        var price = await priceService.GetAsync(priceId);
+
+        // Default to monthly cadence when a price has no recurring configuration (e.g. one-time price).
+        var interval = price?.Recurring?.Interval ?? "month";
+        var intervalCount = price?.Recurring?.IntervalCount ?? 1;
+
+        return new SubscriptionSchedulePhaseDurationOptions
+        {
+            Interval = interval,
+            IntervalCount = intervalCount * billingCycles,
         };
     }
 }

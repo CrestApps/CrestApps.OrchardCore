@@ -46,8 +46,8 @@ public static class CreateSubscriptionEndpoint
             new
             {
                 id = response.Id,
-                status = response.Status,
-                clientSecret = response.Status == "requires_action" ? response.ClientSecret : null
+                status = response.RequiresAction ? "requires_action" : response.Status,
+                clientSecret = response.RequiresAction ? response.ClientSecret : null
             }
         });
     }

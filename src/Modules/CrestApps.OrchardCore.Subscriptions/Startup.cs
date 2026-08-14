@@ -49,6 +49,10 @@ public sealed class Startup : StartupBase
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();
 
+        services.AddDataMigration<SubscriptionSummaryWidgetMigrations>()
+            .AddContentPart<SubscriptionSummaryPart>()
+            .UseDisplayDriver<SubscriptionSummaryPartDisplayDriver>();
+
         services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
             .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
 

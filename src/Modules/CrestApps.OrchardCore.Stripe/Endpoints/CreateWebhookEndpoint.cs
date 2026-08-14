@@ -98,14 +98,17 @@ public static class CreateWebhookEndpoint
                         successContext.Data[data.Key] = data.Value;
                     }
 
+                    // Stripe.net moved subscription details for an invoice under Invoice.Parent in newer API versions.
+                    var subscriptionDetails = invoice.Parent?.SubscriptionDetails;
+
                     successContext.Subscription = new SubscriptionPaymentInfo()
                     {
-                        SubscriptionId = invoice.SubscriptionId ?? invoice.Subscription?.Id,
+                        SubscriptionId = subscriptionDetails?.SubscriptionId ?? subscriptionDetails?.Subscription?.Id,
                     };
 
-                    if (invoice.SubscriptionDetails != null)
+                    if (subscriptionDetails != null)
                     {
-                        foreach (var data in invoice.SubscriptionDetails.Metadata ?? [])
+                        foreach (var data in subscriptionDetails.Metadata ?? [])
                         {
                             successContext.Subscription.Data[data.Key] = data.Value;
                         }
