@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
+using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
 using CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 using CrestApps.OrchardCore.Subscriptions.Endpoints;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -32,6 +34,7 @@ using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions;
@@ -218,6 +221,9 @@ public sealed class TenantOnboardingStartup : StartupBase
         services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, TenantOnboardingStepSubscriptionFlowDisplayDriver>();
         services.AddSiteDisplayDriver<SubscriptionOnboardingSettingsDisplayDriver>();
+
+        services.AddActivity<SubscribedTenantSetupSucceededEvent, SubscribedTenantSetupSucceededEventDisplayDriver>();
+        services.AddActivity<SubscribedTenantFailedSetupEvent, SubscribedTenantFailedSetupEventDisplayDriver>();
     }
 }
 
