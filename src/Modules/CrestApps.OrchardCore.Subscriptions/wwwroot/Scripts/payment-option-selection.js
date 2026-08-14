@@ -4,9 +4,9 @@
 */
 
 // enablePayButtonButton should be set globally.
-var enablePayButtonButton = function enablePayButtonButton(button, enable) {
-  var processing = button.querySelector('.payment-processing');
-  var label = button.querySelector('.payment-label');
+const enablePayButtonButton = (button, enable) => {
+  const processing = button.querySelector('.payment-processing');
+  const label = button.querySelector('.payment-label');
   if (enable) {
     button.disabled = false;
     button.classList.remove('disabled');
@@ -27,12 +27,12 @@ var enablePayButtonButton = function enablePayButtonButton(button, enable) {
     }
   }
 };
-document.addEventListener('DOMContentLoaded', function () {
-  var payButton = document.getElementById('Subscription_Next_Button');
-  var wrappers = document.getElementsByClassName('payment-method-wrapper');
-  var paymentMethodElements = document.querySelectorAll('input[name="PaymentMethod"]');
+document.addEventListener('DOMContentLoaded', () => {
+  const payButton = document.getElementById('Subscription_Next_Button');
+  const wrappers = document.getElementsByClassName('payment-method-wrapper');
+  const paymentMethodElements = document.querySelectorAll('input[name="PaymentMethod"]');
   if (paymentMethodElements.length < 2) {
-    for (var i = 0; i < wrappers.length; i++) {
+    for (let i = 0; i < wrappers.length; i++) {
       wrappers[i].classList.remove('d-none');
     }
     if (wrappers.length > 0) {
@@ -40,12 +40,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return;
   }
-  var handleWrappers = function handleWrappers(element) {
+  const handleWrappers = element => {
     if (element.checked) {
       payButton.setAttribute('data-method-name', element.value);
     }
-    for (var _i = 0; _i < wrappers.length; _i++) {
-      var wrapper = wrappers[_i];
+    for (let i = 0; i < wrappers.length; i++) {
+      let wrapper = wrappers[i];
       if (element.checked && wrapper.getAttribute('data-method-name') == element.value) {
         wrapper.classList.remove('d-none');
       } else {
@@ -53,12 +53,12 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   };
-  for (var y = 0; y < paymentMethodElements.length; y++) {
-    var paymentMethodElement = paymentMethodElements[y];
-    paymentMethodElement.addEventListener("change", function (element) {
+  for (let y = 0; y < paymentMethodElements.length; y++) {
+    const paymentMethodElement = paymentMethodElements[y];
+    paymentMethodElement.addEventListener("change", element => {
       handleWrappers(element.target);
     });
-    paymentMethodElement.addEventListener("click", function (element) {
+    paymentMethodElement.addEventListener("click", element => {
       handleWrappers(element.target);
     });
     if (paymentMethodElement.checked) {
