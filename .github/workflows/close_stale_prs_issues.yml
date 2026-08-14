@@ -9,11 +9,15 @@ on:
     # (see https://github.com/actions/stale#operations-per-run) is risky.
     - cron: '39 */4 * * *'
 
+permissions:
+  issues: write
+  pull-requests: write
+
 jobs:
   close-stale-prs-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           stale-pr-message: >
             It seems that this pull request didn't really move for quite a while. Is this something you'd like to 

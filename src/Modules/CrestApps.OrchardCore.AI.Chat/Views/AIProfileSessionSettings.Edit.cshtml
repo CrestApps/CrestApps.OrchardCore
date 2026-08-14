@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model EditAIProfileSessionSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session inactivity timeout (minutes)"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
+        <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
+    </div>
+</div>

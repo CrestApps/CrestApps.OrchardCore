@@ -1,0 +1,142 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement.Entities;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.AI.Drivers;
+
+/// <summary>
+/// Display driver for managing the default AI deployment settings on the site settings page.
+/// </summary>
+public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver<DefaultAIDeploymentSettings>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IAIDeploymentManager _deploymentManager;
+
+    protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultAIDeploymentSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="deploymentManager">The AI deployment manager.</param>
+    public DefaultAIDeploymentSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IAIDeploymentManager deploymentManager)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
+        _deploymentManager = deploymentManager;
+    }
+
+    public override IDisplayResult Edit(ISite site, DefaultAIDeploymentSettings settings, BuildEditorContext context)
+    {
+        return Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAIDeploymentSettings_Edit", async model =>
+        {
+            model.DefaultChatDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultChatDeploymentName);
+            model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultUtilityDeploymentName);
+            model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultEmbeddingDeploymentName);
+            model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultImageDeploymentName);
+            model.DefaultVisionDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultVisionDeploymentName);
+            model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
+            model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
+            model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
+
+            var chatModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat);
+            model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
+
+            var utilities = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility);
+            model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
+
+            var embeddingModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
+            model.EmbeddingDeployments = BuildGroupedDeploymentItems(embeddingModels);
+
+            var imageModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Image);
+            model.ImageDeployments = BuildGroupedDeploymentItems(imageModels);
+
+            var visionModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Vision);
+            model.VisionDeployments = BuildGroupedDeploymentItems(visionModels);
+
+            var speechToTextModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText);
+            model.SpeechToTextDeployments = BuildGroupedDeploymentItems(speechToTextModels);
+
+            var textToSpeechModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.TextToSpeech);
+            model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
+        }).Location("Content:2%Default Deployments;1")
+        .OnGroup(SettingsGroupId)
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, DefaultAIDeploymentSettings settings, UpdateEditorContext context)
+    {
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
+        {
+            return null;
+        }
+
+        var model = new DefaultAIDeploymentSettingsViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        settings.DefaultChatDeploymentName = model.DefaultChatDeploymentName;
+        settings.DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName;
+        settings.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
+        settings.DefaultImageDeploymentName = model.DefaultImageDeploymentName;
+        settings.DefaultVisionDeploymentName = model.DefaultVisionDeploymentName;
+        settings.DefaultSpeechToTextDeploymentName = model.DefaultSpeechToTextDeploymentName;
+        settings.DefaultTextToSpeechDeploymentName = model.DefaultTextToSpeechDeploymentName;
+        settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();
+
+        return Edit(site, settings, context);
+    }
+
+    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
+    {
+        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
+
+        return deployments
+            .OrderBy(d => d.ConnectionName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(d =>
+            {
+                SelectListGroup group = null;
+
+                var groupKey = d.ConnectionName;
+
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
+                {
+                    group = new SelectListGroup { Name = groupKey };
+
+                    groups[groupKey] = group;
+                }
+
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
+            });
+    }
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
+    {
+        if (string.IsNullOrWhiteSpace(selector))
+        {
+            return selector;
+        }
+
+        var deployment = await _deploymentManager.FindByIdAsync(selector);
+
+        return deployment?.Name ?? selector;
+    }
+}

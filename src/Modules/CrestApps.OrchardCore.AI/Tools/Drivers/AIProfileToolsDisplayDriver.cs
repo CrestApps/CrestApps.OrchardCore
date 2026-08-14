@@ -1,40 +1,78 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
+/// <summary>
+/// Display driver that presents the tool selection UI on AI profiles,
+/// allowing administrators to choose which AI tools are available for a profile.
+/// </summary>
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileToolsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="toolDefinitions">The options containing registered AI tool definitions.</param>
+    /// <param name="authorizationService">The authorization service for checking tool access permissions.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
         if (_toolDefinitions.Tools.Count == 0)
         {
             return null;
         }
 
+        // Filter tools based on user permissions
+        var user = _httpContextAccessor.HttpContext.User;
+        var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
+
+        foreach (var tool in _toolDefinitions.GetSelectableTools())
+        {
+            // Check if user has access to this tool
+            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            {
+                accessibleTools[tool.Key] = tool.Value;
+            }
+        }
+
+        if (accessibleTools.Count == 0)
+        {
+            return null;
+        }
+
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
+            var selectedNames = GetSelectedToolNames(profile);
 
-            model.Tools = _toolDefinitions.Tools
+            model.Tools = accessibleTools
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
             .OrderBy(group => group.Key)
             .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
@@ -42,10 +80,9 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 ItemId = entry.Key,
                 DisplayText = entry.Value.Title,
                 Description = entry.Value.Description,
-                IsSelected = metadata.Names?.Contains(entry.Key) ?? false,
+                IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
-
-        }).Location("Content:8#Capabilities:5");
+        }).Location("Content:7#Capabilities;8");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -59,23 +96,49 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        var metadata = new AIProfileFunctionInvocationMetadata();
+        var metadata = new FunctionInvocationMetadata();
 
-        if (selectedToolKeys is null || selectedToolKeys.Length == 0)
+        if (selectedToolKeys is null || !selectedToolKeys.Any())
         {
             metadata.Names = [];
         }
         else
         {
-            metadata.Names = _toolDefinitions.Tools.Keys
+            metadata.Names = _toolDefinitions.GetSelectableTools().Keys
                 .Intersect(selectedToolKeys)
                 .ToArray();
         }
 
         profile.Put(metadata);
 
+        // Remove the legacy property key if it exists to complete migration.
+        profile.Properties.Remove("AIProfileFunctionInvocationMetadata");
+
         return Edit(profile, context);
+    }
+
+    /// <summary>
+    /// Reads tool names from the current key, falling back to the legacy key for backward compatibility.
+    /// </summary>
+    private static string[] GetSelectedToolNames(AIProfile profile)
+    {
+        var metadata = profile.GetOrCreate<FunctionInvocationMetadata>();
+
+        if (metadata.Names is { Length: > 0 })
+        {
+            return metadata.Names;
+        }
+
+        // Fall back to the legacy property key used in earlier versions.
+        var legacyMetadata = profile.Get<FunctionInvocationMetadata>("AIProfileFunctionInvocationMetadata");
+
+        if (legacyMetadata?.Names is { Length: > 0 })
+        {
+            return legacyMetadata.Names;
+        }
+
+        return null;
     }
 }

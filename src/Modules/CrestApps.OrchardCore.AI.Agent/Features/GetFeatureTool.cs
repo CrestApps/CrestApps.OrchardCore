@@ -1,50 +1,42 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Features;
 
+/// <summary>
+/// Represents the get feature tool.
+/// </summary>
 public sealed class GetFeatureTool : AIFunction
 {
     public const string TheName = "getSiteFeature";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IShellFeaturesManager _shellFeaturesManager;
-
-    public GetFeatureTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IShellFeaturesManager shellFeaturesManager)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _shellFeaturesManager = shellFeaturesManager;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "featureId": {
-                  "type": "string",
-                  "description": "A unique feature ID to get info for."
-                }
-              },
-              "additionalProperties": false,
-              "required": ["featureId"]
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "featureId": {
+          "type": "string",
+          "description": "A unique feature ID to get info for."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureId"
+      ]
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Enables feature site features";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -53,25 +45,42 @@ public sealed class GetFeatureTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageFeatures))
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<GetFeatureTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage features.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("featureId", out var featureId))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureId' argument.", Name);
+
             return "Unable to find a featureId argument in the function arguments.";
         }
 
-        var feature = (await _shellFeaturesManager.GetAvailableFeaturesAsync())
+        var feature = (await shellFeaturesManager.GetAvailableFeaturesAsync())
             .FirstOrDefault(feature => !feature.IsTheme() && feature.Id.Equals(featureId, StringComparison.OrdinalIgnoreCase));
 
         if (feature is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: feature '{FeatureId}' not found.", Name, featureId);
+
             return $"Unable to find a feature with the ID: {featureId}.";
         }
 
-        var isEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
+        var isEnabled = await shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(feature.AsAIObject(isEnabled));
     }

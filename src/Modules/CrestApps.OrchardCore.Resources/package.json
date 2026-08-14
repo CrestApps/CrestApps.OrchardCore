@@ -2,10 +2,19 @@
   "name": "crestapps.orchardcore.resources",
   "private": true,
   "devDependencies": {
-    "vue": "3.5.13",
-    "vuejs": "npm:vue@2.6.13",
-    "@fortawesome/fontawesome-free": "6.7.2",
-    "easymde": "2.18.0",
-    "vuedraggable": "2.24.3"
+    "dompurify": "^3.4.13",
+    "easymde": "2.21.0",
+    "flatpickr": "4.6.13",
+    "highlight.js": "^11.11.1",
+    "marked": "^18.0.5"
+  },
+  "dependencies": {
+    "@crestapps/ai-chat-ui": "1.2.0",
+    "@crestapps/bootstrap-select": "1.2.1",
+    "chart.js": "^4.5.1",
+    "intl-tel-input": "29.1.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.15"
   }
 }

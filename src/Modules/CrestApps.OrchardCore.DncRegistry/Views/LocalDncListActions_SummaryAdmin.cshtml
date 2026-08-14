@@ -1,0 +1,59 @@
+@using CrestApps.OrchardCore.DncRegistry.Models
+@using CrestApps.OrchardCore.DncRegistry.ViewModels
+@inject OrchardCore.Modules.IClock Clock
+
+@model LocalDncListViewModel
+
+@{
+    var entry = Model.LocalDncList;
+    var errorCount = entry.ErrorMessages?.Count ?? 0;
+    var isStalled = entry.Status == LocalDncListStatus.Processing
+        && entry.ProcessSaveUtc.HasValue
+        && (Clock.UtcNow - entry.ProcessSaveUtc.Value).TotalMinutes > 10;
+    var canProcess = entry.Status == LocalDncListStatus.Pending
+        || entry.Status == LocalDncListStatus.Failed
+        || entry.Status == LocalDncListStatus.Paused
+        || isStalled;
+}
+
+@if (errorCount > 0)
+{
+    <a asp-action="DownloadErrors" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" class="dropdown-item btn-sm">
+        <i class="fa-solid fa-file-csv text-danger" aria-hidden="true"></i> @T["Download errors ({0})", errorCount]
+    </a>
+}
+
+@if (canProcess)
+{
+    <a asp-action="ProcessNow" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath" class="dropdown-item btn-sm">
+        <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Process now"]
+    </a>
+}
+
+@if (entry.Status == LocalDncListStatus.Processing)
+{
+    <a asp-action="PauseImport" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath"
+       data-url-af="UnsafeUrl RemoveUrl"
+       data-title="@T["Pause import"]"
+       data-message="@T["Are you sure you want to pause this import?"]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["No"]"
+       data-ok-class="btn-warning"
+       class="dropdown-item btn-sm">
+        <i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Pause import"]
+    </a>
+}
+
+@if (entry.Status != LocalDncListStatus.Deleting)
+{
+    <a asp-action="Delete" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath"
+       class="dropdown-item btn-sm"
+       data-url-af="UnsafeUrl RemoveUrl"
+       data-title="@T["Delete list"]"
+       data-message="@T["Are you sure you want to delete the list '{0}'? This will remove all {1} phone numbers.", entry.Name, entry.PhoneNumberCount]"
+       data-ok-text="@T["Yes, delete"]"
+       data-cancel-text="@T["Cancel"]"
+       data-ok-class="btn-danger">
+        @T["Delete"]
+    </a>
+}

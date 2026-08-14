@@ -7,6 +7,10 @@ namespace CrestApps.OrchardCore.AI.Agent;
 
 internal static class ProjectionExtensions
 {
+    /// <summary>
+    /// Performs the as AI object operation.
+    /// </summary>
+    /// <param name="shellSettings">The shell settings.</param>
     public static object AsAIObject(this ShellSettings shellSettings)
     {
         return new
@@ -24,6 +28,11 @@ internal static class ProjectionExtensions
         };
     }
 
+    /// <summary>
+    /// Performs the as AI object operation.
+    /// </summary>
+    /// <param name="feature">The feature.</param>
+    /// <param name="isEnable">The is enable.</param>
     public static object AsAIObject(this IFeatureInfo feature, bool isEnable)
     {
         return new
@@ -39,6 +48,10 @@ internal static class ProjectionExtensions
         };
     }
 
+    /// <summary>
+    /// Performs the as AI object operation.
+    /// </summary>
+    /// <param name="user">The user.</param>
     public static object AsAIObject(this User user)
     {
         return new
@@ -58,6 +71,10 @@ internal static class ProjectionExtensions
         };
     }
 
+    /// <summary>
+    /// Performs the as AI object operation.
+    /// </summary>
+    /// <param name="recipe">The recipe.</param>
     public static object AsAIObject(this RecipeDescriptor recipe)
     {
         return new

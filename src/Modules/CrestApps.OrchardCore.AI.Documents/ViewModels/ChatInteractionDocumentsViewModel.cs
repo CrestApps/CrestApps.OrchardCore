@@ -1,0 +1,63 @@
+﻿using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
+
+/// <summary>
+/// Represents the view model for chat interaction documents.
+/// </summary>
+public class ChatInteractionDocumentsViewModel
+{
+    /// <summary>
+    /// Gets or sets the unique identifier of the interaction.
+    /// </summary>
+    public string ItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the collection of chat documents associated with the current context.
+    /// </summary>
+    public IList<ChatDocumentInfo> Documents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether an index profile is configured for document embedding.
+    /// </summary>
+    public bool HasIndexProfile { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a vision deployment is available for image uploads.
+    /// </summary>
+    public bool VisionEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether document uploads are allowed.
+    /// </summary>
+    public bool AllowDocumentUploads { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether image uploads are allowed.
+    /// </summary>
+    public bool AllowImageUploads { get; set; }
+
+    /// <summary>
+    /// Gets or sets the document retrieval mode override for the interaction.
+    /// </summary>
+    public DocumentRetrievalMode? DocumentRetrievalMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the configured index profile, if any.
+    /// </summary>
+    public string IndexProfileName { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the configured index profile has a valid embedding search service.
+    /// </summary>
+    public bool HasVectorSearchService { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available document retrieval modes.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> DocumentRetrievalModes { get; set; } = [];
+}

@@ -1,0 +1,68 @@
+<Project>
+  <Target Name="SetComputedPackageTags" BeforeTargets="GenerateNuspec">
+    <ItemGroup>
+      <_ComputedPackageTag Include="CrestApps" />
+      <_ComputedPackageTag Include="OrchardCore" />
+      <_ComputedPackageTag Include="ASP.NET-Core" />
+      <_ComputedPackageTag Include="CMS" Condition="'$(MSBuildProjectName)' != 'CrestApps.Docs'" />
+
+      <_ComputedPackageTag Include="Module" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\src\Modules\'))" />
+      <_ComputedPackageTag Include="Core" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\src\Core\'))" />
+      <_ComputedPackageTag Include="Abstractions" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\src\Abstractions\'))" />
+      <_ComputedPackageTag Include="Targets" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\src\Targets\'))" />
+      <_ComputedPackageTag Include="Startup" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\src\Startup\'))" />
+      <_ComputedPackageTag Include="Documentation" Condition="'$(MSBuildProjectName)' == 'CrestApps.Docs'" />
+      <_ComputedPackageTag Include="Docusaurus" Condition="'$(MSBuildProjectName)' == 'CrestApps.Docs'" />
+      <_ComputedPackageTag Include="Tests" Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('\tests\'))" />
+      <_ComputedPackageTag Include="Benchmark" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Benchmarks'))" />
+      <_ComputedPackageTag Include="Schema" Condition="'$(MSBuildProjectName)' == 'CrestApps.OrchardCore.RecipeSchemaExporter'" />
+      <_ComputedPackageTag Include="Exporter" Condition="'$(MSBuildProjectName)' == 'CrestApps.OrchardCore.RecipeSchemaExporter'" />
+      <_ComputedPackageTag Include="Sample" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Samples.'))" />
+      <_ComputedPackageTag Include="Web" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Web'))" />
+      <_ComputedPackageTag Include="Aspire" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Aspire'))" />
+      <_ComputedPackageTag Include="AppHost" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('AppHost'))" />
+
+      <_ComputedPackageTag Include="AI" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.AI.')) Or '$(MSBuildProjectName)' == 'CrestApps.OrchardCore.AI'" />
+      <_ComputedPackageTag Include="Agent" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Agent'))" />
+      <_ComputedPackageTag Include="A2A" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.A2A'))" />
+      <_ComputedPackageTag Include="Agent-to-Agent" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.A2A'))" />
+      <_ComputedPackageTag Include="Chat" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Chat'))" />
+      <_ComputedPackageTag Include="Copilot" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Copilot'))" />
+      <_ComputedPackageTag Include="Claude" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Claude'))" />
+      <_ComputedPackageTag Include="Data-Sources" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('DataSources'))" />
+      <_ComputedPackageTag Include="Documents" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Documents'))" />
+      <_ComputedPackageTag Include="Memory" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Memory'))" />
+      <_ComputedPackageTag Include="MCP" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Mcp'))" />
+      <_ComputedPackageTag Include="OpenAI" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('OpenAI'))" />
+      <_ComputedPackageTag Include="Azure" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Azure'))" />
+      <_ComputedPackageTag Include="Azure-AI-Inference" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('AzureAIInference'))" />
+      <_ComputedPackageTag Include="Azure-AI-Search" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('AzureAI')) And !$([System.String]::Copy('$(MSBuildProjectName)').Contains('AzureAIInference'))" />
+      <_ComputedPackageTag Include="Elasticsearch" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Elasticsearch'))" />
+      <_ComputedPackageTag Include="Ollama" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Ollama'))" />
+      <_ComputedPackageTag Include="Prompt-Templates" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Prompting'))" />
+      <_ComputedPackageTag Include="SignalR" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('SignalR'))" />
+      <_ComputedPackageTag Include="Users" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Users'))" />
+      <_ComputedPackageTag Include="Roles" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Roles'))" />
+      <_ComputedPackageTag Include="Recipes" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Recipes'))" />
+      <_ComputedPackageTag Include="Resources" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Resources'))" />
+      <_ComputedPackageTag Include="Content-Access-Control" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('ContentAccessControl'))" />
+      <_ComputedPackageTag Include="Omnichannel" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Omnichannel'))" />
+      <_ComputedPackageTag Include="SMS" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Sms'))" />
+      <_ComputedPackageTag Include="Event-Grid" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('EventGrid'))" />
+      <_ComputedPackageTag Include="YesSql" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('YesSql'))" />
+      <_ComputedPackageTag Include="PDF" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Pdf'))" />
+      <_ComputedPackageTag Include="OpenXML" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('OpenXml'))" />
+      <_ComputedPackageTag Include="FTP" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Ftp'))" />
+      <_ComputedPackageTag Include="SFTP" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('.Sftp'))" />
+      <_ComputedPackageTag Include="RAG" Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('DataSources')) Or $([System.String]::Copy('$(MSBuildProjectName)').Contains('.Documents')) Or $([System.String]::Copy('$(MSBuildProjectName)').Contains('.Memory'))" />
+    </ItemGroup>
+
+    <RemoveDuplicates Inputs="@(_ComputedPackageTag)">
+      <Output TaskParameter="Filtered" ItemName="_DistinctPackageTag" />
+    </RemoveDuplicates>
+
+    <PropertyGroup>
+      <PackageTags>@(_DistinctPackageTag, ';')</PackageTags>
+    </PropertyGroup>
+  </Target>
+</Project>

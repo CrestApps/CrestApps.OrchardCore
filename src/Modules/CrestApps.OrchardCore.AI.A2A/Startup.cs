@@ -1,0 +1,119 @@
+using A2A;
+using A2A.AspNetCore;
+using CrestApps.Core.AI.A2A;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.A2A.Drivers;
+using CrestApps.OrchardCore.AI.A2A.Handlers;
+using CrestApps.OrchardCore.AI.A2A.Migrations;
+using CrestApps.OrchardCore.AI.A2A.Recipes;
+using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
+
+namespace CrestApps.OrchardCore.AI.A2A;
+
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAIA2AClient()
+            .AddCoreAIA2AClientStoresYesSql()
+            .AddDataMigration<A2AConnectionMigrations>();
+
+        services.AddDisplayDriver<AIProfile, AIProfileA2AConnectionsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateA2AConnectionsDisplayDriver>();
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionA2AConnectionsDisplayDriver>();
+        services.AddNavigationProvider<A2AAdminMenu>();
+        services.AddPermissionProvider<A2APermissionsProvider>();
+        services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionHandler>();
+        services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionSettingsHandler>();
+        services.AddDisplayDriver<A2AConnection, A2AConnectionDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<A2AConnectionStep>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the A2AHost feature.
+/// </summary>
+[Feature(A2AConstants.Feature.Host)]
+public sealed class A2AHostStartup : StartupBase
+{
+    private const string A2AHostPolicyName = "A2AHostPolicy";
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<A2AHostOptions>, A2AHostOptionsConfiguration>();
+
+        services.AddPermissionProvider<A2AHostPermissionsProvider>();
+
+        services.AddScoped<IAuthorizationHandler, A2AHostAuthorizationHandler>();
+
+        services.AddAuthentication()
+            .AddScheme<A2AApiKeyAuthenticationOptions, A2AApiKeyAuthenticationHandler>(
+                A2AApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
+
+        services.AddSingleton(A2ATaskManagerFactory.Create);
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy(A2AHostPolicyName, policy =>
+            {
+                policy.AddAuthenticationSchemes(A2AApiKeyAuthenticationDefaults.AuthenticationScheme, "Api");
+                policy.AddRequirements(new A2AHostAuthorizationRequirement());
+            });
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var taskManager = serviceProvider.GetRequiredService<ITaskManager>();
+
+        // The well-known endpoint is always public so clients can discover agents and auth requirements.
+        routes.MapGet("/.well-known/agent-card.json", A2AWellKnownEndpointHandler.HandleAsync);
+
+        // Always apply the authorization policy. The A2AHostAuthorizationHandler dynamically
+        // checks A2AHostOptions.AuthenticationType on every request, allowing the "None" mode
+        // to pass through without credentials.
+        routes.MapA2A(taskManager, "a2a")
+            .RequireAuthorization(A2AHostPolicyName);
+    }
+}
+
+/// <summary>
+/// Contributes the A2A connections field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures(A2AConstants.Feature.Area, "CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigA2AConnectionsDisplayDriver>();
+    }
+}

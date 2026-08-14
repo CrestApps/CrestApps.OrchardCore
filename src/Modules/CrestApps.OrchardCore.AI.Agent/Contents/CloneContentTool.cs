@@ -1,75 +1,91 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that performs clone content operations.
+/// </summary>
 public sealed class CloneContentTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "cloneContentItem";
 
-    private readonly IContentManager _contentManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public CloneContentTool(
-        IContentManager contentManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _contentManager = contentManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentItemId": {
-                  "type": "string",
-                  "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
-                }
-              },
-              "required": ["contentItemId"],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
+        }
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Clones the data from one content item into another existing content item.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<CloneContentTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to clone content items.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
+
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
-        var contentItem = await _contentManager.GetAsync(contentItemId);
+        var contentItem = await contentManager.GetAsync(contentItemId);
 
         if (contentItem is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
+
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
         }
 
-        var clone = await _contentManager.CloneAsync(contentItem);
+        var clone = await contentManager.CloneAsync(contentItem);
 
-        return "Content item was successfully cloned. The ContentItemId of the new contentItem is: " + clone.ContentItemId;
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return $"Content item was successfully cloned. The ContentItemId of the new contentItem is: {clone.ContentItemId}";
     }
 }

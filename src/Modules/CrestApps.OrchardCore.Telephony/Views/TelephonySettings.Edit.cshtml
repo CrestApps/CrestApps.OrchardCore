@@ -1,0 +1,12 @@
+@model TelephonySettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultProvider">
+    <label asp-for="DefaultProvider" class="ocat-label">@T["Default telephony provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultProvider" class="form-select" asp-items="Model.Providers">
+            <option value="">@T["Select a provider"]</option>
+        </select>
+        <span asp-validation-for="DefaultProvider"></span>
+        <span class="hint">@T["The soft phone uses the selected provider to place and control calls. Enable a provider on its own tab to make it available here."]</span>
+    </div>
+</div>

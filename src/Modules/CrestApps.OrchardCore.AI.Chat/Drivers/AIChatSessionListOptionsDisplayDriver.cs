@@ -5,6 +5,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
+/// <summary>
+/// Display driver for the AI chat session list options shape.
+/// </summary>
 public sealed class AIChatSessionListOptionsDisplayDriver : DisplayDriver<AIChatSessionListOptions>
 {
     public override IDisplayResult Edit(AIChatSessionListOptions options, BuildEditorContext context)

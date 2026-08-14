@@ -4,6 +4,9 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// A scoped in-memory implementation of <see cref="IUserCacheService"/> that caches user objects by username.
+/// </summary>
 public sealed class DefaultUserCacheService : IUserCacheService
 {
     private readonly Dictionary<string, User> _users = [];
@@ -11,6 +14,11 @@ public sealed class DefaultUserCacheService : IUserCacheService
     private readonly ILookupNormalizer _lookupNormalizer;
     private readonly IUserStore<IUser> _userStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultUserCacheService"/> class.
+    /// </summary>
+    /// <param name="lookupNormalizer">The normalizer used to normalize usernames for store lookups.</param>
+    /// <param name="userStore">The user store used to retrieve users when not found in cache.</param>
     public DefaultUserCacheService(
         ILookupNormalizer lookupNormalizer,
         IUserStore<IUser> userStore)
@@ -18,8 +26,9 @@ public sealed class DefaultUserCacheService : IUserCacheService
         _lookupNormalizer = lookupNormalizer;
         _userStore = userStore;
     }
-
-    public async Task<IUser> GetUserAsync(string username)
+
+    /// <inheritdoc />
+    public async Task<IUser> GetUserAsync(string username, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(username);
 
@@ -38,8 +47,9 @@ public sealed class DefaultUserCacheService : IUserCacheService
 
         return user;
     }
-
-    public Task SetAsync(IUser user)
+
+    /// <inheritdoc />
+    public Task SetAsync(IUser user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
 
@@ -50,8 +60,9 @@ public sealed class DefaultUserCacheService : IUserCacheService
 
         return Task.CompletedTask;
     }
-
-    public Task RemoveAsync(string username)
+
+    /// <inheritdoc />
+    public Task RemoveAsync(string username, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(username);
 

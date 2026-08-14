@@ -1,0 +1,178 @@
+name: Create Documentation Version PR
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Release tag or docs version to snapshot (for example v2.1.0, 2.1.2, 2.1.0, v2.1, or 2.1). Prerelease values are skipped.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-version-${{ github.event_name == 'workflow_dispatch' && inputs.release || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  create-version-pr:
+    runs-on: ubuntu-latest
+    env:
+      DOCS_VERSION_PR_TOKEN: ${{ secrets.DOCS_VERSION_PR_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.DOCS_VERSION_PR_TOKEN || github.token }}
+    steps:
+      - name: Resolve docs version
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            RELEASE="${{ inputs.release }}"
+          else
+            RELEASE="${GITHUB_REF_NAME}"
+          fi
+
+          SHOULD_EVALUATE=false
+          SKIP_REASON=
+
+          if [[ "${RELEASE}" == *-* ]]; then
+            SKIP_REASON="Skipping docs version PR for prerelease '${RELEASE}'."
+          elif [[ "${RELEASE}" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            DOC_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            SOURCE_REF="refs/tags/v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+            SHOULD_EVALUATE=true
+          elif [[ "${RELEASE}" =~ ^v?([0-9]+)\.([0-9]+)$ ]]; then
+            DOC_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            SOURCE_REF="refs/tags/v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+            SHOULD_EVALUATE=true
+          else
+            SKIP_REASON="Skipping docs version PR for unsupported release input '${RELEASE}'. Use vX.Y.Z, X.Y.0, vX.Y, or X.Y."
+          fi
+
+          if [[ "${SHOULD_EVALUATE}" == "true" ]]; then
+            BRANCH_NAME="docs/version-${DOC_VERSION}"
+          fi
+
+          {
+            echo "should_evaluate=${SHOULD_EVALUATE}"
+            echo "doc_version=${DOC_VERSION}"
+            echo "branch_name=${BRANCH_NAME}"
+            echo "source_ref=${SOURCE_REF}"
+            echo "skip_reason=${SKIP_REASON}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Report skipped docs version
+        if: steps.resolve.outputs.should_evaluate != 'true'
+        run: echo "${{ steps.resolve.outputs.skip_reason }}"
+
+      - name: Checkout target branch
+        if: steps.resolve.outputs.should_evaluate == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ env.DOCS_VERSION_PR_TOKEN }}
+
+      - name: Checkout release source
+        if: steps.resolve.outputs.should_evaluate == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.resolve.outputs.source_ref }}
+          path: release-source
+          token: ${{ env.DOCS_VERSION_PR_TOKEN }}
+
+      - name: Setup Node.js
+        if: steps.resolve.outputs.should_evaluate == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: release-source/src/CrestApps.Docs/package-lock.json
+
+      - name: Install dependencies
+        if: steps.resolve.outputs.should_evaluate == 'true'
+        working-directory: release-source/src/CrestApps.Docs
+        run: npm ci
+
+      - name: Create versioned docs snapshot
+        if: steps.resolve.outputs.should_evaluate == 'true'
+        id: snapshot
+        shell: bash
+        run: |
+          DOC_VERSION="${{ steps.resolve.outputs.doc_version }}"
+
+          if [[ -f src/CrestApps.Docs/versions.json ]] && grep -q "\"${DOC_VERSION}\"" src/CrestApps.Docs/versions.json; then
+            echo "Docs version ${DOC_VERSION} already exists; no PR is needed."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          pushd release-source/src/CrestApps.Docs
+          npx docusaurus docs:version "${DOC_VERSION}"
+          npm run build
+          popd
+
+          mkdir -p src/CrestApps.Docs/versioned_docs src/CrestApps.Docs/versioned_sidebars
+          cp -R "release-source/src/CrestApps.Docs/versioned_docs/version-${DOC_VERSION}" "src/CrestApps.Docs/versioned_docs/"
+          cp "release-source/src/CrestApps.Docs/versioned_sidebars/version-${DOC_VERSION}-sidebars.json" "src/CrestApps.Docs/versioned_sidebars/"
+
+          DOC_VERSION="${DOC_VERSION}" node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/CrestApps.Docs/versions.json';
+          const docVersion = process.env.DOC_VERSION;
+          const versions = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : [];
+
+          if (!versions.includes(docVersion)) {
+            versions.unshift(docVersion);
+          }
+
+          fs.writeFileSync(path, `${JSON.stringify(versions, null, 2)}\n`);
+          NODE
+
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit versioned docs
+        if: steps.snapshot.outputs.created == 'true'
+        shell: bash
+        run: |
+          DOC_VERSION="${{ steps.resolve.outputs.doc_version }}"
+          BRANCH_NAME="${{ steps.resolve.outputs.branch_name }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${BRANCH_NAME}"
+          git add \
+            "src/CrestApps.Docs/versioned_docs/version-${DOC_VERSION}" \
+            "src/CrestApps.Docs/versioned_sidebars/version-${DOC_VERSION}-sidebars.json" \
+            src/CrestApps.Docs/versions.json
+
+          if git diff --cached --quiet; then
+            echo "No versioned docs changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Add docs version ${DOC_VERSION}"
+          git push --force-with-lease origin "${BRANCH_NAME}"
+
+      - name: Open pull request
+        if: steps.snapshot.outputs.created == 'true'
+        shell: bash
+        run: |
+          DOC_VERSION="${{ steps.resolve.outputs.doc_version }}"
+          BRANCH_NAME="${{ steps.resolve.outputs.branch_name }}"
+          EXISTING_PR="$(gh pr list --base main --head "${BRANCH_NAME}" --state open --json number --jq '.[0].number // ""')"
+
+          if [[ -n "${EXISTING_PR}" ]]; then
+            echo "Pull request #${EXISTING_PR} already exists for ${BRANCH_NAME}."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "${BRANCH_NAME}" \
+            --title "Add docs version ${DOC_VERSION}" \
+            --body "Snapshots the current documentation as version ${DOC_VERSION}. Merging this PR publishes the versioned docs through the normal main-branch Pages deployment."

@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**\App_Data\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,9 @@
   <!-- Watcher include and excludes -->
   <ItemGroup>
     <Watch Include="**\*.cs" Exclude="Recipes\**;Assets\**;node_modules\**\*;**\*.js.map;obj\**\*;bin\**\*" />
+    <Watch Remove="App_Data\**\*" />
+    <Content Update="App_Data\**\*" Watch="false" />
+    <None Update="App_Data\**\*" Watch="false" />
   </ItemGroup>
 
   <ItemGroup>

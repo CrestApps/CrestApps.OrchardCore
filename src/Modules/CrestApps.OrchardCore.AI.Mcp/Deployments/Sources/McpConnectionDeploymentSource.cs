@@ -1,7 +1,9 @@
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
@@ -10,6 +12,10 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
 {
     private readonly ISourceCatalog<McpConnection> _store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="store">The store.</param>
     public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
     {
         _store = store;
@@ -22,8 +28,8 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
         var connectionsData = new JsonArray();
 
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -36,17 +42,15 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
             {
                 { "ItemId", connection.ItemId },
                 { "DisplayText", connection.DisplayText },
+                { "Source", connection.Source },
                 { "Author", connection.Author },
                 { "CreatedUtc" , connection.CreatedUtc },
                 { "OwnerId" , connection.OwnerId },
             };
 
-            var properties = new JsonObject();
+            var properties = JsonSerializer.SerializeToNode(connection.Properties)?.AsObject() ?? new JsonObject();
 
-            foreach (var property in connection.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
+            SanitizeSensitiveData(connection, properties);
 
             deploymentInfo["Properties"] = properties;
 
@@ -56,7 +60,30 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
-            ["connections"] = connectionsData,
+            ["Connections"] = connectionsData,
         });
+    }
+
+    private static void SanitizeSensitiveData(McpConnection connection, JsonObject properties)
+    {
+        if (!string.Equals(connection.Source, McpConstants.TransportTypes.Sse, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var metadataNode = properties[nameof(SseMcpConnectionMetadata)]?.AsObject();
+
+        if (metadataNode == null)
+        {
+            return;
+        }
+
+        // Clear all sensitive fields to prevent accidental credential exposure.
+        metadataNode[nameof(SseMcpConnectionMetadata.ApiKey)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.BasicPassword)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientSecret)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2PrivateKey)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientCertificate)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientCertificatePassword)] = string.Empty;
     }
 }

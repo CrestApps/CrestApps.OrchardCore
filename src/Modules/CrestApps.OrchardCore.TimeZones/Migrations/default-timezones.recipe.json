@@ -1,0 +1,142 @@
+{
+  "name": "CommonTimeZoneMaps",
+  "displayName": "Common time zone maps",
+  "description": "Seeds common worldwide time zone maps.",
+  "variables": {
+    "OwnerId": "[js: parameters('AdminUserId')]",
+    "Author": "[js: parameters('AdminUsername')]"
+  },
+  "steps": [
+    {
+      "name": "TimeZoneMaps",
+      "Maps": [
+        {
+          "Name": "Alaska Time",
+          "TimeZoneId": "America/Anchorage",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Atlantic Time (Canada)",
+          "TimeZoneId": "America/Halifax",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Australian Eastern Time",
+          "TimeZoneId": "Australia/Sydney",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Brasilia Time",
+          "TimeZoneId": "America/Sao_Paulo",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Central European Time",
+          "TimeZoneId": "Europe/Berlin",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Central Time (US & Canada)",
+          "TimeZoneId": "America/Chicago",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "China Standard Time",
+          "TimeZoneId": "Asia/Shanghai",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Coordinated Universal Time (UTC)",
+          "TimeZoneId": "Etc/UTC",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Eastern European Time",
+          "TimeZoneId": "Europe/Bucharest",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Eastern Time (US & Canada)",
+          "TimeZoneId": "America/New_York",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Gulf Standard Time",
+          "TimeZoneId": "Asia/Dubai",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Hawaii Time",
+          "TimeZoneId": "Pacific/Honolulu",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "India Standard Time",
+          "TimeZoneId": "Asia/Kolkata",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Japan Standard Time",
+          "TimeZoneId": "Asia/Tokyo",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Jerusalem Time",
+          "TimeZoneId": "Asia/Jerusalem",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Moscow Standard Time",
+          "TimeZoneId": "Europe/Moscow",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Mountain Time (US & Canada)",
+          "TimeZoneId": "America/Denver",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "New Zealand Time",
+          "TimeZoneId": "Pacific/Auckland",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Pacific Time (US & Canada)",
+          "TimeZoneId": "America/Los_Angeles",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Singapore Time",
+          "TimeZoneId": "Asia/Singapore",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "Western European Time",
+          "TimeZoneId": "Europe/London",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        }
+      ]
+    }
+  ]
+}

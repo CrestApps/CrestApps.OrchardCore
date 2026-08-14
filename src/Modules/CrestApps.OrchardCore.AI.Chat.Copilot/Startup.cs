@@ -1,0 +1,65 @@
+﻿using CrestApps.Core.AI.Copilot;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Endpoints;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
+
+namespace CrestApps.OrchardCore.AI.Chat.Copilot;
+
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register framework-level Copilot services (orchestrator, OAuth, handlers).
+        services.AddCoreAICopilotOrchestrator();
+
+        // Bridge OrchardCore site settings → CopilotOptions.
+        services.ConfigureOptions<CopilotOptionsConfiguration>();
+
+        // Bridge OrchardCore User model → ICopilotCredentialStore.
+        services.AddScoped<ICopilotCredentialStore, OrchardCoreCopilotCredentialStore>();
+        services.AddScoped<CopilotCallbackUrlProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestratorAvailabilityProvider, CopilotOrchestratorAvailabilityProvider>());
+
+        // OrchardCore-specific display drivers.
+        services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateCopilotDisplayDriver>();
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
+
+        services
+            .AddSiteDisplayDriver<CopilotSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
+        services.AddPermissionProvider<CopilotPermissionProvider>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddCopilotAuthEndpoints();
+    }
+}

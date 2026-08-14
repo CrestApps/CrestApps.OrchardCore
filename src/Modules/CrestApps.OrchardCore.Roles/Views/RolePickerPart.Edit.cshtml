@@ -1,23 +1,41 @@
 @using CrestApps.OrchardCore.Roles.ViewModels
-@using OrchardCore
 
 @model RolePickerViewModel
 
-<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="Roles">
-    <label asp-for="Roles" class="@Orchard.GetLabelClasses()">@Model.DisplayName</label>
-    <div class="@Orchard.GetEndClasses()">
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="Roles">
+    <label asp-for="Roles" class="ocat-label">@Model.DisplayName</label>
+    <div class="ocat-end">
         @if (Model.Settings.AllowSelectMultiple)
         {
-            @await Component.InvokeAsync("SelectRoles", new
-                {
-                    selectedRoles = Model.Roles,
-                    htmlName = Html.NameFor(m => m.Roles),
-                    exclude = Model.Settings.ExcludedRoles,
-                })
+            <select asp-for="Roles"
+                    asp-items="Model.AvailableRoles"
+                    class="selectpicker show-tick"
+                    multiple
+                    data-live-search="true"
+                    data-actions-box="true"
+                    data-header="@T["Select roles"]"
+                    data-width="100%"
+                    data-selected-text-format="count > 2"
+                    data-count-selected-text="@T["{0} roles selected", "{0}"]"
+                    data-none-selected-text="@T["No roles selected"]"
+                    data-style="btn-light"
+                    title="@Model.DisplayName">
+            </select>
         }
         else
         {
-            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="form-select"></select>
+            <select asp-for="Roles"
+                    asp-items="Model.AvailableRoles"
+                    class="selectpicker"
+                    data-live-search="true"
+                    data-width="100%"
+                    data-none-selected-text="@T["No role selected"]"
+                    data-style="btn-light"
+                    title="@Model.DisplayName">
+            </select>
         }
 
         <span asp-validation-for="Roles"></span>

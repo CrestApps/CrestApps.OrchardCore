@@ -1,0 +1,309 @@
+using System.Security.Claims;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Security;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
+
+namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
+
+public sealed class LocalToolRegistryProviderTests
+{
+    [Fact]
+    public async Task GetToolsAsync_NullToolNames_ReturnsEmpty()
+    {
+        var provider = CreateProvider([]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = null }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_EmptyToolNames_ReturnsEmpty()
+    {
+        var provider = CreateProvider([]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = [] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_MatchingToolNames_ReturnsEntries()
+    {
+        var provider = CreateProvider(
+        [
+            ("tool1", "Tool 1", "First tool"),
+            ("tool2", "Tool 2", "Second tool"),
+            ("tool3", "Tool 3", "Third tool"),
+            ]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1", "tool3"] }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, t => t.Name == "tool1" && t.Description == "First tool");
+        Assert.Contains(result, t => t.Name == "tool3" && t.Description == "Third tool");
+        Assert.All(result, t => Assert.Equal(ToolRegistryEntrySource.Local, t.Source));
+        Assert.All(result, t => Assert.NotNull(t.CreateAsync));
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_UnknownToolNames_SkipsMissing()
+    {
+        var provider = CreateProvider([("tool1", "Tool 1", "First tool")]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1", "nonexistent"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("tool1", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_FallsBackToTitle_WhenDescriptionIsNull()
+    {
+        var provider = CreateProvider([("tool1", "My Tool Title", null)]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        // When Description is null, falls back to Title.
+        Assert.Equal("My Tool Title", result[0].Description);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_FallsBackToName_WhenTitleAndDescriptionAreNull()
+    {
+        var provider = CreateProvider([("tool1", null, null)]);
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("tool1", result[0].Description);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_SkipsSystemTools()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("local_tool", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "local_tool",
+            Title = "Local",
+            Description = "A local tool",
+            IsSystemTool = false,
+        });
+        options.SetTool("system_tool", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "system_tool",
+            Title = "System",
+            Description = "A system tool",
+            IsSystemTool = true,
+        });
+
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["local_tool", "system_tool"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("local_tool", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_SetsIdEqualToName()
+    {
+        var provider = CreateProvider([("my_tool", "My Tool", "A test tool")]);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["my_tool"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("my_tool", result[0].Id);
+        Assert.Equal("my_tool", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCreateOrUpdateContentItemRequested_DoesNotAutoAddDependencies()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("createOrUpdateContentItem", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "createOrUpdateContentItem",
+            Title = "Primary Tool",
+            Description = "Primary tool",
+        });
+        options.Tools["createOrUpdateContentItem"].AddDependency("getContentItemSchema");
+        options.SetTool("getContentItemSchema", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "getContentItemSchema",
+            Title = "Content Schema",
+            Description = "Schema tool",
+        });
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["createOrUpdateContentItem"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Contains(result, entry => entry.Name == "createOrUpdateContentItem");
+        Assert.DoesNotContain(result, entry => entry.Name == "getContentItemSchema");
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenImportRecipeRequested_DoesNotAutoAddDependencies()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("importOrchardCoreRecipe", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "importOrchardCoreRecipe",
+            Title = "Primary Tool",
+            Description = "Primary tool",
+        });
+        options.Tools["importOrchardCoreRecipe"].AddDependency("getOrchardCoreRecipeJsonSchema");
+        options.SetTool("getOrchardCoreRecipeJsonSchema", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "getOrchardCoreRecipeJsonSchema",
+            Title = "Recipe Schema",
+            Description = "Schema tool",
+        });
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+        new AICompletionContext { ToolNames = ["importOrchardCoreRecipe"] },
+        TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Contains(result, entry => entry.Name == "importOrchardCoreRecipe");
+        Assert.DoesNotContain(result, entry => entry.Name == "getOrchardCoreRecipeJsonSchema");
+    }
+
+    private static LocalToolRegistryProvider CreateProvider((string name, string title, string description)[] tools)
+    {
+        var options = new AIToolDefinitionOptions();
+        foreach (var (name, title, description) in tools)
+        {
+            options.SetTool(name, new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+            {
+                Name = name,
+                Title = title,
+                Description = description,
+            });
+        }
+
+        return CreateProviderWithOptions(options);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenThereIsNoCaller_SkipsAuthorization()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        var provider = CreateProviderWithUser(authService.Object, user: null, ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        authService.Verify(
+            x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsAuthorized_ReturnsTheTool()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        var provider = CreateProviderWithUser(authService.Object, CreateUser(), ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("tool1", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsNotAuthorized_ExcludesTheTool()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var provider = CreateProviderWithUser(authService.Object, CreateUser(), ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_WhenCallerIsAnonymous_StillEvaluatesAuthorization()
+    {
+        var authService = new Mock<IAuthorizationService>();
+        authService
+            .Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
+        var provider = CreateProviderWithUser(authService.Object, anonymousUser, ("tool1", "Tool 1", "First tool"));
+
+        var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1"] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        authService.Verify(
+            x => x.AuthorizeAsync(anonymousUser, It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()),
+            Times.Once);
+    }
+
+    private static ClaimsPrincipal CreateUser()
+    {
+        return new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "test-user")], "Test"));
+    }
+
+    private static LocalToolRegistryProvider CreateProviderWithUser(
+        IAuthorizationService authorizationService,
+        ClaimsPrincipal user,
+        params (string Name, string Title, string Description)[] tools)
+    {
+        var options = new AIToolDefinitionOptions();
+
+        foreach (var (name, title, description) in tools)
+        {
+            options.SetTool(name, new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+            {
+                Name = name,
+                Title = title,
+                Description = description,
+            });
+        }
+
+        return CreateProviderWithOptions(options, authorizationService, user);
+    }
+
+    private static LocalToolRegistryProvider CreateProviderWithOptions(AIToolDefinitionOptions options)
+    {
+        var authService = new Mock<IAuthorizationService>();
+
+        return CreateProviderWithOptions(options, authService.Object, user: null);
+    }
+
+    private static LocalToolRegistryProvider CreateProviderWithOptions(
+        AIToolDefinitionOptions options,
+        IAuthorizationService authorizationService,
+        ClaimsPrincipal user)
+    {
+        var userAccessor = new Mock<IUserAccessor>();
+        userAccessor.Setup(x => x.User).Returns(user);
+
+        return new LocalToolRegistryProvider(Options.Create(options), authorizationService, userAccessor.Object, NullLogger<LocalToolRegistryProvider>.Instance);
+    }
+}

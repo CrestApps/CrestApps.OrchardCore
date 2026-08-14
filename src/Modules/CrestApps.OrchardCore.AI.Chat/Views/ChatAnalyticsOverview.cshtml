@@ -1,0 +1,143 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsOverviewViewModel
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fa-solid fa-chart-line me-1"></i>@T["Conversation & Usage"]
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-primary">@Model.TotalSessions</div>
+                    <div class="text-muted">
+                        @T["Total Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The total number of chat conversations started within the selected period."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-info">@Model.UniqueVisitors</div>
+                    <div class="text-muted">
+                        @T["Unique Visitors"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of distinct visitors who interacted with the chat, identified by visitor ID or user account."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-success">@Model.ContainmentRatePercent%</div>
+                    <div class="text-muted">
+                        @T["Containment Rate"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of sessions that were fully resolved by the bot without requiring human escalation. Higher is better."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-danger">@Model.AbandonmentRatePercent%</div>
+                    <div class="text-muted">
+                        @T["Abandonment Rate"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of sessions where the user left the conversation without reaching a resolution. This may indicate user frustration or irrelevant responses."]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold">@FormatHandleTime(Model.AverageHandleTimeSeconds)</div>
+                    <div class="text-muted">
+                        @T["Avg Session Duration"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The average time from the first message to the last message in a session. Measures how long users typically interact with the bot."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold">@Model.AverageMessagesPerSession</div>
+                    <div class="text-muted">
+                        @T["Avg Messages/Session"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The average number of messages (user + assistant) exchanged per session. Indicates conversation depth and engagement."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-info">@Model.ReturningUserRatePercent%</div>
+                    <div class="text-muted">
+                        @T["Returning User Rate"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of unique visitors who engaged with the bot in more than one session. A high rate indicates users find the bot useful enough to come back."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold">@Model.AverageStepsToResolution</div>
+                    <div class="text-muted">
+                        @T["Avg Steps to Resolve"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The average number of messages needed to reach a resolution in resolved sessions. Fewer steps means faster problem-solving."]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-success">@Model.ResolvedSessions</div>
+                    <div class="text-muted">
+                        @T["Resolved Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions that ended with a natural resolution (the bot successfully handled the user's request)."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-warning">@Model.AbandonedSessions</div>
+                    <div class="text-muted">
+                        @T["Abandoned Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions that ended due to inactivity timeout without the user reaching a resolution."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-secondary">@Model.ActiveSessions</div>
+                    <div class="text-muted">
+                        @T["Active Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions that are currently in progress and have not yet ended."]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(function (el) { new bootstrap.Tooltip(el); });
+    });
+</script>
+
+@functions {
+    string FormatHandleTime(double seconds)
+    {
+        if (seconds < 60)
+        {
+            return $"{seconds:F0}s";
+        }
+
+        var minutes = seconds / 60;
+
+        if (minutes < 60)
+        {
+            return $"{minutes:F1}m";
+        }
+
+        var hours = minutes / 60;
+        return $"{hours:F1}h";
+    }
+}

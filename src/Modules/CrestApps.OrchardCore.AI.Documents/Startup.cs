@@ -1,0 +1,146 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Endpoints;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Documents.Drivers;
+using CrestApps.OrchardCore.AI.Documents.Handlers;
+using CrestApps.OrchardCore.AI.Documents.Migrations;
+using CrestApps.OrchardCore.AI.Documents.Services;
+using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.FileStorage;
+using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Workflows.Helpers;
+
+namespace CrestApps.OrchardCore.AI.Documents;
+
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Route uploaded files through Orchard Core's file creation pipeline so registered IFileEventHandler
+        // implementations (such as the ClamAV antivirus handler) can scan and reject files before storage.
+        // Registered before AddCoreAIDocumentProcessing() so it wins over the framework's NoOpUploadedFileScanner,
+        // which is added with TryAddSingleton.
+        services.TryAddTransient<FileCreationService>();
+        services.AddScoped<IUploadedFileScanner, OrchardUploadedFileScanner>();
+
+        services.AddCoreAIDocumentProcessing()
+            .AddCoreAIDocumentReferenceDownloads()
+            .AddCoreAIDocumentProcessingStoresYesSql()
+            .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>()
+            .AddDataMigration<AIDocumentLegacyTypeNameMigrations>()
+            .AddDataMigration<AIDocumentIndexMigrations>()
+            .AddDataMigration<AIDocumentChunkIndexMigrations>();
+
+        services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
+        services.AddSingleton<IPostConfigureOptions<DocumentFileSystemFileStoreOptions>, DocumentFileSystemFileStoreOptionsPostConfiguration>();
+        services
+            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
+        services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();
+        services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
+
+        // Register the session document cleanup handler to remove documents when a chat session is deleted.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddDownloadAIDocumentEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ChatInteractionDocuments feature.
+/// </summary>
+[Feature(ChatInteractionsConstants.Feature.ChatInteractionDocuments)]
+public sealed class ChatInteractionDocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
+
+        // Add Indexing Services.
+        services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
+            .AddScoped<AIDocumentsIndexingService>()
+            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
+            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
+            .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddUploadChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionUploadDocument)
+            .AddRemoveChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionRemoveDocument);
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ProfileDocuments feature.
+/// </summary>
+[Feature(AIConstants.Feature.ProfileDocuments)]
+public sealed class ProfileDocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDocumentsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ChatSessionDocuments feature.
+/// </summary>
+[Feature(AIConstants.Feature.ChatSessionDocuments)]
+public sealed class ChatSessionDocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileSessionDocumentsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
+            .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+    }
+}
+
+/// <summary>
+/// Registers the document knowledgebase display driver for the AI Completion using Direct Config
+/// workflow activity so uploaded documents contribute retrieval context during completion.
+/// </summary>
+[RequireFeatures(ChatInteractionsConstants.Feature.ChatInteractions, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigDocumentsDisplayDriver>();
+    }
+}

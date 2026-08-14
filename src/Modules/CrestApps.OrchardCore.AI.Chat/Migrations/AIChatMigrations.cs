@@ -1,4 +1,4 @@
-using OrchardCore.ContentManagement.Metadata;
+﻿using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 
@@ -8,11 +8,18 @@ internal sealed class AIChatMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIChatMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
     public AIChatMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
     public async Task<int> CreateAsync()
     {
         await _contentDefinitionManager.AlterPartDefinitionAsync("AIProfilePart", part => part
@@ -27,7 +34,7 @@ internal sealed class AIChatMigrations : DataMigration
             .Securable(false)
             .Creatable(false)
             .Versionable(false)
-            .DisplayedAs("Artificial Intelligence Chat")
+            .WithDisplayName("Artificial Intelligence Chat")
             .WithDescription("A widget to add a Artificial Intelligence Chat.")
             .WithPart("AIProfilePart")
             .Stereotype("Widget")

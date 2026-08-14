@@ -1,23 +1,28 @@
-@using CrestApps.OrchardCore.AI.Core
-@using Microsoft.Extensions.DependencyInjection
-@using CrestApps.OrchardCore.AI
+@using CrestApps.Core.AI
+@using Microsoft.Extensions.Options
+
+@inject IOptions<AIOptions> AIOptions
 
 @{
-    string source = Model.Source;
-    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIToolSource>(source);
+    string sourceName = Model.Source;
+
+    if (!AIOptions.Value.ToolInstanceSources.TryGetValue(sourceName, out var source))
+    {
+        return;
+    }
 }
 
 <div class="col">
     <div class="card h-100">
         <div class="card-body">
-            <h4>@(service?.DisplayName ?? source)</h4>
-            <p class="hint">@(service?.Description)</p>
+            <h4>@(source.DisplayName)</h4>
+            <p class="hint">@(source.Description)</p>
         </div>
         <div class="card-footer text-muted text-sm-end">
             <a class="btn btn-primary btn-sm"
                asp-route-action="Create"
-               asp-route-controller="ToolInstances"
-               asp-route-source="@source">@T["Add"]</a>
+               asp-route-controller="AIToolInstances"
+               asp-route-source="@sourceName">@T["Add"]</a>
         </div>
     </div>
 </div>

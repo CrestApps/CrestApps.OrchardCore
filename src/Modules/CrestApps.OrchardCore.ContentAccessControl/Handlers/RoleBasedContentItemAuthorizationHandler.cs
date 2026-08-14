@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -9,10 +9,17 @@ using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
+/// <summary>
+/// Handles events for role based content item authorization.
+/// </summary>
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoleBasedContentItemAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
     public RoleBasedContentItemAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -60,7 +67,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
         var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // RolePickerPart is reusable by default. Look in the content type definition for the part. 
+        // RolePickerPart is reusable by default. Look in the content type definition for the part.
         foreach (var partDefinition in definition.Parts)
         {
             var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
@@ -106,6 +113,11 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
                 return;
             }
+        }
+
+        if (roleNames.Count > 0)
+        {
+            context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
         }
     }
 }

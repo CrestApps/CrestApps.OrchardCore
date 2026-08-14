@@ -1,7 +1,8 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -11,6 +12,9 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
+    /// <summary>
+    /// The recipe step key used to identify this handler.
+    /// </summary>
     public const string StepKey = "AIProviderConnections";
 
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
@@ -18,11 +22,17 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionsStep"/> class.
+    /// </summary>
+    /// <param name="manager">The AI provider connection manager.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIProviderConnectionsStep(
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
@@ -37,12 +47,15 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProviderConnection connection = null;
+            var isNew = false;
 
-            var itemId = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
+            var id = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(itemId))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (!string.IsNullOrEmpty(id))
             {
-                connection = await _manager.FindByIdAsync(itemId);
+                connection = await _manager.FindByIdAsync(id);
             }
 
             var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
@@ -71,6 +84,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
@@ -86,6 +100,11 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 }
 
                 connection = await _manager.NewAsync(sourceName, token);
+
+                if (hasId && UniqueId.IsValid(id))
+                {
+                    connection.ItemId = id;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(connection);
@@ -100,12 +119,18 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.CreateAsync(connection);
+            if (isNew)
+            {
+                await _manager.CreateAsync(connection);
+            }
         }
     }
 
     private sealed class AIProviderConnectionStepModel
     {
+        /// <summary>
+        /// Gets or sets the collection of AI provider connection definitions to import.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

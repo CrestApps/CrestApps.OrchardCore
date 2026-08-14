@@ -2,6 +2,8 @@ name: PR - CI
 on: 
   pull_request:
     branches: [ main, release/** ]
+permissions:
+  contents: read
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -17,28 +19,24 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     name: Build & Test
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v7
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
+    - uses: actions/setup-node@v7
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v4
+    - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
-          8.0.x
-          9.0.x
+          10.0.x
     - name: Build
       # We disable NuGet audit warnings, see https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1901-nu1904.
       # Security issues being discovered in NuGet packages we use can happen at any time, and thus all our CI builds that
       # treat warnings as errors could break anytime, without us changing the code. This prevents that. Treating them as
       # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
       run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Set Git line ending configuration
-      run: git config --global core.autocrlf true
-    - name: Validate code format
-      run: dotnet format --verify-no-changes --verbosity diagnostic
+        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 

@@ -1,119 +1,155 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Markdown;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Services;
+using Fluid;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
+using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Provides extension methods for service collection.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds the AI core services.
+    /// </summary>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddMarkdown()
+            )
+        );
+
+        // In Orchard Core's multi-tenant architecture, IConfiguration resolves to the
+        // host configuration (project-root appsettings.json), not the tenant's ShellConfiguration
+        // (which includes App_Data/appsettings.json and per-tenant overrides). The core
+        // CrestApps.Core.AI library registers services that read AI settings from IConfiguration,
+        // so they never see the tenant's config. Replace them with factory-based registrations
+        // that provide IShellConfiguration (the tenant configuration) instead.
+        services.ReplaceConfigurationServices();
+
         services
-            .AddCatalogs()
             .AddCatalogManagers()
-            .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
-            .AddScoped<INamedCatalog<AIProfile>, DefaultAIProfileStore>()
-            .AddScoped<AIProviderConnectionStore>()
-            .AddScoped<ICatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
-            .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
-            .AddScoped<IAICompletionService, DefaultAICompletionService>()
-            .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
-            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
+            .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
+            .AddScoped<DefaultSpeechVoicePresenter>();
 
         services
-            .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
-            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
+            .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
+            .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
+            .AddTransient<IConfigureOptions<StoreCollectionOptions>, StoreCollectionOptionsConfiguration>();
 
-        services
-            .AddScoped<ICatalogEntryHandler<AIToolInstance>, AIToolInstanceHandler>();
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<AIProfile>();
+            o.MemberAccessStrategy.Register<AIChatSession>();
+            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
+            o.MemberAccessStrategy.Register<ExtractedFieldState>();
+            o.MemberAccessStrategy.Register<PostSessionResult>();
+            o.MemberAccessStrategy.Register<AICompletionReference>();
+            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
+            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
+            o.MemberAccessStrategy.Register<ConversionGoalResult>();
+            o.MemberAccessStrategy.Register<AIResponseMessage>();
+        });
 
         return services;
     }
 
+    /// <summary>
+    /// Adds the AI deployment services.
+    /// </summary>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddScoped<DefaultAIDeploymentStore>()
-            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
+            .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
         return services;
     }
 
-    public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
+    /// <summary>
+    /// Adds the orchard core indexing adapters.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="providerName">The provider name.</param>
+    public static IServiceCollection AddOrchardCoreIndexingAdapters(this IServiceCollection services, string providerName)
     {
-        services
-            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
-            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>()
-            .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+
+        services.TryAddKeyedScoped<ISearchIndexManager, OrchardCoreSearchIndexManager>(providerName);
+        services.TryAddKeyedScoped<ISearchDocumentManager, OrchardCoreSearchDocumentManager>(providerName);
 
         return services;
     }
 
-    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
-        where TClient : class, IAICompletionClient
+    /// <summary>
+    /// Replaces core CrestApps.Core.AI configuration-backed services that inject
+    /// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> (host-level) with
+    /// factory-based registrations that provide <see cref="IShellConfiguration"/>
+    /// (tenant-level) instead, so they can read from App_Data/appsettings.json.
+    /// </summary>
+    private static void ReplaceConfigurationServices(this IServiceCollection services)
     {
-        return services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddProfileSource(implementationName, providerName, configure);
-            })
-            .AddAICompletionClient<TClient>(implementationName);
-    }
-
-    public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
-    {
-        services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddDeploymentProvider(providerName, configure);
-            });
-
-        return services;
-    }
-
-    public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
-        where TClient : class, IAICompletionClient
-    {
-        services.Configure<AIOptions>(o =>
+        services.Configure<AIProviderConnectionCatalogOptions>(o =>
         {
-            o.AddClient<TClient>(clientName);
+            // Deprecated: will be removed in a future version.
+            o.ProviderSections.Add("CrestApps_AI:Providers");
         });
 
-        services.TryAddScoped<TClient>();
-        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
+        ReplaceService<INamedSourceCatalogSource<AIDeployment>, ConfigurationAIDeploymentSource>(
+            services,
+            ServiceLifetime.Scoped,
+            static sp => ActivatorUtilities.CreateInstance<ConfigurationAIDeploymentSource>(
+                sp,
+                sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<IOptions<AIOptions>>(),
+                sp.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>(),
+                sp.GetRequiredService<ILogger<ConfigurationAIDeploymentSource>>()));
 
-        return services;
+        ReplaceService<INamedSourceCatalogSource<AIProviderConnection>, ConfigurationAIProviderConnectionSource>(
+            services,
+            ServiceLifetime.Scoped,
+            static sp => ActivatorUtilities.CreateInstance<ConfigurationAIProviderConnectionSource>(
+                sp,
+                sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
+                sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionSource>>()));
     }
 
-    public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
+    private static void ReplaceService<TService, TImplementation>(
+        IServiceCollection services,
+        ServiceLifetime lifetime,
+        Func<IServiceProvider, TService> factory)
+        where TService : class
+        where TImplementation : class, TService
     {
-        services.Configure<AIOptions>(o =>
+        var descriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(TService) &&
+            d.ImplementationType == typeof(TImplementation));
+
+        if (descriptor != null)
         {
-            o.AddConnectionSource(providerName, configure);
-        });
+            services.Remove(descriptor);
+        }
 
-        return services;
-    }
-
-    public static IServiceCollection AddAIDataSource(this IServiceCollection services, string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
-    {
-        services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddDataSource(profileSource, type, configure);
-            });
-
-        return services;
+        services.Add(new ServiceDescriptor(typeof(TService), (sp) => factory(sp), lifetime));
     }
 }

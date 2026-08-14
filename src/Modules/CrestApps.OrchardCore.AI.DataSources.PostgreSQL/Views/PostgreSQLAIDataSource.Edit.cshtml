@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.ViewModels
+
+@model EditPostgreSQLAIDataSourceViewModel
+
+<div data-ai-data-source-section="PostgreSQL" hidden>
+    <fieldset class="ocat-wrapper">
+        <legend class="ocat-label">@T["PostgreSQL Connection"]</legend>
+        <div class="ocat-end">
+            <div class="mb-3">
+                <label asp-for="ConnectionString" class="form-label">@T["Connection string"]</label>
+                <input asp-for="ConnectionString" class="form-control" type="password" placeholder="@(Model.HasConnectionString ? T["Leave empty to keep the saved connection string"].Value : string.Empty)" />
+                <span asp-validation-for="ConnectionString" class="text-danger"></span>
+            </div>
+
+            <div class="mb-0">
+                <label asp-for="TableName" class="form-label">@T["Table name"]</label>
+                <input asp-for="TableName" class="form-control" />
+                <span asp-validation-for="TableName" class="text-danger"></span>
+                <span class="hint">@T["The PostgreSQL table to read rows from."]</span>
+            </div>
+        </div>
+    </fieldset>
+</div>

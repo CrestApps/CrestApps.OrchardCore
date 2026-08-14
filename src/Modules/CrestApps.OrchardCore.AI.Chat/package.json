@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "marked": "^15.0.7"
+    "@crestapps/ai-chat-ui": "1.2.0"
   }
 }

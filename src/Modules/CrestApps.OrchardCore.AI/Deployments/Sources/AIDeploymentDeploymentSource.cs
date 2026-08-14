@@ -1,23 +1,28 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploymentDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly INamedSourceCatalog<AIDeployment> _deploymentCatalog;
 
-    public AIDeploymentDeploymentSource(INamedCatalog<AIProfile> profilesCatalog)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentDeploymentSource"/> class.
+    /// </summary>
+    /// <param name="deploymentCatalog">The deployment catalog.</param>
+    public AIDeploymentDeploymentSource(INamedSourceCatalog<AIDeployment> deploymentCatalog)
     {
-        _profilesCatalog = profilesCatalog;
+        _deploymentCatalog = deploymentCatalog;
     }
 
     protected override async Task ProcessAsync(AIDeploymentDeploymentStep step, DeploymentPlanResult result)
     {
-        var deployments = await _profilesCatalog.GetAllAsync();
+        var deployments = await _deploymentCatalog.GetAllAsync();
 
         var deploymentData = new JsonArray();
 
@@ -36,13 +41,15 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
             {
                 { "ItemId", deployment.ItemId },
                 { "Name", deployment.Name },
+                { "ModelName", deployment.ModelName },
+                { "ClientName", deployment.Source },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
+                { "Purpose", deployment.Purpose.ToString() },
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },
-                { "OwnerId" , deployment.OwnerId },
-                { "Properties", deployment.Properties?.DeepClone() },
+                { "Properties", JsonSerializer.SerializeToNode(deployment.Properties) },
             };
 
             deploymentData.Add(deploymentInfo);

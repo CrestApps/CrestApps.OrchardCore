@@ -1,79 +1,83 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Agent.Recipes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the remove content type definitions tool.
+/// </summary>
 public sealed class RemoveContentTypeDefinitionsTool : AIFunction
 {
     public const string TheName = "removeContentTypeDefinition";
 
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly RecipeExecutionService _recipeExecutionService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public RemoveContentTypeDefinitionsTool(
-        IContentDefinitionManager contentDefinitionManager,
-        RecipeExecutionService recipeExecutionService,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _contentDefinitionManager = contentDefinitionManager;
-        _recipeExecutionService = recipeExecutionService;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "The name of the content type for which to remove the definitions."
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the content type for which to remove the definitions."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Removes the content type definition for a given content type.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
+        var logger = arguments.Services.GetRequiredService<ILogger<RemoveContentTypeDefinitionsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to edit content definitions.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
+
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
-        var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(name);
+        var typeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(name);
 
         if (typeDefinition is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find a type definition matching the name '{ContentType}'.", TheName, name);
+
             return
                 $"""
                 Unable to find a type definition that match the name: {name}.
                 Here are the available content types that can be removed:
-                {JsonSerializer.Serialize((await _contentDefinitionManager.ListTypeDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+                {JsonSerializer.Serialize((await contentDefinitionManager.ListTypeDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+
                 """;
         }
 
@@ -91,10 +95,17 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
             }
             """);
 
-        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
+        if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+            }
+
             return $"The content type {name} was removed successfully";
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed to remove content type definition '{ContentType}'.", TheName, name);
 
         return "Unable to remove the content type definition.";
     }

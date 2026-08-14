@@ -5,11 +5,11 @@
 
     <!-- TFM used when coding in Visual Studio and when creating templates -->
     <!-- All 'template.json' should provide a 'choice' for the default TFM -->
-    <DefaultTargetFramework Condition="'$(DefaultTargetFramework)' == ''">net9.0</DefaultTargetFramework>
+    <DefaultTargetFramework Condition="'$(DefaultTargetFramework)' == ''">net10.0</DefaultTargetFramework>
 
     <!-- TFMs used to build the abstractions and modules, by convention the default TFM is at the first position -->
     <!-- In a cross-targeting build, some assets are only copied on the first TFM, by convention the default TFM -->
-    <CommonTargetFrameworks Condition="'$(CommonTargetFrameworks)' == ''">net9.0</CommonTargetFrameworks>
+    <CommonTargetFrameworks Condition="'$(CommonTargetFrameworks)' == ''">net10.0</CommonTargetFrameworks>
   </PropertyGroup>
 
   <!-- Detect if the solution is opened in VS to limit the TFMs that are analyzed by Roslyn for performance reasons -->
@@ -17,17 +17,47 @@
     <CommonTargetFrameworks>$(DefaultTargetFramework)</CommonTargetFrameworks>
   </PropertyGroup>
 
+  <!--
+    The GitHub Copilot SDK downloads a platform-specific Copilot CLI tarball from registry.npmjs.org during
+    BeforeBuild. That makes the whole solution unbuildable without public npm egress, which breaks air-gapped
+    and restricted-network builds and pulls an unpinned artifact into the build. The download is opt-in here.
+
+    To build the Copilot chat orchestrator with its CLI, set one of:
+      -p:CopilotSkipCliDownload=false            downloads the CLI from the configured npm registry
+      -p:CopilotCliBinaryPath=<path-to-binary>   uses a vendored binary and skips the download entirely
+  -->
+  <PropertyGroup>
+    <CopilotSkipCliDownload Condition="'$(CopilotSkipCliDownload)' == '' And '$(CopilotCliBinaryPath)' == ''">true</CopilotSkipCliDownload>
+  </PropertyGroup>
+
+  <!--
+    Dependency vulnerability auditing. This has to be a build failure rather than a warning: CI previously
+    passed -p:NuGetAudit=false on every workflow, so advisories against transitive packages went unseen.
+    Auditing every package at the lowest severity is deliberate - a transitive moderate advisory is exactly
+    what the suppressed builds were hiding. When a new advisory appears, pin the patched version in
+    Directory.Packages.props rather than lowering these settings.
+  -->
+  <PropertyGroup>
+    <NuGetAudit Condition="'$(NuGetAudit)' == ''">true</NuGetAudit>
+    <NuGetAuditMode Condition="'$(NuGetAuditMode)' == ''">all</NuGetAuditMode>
+    <NuGetAuditLevel Condition="'$(NuGetAuditLevel)' == ''">low</NuGetAuditLevel>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+
   <!-- Default TFMs to use when building and packaging -->
   <PropertyGroup>
-    <TargetFrameworks>$(CommonTargetFrameworks)</TargetFrameworks>
+    <TargetFramework Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'False'">$(CommonTargetFrameworks)</TargetFramework>
+    <TargetFrameworks Condition="$([System.String]::Copy('$(CommonTargetFrameworks)').Contains(';')) == 'True'">$(CommonTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>
     <PackageIcon>CrestAppsLogo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/CrestApps/CrestApps.OrchardCore</RepositoryUrl>
     <CompanyUrl>https://crestapps.com</CompanyUrl>
+    <PackageProjectUrl>https://orchardcore.crestapps.com/</PackageProjectUrl>
     <CrestAppsDescription>CrestApps enhances the capabilities of Orchard Core, a modular and multi-tenant application framework built on ASP.NET Core. By leveraging Orchard Core's powerful foundation for creating dynamic, data-driven websites and applications, CrestApps introduces additional features and tools that empower developers to build more flexible, scalable, and feature-rich solutions.</CrestAppsDescription>
     <PackageTags>CrestApps OrchardCore</PackageTags>
   </PropertyGroup>
@@ -37,10 +67,14 @@
       <Pack>True</Pack>
       <PackagePath>CrestAppsLogo.png</PackagePath>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)/src/README.md">
+      <Pack>True</Pack>
+      <PackagePath>README.md</PackagePath>
+    </None>
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>2.0.0</VersionPrefix>
+    <VersionPrefix>3.0.0</VersionPrefix>
     <VersionSuffix>preview</VersionSuffix>
     <VersionSuffix Condition="'$(VersionSuffix)' != '' AND '$(BuildNumber)' != ''">$(VersionSuffix)-$(BuildNumber)</VersionSuffix>
     <InformationalVersion></InformationalVersion>
@@ -49,8 +83,9 @@
   <PropertyGroup>
     <!-- https://aka.ms/vs-build-acceleration -->
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <RestoreUseStaticGraphEvaluation Condition="'$(RestoreUseStaticGraphEvaluation)' == ''">true</RestoreUseStaticGraphEvaluation>
   </PropertyGroup>
-
+  
   <PropertyGroup Label="Analysis rules">
 
     <AnalysisLevel>latest-Recommended</AnalysisLevel>

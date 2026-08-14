@@ -1,0 +1,55 @@
+﻿using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
+
+/// <summary>
+/// Provides omnichannel activity index functionality.
+/// </summary>
+public sealed class OmnichannelActivityIndexProvider : IndexProvider<OmnichannelActivity>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityIndexProvider"/> class.
+    /// </summary>
+    public OmnichannelActivityIndexProvider()
+    {
+        CollectionName = OmnichannelConstants.CollectionName;
+    }
+
+    public override void Describe(DescribeContext<OmnichannelActivity> context)
+    {
+        context
+            .For<OmnichannelActivityIndex>()
+            .Map(activity => new OmnichannelActivityIndex()
+            {
+                ItemId = activity.ItemId,
+                Kind = activity.Kind,
+                Source = activity.Source,
+                Channel = activity.Channel,
+                ChannelEndpointId = activity.ChannelEndpointId,
+                SubjectContentType = activity.SubjectContentType,
+                PreferredDestination = activity.PreferredDestination,
+                ContactContentType = activity.ContactContentType,
+                ContactContentItemId = activity.ContactContentItemId,
+                CampaignId = activity.CampaignId,
+                ScheduledUtc = activity.ScheduledUtc,
+                Attempts = activity.Attempts,
+                AssignedToId = activity.AssignedToId,
+                AssignedToUtc = activity.AssignedToUtc,
+                AssignmentStatus = activity.AssignmentStatus,
+                ReservationId = activity.ReservationId,
+                ReservedById = activity.ReservedById,
+                ReservedUtc = activity.ReservedUtc,
+                ReservationExpiresUtc = activity.ReservationExpiresUtc,
+                CreatedById = activity.CreatedById,
+                CompletedUtc = activity.CompletedUtc,
+                InteractionType = activity.InteractionType,
+                DispositionId = activity.DispositionId,
+                CreatedUtc = activity.CreatedUtc,
+                UrgencyLevel = activity.UrgencyLevel,
+                Status = activity.Status,
+            });
+    }
+}

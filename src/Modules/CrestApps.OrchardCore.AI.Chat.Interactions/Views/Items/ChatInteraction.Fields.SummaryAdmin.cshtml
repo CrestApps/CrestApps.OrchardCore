@@ -1,0 +1,6 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ChatInteraction>
+
+<h5>@(string.IsNullOrEmpty(Model.Value.Title) ? T["Untitled"] : Model.Value.Title)</h5>

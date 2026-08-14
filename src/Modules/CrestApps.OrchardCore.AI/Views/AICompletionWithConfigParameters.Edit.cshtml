@@ -1,0 +1,51 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AICompletionWithConfigParametersViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="SystemMessage" class="ocat-label">@T["System instructions"]</label>
+    <div class="ocat-end">
+        <div class="hint mb-1">@T["The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
+        <textarea asp-for="SystemMessage" class="form-control" rows="5" placeholder="@T["Optional system instructions to guide AI behavior..."]"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxTokens" class="ocat-label">@T["Max response tokens"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" placeholder="@T["Default"]">
+        <span class="hint">@T["The maximum number of tokens the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Temperature" class="ocat-label">@T["Temperature"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <span class="hint">@T["Controls the randomness of AI responses. Lower values make responses more focused and deterministic. Higher values make responses more creative and varied. Try adjusting temperature or Top P but not both."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TopP" class="ocat-label">@T["Top P"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1" placeholder="@T["Default"]">
+        <span class="hint">@T["Also called 'nucleus sampling'. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Try adjusting temperature or Top P but not both."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="FrequencyPenalty" class="ocat-label">@T["Frequency penalty"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <span class="hint">@T["Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PresencePenalty" class="ocat-label">@T["Presence penalty"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <span class="hint">@T["Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects."]</span>
+    </div>
+</div>

@@ -7,8 +7,11 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'mkdocs.yml'
-      - 'src/docs/**/*'
+      - 'src/CrestApps.Docs/**'
     branches: [ main, release/** ]
+
+permissions:
+  contents: read
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -23,19 +26,21 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v7
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
+    - uses: actions/setup-node@v7
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v4
+    - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
-          8.0.x
-          9.0.x
+          10.0.x
     - name: Build
       # See pr_ci.yml for the reason why we disable NuGet audit warnings.
       run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
+        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 

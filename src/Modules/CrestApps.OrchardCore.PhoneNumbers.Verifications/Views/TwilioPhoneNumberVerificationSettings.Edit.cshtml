@@ -1,0 +1,128 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@model TwilioPhoneNumberVerificationSettingsViewModel
+
+<h4 class="card-title">@T["Twilio"]</h4>
+<p class="hint">@T["Configure the connection to the Twilio Lookup service."]</p>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check form-switch">
+            <input type="checkbox" class="form-check-input" asp-for="IsEnabled" data-bs-toggle="collapse" data-bs-target="#Twilio_Provider_Settings" aria-controls="Twilio_Provider_Settings" aria-expanded="@(Model.IsEnabled ? "true" : "false")" />
+            <label class="form-check-label" asp-for="IsEnabled">@T["Enable this provider"]</label>
+        </div>
+        <span class="hint">@T["When enabled, this provider becomes available for selection as the default verification provider."]</span>
+    </div>
+</div>
+
+<div id="Twilio_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
+    <div class="ocat-wrapper">
+        <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
+        <div class="ocat-end">
+            <select asp-for="AuthenticationType" class="form-select auth-type-select">
+                <option value="@TwilioPhoneNumberVerificationAuthenticationType.ApiKey">@T["API key SID and secret"]</option>
+                <option value="@TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials">@T["Account SID and Auth Token"]</option>
+            </select>
+            <span class="hint">@T["Twilio recommends API keys for production. Account SID and Auth Token authentication is available for local testing."]</span>
+        </div>
+    </div>
+
+    <div class="authentication-type-dependent authentication-type-dependent-@TwilioPhoneNumberVerificationAuthenticationType.ApiKey@(Model.AuthenticationType == TwilioPhoneNumberVerificationAuthenticationType.ApiKey ? string.Empty : " d-none")">
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeySid" class="ocat-label">@T["API key SID"]</label>
+            <div class="ocat-end">
+                <input type="text" class="form-control" asp-for="ApiKeySid" autocomplete="off" />
+                <span asp-validation-for="ApiKeySid" class="text-danger"></span>
+                <span class="hint">@T["The Twilio API key SID used as the Basic authentication username."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="ApiKeySecret" class="ocat-label">@T["API key secret"]</label>
+            <div class="ocat-end">
+                <input type="password" class="form-control" asp-for="ApiKeySecret" autocomplete="off" placeholder='@T["Enter a new API key secret to replace the saved value"]' />
+                <span asp-validation-for="ApiKeySecret" class="text-danger"></span>
+                @if (Model.HasApiKeySecret)
+                {
+                    <span class="hint text-success">@T["An API key secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["The Twilio API key secret used as the Basic authentication password."]</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="authentication-type-dependent authentication-type-dependent-@TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials@(Model.AuthenticationType == TwilioPhoneNumberVerificationAuthenticationType.AccountCredentials ? string.Empty : " d-none")">
+        <div class="ocat-wrapper">
+            <label asp-for="AccountSid" class="ocat-label">@T["Account SID"]</label>
+            <div class="ocat-end">
+                <input type="text" class="form-control" asp-for="AccountSid" autocomplete="off" />
+                <span asp-validation-for="AccountSid" class="text-danger"></span>
+                <span class="hint">@T["The Twilio Account SID used as the Basic authentication username when account credential authentication is selected."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="AuthToken" class="ocat-label">@T["Auth Token"]</label>
+            <div class="ocat-end">
+                <input type="password" class="form-control" asp-for="AuthToken" autocomplete="off" placeholder='@T["Enter a new Auth Token to replace the saved value"]' />
+                <span asp-validation-for="AuthToken" class="text-danger"></span>
+                @if (Model.HasAuthToken)
+                {
+                    <span class="hint text-success">@T["An Auth Token has been securely stored. Enter a new value to replace it, or leave empty to keep the existing token."]</span>
+                }
+                else
+                {
+                    <span class="hint">@T["The Twilio Auth Token used as the Basic authentication password when account credential authentication is selected."]</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="CountryCode" class="ocat-label">@T["Country code"]</label>
+        <div class="ocat-end">
+            <input type="text" maxlength="2" class="form-control" asp-for="CountryCode" autocomplete="off" placeholder="US" />
+            <span class="hint">@T["Optional ISO 3166-1 alpha-2 country code sent to Twilio when phone numbers are submitted in national format."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Fields" class="ocat-label">@T["Data packages"]</label>
+        <div class="ocat-end">
+            <input type="text" class="form-control" asp-for="Fields" autocomplete="off" placeholder="line_type_intelligence,line_status" />
+            <span class="hint">@T["Optional comma-separated Twilio Lookup data packages for the Fields parameter. Basic validation is included by default; additional data packages may incur Twilio charges."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var container = document.getElementById('Twilio_Provider_Settings');
+
+        if (!container) {
+            return;
+        }
+
+        var authSelect = container.querySelector('.auth-type-select');
+
+        if (!authSelect) {
+            return;
+        }
+
+        function toggleSections() {
+            var sections = container.querySelectorAll('.authentication-type-dependent');
+            for (var i = 0; i < sections.length; i++) {
+                sections[i].classList.add('d-none');
+
+                if (sections[i].classList.contains('authentication-type-dependent-' + authSelect.value)) {
+                    sections[i].classList.remove('d-none');
+                }
+            }
+        }
+
+        authSelect.addEventListener('change', toggleSections);
+        toggleSections();
+    });
+</script>

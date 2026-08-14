@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.DncRegistry.Models
+@using CrestApps.OrchardCore.DncRegistry.ViewModels
+
+@model LocalDncListViewModel
+
+@{
+    var entry = Model.LocalDncList;
+    var errorCount = entry.ErrorMessages?.Count ?? 0;
+    var percent = entry.TotalRecords > 0
+        ? (int)((double)entry.TotalProcessed / entry.TotalRecords * 100)
+        : 0;
+}
+
+@if ((entry.Status == LocalDncListStatus.Pending || entry.Status == LocalDncListStatus.Processing || entry.Status == LocalDncListStatus.Paused)
+    && entry.TotalRecords > 0)
+{
+    <div class="progress" role="progressbar" title="@T["Progress"]" aria-label="@T["Progress"]" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar progress-bar-striped @(entry.Status == LocalDncListStatus.Processing ? "progress-bar-animated" : "") @(errorCount > 0 ? "bg-warning" : "")" style="width: @(percent)%">@(percent)%</div>
+    </div>
+    <small class="text-muted">
+        @T["{0} of {1} records processed", entry.TotalProcessed, entry.TotalRecords]
+        @if (errorCount > 0)
+        {
+            <span class="text-danger ms-1">(@T["{0} errors", errorCount])</span>
+        }
+    </small>
+}

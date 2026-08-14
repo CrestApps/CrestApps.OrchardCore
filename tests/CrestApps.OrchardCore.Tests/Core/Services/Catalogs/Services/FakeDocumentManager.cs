@@ -1,3 +1,5 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
@@ -34,12 +36,14 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
     public Task UpdateAsync(DictionaryDocument<T> document)
     {
         UpdateCalled = true;
+
         return Task.CompletedTask;
     }
 
     public Task UpdateAsync(DictionaryDocument<T> document, Func<DictionaryDocument<T>, Task> afterUpdate)
     {
         UpdateCalled = true;
+
         return afterUpdate != null ? afterUpdate(document) : Task.CompletedTask;
     }
 }

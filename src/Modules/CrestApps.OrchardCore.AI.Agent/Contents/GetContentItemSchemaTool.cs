@@ -1,67 +1,165 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that returns content-item JSON schemas for one or more Orchard Core content types.
+/// </summary>
 public sealed class GetContentItemSchemaTool : AIFunction
 {
-    public const string TheName = "getSampleContentItemForContentType";
+    /// <summary>
+    /// The name constant.
+    /// </summary>
+    public const string TheName = "getContentItemSchema";
 
-    private readonly IContentManager _contentManager;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly DocumentJsonSerializerOptions _options;
-
-    public GetContentItemSchemaTool(
-        IContentManager contentManager,
-        IContentDefinitionManager contentDefinitionManager,
-        IOptions<DocumentJsonSerializerOptions> options)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _contentManager = contentManager;
-        _contentDefinitionManager = contentDefinitionManager;
-        _options = options.Value;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentType": {
-                  "type": "string",
-                  "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
-                }
-              },
-              "required": ["contentType"],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "contentTypes": {
+          "description": "One or more Orchard Core content type names to return JSON schemas for. Provide either a single string value or an array of strings."
+        }
+      },
+      "required": [
+        "contentTypes"
+      ],
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
-    public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
+    public override string Description => $"Returns the current content-item JSON schema for one or more Orchard Core content types. Call this immediately before '{CreateOrUpdateContentTool.TheName}' whenever that tool is available so the payload follows the exact schema contract for the parent content type and any nested content types.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!arguments.TryGetFirstString("contentType", out var contentType))
+        var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemSchemaTool>>();
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var contentItemSchemaService = arguments.Services.GetRequiredService<IContentItemSchemaService>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a contentType argument in the function arguments.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
-        if (await _contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
+        var contentTypes = GetRequestedContentTypes(arguments);
+
+        if (contentTypes.Length == 0)
         {
-            return "The given content type does not exists";
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentTypes argument in the function arguments.", TheName);
+
+            return "Unable to find a contentTypes argument in the function arguments.";
         }
 
-        var contentItem = await _contentManager.NewAsync(contentType);
+        var schemas = new JsonObject();
+        var missingContentTypes = new JsonArray();
 
-        return JsonSerializer.Serialize(contentItem, _options.SerializerOptions);
+        foreach (var contentType in contentTypes)
+        {
+            if (await contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
+            {
+                missingContentTypes.Add(contentType);
+                continue;
+            }
+
+            var schemaBuilder = await contentItemSchemaService.GetSchemaAsync(contentType, cancellationToken);
+
+            if (schemaBuilder is null)
+            {
+                missingContentTypes.Add(contentType);
+                continue;
+            }
+
+            var schemaNode = JsonNode.Parse(JsonSerializer.Serialize(schemaBuilder.Build()));
+
+            schemas[contentType] = schemaNode;
+        }
+
+        if (schemas.Count == 0)
+        {
+            var missingMessage = string.Join(", ", missingContentTypes.Select(node => node?.GetValue<string>()));
+            logger.LogWarning("AI tool '{ToolName}': No schema was found for the requested content types: {ContentTypes}.", TheName, missingMessage);
+
+            return $"No schema was found for the requested content types: {missingMessage}.";
+        }
+
+        var result = new JsonObject
+        {
+            ["schemas"] = schemas,
+        };
+
+        if (missingContentTypes.Count > 0)
+        {
+            result["missingContentTypes"] = missingContentTypes;
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result.ToJsonString();
+    }
+
+    private static string[] GetRequestedContentTypes(AIFunctionArguments arguments)
+    {
+        if (arguments.TryGetFirstString("contentTypes", out var singleContentType) &&
+            !string.IsNullOrWhiteSpace(singleContentType))
+        {
+            return [singleContentType];
+        }
+
+        if (arguments.TryGetFirst("contentTypes", out var rawValue) &&
+            rawValue is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind == JsonValueKind.String)
+            {
+                var contentType = jsonElement.GetString();
+
+                return string.IsNullOrWhiteSpace(contentType)
+                    ? []
+                    : [contentType];
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                return jsonElement
+                    .EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString())
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+            }
+        }
+
+        if (arguments.TryGetFirstString("contentType", out var fallbackContentType) &&
+            !string.IsNullOrWhiteSpace(fallbackContentType))
+        {
+            return [fallbackContentType];
+        }
+
+        return [];
     }
 }

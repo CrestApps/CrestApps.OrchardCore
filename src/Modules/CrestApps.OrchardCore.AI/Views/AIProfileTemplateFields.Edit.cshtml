@@ -1,0 +1,81 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileTemplateFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["The display title for this template."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+            <span class="hint">@T["The technical name of the template. It cannot be changed once created."]</span>
+        }
+        else
+        {
+            <input asp-for="Name" class="form-control" disabled="disabled" />
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["A description of what this template provides."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Category" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <input asp-for="Category" class="form-control" />
+        <span class="hint">@T["A category for grouping templates."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsListable" class="form-check-input" type="checkbox" />
+            <label asp-for="IsListable" class="form-check-label">@T["Listable"]</label>
+            <span class="hint">@T["Whether this template appears in the template selection list."]</span>
+        </div>
+    </div>
+</div>
+
+@if (Model.IsNew)
+{
+    <script asp-name="jQuery" at="Foot"></script>
+    <script at="Foot" depends-on="jQuery">
+        $(function () {
+            var $title = $('#@Html.IdFor(m => m.DisplayText)');
+            var $name = $('#@Html.IdFor(m => m.Name)');
+
+            $title.on('input', function () {
+                if (!$name.data('manually-edited')) {
+                    var val = $title.val()
+                        .toLowerCase()
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .replace(/[\s]+/g, '-')
+                        .replace(/-{2,}/g, '-')
+                        .replace(/^-|-$/g, '');
+                    $name.val(val);
+                }
+            });
+
+            $name.on('input', function () {
+                $name.data('manually-edited', true);
+            });
+        });
+    </script>
+}

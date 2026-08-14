@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core.Indexes;
+﻿using CrestApps.OrchardCore.Users.Core.Indexes;
 using CrestApps.OrchardCore.Users.Core.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,10 +13,17 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
+/// <summary>
+/// Provides display name users admin list filter functionality.
+/// </summary>
 public sealed class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFilterProvider
 {
     public const string DefaultTermName = "display-name";
 
+    /// <summary>
+    /// Builds the .
+    /// </summary>
+    /// <param name="builder">The builder.</param>
     public void Build(QueryEngineBuilder<User> builder)
     {
         builder
@@ -28,7 +35,7 @@ public sealed class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFil
                         var userManager = context.ServiceProvider.GetRequiredService<UserManager<IUser>>();
                         var siteService = context.ServiceProvider.GetRequiredService<ISiteService>();
                         var normalizer = context.ServiceProvider.GetRequiredService<ILookupNormalizer>();
-                        var settings = (await siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+                        var settings = await siteService.GetSettingsAsync<DisplayNameSettings>();
                         var normalizedUserName = userManager.NormalizeName(val);
 
                         var predicates = new List<Func<IQuery<User>, IQuery<User>>>()
@@ -67,7 +74,7 @@ public sealed class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFil
                         var normalizedUserName = userManager.NormalizeName(val);
                         var siteService = context.ServiceProvider.GetRequiredService<ISiteService>();
                         var normalizer = context.ServiceProvider.GetRequiredService<ILookupNormalizer>();
-                        var settings = (await siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+                        var settings = (await siteService.GetSiteSettingsAsync()).GetOrCreate<DisplayNameSettings>();
 
                         var predicates = new List<Func<IQuery<User>, IQuery<User>>>()
                         {

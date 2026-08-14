@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.TimeZones.ViewModels
+
+@model TimeZoneMapViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The time zone map name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select">
+            <option value="">@T["Select a time zone"]</option>
+        </select>
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["Select the time zone identifier that this friendly name should represent."]</span>
+    </div>
+</div>

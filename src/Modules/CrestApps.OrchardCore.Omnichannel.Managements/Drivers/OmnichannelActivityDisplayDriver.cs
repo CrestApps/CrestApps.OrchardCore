@@ -1,0 +1,436 @@
+using System.Security.Claims;
+using CrestApps.Core;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
+using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Users;
+using OrchardCore.Users.Indexes;
+using OrchardCore.Users.Models;
+using YesSql;
+using IYesSqlSession = YesSql.ISession;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
+
+internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<OmnichannelActivity>
+{
+    private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
+    private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
+    private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly ISourceCatalog<SubjectAction> _actionCatalog;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
+    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IContentManager _contentManager;
+    private readonly IYesSqlSession _session;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="dispositionsCatalog">The dispositions catalog.</param>
+    /// <param name="campaignsCatalog">The campaigns catalog.</param>
+    /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
+    /// <param name="actionCatalog">The subject action catalog.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="displayNameProvider">The display name provider.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="localClock">The local clock.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OmnichannelActivityDisplayDriver(
+        ICatalog<OmnichannelDisposition> dispositionsCatalog,
+        ICatalog<OmnichannelCampaign> campaignsCatalog,
+        ISubjectFlowSettingsService subjectFlowSettingsService,
+        ISourceCatalog<SubjectAction> actionCatalog,
+        IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IDisplayNameProvider displayNameProvider,
+        IClock clock,
+        ILocalClock localClock,
+        UserManager<IUser> userManager,
+        IContentManager contentManager,
+        IYesSqlSession session,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<OmnichannelActivityDisplayDriver> stringLocalizer)
+    {
+        _dispositionsCatalog = dispositionsCatalog;
+        _campaignsCatalog = campaignsCatalog;
+        _subjectFlowSettingsService = subjectFlowSettingsService;
+        _actionCatalog = actionCatalog;
+        _contentDefinitionManager = contentDefinitionManager;
+        _contentTypeProvider = contentTypeProvider;
+        _displayNameProvider = displayNameProvider;
+        _clock = clock;
+        _localClock = localClock;
+        _userManager = userManager;
+        _contentManager = contentManager;
+        _session = session;
+        _httpContextAccessor = httpContextAccessor;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(OmnichannelActivity activity, BuildEditorContext context)
+    {
+        var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
+        var isCreatingOutbound = context.IsNew && !isCompletingActivity;
+
+        var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
+        {
+            model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
+                ? (await _localClock.GetLocalNowAsync()).DateTime
+                : activity.ScheduledUtc;
+            model.SubjectContentType = activity.SubjectContentType;
+            model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            model.Instructions = activity.Instructions;
+            model.UrgencyLevel = activity.UrgencyLevel;
+
+            var subjectContentTypes = new List<SelectListItem>();
+            var contactContentTypes = new List<SelectListItem>();
+
+            var configuredSubjectTypes = isCreatingOutbound
+                ? await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound)
+                : await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+
+            foreach (var contentType in configuredSubjectTypes)
+            {
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+            }
+
+            // When creating an outbound activity and there is exactly one outbound subject, auto-select it.
+            if (isCreatingOutbound && string.IsNullOrEmpty(model.SubjectContentType) && subjectContentTypes.Count == 1)
+            {
+                model.SubjectContentType = subjectContentTypes[0].Value;
+            }
+
+            var contactContentTypeNames = await _contentTypeProvider.GetContactContentTypesAsync();
+
+            foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            {
+                if (contactContentTypeNames.Contains(contentType.Name))
+                {
+                    contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                }
+            }
+
+            var users = await _session.Query<User, UserIndex>(x => x.IsEnabled).ListAsync();
+
+            var usersListItems = new List<SelectListItem>();
+
+            foreach (var user in users)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                usersListItems.Add(new SelectListItem(displayName, user.UserId));
+            }
+
+            model.UrgencyLevels =
+            [
+                new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
+                new(S["Very low"], nameof(ActivityUrgencyLevel.VeryLow)),
+                new(S["Low"], nameof(ActivityUrgencyLevel.Low)),
+                new(S["Medium"], nameof(ActivityUrgencyLevel.Medium)),
+                new(S["High"], nameof(ActivityUrgencyLevel.High)),
+                new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
+            ];
+            model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+            model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
+            model.Users = usersListItems.OrderBy(x => x.Text);
+        }).Location("Content:5")
+        .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
+
+        var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
+        {
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
+            OmnichannelCampaign campaign = null;
+
+            if (!string.IsNullOrWhiteSpace(activity.CampaignId))
+            {
+                campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
+            }
+
+            if (campaign is null)
+            {
+                if (flowSettings is not null && !string.IsNullOrWhiteSpace(flowSettings.CampaignId))
+                {
+                    campaign = await _campaignsCatalog.FindByIdAsync(flowSettings.CampaignId);
+                }
+            }
+
+            // Derive distinct dispositions from subject actions.
+            var allActions = await _actionCatalog.GetAllAsync();
+            var subjectDispositionIds = allActions
+                .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.DispositionId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (!string.IsNullOrEmpty(activity.DispositionId) && !subjectDispositionIds.Contains(activity.DispositionId))
+            {
+                subjectDispositionIds.Add(activity.DispositionId);
+            }
+
+            model.CampaignId = activity.CampaignId;
+            model.Channel = activity.Channel;
+            model.CampaignTitle = campaign?.DisplayText;
+            model.Channel = activity.Channel;
+            model.InteractionType = activity.InteractionType.ToString();
+            model.Instructions = activity.Instructions;
+            model.SubjectContentType = activity.SubjectContentType;
+            model.Attempts = activity.Attempts;
+
+            if (string.IsNullOrWhiteSpace(activity.Subject?.DisplayText))
+            {
+                if (string.IsNullOrWhiteSpace(activity.SubjectContentType))
+                {
+                    model.Subject = S["Activity"];
+                }
+                else
+                {
+                    var subjectContentType = await _contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType);
+                    model.Subject = subjectContentType?.DisplayName ?? activity.SubjectContentType;
+                }
+            }
+            else
+            {
+                model.Subject = activity.Subject.DisplayText;
+            }
+
+            model.Dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
+            model.Notes = activity.Notes;
+            model.DispositionId = activity.DispositionId;
+            model.RequireDisposition = flowSettings?.RequireDisposition ?? false;
+            model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
+            model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
+            model.UrgencyLevel = activity.UrgencyLevel;
+            model.ShowWorkflowPreview = isCompletingActivity;
+            model.RequiresContactResolution =
+                activity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous ||
+                (isCompletingActivity &&
+                    activity.ContactResolutionStatus == ContactResolutionStatus.Resolved &&
+                    activity.ContactResolutionCandidates.Count > 1);
+            model.SelectedContactContentItemId = activity.ContactContentItemId;
+
+            if (model.RequiresContactResolution)
+            {
+                var contactCandidates = new List<SelectListItem>();
+
+                foreach (var contactItemId in activity.ContactResolutionCandidates)
+                {
+                    var contactCandidate = await _contentManager.GetAsync(contactItemId, VersionOptions.Latest);
+
+                    if (contactCandidate is not null)
+                    {
+                        contactCandidates.Add(new SelectListItem(
+                            contactCandidate.DisplayText ?? contactCandidate.ContentItemId,
+                            contactCandidate.ContentItemId));
+                    }
+                }
+
+                model.ContactCandidates = contactCandidates.OrderBy(candidate => candidate.Text);
+            }
+
+            if (activity.Status == ActivityStatus.Completed)
+            {
+                model.CompletedLocal = (await _localClock.ConvertToLocalAsync(activity.CompletedUtc.Value)).DateTime;
+                model.CompletedByName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
+            }
+        }).Location("Content:5")
+        .OnGroup(OmnichannelConstants.CompleteActivityGroup);
+
+        if (activity.Status == ActivityStatus.Completed)
+        {
+            completing.OnGroup("");
+        }
+
+        return Combine(fields, completing);
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivity activity, UpdateEditorContext context)
+    {
+        var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
+
+        if (isCompletingActivity || activity.Status == ActivityStatus.Completed)
+        {
+            // The following fields are for processing a task.
+            var processModel = new OmnichannelActivityViewModel();
+
+            await context.Updater.TryUpdateModelAsync(processModel, Prefix);
+
+            if (isCompletingActivity &&
+                activity.ContactResolutionStatus == ContactResolutionStatus.Ambiguous)
+            {
+                if (string.IsNullOrEmpty(processModel.SelectedContactContentItemId))
+                {
+                    context.Updater.ModelState.AddModelError(
+                        Prefix,
+                        nameof(processModel.SelectedContactContentItemId),
+                        S["Select the contact associated with this activity."]);
+                }
+                else
+                {
+                    var contact = await _contentManager.GetAsync(
+                        processModel.SelectedContactContentItemId,
+                        VersionOptions.Latest);
+
+                    if (contact is null ||
+                        !activity.TryResolveContact(
+                            contact,
+                            _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier),
+                            _httpContextAccessor.HttpContext?.User?.Identity?.Name,
+                            _clock.UtcNow))
+                    {
+                        context.Updater.ModelState.AddModelError(
+                            Prefix,
+                            nameof(processModel.SelectedContactContentItemId),
+                            S["The selected contact is not a valid candidate for this activity."]);
+                    }
+                }
+            }
+
+            var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType);
+
+            if (string.IsNullOrEmpty(processModel.DispositionId))
+            {
+                if (flowSettings?.RequireDisposition == true)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The Disposition field is required."]);
+                }
+            }
+            else
+            {
+                // Derive valid dispositions from subject actions.
+                var allActions = await _actionCatalog.GetAllAsync();
+                var subjectDispositionIds = allActions
+                    .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
+                    .Select(a => a.DispositionId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (!string.IsNullOrEmpty(activity.DispositionId))
+                {
+                    subjectDispositionIds.Add(activity.DispositionId);
+                }
+
+                var dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
+
+                var disposition = dispositions.FirstOrDefault(d => d.ItemId == processModel.DispositionId);
+
+                if (disposition == null)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The selected Disposition is invalid."]);
+                }
+            }
+
+            activity.DispositionId = processModel.DispositionId;
+            activity.Notes = processModel.Notes;
+
+            activity.Put(new DispositionMetadata
+            {
+                ScheduledDate = processModel.ScheduleDate,
+            });
+
+            if (isCompletingActivity)
+            {
+                return Edit(activity, context);
+            }
+        }
+
+        if (activity.Status == ActivityStatus.NotStated && !isCompletingActivity)
+        {
+            var model = new EditOmnichannelActivity();
+
+            await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+            if (string.IsNullOrEmpty(model.SubjectContentType))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
+            }
+
+            SubjectFlowSettings flowSettings = null;
+
+            if (!string.IsNullOrEmpty(model.SubjectContentType))
+            {
+                flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+
+                if (flowSettings is null)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["The selected subject must be configured under Subject Flows before activities can be created."]);
+                }
+            }
+
+            if (flowSettings is not null)
+            {
+                var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                if (!string.IsNullOrEmpty(flowSettings.Channel))
+                {
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+                }
+            }
+
+            if (string.IsNullOrEmpty(model.UserId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Contact is required."]);
+            }
+
+            if (!model.ScheduleAt.HasValue)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
+            }
+
+            if (flowSettings is not null)
+            {
+                activity.ChannelEndpointId = flowSettings.ChannelEndpointId;
+                activity.InteractionType = flowSettings.InteractionType;
+                activity.Channel = flowSettings.Channel;
+                activity.CampaignId = flowSettings.CampaignId;
+            }
+
+            activity.SubjectContentType = model.SubjectContentType;
+            activity.Instructions = model.Instructions?.Trim();
+            activity.UrgencyLevel = model.UrgencyLevel;
+
+            if (activity.AssignedToId != model.UserId ||
+                string.IsNullOrEmpty(activity.AssignedToId) ||
+                    !activity.AssignedToUtc.HasValue)
+            {
+                activity.AssignedToUtc = _clock.UtcNow;
+                activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
+                activity.AssignedToId = model.UserId;
+            }
+
+            if (model.ScheduleAt.HasValue)
+            {
+                activity.ScheduledUtc = await _localClock.ConvertToUtcAsync(model.ScheduleAt.Value);
+            }
+
+            return Edit(activity, context);
+        }
+
+        return Edit(activity, context);
+    }
+}

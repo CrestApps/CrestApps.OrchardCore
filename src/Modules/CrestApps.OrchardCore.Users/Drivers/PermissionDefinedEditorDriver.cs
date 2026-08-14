@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -13,6 +13,9 @@ using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
+/// <summary>
+/// Display driver for the permission defined editor shape.
+/// </summary>
 public sealed class PermissionDefinedEditorDriver : ContentPartDisplayDriver<CommonPart>
 {
     public static string PermissionDefinedEditor => "PermissionDefinedEditor";
@@ -23,6 +26,13 @@ public sealed class PermissionDefinedEditorDriver : ContentPartDisplayDriver<Com
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PermissionDefinedEditorDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="userManager">The user manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public PermissionDefinedEditorDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,

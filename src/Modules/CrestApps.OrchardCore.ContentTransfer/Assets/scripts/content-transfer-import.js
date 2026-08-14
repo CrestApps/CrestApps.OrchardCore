@@ -1,0 +1,256 @@
+// Handles the bulk import upload form, including client-side size validation and
+// chunked uploading of large files. Localized messages can be supplied through the
+// configuration passed to initialize() to override the built-in English defaults.
+var contentTransferImport = (function () {
+    'use strict';
+
+    var UPLOAD_ID_FIELD_NAME = '__chunkedFileUploadId';
+    var initializedAttribute = 'data-content-transfer-initialized';
+
+    var defaultMessages = {
+        selectFile: 'Please select a file to upload.',
+        fileTooLargeClient: 'The selected file is larger than the maximum allowed size of {0}.',
+        uploadGeneric: 'An error occurred while uploading the file.',
+        fileTooLargeServer: 'The file is too large to upload. Maximum allowed size is {0}.',
+        uploadInterrupted: 'The upload was interrupted. Please check your connection and try again.',
+        uploading: 'Uploading...'
+    };
+
+    function format(template, value) {
+        if (!template) {
+            return template;
+        }
+
+        return template.replace('{0}', value);
+    }
+
+    function ready(callback) {
+        if (document.readyState !== 'loading') {
+            callback();
+            return;
+        }
+
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+    }
+
+    function parseConfig(form) {
+        var rawConfig = form.getAttribute('data-config');
+
+        if (!rawConfig) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(rawConfig);
+        } catch (error) {
+            console.error('Failed to parse content transfer import config.', error);
+            return {};
+        }
+    }
+
+    function getPostUploadRedirectPath() {
+        if (!window.location || typeof window.location.pathname !== 'string') {
+            return null;
+        }
+
+        var pathSegments = window.location.pathname.split('/import/contents/');
+
+        if (pathSegments.length !== 2 || !pathSegments[0]) {
+            return null;
+        }
+
+        return pathSegments[0] + '/content-transfer-entries';
+    }
+
+    function initializeForm(form, config) {
+        config = config || {};
+
+        if (!form) {
+            return;
+        }
+
+        if (form.hasAttribute(initializedAttribute)) {
+            return;
+        }
+
+        form.setAttribute(initializedAttribute, 'true');
+
+        var progressContainer = form.querySelector('#upload-progress');
+        var progressBar = progressContainer.querySelector('.progress-bar');
+        var uploadStatus = form.querySelector('#upload-status');
+        var uploadError = form.querySelector('#upload-error');
+        var uploadActions = form.querySelector('#upload-actions');
+
+        var messages = Object.assign({}, defaultMessages, config.messages || {});
+        var maxChunkSize = config.maxChunkSize || 0;
+        var maxFileSize = config.maxFileSize || 0;
+        var maxFileSizeDisplay = config.maxFileSizeDisplay || '';
+        var redirectUrl = getPostUploadRedirectPath();
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var fileInput = form.querySelector('input[type="file"]');
+
+            if (!fileInput || !fileInput.files || !fileInput.files.length) {
+                uploadError.textContent = messages.selectFile;
+                uploadError.style.display = '';
+                return;
+            }
+            var file = fileInput.files[0];
+            var url = form.action;
+            var url = form.action;
+
+            uploadError.style.display = 'none';
+
+            if (maxFileSize > 0 && file.size > maxFileSize) {
+                uploadError.textContent = format(messages.fileTooLargeClient, maxFileSizeDisplay);
+                uploadError.style.display = '';
+                return;
+            }
+
+            uploadActions.style.display = 'none';
+            progressContainer.style.display = '';
+
+            if (maxChunkSize > 0 && file.size > maxChunkSize) {
+                uploadChunked(file, fileInput.name, url, maxChunkSize);
+            } else {
+                uploadWhole(url);
+            }
+        });
+
+        function uploadWhole(url) {
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', function (e) {
+                if (e.lengthComputable) {
+                    var percent = Math.round((e.loaded / e.total) * 100);
+                    setProgress(percent);
+                }
+            });
+
+            xhr.addEventListener('load', function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    var response = JSON.parse(xhr.responseText);
+
+                    if (response.success) {
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    }
+                } else {
+                    showError(xhr);
+                }
+            });
+
+            xhr.addEventListener('error', function () {
+                showError(xhr);
+            });
+
+            xhr.open('POST', url);
+            xhr.send(formData);
+        }
+
+        function uploadChunked(file, fileFieldName, url, chunkSize) {
+            var uploadId = crypto.randomUUID();
+            var fileSize = file.size;
+            var start = 0;
+
+            function uploadNextChunk() {
+                var end = Math.min(start + chunkSize, fileSize);
+                var chunk = file.slice(start, end);
+
+                var formData = new FormData(form);
+                formData.set(fileFieldName, new File([chunk], file.name, { type: file.type }));
+                formData.set(UPLOAD_ID_FIELD_NAME, uploadId);
+
+                var xhr = new XMLHttpRequest();
+
+                xhr.addEventListener('load', function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        start = end;
+                        var percent = Math.round((start / fileSize) * 100);
+                        setProgress(percent);
+
+                        if (start < fileSize) {
+                            uploadStatus.textContent = messages.uploading + ' (' + percent + '%)';
+                            uploadNextChunk();
+                        } else {
+                            var response = JSON.parse(xhr.responseText);
+
+                            if (response.success) {
+                                if (redirectUrl) {
+                                    window.location.href = redirectUrl;
+                                }
+                            }
+                        }
+                    } else {
+                        showError(xhr);
+                    }
+                });
+
+                xhr.addEventListener('error', function () {
+                    showError(xhr);
+                });
+
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Content-Range', 'bytes ' + start + '-' + (end - 1) + '/' + fileSize);
+                xhr.send(formData);
+            }
+
+            uploadNextChunk();
+        }
+
+        function setProgress(percent) {
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            progressBar.setAttribute('aria-valuenow', percent);
+        }
+
+        function showError(xhr) {
+            progressContainer.style.display = 'none';
+            uploadActions.style.display = '';
+            var message = messages.uploadGeneric;
+
+            if (xhr.status === 413) {
+                message = format(messages.fileTooLargeServer, maxFileSizeDisplay);
+            } else if (xhr.status === 0) {
+                message = messages.uploadInterrupted;
+            }
+
+            try {
+                var response = JSON.parse(xhr.responseText);
+
+                if (response && response.error) {
+                    message = response.error;
+                }
+            } catch (e) { }
+
+            uploadError.textContent = message;
+            uploadError.style.display = '';
+        }
+    }
+
+    function initialize(rootOrConfig, explicitConfig) {
+        if (rootOrConfig && rootOrConfig.nodeType === 1) {
+            initializeForm(rootOrConfig, explicitConfig);
+            return;
+        }
+
+        initializeForm(document.getElementById('import-form'), rootOrConfig);
+    }
+
+    function initializeAll() {
+        document.querySelectorAll('[data-content-transfer-import]').forEach(function (form) {
+            initializeForm(form, parseConfig(form));
+        });
+    }
+
+    ready(initializeAll);
+
+    return {
+        initialize: initialize,
+        initializeAll: initializeAll
+    };
+})();

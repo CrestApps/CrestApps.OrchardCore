@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model SubjectActionViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+    <div class="ocat-end">
+        <select asp-for="DispositionId" asp-items="Model.Dispositions" class="form-select">
+            <option value="">@T["Select a disposition"]</option>
+        </select>
+        <span class="hint">@T["The disposition that triggers this action."]</span>
+        <span asp-validation-for="DispositionId" class="text-danger"></span>
+    </div>
+</div>

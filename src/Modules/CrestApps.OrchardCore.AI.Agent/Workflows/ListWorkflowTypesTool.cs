@@ -1,8 +1,8 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+﻿using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
@@ -10,54 +10,41 @@ using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
+/// <summary>
+/// Represents the list workflow types tool.
+/// </summary>
 public sealed class ListWorkflowTypesTool : AIFunction
 {
     public const string TheName = "listWorkflowTypes";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IWorkflowTypeStore _workflowTypeStore;
-    private readonly DocumentJsonSerializerOptions _options;
-    private readonly PagerOptions _pagerOptions;
-
-    public ListWorkflowTypesTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IWorkflowTypeStore workflowTypeStore,
-        IOptions<DocumentJsonSerializerOptions> options,
-        IOptions<PagerOptions> pagerOptions)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _workflowTypeStore = workflowTypeStore;
-        _options = options.Value;
-        _pagerOptions = pagerOptions.Value;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "term": {
-                  "type": "string",
-                  "description": "The query string to search for."
-                },
-                "pageNumber": {
-                  "type": "integer",
-                  "description": "The page number of results to return.",
-                  "default": 1
-                }
-              },
-              "required": ["term"],
-              "additionalProperties": false
-            }     
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
     }
+
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "List all workflow types";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -66,10 +53,21 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<ListWorkflowTypesTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage workflows.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var workflowTypeStore = arguments.Services.GetRequiredService<IWorkflowTypeStore>();
+
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
+
+        var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
@@ -78,9 +76,9 @@ public sealed class ListWorkflowTypesTool : AIFunction
             page = 1;
         }
 
-        var startingIndex = (page - 1) * _pagerOptions.PageSize;
+        var startingIndex = (page - 1) * pagerOptions.PageSize;
 
-        var workflowTypes = await _workflowTypeStore.ListAsync();
+        var workflowTypes = await workflowTypeStore.ListAsync();
 
         var count = workflowTypes.Count();
 
@@ -91,18 +89,22 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         var items = workflowTypes
             .Skip(startingIndex)
-            .Take(_pagerOptions.PageSize)
+            .Take(pagerOptions.PageSize)
             .ToList();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return
         $$"""
-            {
-                "workflows": {{JsonSerializer.Serialize(items, _options.SerializerOptions)}},
-                "pageSize": {{_pagerOptions.PageSize}},
-                "workflowsCount": {{count}},
-                "totalPages": {{Math.Ceiling((double)count / _pagerOptions.PageSize)}},
-                "pageSize": {{_pagerOptions.PageSize}},
-            }
-            """;
+{
+"workflows": {{JsonSerializer.Serialize(items, options.SerializerOptions)}},
+"workflowsCount": {{count}},
+"totalPages": {{Math.Ceiling((double)count / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

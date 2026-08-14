@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore DNC Registry - Azure Blob Storage</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure Blob Storage support for Local DNC Registry file uploads.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS DNC Compliance Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.Media.Azure" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

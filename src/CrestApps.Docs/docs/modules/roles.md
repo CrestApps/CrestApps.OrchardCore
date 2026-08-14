@@ -1,0 +1,65 @@
+---
+sidebar_label: Roles
+sidebar_position: 3
+title: Enhanced Roles
+description: Extends the Orchard Core Roles module with additional reusable components like RolePickerPart.
+---
+
+| | |
+| --- | --- |
+| **Feature Name** | Enhanced Roles |
+| **Feature ID** | `CrestApps.OrchardCore.Roles` |
+
+Provides a way to enhance the role management experience.
+
+## RolePickerPart
+
+The screencast below enables **Enhanced Roles**, adds the **Role Picker** part to the *Page* content type, and then picks roles with the Role Picker while creating a page.
+
+<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Enhanced Roles, adding the Role Picker part, and selecting roles on a content item">
+  <source src="/img/docs/roles.mp4" type="video/mp4" />
+</video>
+
+This adds a role-picker to any content type. The editor uses an enhanced dropdown (bootstrap-select) that lets editors search roles, and, when multiple selection is enabled, select or deselect all roles at once for a friendlier experience. You can use the Orchard Core content types UI to add it to any content type, or you can do it via code using a migration. For example:
+
+```csharp
+internal sealed class CustomContentTypeMigrations : DataMigration
+{
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+
+    public CustomContentTypeMigrations(IContentDefinitionManager contentDefinitionManager)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+    }
+
+    public async Task<int> CreateAsync()
+    {
+        await _contentDefinitionManager.AlterTypeDefinitionAsync("CustomContentType", type => type
+            .WithPart<RolePickerPart>(part => part
+                .WithDisplayName("Roles")
+                .WithSettings(new RolePickerPartSettings()
+                {
+                    AllowSelectMultiple = true,
+                    Required = true,
+                    Hint = "Select one or more roles",
+                    ExcludedRoles = ["Authenticated", "Anonymous"],
+                })
+            )
+        );
+
+        return 1;
+    }
+}
+```
+
+Finally, register this migration:
+
+```csharp
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<CustomContentTypeMigrations>();
+    }
+}
+```

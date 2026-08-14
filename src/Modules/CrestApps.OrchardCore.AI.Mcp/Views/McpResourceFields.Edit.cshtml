@@ -1,0 +1,76 @@
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+
+@model McpResourceFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Display Text"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["A friendly name to identify this resource in the admin interface."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A human-readable name for the resource."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Path" class="ocat-label">@T["Path"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="Path" class="form-control" />
+        <span asp-validation-for="Path" class="text-danger"></span>
+        @if (!string.IsNullOrEmpty(Model.UriPreview))
+        {
+            <span class="hint">@T["Full URI: {0}", Model.UriPreview]</span>
+        }
+        @if (Model.SupportedVariables?.Length > 0)
+        {
+            <span class="hint">@T["You may use the following variables in the path:"]</span>
+            <ul class="hint list-unstyled ms-3 mb-0">
+                @foreach (var variable in Model.SupportedVariables)
+                {
+                    <li>
+                        <code>{@variable.Name}</code>
+                        @if (!string.IsNullOrEmpty(variable.Description))
+                        {
+                            <text> &mdash; @variable.Description</text>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <span class="hint">@T["Provide the path portion of the URI for this resource. Leave empty if no path is needed."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["A description of what this resource provides."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MimeType" class="ocat-label">@T["MIME Type"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="MimeType" class="form-control" placeholder="text/plain" />
+        <span asp-validation-for="MimeType" class="text-danger"></span>
+        <span class="hint">@T["The MIME type of the resource content (e.g., text/plain, application/json)."]</span>
+    </div>
+</div>
+
+<script asp-name="technical-name-generator"></script>
+<script at="Foot" depends-on="technical-name-generator">
+    window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.DisplayText)', '@Html.IdFor(x => x.Name)');
+</script>

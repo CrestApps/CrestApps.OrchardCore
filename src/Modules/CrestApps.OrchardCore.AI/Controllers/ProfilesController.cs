@@ -1,12 +1,14 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -18,26 +20,37 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+/// <summary>
+/// Provides admin controller actions for managing AI profiles.
+/// </summary>
 public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceCatalogManager<AIProfile> _profileManager;
+    private readonly IAIProfileManager _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfilesController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The AI profile manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="profileDisplayManager">The profile display manager.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ProfilesController(
-        INamedSourceCatalogManager<AIProfile> profileManager,
+        IAIProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)
@@ -46,12 +59,19 @@ public sealed class ProfilesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _profileDisplayManager = profileDisplayManager;
-        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Displays a paginated list of AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry filter options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <returns>The index view.</returns>
     [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -80,12 +100,11 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIProfile>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIProfile>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -105,80 +124,96 @@ public sealed class ProfilesController : Controller
         return View(viewModel);
     }
 
+    /// <summary>
+    /// Handles the filter form submission for the profiles index.
+    /// </summary>
+    /// <param name="model">The list view model containing filter options.</param>
+    /// <returns>A redirect to the filtered index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
+        {
+            return Forbid();
+        }
+
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
 
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source)
+    /// <summary>
+    /// Displays the editor for creating a new AI profile.
+    /// </summary>
+    /// <param name="templateId">The optional template identifier to pre-populate the profile.</param>
+    /// <returns>The create view.</returns>
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> Create([FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
+        var profile = await _profileManager.NewAsync();
+
+        if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var profile = await _profileManager.NewAsync(source);
-
-        if (profile == null)
+        if (!string.IsNullOrEmpty(templateId))
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
+            var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
 
-            return RedirectToAction(nameof(Index));
+            if (template != null)
+            {
+                AIProfileTemplateApplicator.Apply(profile, template);
+            }
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for creating a new AI profile.
+    /// </summary>
+    /// <returns>A redirect to the index view on success, or the create view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var profile = await _profileManager.NewAsync(source);
+        var profile = await _profileManager.NewAsync();
 
         if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -194,6 +229,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Displays the editor for editing an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>The edit view.</returns>
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -218,6 +258,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Handles the form submission for updating an existing AI profile.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile.</param>
+    /// <returns>A redirect to the index view on success, or the edit view with validation errors.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
@@ -253,6 +298,11 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// Deletes an AI profile by its identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profile to delete.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [Admin("ai/profile/delete/{id}", "AIProfilesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -290,11 +340,22 @@ public sealed class ProfilesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the bulk action form submission for AI profiles.
+    /// </summary>
+    /// <param name="options">The catalog entry options containing the selected bulk action.</param>
+    /// <param name="itemIds">The identifiers of the selected profiles.</param>
+    /// <returns>A redirect to the index view.</returns>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/profiles", "AIProfilesIndex")]
 
+    /// <summary>
+    /// Performs the index post operation.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="itemIds">The item ids.</param>
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -310,15 +371,11 @@ public sealed class ProfilesController : Controller
                     break;
                 case CatalogEntryAction.Remove:
                     var counter = 0;
-                    foreach (var id in itemIds)
+                    var itemIdsSet = itemIds.ToHashSet();
+                    var allProfiles = await _profileManager.GetAllAsync();
+
+                    foreach (var profile in allProfiles.Where(p => itemIdsSet.Contains(p.ItemId)))
                     {
-                        var profile = await _profileManager.FindByIdAsync(id);
-
-                        if (profile == null)
-                        {
-                            continue;
-                        }
-
                         var settings = profile.GetSettings<AIProfileSettings>();
 
                         if (!settings.IsRemovable)
@@ -347,4 +404,5 @@ public sealed class ProfilesController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
 }

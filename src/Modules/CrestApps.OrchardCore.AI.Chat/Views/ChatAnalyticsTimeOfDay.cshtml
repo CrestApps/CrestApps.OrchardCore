@@ -1,0 +1,48 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsTimeOfDayViewModel
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fa-regular fa-clock me-1"></i>@T["Usage by Time of Day"]
+            <i class="fa-solid fa-circle-info ms-1 small" data-bs-toggle="tooltip" title="@T["Shows how chat sessions are distributed across hours of the day (24-hour breakdown). Helps identify peak usage times for staffing and resource allocation."]"></i>
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (Model.HourlyDistribution.Any(h => h.SessionCount > 0))
+        {
+            var maxCount = Model.HourlyDistribution.Max(h => h.SessionCount);
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">@T["Hour"]</th>
+                            <th>@T["Sessions"]</th>
+                            <th style="width: 60%;">@T["Distribution"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var hour in Model.HourlyDistribution)
+                        {
+                            var widthPercent = maxCount > 0 ? (int)((double)hour.SessionCount / maxCount * 100) : 0;
+                            <tr>
+                                <td>@hour.Label</td>
+                                <td>@hour.SessionCount</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: @(widthPercent)%" aria-valuenow="@hour.SessionCount" aria-valuemin="0" aria-valuemax="@maxCount">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted mb-0">@T["No session data available for the selected period."]</p>
+        }
+    </div>
+</div>

@@ -1,6 +1,7 @@
-using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Services;
+﻿using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -17,11 +18,17 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpConnectionStep"/> class.
+    /// </summary>
+    /// <param name="manager">The manager.</param>
+    /// <param name="mcpClientOptions">The mcp client options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _mcpClientOptions = mcpClientOptions.Value;
@@ -36,10 +43,13 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             McpConnection connection = null;
+            var isNew = false;
 
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 connection = await _manager.FindByIdAsync(id);
             }
@@ -53,9 +63,11 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
             }
             else
             {
+                isNew = true;
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
+
                     continue;
                 }
 
@@ -67,6 +79,11 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 }
 
                 connection = await _manager.NewAsync(sourceName, token);
+
+                if (hasId && UniqueId.IsValid(id))
+                {
+                    connection.ItemId = id;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(connection);
@@ -81,12 +98,18 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.CreateAsync(connection);
+            if (isNew)
+            {
+                await _manager.CreateAsync(connection);
+            }
         }
     }
 
     private sealed class McpConnectionDeploymentStepModel
     {
+        /// <summary>
+        /// Gets or sets the connections.
+        /// </summary>
         public JsonArray Connections { get; set; }
     }
 }

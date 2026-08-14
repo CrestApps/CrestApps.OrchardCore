@@ -5,6 +5,10 @@ on:
   pull_request_target:
     types: [opened, synchronize]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   validate-pull-request:
     name: Validate Pull Request
@@ -13,7 +17,7 @@ jobs:
     steps:
       - name: Check for Merge Conflict in PR
         # v3.0.0
-        uses: eps1lon/actions-label-merge-conflict@e62d7a53ff8be8b97684bffb6cfbbf3fc1115e2e
+        uses: eps1lon/actions-label-merge-conflict@0273be72a0bbd58fcd71d0d6c02c209b50d1e5e1
         with:
             repoToken: ${{ secrets.GITHUB_TOKEN }}
             commentOnDirty: "This pull request has merge conflicts. Please resolve those before requesting a review."

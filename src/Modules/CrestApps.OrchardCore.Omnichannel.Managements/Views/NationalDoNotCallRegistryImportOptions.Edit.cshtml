@@ -1,0 +1,48 @@
+@model CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NationalDoNotCallRegistryImportOptionsViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Do-not-call registry"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IgnoreDoNotCallNumbers" disabled="@(Model.IsGloballyEnforced ? "disabled" : null)" />
+            <label class="form-check-label" asp-for="IgnoreDoNotCallNumbers">@T["Ignore numbers on national do-not-call registries"]</label>
+            <span class="hint dashed">@T["When enabled, phone numbers found on the selected do-not-call registries will be excluded from the import."]</span>
+            @if (Model.IsGloballyEnforced)
+            {
+                <input type="hidden" asp-for="IgnoreDoNotCallNumbers" value="true" />
+                <span class="text-warning d-block mt-1"><i class="fa-solid fa-shield-halved"></i> @T["This setting is globally enforced by the site administrator."]</span>
+            }
+        </div>
+
+        @if (Model.AvailableRegistries.Length > 0)
+        {
+            <div class="mt-2 ms-4">
+                <span class="fw-semibold">@T["Select registries to check against:"]</span>
+                @for (var i = 0; i < Model.AvailableRegistries.Length; i++)
+                {
+                    var registry = Model.AvailableRegistries[i];
+                    var inputId = $"SelectedRegistryKeys_{i}";
+                    var isChecked = Model.SelectedRegistryKeys?.Contains(registry.Key) == true;
+                    var isEnforced = registry.IsEnforced;
+
+                    <div class="form-check mt-1">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="@inputId"
+                               name="@Html.NameFor(m => m.SelectedRegistryKeys)"
+                               value="@registry.Key"
+                               checked="@(isChecked ? "checked" : null)"
+                               disabled="@(isEnforced ? "disabled" : null)" />
+                        <label class="form-check-label" for="@inputId">@registry.DisplayName</label>
+                        @if (isEnforced)
+                        {
+                            <input type="hidden" name="@Html.NameFor(m => m.SelectedRegistryKeys)" value="@registry.Key" />
+                            <span class="badge bg-info ms-1">@T["Enforced"]</span>
+                        }
+                        <span class="hint dashed d-block">@registry.Description</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

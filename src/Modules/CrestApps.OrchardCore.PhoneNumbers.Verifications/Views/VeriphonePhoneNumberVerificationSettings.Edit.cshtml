@@ -1,0 +1,32 @@
+@model VeriphonePhoneNumberVerificationSettingsViewModel
+
+<h4 class="card-title">@T["Veriphone"]</h4>
+<p class="hint">@T["Configure the connection to the Veriphone phone number validation service."]</p>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check form-switch">
+            <input type="checkbox" class="form-check-input" asp-for="IsEnabled" data-bs-toggle="collapse" data-bs-target="#Veriphone_Provider_Settings" aria-controls="Veriphone_Provider_Settings" aria-expanded="@(Model.IsEnabled ? "true" : "false")" />
+            <label class="form-check-label" asp-for="IsEnabled">@T["Enable this provider"]</label>
+        </div>
+        <span class="hint">@T["When enabled, this provider becomes available for selection as the default verification provider."]</span>
+    </div>
+</div>
+
+<div id="Veriphone_Provider_Settings" class="collapse @(Model.IsEnabled ? "show" : string.Empty)">
+    <div class="ocat-wrapper">
+        <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+        <div class="ocat-end">
+            <input type="password" class="form-control" asp-for="ApiKey" autocomplete="off" placeholder='@T["Enter a new API key to replace the saved key"]' />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+            @if (Model.HasApiKey)
+            {
+                <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["The API key provided by Veriphone for authenticating requests."]</span>
+            }
+        </div>
+    </div>
+</div>

@@ -12,11 +12,43 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest = new ResourceManifest();
 
         _manifest
+            .DefineScript("list-management-ui")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("item-selector")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/item-selector.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/item-selector.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("collapsible-panel")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/collapsible-panel.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("item-selector")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/styles/item-selector.min.css",
+                "~/CrestApps.OrchardCore.Resources/styles/item-selector.css"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("easymde")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
-            )
+                )
             .SetVersion("2.18.0");
 
         _manifest
@@ -24,10 +56,179 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
-            )
+                )
             .SetVersion("2.18.0");
+
+        _manifest
+            .DefineScript("chart.js")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+                "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
+            .SetCdnIntegrity(
+                "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
+                "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
+            .SetVersion("4.5.1");
+
+        _manifest
+            .DefineScript("marked")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/marked.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/marked.js")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.js")
+            .SetCdnIntegrity(
+                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==",
+                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==")
+            .SetVersion("15.0.6");
+
+        _manifest
+            .DefineScript("flatpickr")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/js/flatpickr.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/js/flatpickr.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js",
+                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.js")
+            .SetCdnIntegrity(
+                "sha384-6MRMrUEhJMa1+Lu30o5HJn4S0FFOEKnFZFWDfQ5RGRs7aiW7M1I/OpF4G7jxWLsw",
+                "sha384-IYsDIK5FMbPNV17G3cUJm5KJ3w2tMrXt2z50E0x5YYGBVi8s2x/MLNW9pvVcITLF")
+             .SetVersion("4.6.13");
+
+        _manifest
+            .DefineStyle("flatpickr")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/css/flatpickr.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/css/flatpickr.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css",
+                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.css")
+            .SetCdnIntegrity(
+                "sha384-RvLlU3fMPPFGDiYrj9DXiCNv6wPcoG++9Ae/3doVdoh/y8GC6Ya+E4F1oOH+m6w+",
+                "sha384-pBNX8OFzxVjH58gMO1pgMOJFt3NsWZTJhTLlyet+psDjRpz6jJhIVoKgvyf7KVJM")
+             .SetVersion("4.6.13");
+
+        _manifest
+            .DefineScript("flatpickr-culture")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.js")
+            .SetVersion("1.0.2");
+
+        _manifest
+            .DefineScript("date-range-picker")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/date-range-picker.js")
+            .SetDependencies("flatpickr", "flatpickr-culture")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("dompurify")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.js")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.js")
+            .SetVersion("3.3.1");
+
+        _manifest
+            .DefineScript("highlightjs")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
+            .SetCdnIntegrity(
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
+            .SetVersion("11.11.1");
+
+        _manifest
+            .DefineStyle("highlightjs")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.css")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
+            .SetCdnIntegrity(
+                "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
+                "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
+            .SetVersion("11.11.1");
+
+        _manifest
+            .DefineScript("technical-name-generator")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/technical-name-generator.js")
+            .SetCdnIntegrity(
+                "sha384-vk5MiCC6biz7ygKi3CY+whjnNoLe2Ol+ZWoxUr/aoifSyfm9c2WFazGMhNLi8g7I",
+                "sha384-9cJ5WEY0z1tJkCLND8ZMhN+rT6IySJKbK/R1yJcaSqmWgiCMuOyZJ+UUobxuScNs")
+            .SetVersion("1.2.0");
+
+        _manifest
+            .DefineScript("document-drop-zone")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/document-drop-zone.js")
+            .SetCdnIntegrity(
+                "sha384-AvXYh7cCLTVJu3IoIikt5045awzgrmZ4S6e8Z5mHQydf5f9mHIPAbZ2xTP+LT5BC",
+                "sha384-8W/wOs7j6d1l50bR3wLRiY6M3/yf0acllYpEJRFraFBwtAXwvYcoyITxQ6FxyNkb")
+            .SetVersion("1.2.0");
+
+        _manifest
+            .DefineStyle("document-drop-zone")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.2.0/dist/document-drop-zone.css")
+            .SetCdnIntegrity(
+                "sha384-cTjcD1YHMzaJ5FIvmpJhm3VZDBheTcbiNfGCQfFvBTDg1pZi7PWE5lO6VHRYX9zq",
+                "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
+            .SetVersion("1.2.0");
+
+        _manifest
+            .DefineStyle("intl-tel-input")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/css/intlTelInput.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/css/intlTelInput.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.min.css",
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css")
+            .SetCdnIntegrity(
+                "sha384-WNF7dtZ0UZJjHFk7vUp7qTzY3PQnxFBo6/lqKHvZmCYwIUHqDDsyFL6zfeG83jKf",
+                "sha384-KgNFOuU4mTPtXZmFu6WaY2/jxbJEA+INAC2SFk+B0vTR9iuuKE+5qujIZY8Mnmzt")
+            .SetVersion("25.12.4");
+
+        _manifest
+            .DefineScript("intl-tel-input")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/js/intlTelInputWithUtils.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/intl-tel-input/js/intlTelInputWithUtils.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.min.js",
+                "https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInputWithUtils.js")
+            .SetCdnIntegrity(
+                "sha384-zmSxq8xjduh+c9LYQCwKvFI7Q3Glzkdm2t62FEZ0T+aPhd1443w9QLqX4YFq6yRF",
+                "sha384-FdYuaXg9bZPa49HOFPWlxiUurpAlJZFOLCVAV/d8BUFdIjEh98n1FtwpIje1FGQK")
+            .SetVersion("25.12.4");
     }
 
+    /// <summary>
+    /// Configures the .
+    /// </summary>
+    /// <param name="options">The options.</param>
     public void Configure(ResourceManagementOptions options)
     {
         options.ResourceManifests.Add(_manifest);

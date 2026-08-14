@@ -1,0 +1,99 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.OrchardCore.AI.Documents.Services;
+using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Indexing;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.AI.Documents.Drivers;
+
+/// <summary>
+/// Display driver for document uploads in chat interactions.
+/// Shows for all providers to enable RAG (Retrieval Augmented Generation) functionality.
+/// Documents are embedded and indexed, then searched during chat to provide context.
+/// </summary>
+internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<ChatInteraction>
+{
+    private readonly ISiteService _siteService;
+    private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IServiceProvider _serviceProvider;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatInteractionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    /// <param name="indexProfileStore">The index profile store.</param>
+    /// <param name="deploymentManager">The AI deployment manager.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ChatInteractionDocumentsDisplayDriver(
+        ISiteService siteService,
+        IIndexProfileStore indexProfileStore,
+        IAIDeploymentManager deploymentManager,
+        IServiceProvider serviceProvider,
+        IStringLocalizer<ChatInteractionDocumentsDisplayDriver> stringLocalizer)
+    {
+        _siteService = siteService;
+        _indexProfileStore = indexProfileStore;
+        _deploymentManager = deploymentManager;
+        _serviceProvider = serviceProvider;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
+    {
+        return Initialize<ChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", async model =>
+        {
+            model.ItemId = interaction.ItemId;
+            model.Documents = interaction.Documents ?? [];
+            model.DocumentRetrievalMode = interaction.GetOrCreate<DocumentsMetadata>().RetrievalMode;
+            model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
+
+            var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+            model.AllowDocumentUploads = settings.AllowDocumentUploads;
+            model.AllowImageUploads = settings.AllowImageUploads;
+            model.IndexProfileName = settings.IndexProfileName;
+            model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
+            model.VisionEnabled = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision) != null;
+
+            if (model.HasIndexProfile)
+            {
+                // Check if the index profile has a valid embedding search service
+                var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+
+                if (indexProfile != null)
+                {
+                    // Check if there's a keyed service registered for this provider
+                    var searchService = _serviceProvider.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
+                    model.HasVectorSearchService = searchService != null;
+                }
+            }
+        }).Location("Parameters:6#Knowledge;3");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
+    {
+        var model = new ChatInteractionDocumentsViewModel();
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        interaction.Alter<DocumentsMetadata>(metadata =>
+        {
+            metadata.RetrievalMode = model.DocumentRetrievalMode;
+        });
+
+        // Documents are uploaded via minimal API endpoints, so we just return the current view
+        // The actual document handling happens in UploadDocumentEndpoint and RemoveDocumentEndpoint
+
+        return Edit(interaction, context);
+    }
+}

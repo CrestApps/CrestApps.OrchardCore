@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/activity-query-builder.js"
+    ],
+    "output": "wwwroot/scripts/activity-query-builder.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/subject-action-assignment-toggle.js"
+    ],
+    "output": "wwwroot/scripts/subject-action-assignment-toggle.js"
+  }
+]

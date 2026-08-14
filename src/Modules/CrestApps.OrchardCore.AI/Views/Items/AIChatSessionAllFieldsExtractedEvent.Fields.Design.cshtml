@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIChatSessionAllFieldsExtractedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["AI Chat Session All Fields Extracted"])
+    </h4>
+</header>

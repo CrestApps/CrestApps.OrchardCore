@@ -1,0 +1,7 @@
+@{
+    if ((bool?)Model.SuppressLayout == true)
+    {
+        Layout = null;
+    }
+}
+@await DisplayAsAsync(Model, "UserDisplayNameText")

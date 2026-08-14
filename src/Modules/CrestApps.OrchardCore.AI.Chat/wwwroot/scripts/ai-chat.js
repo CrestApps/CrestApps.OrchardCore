@@ -3,29 +3,603 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+var _excluded = ["placeholder"];
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
-function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
-function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
-window.openAIChatManager = function () {
+window.coreAIChatManager = function () {
+  // Defaults (can be overridden by instanceConfig)
+  var defaultConfig = {
+    // UI defaults for generated media
+    generatedImageAltText: 'Generated Image',
+    generatedImageMaxWidth: 400,
+    downloadImageTitle: 'Download image',
+    downloadChartTitle: 'Download chart as image',
+    downloadChartButtonText: 'Download',
+    userLabel: 'You',
+    assistantLabel: 'Assistant',
+    thumbsUpTitle: 'Thumbs up',
+    thumbsDownTitle: 'Thumbs down',
+    copyTitle: 'Click here to copy response to clipboard.',
+    copiedTitle: 'Response copied to clipboard.',
+    codeCopiedText: 'Copied!',
+    copyResetDelayMs: 2000,
+    widget: {
+      chatWidgetContainer: null,
+      chatWidgetStateName: null,
+      chatHistorySection: null,
+      showHistoryButton: null,
+      closeHistoryButton: null,
+      newChatButton: null,
+      toggleButtonSelector: null,
+      resetSizeButtonSelector: null,
+      dragHandleSelector: '.ai-chat-widget-header',
+      enableDragging: true,
+      enableResizing: true,
+      persistLayout: true,
+      defaultWidth: null,
+      defaultHeight: null,
+      minWidth: 320,
+      minHeight: 420
+    },
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-message-heading ai-chat-message-heading-user\">\n                        <span class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</span>\n                    </div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-message-heading ai-chat-message-heading-assistant\">\n                        <div :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                            <span class=\"ai-chat-message-role-label\">{{ getAssistantLabel(message) }}</span>\n                        </div>\n                    </div>\n                    <div class=\"ai-chat-message-body lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <ol v-if=\"message.citationReferences && message.citationReferences.length\" class=\"ai-chat-citation-list\">\n                            <li v-for=\"citation in message.citationReferences\" :key=\"'citation-' + (citation.referenceKey || citation.displayIndex)\" class=\"ai-chat-citation-item\">\n                                <a v-if=\"citation.link\" :href=\"citation.link\" :target=\"citation.isDownload ? null : '_blank'\" :rel=\"citation.isDownload ? null : 'noopener noreferrer'\">{{ citation.label }}</a>\n                                <span v-else>{{ citation.label }}</span>\n                            </li>\n                        </ol>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button type=\"button\" class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button type=\"button\" v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                            </button>\n                            <button type=\"button\" class=\"btn btn-sm btn-link p-0 button-message-toolbox ai-response-copy-btn\" :class=\"copiedMessageIndex === index ? 'text-success' : 'text-secondary'\" :data-copy-message-index=\"index\" @click=\"copyResponse(message, index, $event)\" :title=\"copiedMessageIndex === index ? copiedTitle : copyTitle\">\n                                <i :class=\"copiedMessageIndex === index ? 'fa-solid fa-check' : 'fa-solid fa-copy'\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button type=\"button\" v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button type=\"button\" v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-message-heading ai-chat-message-heading-assistant\">\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                <span class=\"ai-chat-message-role-label\">Assistant</span>\n            </div>\n        </div>\n    "
+  };
+
+  // Sanitize URLs to prevent javascript: protocol injection.
+  function sanitizeUrl(url) {
+    if (!url) return '';
+    var trimmed = url.trim();
+    if (/^javascript:/i.test(trimmed) || /^vbscript:/i.test(trimmed) || /^data:text\/html/i.test(trimmed)) {
+      return '';
+    }
+    return url;
+  }
+
+  // Safely HTML-encode a string using the DOM (avoids regex-based HTML filtering).
+  function escapeHtmlEntities(text) {
+    var span = document.createElement('span');
+    span.textContent = text;
+    return span.innerHTML;
+  }
+  function containsFontAwesomePlaceholders(root) {
+    if (!root || root.nodeType !== 1) {
+      return false;
+    }
+    var selector = 'i[class*="fa-"],i.fa,i.fas,i.far,i.fab';
+    if (typeof root.matches === 'function' && root.matches(selector)) {
+      return true;
+    }
+    return typeof root.querySelector === 'function' && !!root.querySelector(selector);
+  }
+  function refreshFontAwesomeIcons(root) {
+    var fontAwesome = window.FontAwesome;
+    if (!containsFontAwesomePlaceholders(root) || !fontAwesome || !fontAwesome.dom || typeof fontAwesome.dom.i2svg !== 'function') {
+      return;
+    }
+    fontAwesome.dom.i2svg({
+      node: root
+    });
+  }
+  function observeFontAwesomeIcons(root) {
+    if (!root || typeof MutationObserver === 'undefined') {
+      return null;
+    }
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          refreshFontAwesomeIcons(node);
+        });
+      });
+    });
+    observer.observe(root, {
+      childList: true,
+      subtree: true
+    });
+    return observer;
+  }
+  function parsePixelValue(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value !== 'string') {
+      return null;
+    }
+    var parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+  function normalizeReference(reference) {
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference, _normalized$isGenerat;
+    if (!reference || _typeof(reference) !== 'object') {
+      return null;
+    }
+    var normalized = Object.assign({}, reference);
+    normalized.index = (_ref = (_normalized$index = normalized.index) !== null && _normalized$index !== void 0 ? _normalized$index : normalized.Index) !== null && _ref !== void 0 ? _ref : 0;
+    normalized.text = (_ref2 = (_normalized$text = normalized.text) !== null && _normalized$text !== void 0 ? _normalized$text : normalized.Text) !== null && _ref2 !== void 0 ? _ref2 : null;
+    normalized.title = (_ref3 = (_normalized$title = normalized.title) !== null && _normalized$title !== void 0 ? _normalized$title : normalized.Title) !== null && _ref3 !== void 0 ? _ref3 : null;
+    normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
+    normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
+    normalized.isGenerated = ((_normalized$isGenerat = normalized.isGenerated) !== null && _normalized$isGenerat !== void 0 ? _normalized$isGenerat : normalized.IsGenerated) === true;
+    return normalized;
+  }
+  function isDownloadCitationReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return false;
+    }
+    if (typeof reference.referenceType === 'string' && reference.referenceType.toLowerCase() === 'document') {
+      return true;
+    }
+    if (typeof reference.link === 'string' && /\/ai\/documents\/.+\/download(?:$|\?)/i.test(reference.link)) {
+      return true;
+    }
+    return false;
+  }
+  function normalizeReferences(references) {
+    if (!references || _typeof(references) !== 'object') {
+      return {};
+    }
+    var normalized = {};
+    for (var _i = 0, _Object$entries = Object.entries(references); _i < _Object$entries.length; _i++) {
+      var _normalizeReference;
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        key = _Object$entries$_i[0],
+        value = _Object$entries$_i[1];
+      normalized[key] = (_normalizeReference = normalizeReference(value)) !== null && _normalizeReference !== void 0 ? _normalizeReference : {};
+    }
+    return normalized;
+  }
+  function getCitationLabel(reference, key) {
+    return reference.title || reference.text || key;
+  }
+  function buildCitationDisplay(content, references) {
+    var processedContent = (content || '').trim();
+    var messageReferences = normalizeReferences(references);
+    var referenceEntries = Object.entries(messageReferences);
+    if (!referenceEntries.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    var citedRefs = referenceEntries.filter(function (_ref6) {
+      var _ref7 = _slicedToArray(_ref6, 1),
+        key = _ref7[0];
+      return processedContent.includes(key);
+    });
+    var generatedRefs = referenceEntries.filter(function (_ref8) {
+      var _ref9 = _slicedToArray(_ref8, 2),
+        key = _ref9[0],
+        value = _ref9[1];
+      return value.isGenerated && !processedContent.includes(key);
+    });
+    if (!citedRefs.length && !generatedRefs.length) {
+      return {
+        content: processedContent,
+        citations: []
+      };
+    }
+    citedRefs.sort(function (_ref0, _ref1) {
+      var _ref10 = _slicedToArray(_ref0, 2),
+        a = _ref10[1];
+      var _ref11 = _slicedToArray(_ref1, 2),
+        b = _ref11[1];
+      return a.index - b.index;
+    });
+    generatedRefs.sort(function (_ref12, _ref13) {
+      var _ref14 = _slicedToArray(_ref12, 2),
+        a = _ref14[1];
+      var _ref15 = _slicedToArray(_ref13, 2),
+        b = _ref15[1];
+      return a.index - b.index;
+    });
+    var citations = [];
+    var displayIndex = 1;
+    var _iterator = _createForOfIteratorHelper(citedRefs),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _step$value = _slicedToArray(_step.value, 2),
+          key = _step$value[0],
+          value = _step$value[1];
+        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        processedContent = processedContent.replaceAll(key, placeholder);
+        citations.push({
+          referenceKey: key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(value, key),
+          link: value.link || null,
+          isDownload: isDownloadCitationReference(value),
+          placeholder: placeholder
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
+      var citation = _citations[_i2];
+      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    }
+    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+
+    // Generated files (such as exported tabular data) are always offered as a download even when
+    // the model does not cite them inline, so the user never loses access to the produced file.
+    var _iterator2 = _createForOfIteratorHelper(generatedRefs),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var _step2$value = _slicedToArray(_step2.value, 2),
+          _key = _step2$value[0],
+          _value = _step2$value[1];
+        citations.push({
+          referenceKey: _key,
+          displayIndex: displayIndex,
+          label: getCitationLabel(_value, _key),
+          link: _value.link || null,
+          isDownload: true,
+          placeholder: null
+        });
+        displayIndex++;
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    return {
+      content: processedContent,
+      citations: citations.map(function (_ref16) {
+        var placeholder = _ref16.placeholder,
+          citation = _objectWithoutProperties(_ref16, _excluded);
+        return citation;
+      })
+    };
+  }
+  function buildCopyContent(content, citations) {
+    var copyContent = (content || '').trim();
+    if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
+      return copyContent;
+    }
+    var _iterator3 = _createForOfIteratorHelper(citations),
+      _step3;
+    try {
+      for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var citation = _step3.value;
+        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+      }
+    } catch (err) {
+      _iterator3.e(err);
+    } finally {
+      _iterator3.f();
+    }
+    copyContent += '\n\nReferences:\n';
+    var _iterator4 = _createForOfIteratorHelper(citations),
+      _step4;
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var _citation = _step4.value;
+        copyContent += "".concat(_citation.displayIndex, ". ").concat(_citation.label);
+        if (_citation.link) {
+          copyContent += " - ".concat(_citation.link);
+        }
+        copyContent += '\n';
+      }
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
+    return copyContent.trimEnd();
+  }
+  function updateMessagePresentation(message, references) {
+    var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
+    var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
+    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    message.rawContent = rawContent;
+    message.content = rawContent;
+    message.displayContent = citationDisplay.content;
+    message.references = messageReferences;
+    message.citationReferences = citationDisplay.citations;
+    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
+    return message;
+  }
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
   renderer.link = function (data) {
-    return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
+    var href = sanitizeUrl(data.href);
+    if (!href) return data.text || '';
+    return "<a href=\"".concat(href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
-  var defaultConfig = {
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+
+  // Custom code block renderer with highlight.js integration and copy button.
+  renderer.code = function (data) {
+    var code = data.text || '';
+    var lang = (data.lang || '').trim();
+    var highlighted = code;
+    if (typeof hljs !== 'undefined') {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          highlighted = hljs.highlight(code, {
+            language: lang
+          }).value;
+        } catch (_) {}
+      } else {
+        try {
+          highlighted = hljs.highlightAuto(code).value;
+        } catch (_) {}
+      }
+    } else {
+      highlighted = escapeHtmlEntities(code);
+    }
+    var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
+
+  // Custom image renderer for generated images with thumbnail styling and download button.
+  // Handles both URL and data-URI sources (data URIs are converted to blobs for download).
+  renderer.image = function (data) {
+    var src = sanitizeUrl(data.href);
+    if (!src) return '';
+    var alt = data.text || defaultConfig.generatedImageAltText;
+    var maxWidth = defaultConfig.generatedImageMaxWidth;
+    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </div>\n    </div>");
+  };
+
+  // Chart counter for unique IDs
+  var chartCounter = 0;
+
+  // Collector for charts discovered during marked parsing.
+  var _pendingCharts = [];
+
+  // Global chart config map: any page (e.g., Chat Interactions) that uses
+  // the shared marked instance can call window.renderPendingCharts() after
+  // its DOM update to render charts it didn't create itself.
+  window.__chartConfigs = window.__chartConfigs || {};
+  function createChartHtml(chartId) {
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+  }
+
+  // Register [chart:{...json...}] as a native marked block extension so the
+  // markdown parser handles chart markers inline with surrounding text.
+  marked.use({
+    extensions: [{
+      name: 'chart',
+      level: 'block',
+      start: function start(src) {
+        var idx = src.indexOf('[chart:');
+        return idx >= 0 ? idx : undefined;
+      },
+      tokenizer: function tokenizer(src) {
+        var extracted = tryExtractChartMarker(src);
+        if (!extracted || extracted.startIndex !== 0) {
+          return undefined;
+        }
+        var chartId = "chat_chart_".concat(++chartCounter);
+        return {
+          type: 'chart',
+          raw: src.substring(0, extracted.endIndex),
+          chartId: chartId,
+          json: extracted.json
+        };
+      },
+      renderer: function renderer(token) {
+        _pendingCharts.push({
+          chartId: token.chartId,
+          config: token.json
+        });
+        window.__chartConfigs[token.chartId] = token.json;
+        return createChartHtml(token.chartId);
+      }
+    }]
+  });
+
+  // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+  function tryExtractChartMarker(text) {
+    var token = '[chart:';
+    var start = text.indexOf(token);
+    if (start < 0) {
+      return null;
+    }
+
+    // Find JSON object boundary by balancing braces
+    var jsonStart = start + token.length;
+    var i = jsonStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+      i++;
+    }
+    if (i >= text.length || text[i] !== '{') {
+      return null;
+    }
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (; i < text.length; i++) {
+      var ch = text[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === '{') {
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          var jsonEnd = i;
+          // Expect closing bracket after JSON
+          var closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+          if (closeBracketIndex < 0) {
+            return null;
+          }
+          var json = text.substring(jsonStart, jsonEnd + 1).trim();
+          return {
+            startIndex: start,
+            endIndex: closeBracketIndex + 1,
+            json: json
+          };
+        }
+      }
+    }
+    return null;
+  }
+  function renderChartsInMessage(message) {
+    if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+      return;
+    }
+
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
+    message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator5 = _createForOfIteratorHelper(charts),
+        _step5;
+      try {
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var c = _step5.value;
+          renderChartOnCanvas(c.chartId, c.config);
+        }
+      } catch (err) {
+        _iterator5.e(err);
+      } finally {
+        _iterator5.f();
+      }
+    });
+  }
+  function renderChartOnCanvas(chartId, config) {
+    var canvas = document.getElementById(chartId);
+    if (!canvas) {
+      return false;
+    }
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+      return false;
+    }
+
+    // When the canvas is inside a hidden container (e.g., a widget panel with
+    // display:none), it has zero dimensions and Chart.js cannot render correctly.
+    // Keep the config in __chartConfigs so renderPendingCharts() can retry later
+    // once the container becomes visible.
+    if (canvas.offsetParent === null) {
+      window.__chartConfigs[chartId] = config;
+      return false;
+    }
+    try {
+      var _cfg$options, _cfg$options2, _cfg$options2$aspectR;
+      if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+      }
+      var cfg = typeof config === 'string' ? JSON.parse(config) : config;
+      (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+      cfg.options.responsive = true;
+      cfg.options.maintainAspectRatio = true;
+      (_cfg$options2$aspectR = (_cfg$options2 = cfg.options).aspectRatio) !== null && _cfg$options2$aspectR !== void 0 ? _cfg$options2$aspectR : _cfg$options2.aspectRatio = 4 / 3;
+      canvas._chartInstance = new Chart(canvas, cfg);
+      delete window.__chartConfigs[chartId];
+      return true;
+    } catch (e) {
+      console.error('Error creating chart:', e);
+      return false;
+    }
+  }
+
+  // Global function: renders any chart canvases whose configs are in the
+  // global __chartConfigs map. Called by pages (e.g., Chat Interactions)
+  // that share the marked instance but have their own rendering pipeline.
+  window.renderPendingCharts = function () {
+    if (typeof Chart === 'undefined') {
+      return;
+    }
+    var configs = window.__chartConfigs;
+    if (!configs) {
+      return;
+    }
+    requestAnimationFrame(function () {
+      for (var _i3 = 0, _Object$keys = Object.keys(configs); _i3 < _Object$keys.length; _i3++) {
+        var chartId = _Object$keys[_i3];
+        renderChartOnCanvas(chartId, configs[chartId]);
+      }
+    });
+  };
+
+  // Parse markdown content via marked (which natively handles [chart:...] markers
+  // through the registered extension) and collect pending chart configs for later
+  // Chart.js rendering.
+  function parseMarkdownContent(content, message) {
+    _pendingCharts = [];
+    var html = marked.parse(content, {
+      renderer: renderer
+    });
+    message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
+    return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['canvas'],
+      ADD_ATTR: ['target']
+    });
+  }
+  function compactObject(source) {
+    if (!source || _typeof(source) !== 'object') {
+      return {};
+    }
+    return Object.fromEntries(Object.entries(source).filter(function (_ref17) {
+      var _ref18 = _slicedToArray(_ref17, 2),
+        value = _ref18[1];
+      return value !== undefined;
+    }));
+  }
+  function resolveIndicatorTemplate(template, assistantLabel) {
+    if (!template) {
+      return template;
+    }
+    var encodedAssistantLabel = escapeHtmlEntities(assistantLabel || 'Assistant');
+    return template.replace(/\{\{\s*assistantLabel\s*\}\}/g, encodedAssistantLabel);
+  }
   var initialize = function initialize(instanceConfig) {
-    var config = Object.assign({}, defaultConfig, instanceConfig);
+    var normalizedInstanceConfig = compactObject(instanceConfig);
+    var normalizedWidgetConfig = compactObject(normalizedInstanceConfig.widget);
+    var config = Object.assign({}, defaultConfig, normalizedInstanceConfig);
+    config.widget = Object.assign({}, defaultConfig.widget || {}, normalizedWidgetConfig);
+    config.indicatorTemplate = resolveIndicatorTemplate(config.indicatorTemplate, config.assistantLabel);
+    var hasWidgetConfig = !!(normalizedWidgetConfig.chatWidgetContainer && normalizedWidgetConfig.chatWidgetStateName);
+    var widgetBehavior = window.coreAIChatWidgetBehavior || null;
+    // Keep defaultConfig in sync so renderers use overridden values
+    defaultConfig = config;
     if (!config.signalRHubUrl) {
       console.error('The signalRHubUrl is required.');
       return;
@@ -46,7 +620,7 @@ window.openAIChatManager = function () {
       console.error('The sendButtonElementSelector is required.');
       return;
     }
-    var app = Vue.createApp({
+    var appDefinition = {
       data: function data() {
         return {
           inputElement: null,
@@ -55,62 +629,776 @@ window.openAIChatManager = function () {
           placeholder: null,
           isSessionStarted: false,
           isPlaceholderVisible: true,
-          chatWidgetStateName: null,
-          chatWidgetStateSession: null,
-          chatHistorySection: null,
-          widgetIsInitialized: false,
-          isSteaming: false,
+          isStreaming: false,
+          isNavigatingAway: false,
+          autoScroll: true,
           stream: null,
           messages: [],
-          prompt: ''
+          notifications: [],
+          prompt: '',
+          documents: config.existingDocuments || [],
+          isUploading: false,
+          isDocumentOperationPending: false,
+          documentOperationQueue: null,
+          uploadErrors: [],
+          isDragOver: false,
+          documentBar: null,
+          metricsEnabled: !!config.metricsEnabled,
+          userLabel: config.userLabel,
+          assistantLabel: config.assistantLabel,
+          thumbsUpTitle: config.thumbsUpTitle,
+          thumbsDownTitle: config.thumbsDownTitle,
+          copyTitle: config.copyTitle,
+          copiedTitle: config.copiedTitle,
+          isRecording: false,
+          mediaRecorder: null,
+          preRecordingPrompt: '',
+          micButton: null,
+          speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation' || !!config.textToSpeechEnabled,
+          ttsVoiceName: config.ttsVoiceName || null,
+          audioChunks: [],
+          audioPlayQueue: [],
+          isPlayingAudio: false,
+          currentAudioElement: null,
+          currentAudioUrl: null,
+          ttsButton: null,
+          ttsPlayingMessageIndex: -1,
+          ttsAudioCache: {},
+          ttsInstanceId: 'ai-chat-' + Math.random().toString(36).slice(2),
+          singleResponseMode: !!config.singleResponseMode,
+          conversationModeEnabled: config.chatMode === 'Conversation',
+          conversationButton: null,
+          isConversationMode: false,
+          notificationDismissTimers: {},
+          pendingSessionPromise: null,
+          pendingSessionResolver: null,
+          pendingSessionRejector: null,
+          pendingSessionTimeoutId: null,
+          copiedMessageIndex: -1,
+          copyResetTimeoutId: null,
+          activeCopyButton: null
         };
       },
+      computed: {
+        lastAssistantIndex: function lastAssistantIndex() {
+          for (var i = this.messages.length - 1; i >= 0; i--) {
+            if (this.messages[i].role === 'assistant') {
+              return i;
+            }
+          }
+          return -1;
+        }
+      },
       methods: {
-        startConnection: function startConnection() {
-          var _this = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-            return _regeneratorRuntime().wrap(function _callee$(_context) {
-              while (1) switch (_context.prev = _context.next) {
+        handleBeforeUnload: function handleBeforeUnload() {
+          this.isNavigatingAway = true;
+        },
+        handleDragOver: function handleDragOver(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = true;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.add('ai-chat-drag-over');
+        },
+        handleDragLeave: function handleDragLeave(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = false;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+        },
+        handleDrop: function handleDrop(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = false;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            this.uploadFiles(Array.from(e.dataTransfer.files));
+          }
+        },
+        triggerFileInput: function triggerFileInput() {
+          if (!config.sessionDocumentsEnabled || this.isDocumentOperationPending) return;
+          var fileInput = document.getElementById('ai-chat-doc-input');
+          if (fileInput) fileInput.click();
+        },
+        handleFileInputChange: function handleFileInputChange(e) {
+          var files = e.target.files ? Array.from(e.target.files) : [];
+          if (files && files.length > 0) {
+            this.uploadFiles(files);
+          }
+          e.target.value = '';
+        },
+        queueDocumentOperation: function queueDocumentOperation(operation) {
+          var self = this;
+          var previousOperation = this.documentOperationQueue || Promise.resolve();
+          var nextOperation = previousOperation["catch"](function () {}).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+            return _regenerator().w(function (_context) {
+              while (1) switch (_context.p = _context.n) {
                 case 0:
-                  _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
-                  _this.connection.on("LoadSession", function (data) {
-                    var _data$messages;
-                    _this.initializeSession(data.sessionId, true);
-                    _this.messages = [];
-                    ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
-                      _this.addMessage(msg);
-                    });
-                  });
-                  _this.connection.on("ReceiveError", function (error) {
-                    console.error("SignalR Error: ", error);
-                  });
-                  _context.prev = 3;
-                  _context.next = 6;
-                  return _this.connection.start();
-                case 6:
-                  _context.next = 11;
-                  break;
-                case 8:
-                  _context.prev = 8;
-                  _context.t0 = _context["catch"](3);
-                  console.error("SignalR Connection Error: ", _context.t0);
-                case 11:
-                case "end":
-                  return _context.stop();
+                  self.isDocumentOperationPending = true;
+                  _context.p = 1;
+                  _context.n = 2;
+                  return operation();
+                case 2:
+                  return _context.a(2, _context.v);
+                case 3:
+                  _context.p = 3;
+                  self.isDocumentOperationPending = false;
+                  return _context.f(3);
+                case 4:
+                  return _context.a(2);
               }
-            }, _callee, null, [[3, 8]]);
+            }, _callee, null, [[1,, 3, 4]]);
+          })));
+          this.documentOperationQueue = nextOperation["finally"](function () {
+            if (self.documentOperationQueue === nextOperation) {
+              self.documentOperationQueue = null;
+            }
+          });
+          return this.documentOperationQueue;
+        },
+        uploadFiles: function uploadFiles(files) {
+          var _this = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+            var filesToUpload;
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.n) {
+                case 0:
+                  if (config.uploadDocumentUrl) {
+                    _context3.n = 1;
+                    break;
+                  }
+                  return _context3.a(2);
+                case 1:
+                  filesToUpload = Array.isArray(files) ? files.slice() : Array.from(files || []);
+                  if (!(filesToUpload.length === 0)) {
+                    _context3.n = 2;
+                    break;
+                  }
+                  return _context3.a(2);
+                case 2:
+                  return _context3.a(2, _this.queueDocumentOperation(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+                    var sessionId, profileId, formData, i, response, errorText, uploadError, result, _t, _t2;
+                    return _regenerator().w(function (_context2) {
+                      while (1) switch (_context2.p = _context2.n) {
+                        case 0:
+                          sessionId = _this.getSessionId();
+                          profileId = _this.getProfileId();
+                          if (sessionId) {
+                            _context2.n = 4;
+                            break;
+                          }
+                          _context2.p = 1;
+                          _context2.n = 2;
+                          return _this.ensureSessionForDocuments(profileId);
+                        case 2:
+                          sessionId = _context2.v;
+                          _context2.n = 4;
+                          break;
+                        case 3:
+                          _context2.p = 3;
+                          _t = _context2.v;
+                          console.error('Failed to create a chat session for document upload:', _t);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Could not create a chat session for the upload.'
+                          }];
+                          _this.renderDocumentBar();
+                          return _context2.a(2);
+                        case 4:
+                          if (sessionId) {
+                            _context2.n = 5;
+                            break;
+                          }
+                          console.warn('Cannot upload documents without a session or profile.');
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Could not create a chat session for the upload.'
+                          }];
+                          _this.renderDocumentBar();
+                          return _context2.a(2);
+                        case 5:
+                          _this.isUploading = true;
+                          _this.uploadErrors = [];
+                          _this.renderDocumentBar();
+                          _context2.p = 6;
+                          formData = new FormData();
+                          formData.append('sessionId', sessionId);
+                          for (i = 0; i < filesToUpload.length; i++) {
+                            formData.append('files', filesToUpload[i]);
+                          }
+                          _context2.n = 7;
+                          return fetch(config.uploadDocumentUrl, {
+                            method: 'POST',
+                            body: formData
+                          });
+                        case 7:
+                          response = _context2.v;
+                          if (response.ok) {
+                            _context2.n = 9;
+                            break;
+                          }
+                          _context2.n = 8;
+                          return response.text();
+                        case 8:
+                          errorText = _context2.v;
+                          uploadError = _this.extractReadableErrorMessage(errorText, 'Upload failed. Please try again.');
+                          console.error('Upload failed:', errorText);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: uploadError
+                          }];
+                          return _context2.a(2);
+                        case 9:
+                          _context2.n = 10;
+                          return response.json();
+                        case 10:
+                          result = _context2.v;
+                          if (result.sessionId && result.sessionId !== _this.getSessionId()) {
+                            _this.initializeSession(result.sessionId);
+                          }
+                          if (Array.isArray(result.documents)) {
+                            _this.documents = result.documents;
+                          } else if (result.uploaded && result.uploaded.length > 0) {
+                            _this.documents = _this.documents.concat(result.uploaded);
+                          }
+                          if (result.failed && result.failed.length > 0) {
+                            _this.uploadErrors = result.failed;
+                          }
+                          _context2.n = 12;
+                          break;
+                        case 11:
+                          _context2.p = 11;
+                          _t2 = _context2.v;
+                          console.error('Upload error:', _t2);
+                          _this.uploadErrors = [{
+                            fileName: '',
+                            error: 'Upload failed. Please try again.'
+                          }];
+                          if (_this.getSessionId()) {
+                            _this.reloadCurrentSession();
+                          }
+                        case 12:
+                          _context2.p = 12;
+                          _this.isUploading = false;
+                          _this.renderDocumentBar();
+                          return _context2.f(12);
+                        case 13:
+                          return _context2.a(2);
+                      }
+                    }, _callee2, null, [[6, 11, 12, 13], [1, 3]]);
+                  }))));
+              }
+            }, _callee3);
+          }))();
+        },
+        removeDocument: function removeDocument(doc) {
+          var _this2 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+            return _regenerator().w(function (_context5) {
+              while (1) switch (_context5.n) {
+                case 0:
+                  if (config.removeDocumentUrl) {
+                    _context5.n = 1;
+                    break;
+                  }
+                  return _context5.a(2);
+                case 1:
+                  return _context5.a(2, _this2.queueDocumentOperation(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                    var sessionId, response, result, idx, errorText, removeError, _t3;
+                    return _regenerator().w(function (_context4) {
+                      while (1) switch (_context4.p = _context4.n) {
+                        case 0:
+                          _context4.p = 0;
+                          sessionId = _this2.getSessionId();
+                          _context4.n = 1;
+                          return fetch(config.removeDocumentUrl, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              itemId: sessionId,
+                              documentId: doc.documentId
+                            })
+                          });
+                        case 1:
+                          response = _context4.v;
+                          if (!response.ok) {
+                            _context4.n = 3;
+                            break;
+                          }
+                          _context4.n = 2;
+                          return response.json();
+                        case 2:
+                          result = _context4.v;
+                          if (Array.isArray(result.documents)) {
+                            _this2.documents = result.documents;
+                          } else {
+                            idx = _this2.documents.indexOf(doc);
+                            if (idx > -1) {
+                              _this2.documents.splice(idx, 1);
+                            }
+                          }
+                          _context4.n = 5;
+                          break;
+                        case 3:
+                          _context4.n = 4;
+                          return response.text();
+                        case 4:
+                          errorText = _context4.v;
+                          removeError = _this2.extractReadableErrorMessage(errorText, 'Failed to remove document. Please try again.');
+                          console.error('Failed to remove document:', response.status, errorText);
+                          _this2.uploadErrors = [{
+                            fileName: doc.fileName || '',
+                            error: removeError
+                          }];
+                          if (sessionId) {
+                            _this2.reloadCurrentSession();
+                          }
+                          _this2.renderDocumentBar();
+                        case 5:
+                          _context4.n = 7;
+                          break;
+                        case 6:
+                          _context4.p = 6;
+                          _t3 = _context4.v;
+                          console.error('Remove document error:', _t3);
+                          _this2.uploadErrors = [{
+                            fileName: doc.fileName || '',
+                            error: 'Failed to remove document. Please try again.'
+                          }];
+                          if (_this2.getSessionId()) {
+                            _this2.reloadCurrentSession();
+                          }
+                          _this2.renderDocumentBar();
+                        case 7:
+                          return _context4.a(2);
+                      }
+                    }, _callee4, null, [[0, 6]]);
+                  }))));
+              }
+            }, _callee5);
+          }))();
+        },
+        formatFileSize: function formatFileSize(bytes) {
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        renderDocumentBar: function renderDocumentBar() {
+          if (!this.documentBar) return;
+          if (!config.sessionDocumentsEnabled) {
+            this.documentBar.classList.add('d-none');
+            return;
+          }
+          this.documentBar.classList.remove('d-none');
+          var html = '<div class="ai-chat-doc-bar p-2">';
+          html += '<div class="d-flex flex-wrap align-items-center gap-1">';
+          for (var i = 0; i < this.documents.length; i++) {
+            var doc = this.documents[i];
+            var name = doc.fileName || 'Document';
+            if (name.length > 20) name = name.substring(0, 17) + '...';
+            html += '<span class="badge bg-secondary bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml(doc.fileName || '') + '">';
+            html += '<i class="fa-solid fa-file-lines" style="font-size: 0.7rem;"></i> ';
+            html += this.escapeHtml(name);
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"' + (this.isDocumentOperationPending ? ' disabled' : '') + '></button>';
+            html += '</span>';
+          }
+          for (var m = 0; m < this.uploadErrors.length; m++) {
+            var failedItem = this.uploadErrors[m];
+            var failedName = failedItem.fileName || 'File';
+            var errorMsg = failedItem.error || 'Upload failed';
+            if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
+            html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
+            html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+            html += this.escapeHtml(failedName);
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
+            html += '</span>';
+          }
+          if (this.isUploading) {
+            html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
+            html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
+            html += '</span>';
+          }
+          html += '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ai-chat-doc-add-btn d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;" title="Attach documents"' + (this.isDocumentOperationPending ? ' disabled' : '') + '>';
+          html += '<i class="fa-solid fa-paperclip"></i>';
+          if (this.documents.length === 0 && !this.isUploading) {
+            html += ' <span>Attach files</span>';
+          }
+          html += '</button>';
+          html += '</div>';
+          if (config.supportedExtensionsText) {
+            html += '<div class="small text-muted mt-2">Supported formats: ' + this.escapeHtml(config.supportedExtensionsText) + '</div>';
+          }
+          html += '</div>';
+          this.documentBar.replaceChildren(DOMPurify.sanitize(html, {
+            RETURN_DOM_FRAGMENT: true
+          }));
+
+          // Bind remove handlers
+          var self = this;
+          var closeButtons = this.documentBar.querySelectorAll('[data-doc-index]');
+          for (var j = 0; j < closeButtons.length; j++) {
+            closeButtons[j].addEventListener('click', function (idx) {
+              return function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (self.isDocumentOperationPending) {
+                  return;
+                }
+                var docToRemove = self.documents[idx];
+                if (docToRemove) self.removeDocument(docToRemove);
+              };
+            }(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+          }
+
+          // Bind error dismiss handlers
+          var errorCloseButtons = this.documentBar.querySelectorAll('[data-error-index]');
+          for (var n = 0; n < errorCloseButtons.length; n++) {
+            errorCloseButtons[n].addEventListener('click', function (idx) {
+              return function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.uploadErrors.splice(idx, 1);
+                self.renderDocumentBar();
+              };
+            }(parseInt(errorCloseButtons[n].getAttribute('data-error-index'))));
+          }
+
+          // Bind add button
+          var addBtn = this.documentBar.querySelector('.ai-chat-doc-add-btn');
+          if (addBtn) {
+            addBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              if (self.isDocumentOperationPending) {
+                return;
+              }
+              self.triggerFileInput();
+            });
+          }
+        },
+        escapeHtml: function escapeHtml(text) {
+          var div = document.createElement('div');
+          div.textContent = text;
+          return div.innerHTML;
+        },
+        extractReadableErrorMessage: function extractReadableErrorMessage(errorText, fallbackMessage) {
+          if (!errorText || typeof errorText !== 'string') {
+            return fallbackMessage;
+          }
+          var trimmed = errorText.trim();
+          if (!trimmed) {
+            return fallbackMessage;
+          }
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+              var parsed = JSON.parse(trimmed);
+              var message = (parsed === null || parsed === void 0 ? void 0 : parsed.error) || (parsed === null || parsed === void 0 ? void 0 : parsed.message) || (parsed === null || parsed === void 0 ? void 0 : parsed.title) || (parsed === null || parsed === void 0 ? void 0 : parsed.detail);
+              return typeof message === 'string' && message.trim() ? message.trim() : fallbackMessage;
+            } catch (err) {
+              return fallbackMessage;
+            }
+          }
+          if (/<[^>]+>/.test(trimmed)) {
+            return fallbackMessage;
+          }
+          return trimmed;
+        },
+        normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
+          if (!appearance) {
+            return null;
+          }
+          var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
+          var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+          var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+          var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+          if (!label && !icon && !cssClass && !disableStreamingAnimation) {
+            return null;
+          }
+          return {
+            label: label,
+            icon: icon,
+            cssClass: cssClass,
+            disableStreamingAnimation: disableStreamingAnimation
+          };
+        },
+        getAssistantLabel: function getAssistantLabel(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.label ? appearance.label : this.assistantLabel;
+        },
+        getAssistantRoleClasses: function getAssistantRoleClasses(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          var classes = ['ai-chat-msg-role'];
+          if (appearance && appearance.cssClass) {
+            classes.push(appearance.cssClass);
+          } else {
+            classes.push('ai-chat-msg-role-assistant');
+          }
+          return classes;
+        },
+        getAssistantIconClasses: function getAssistantIconClasses(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+        },
+        getAssistantIcon: function getAssistantIcon(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+        },
+        shouldAnimateAssistantIcon: function shouldAnimateAssistantIcon(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return !!message && message.isStreaming && index === this.lastAssistantIndex && !(appearance && appearance.disableStreamingAnimation);
+        },
+        startConnection: function startConnection() {
+          var _this3 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+            var _t4;
+            return _regenerator().w(function (_context6) {
+              while (1) switch (_context6.p = _context6.n) {
+                case 0:
+                  _this3.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+
+                  // Allow long-running operations (e.g., multi-step MCP tool calls)
+                  // without the client disconnecting prematurely.
+                  _this3.connection.serverTimeoutInMilliseconds = 600000;
+                  _this3.connection.keepAliveIntervalInMilliseconds = 15000;
+                  _this3.connection.on("LoadSession", function (data) {
+                    var _data$messages;
+                    _this3.initializeSession(data.sessionId, true);
+                    _this3.messages = [];
+                    _this3.documents = data.documents || [];
+                    _this3.uploadErrors = [];
+                    ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
+                      _this3.addMessage(msg);
+                      _this3.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                      });
+                    });
+
+                    // Update feedback icons in the DOM after all messages have rendered.
+                    _this3.$nextTick(function () {
+                      _this3.refreshAllFeedbackIcons();
+                    });
+
+                    // When the session is new (no messages) and an initial prompt is configured,
+                    // display it as the first assistant message without invoking the AI.
+                    if (_this3.messages.length === 0 && config.initialPrompt) {
+                      _this3.addMessage({
+                        role: 'assistant',
+                        content: config.initialPrompt
+                      });
+                    }
+                  });
+                  _this3.connection.on("ReceiveError", function (error) {
+                    console.error("SignalR Error: ", error);
+                    if (_this3.isRecording) {
+                      _this3.stopRecording();
+                    }
+                    if (widgetBehavior && typeof widgetBehavior.handleReceiveError === 'function') {
+                      widgetBehavior.handleReceiveError(_this3, error, config);
+                    }
+                  });
+                  _this3.connection.on("MessageRated", function (messageId, userRating) {
+                    var msg = _this3.messages.find(function (m) {
+                      return m.id === messageId;
+                    });
+                    if (msg) {
+                      msg.userRating = userRating;
+                    }
+                  });
+                  _this3.connection.on("ReceiveTranscript", function (sessionId, text, isFinal) {
+                    if (_this3.isConversationMode) {
+                      if (!isFinal && text) {
+                        _this3._conversationPartialTranscript = text;
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                        // Show partial transcript as a live user message.
+                        if (!_this3._conversationPartialMessage) {
+                          _this3.hidePlaceholder();
+                          _this3._conversationPartialMessage = {
+                            role: 'user',
+                            content: text,
+                            htmlContent: html,
+                            isPartial: true
+                          };
+                          _this3.messages.push(_this3._conversationPartialMessage);
+                        } else {
+                          _this3._conversationPartialMessage.content = text;
+                          _this3._conversationPartialMessage.htmlContent = html;
+                        }
+                        _this3.scrollToBottom();
+                      }
+                      return;
+                    }
+                    if (text && !_this3._audioInputSent) {
+                      _this3.prompt = _this3.preRecordingPrompt + text;
+                      if (_this3.inputElement) {
+                        _this3.inputElement.value = _this3.prompt;
+                        _this3.inputElement.dispatchEvent(new Event('input'));
+                      }
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, text) {
+                    if (text) {
+                      _this3.stopAudio();
+
+                      // If there's an interrupted assistant message still streaming,
+                      // mark it as done to stop the spinner animation.
+                      if (_this3._conversationAssistantMessage) {
+                        var oldMsg = _this3.messages[_this3._conversationAssistantMessage.index];
+                        if (oldMsg) {
+                          oldMsg.isStreaming = false;
+                        }
+                        _this3._conversationAssistantMessage = null;
+                      }
+
+                      // Replace the partial transcript message with the final one.
+                      if (_this3._conversationPartialMessage) {
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        _this3._conversationPartialMessage.content = text;
+                        _this3._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                        _this3._conversationPartialMessage.isPartial = false;
+                        _this3._conversationPartialMessage = null;
+                      } else {
+                        _this3.addMessage({
+                          role: 'user',
+                          content: text
+                        });
+                      }
+                      _this3.scrollToBottom();
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, references, appearance) {
+                    if (!_this3._conversationAssistantMessage) {
+                      _this3.stopAudio();
+                      _this3.hideTypingIndicator();
+
+                      // Ensure no stale streaming indicators remain from prior messages.
+                      for (var j = 0; j < _this3.messages.length; j++) {
+                        if (_this3.messages[j].isStreaming) {
+                          _this3.messages[j].isStreaming = false;
+                        }
+                      }
+                      var msgIndex = _this3.messages.length;
+                      var newMessage = {
+                        id: messageId,
+                        role: "assistant",
+                        content: "",
+                        htmlContent: "",
+                        isStreaming: true,
+                        userRating: null,
+                        appearance: _this3.normalizeAssistantAppearance(appearance),
+                        references: {}
+                      };
+                      _this3.messages.push(newMessage);
+                      _this3._conversationAssistantMessage = {
+                        index: msgIndex,
+                        content: ''
+                      };
+                    }
+                    _this3._conversationAssistantMessage.content += token;
+                    var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                    if (msg) {
+                      if (!msg.appearance) {
+                        msg.appearance = _this3.normalizeAssistantAppearance(appearance);
+                      }
+                      msg.rawContent = _this3._conversationAssistantMessage.content;
+                      msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                      updateMessagePresentation(msg, msg.references);
+                      _this3.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                        _this3.scrollToBottom();
+                      });
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId, references) {
+                    if (_this3._conversationAssistantMessage) {
+                      var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                      if (msg) {
+                        msg.isStreaming = false;
+                        msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
+                        updateMessagePresentation(msg, msg.references);
+                      }
+                      _this3._conversationAssistantMessage = null;
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioChunk", function (sessionId, base64Audio, contentType) {
+                    if (base64Audio) {
+                      var binaryString = atob(base64Audio);
+                      var bytes = new Uint8Array(binaryString.length);
+                      for (var i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      _this3.audioChunks.push(bytes);
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioComplete", function (sessionId) {
+                    _this3.playCollectedAudio();
+                  });
+                  _this3.connection.on("ReceiveNotification", function (notification) {
+                    _this3.receiveNotification(notification);
+                  });
+                  _this3.connection.on("UpdateNotification", function (notification) {
+                    _this3.updateNotification(notification);
+                  });
+                  _this3.connection.on("RemoveNotification", function (notificationType) {
+                    _this3.removeNotification(notificationType);
+                  });
+                  _this3.connection.onreconnecting(function () {
+                    console.warn("SignalR: reconnecting...");
+                  });
+                  _this3.connection.onreconnected(function () {
+                    console.info("SignalR: reconnected.");
+                    if (_this3.isSessionStarted) {
+                      _this3.reloadCurrentSession();
+                    }
+                  });
+                  _this3.connection.onclose(function (error) {
+                    if (_this3.isNavigatingAway) {
+                      return;
+                    }
+                    if (error) {
+                      console.warn("SignalR connection closed with error:", error.message || error);
+                    }
+                  });
+                  _context6.p = 1;
+                  _context6.n = 2;
+                  return _this3.connection.start();
+                case 2:
+                  _context6.n = 4;
+                  break;
+                case 3:
+                  _context6.p = 3;
+                  _t4 = _context6.v;
+                  console.error("SignalR Connection Error: ", _t4);
+                case 4:
+                  return _context6.a(2);
+              }
+            }, _callee6, null, [[1, 3]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
-          var _this2 = this;
-          this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", {
+          var _this4 = this;
+          if (message.role === 'assistant') {
+            message.appearance = this.normalizeAssistantAppearance(message.appearance);
+          }
+          if (message.content && !message.htmlContent) {
+            message.htmlContent = parseMarkdownContent(message.content, message);
+          }
+          this.fireEvent(new CustomEvent("addingCoreAIPromotMessage", {
             detail: {
               message: message
             }
           }));
           this.messages.push(message);
           this.$nextTick(function () {
-            _this2.fireEvent(new CustomEvent("addedOpenAIPromotMessage", {
+            _this4.fireEvent(new CustomEvent("addedCoreAIPromotMessage", {
               detail: {
                 message: message
               }
@@ -118,46 +1406,32 @@ window.openAIChatManager = function () {
           });
         },
         addMessage: function addMessage(message) {
-          var _this3 = this;
+          var _this5 = this;
+          // Ensure userRating is always defined for Vue reactivity.
+          if (message.userRating === undefined) {
+            message.userRating = null;
+          }
           if (message.content) {
-            var processedContent = message.content.trim();
-            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
-                var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
-                  key = _Object$entries$_i[0],
-                  value = _Object$entries$_i[1];
-                processedContent = processedContent.replaceAll(key, "<sup><strong>".concat(value.index, "</strong></sup>"));
-              }
-
-              // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-              processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-              processedContent += '<br><br>';
-              for (var _i2 = 0, _Object$entries2 = Object.entries(message.references); _i2 < _Object$entries2.length; _i2++) {
-                var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                  _key = _Object$entries2$_i[0],
-                  _value = _Object$entries2$_i[1];
-                processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
-              }
-            }
-            message.content = processedContent;
-            message.htmlContent = marked.parse(processedContent, {
-              renderer: renderer
-            });
+            var _message$rawContent;
+            message.rawContent = (_message$rawContent = message.rawContent) !== null && _message$rawContent !== void 0 ? _message$rawContent : message.content;
+            updateMessagePresentation(message, message.references);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
           this.$nextTick(function () {
-            _this3.scrollToBottom();
+            // Render any pending charts once the DOM is updated
+            renderChartsInMessage(message);
+            _this5.scrollToBottom();
           });
         },
         addMessages: function addMessages(messages) {
-          var _this4 = this;
+          var _this6 = this;
           for (var i = 0; i < messages.length; i++) {
             this.addMessageInternal(messages[i]);
           }
           this.hidePlaceholder();
           this.$nextTick(function () {
-            _this4.scrollToBottom();
+            _this6.scrollToBottom();
           });
         },
         hidePlaceholder: function hidePlaceholder() {
@@ -172,6 +1446,32 @@ window.openAIChatManager = function () {
           }
           this.isPlaceholderVisible = true;
         },
+        isOrchestratorAvailable: function isOrchestratorAvailable() {
+          return config.isOrchestratorAvailable !== false;
+        },
+        applyOrchestratorAvailability: function applyOrchestratorAvailability() {
+          if (this.isOrchestratorAvailable()) {
+            return true;
+          }
+          var unavailableMessage = config.orchestratorUnavailableMessage || "This orchestrator is not currently available.";
+          if (this.inputElement) {
+            this.inputElement.disabled = true;
+            this.inputElement.value = '';
+            this.inputElement.placeholder = unavailableMessage;
+          }
+          if (this.buttonElement) {
+            this.buttonElement.disabled = true;
+          }
+          if (this.micButtonElement) {
+            this.micButtonElement.disabled = true;
+            this.micButtonElement.style.display = 'none';
+          }
+          if (this.conversationButtonElement) {
+            this.conversationButtonElement.disabled = true;
+            this.conversationButtonElement.style.display = 'none';
+          }
+          return false;
+        },
         fireEvent: function fireEvent(event) {
           document.dispatchEvent(event);
         },
@@ -179,101 +1479,230 @@ window.openAIChatManager = function () {
           return message.role === 'indicator';
         },
         sendMessage: function sendMessage() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
           var trimmedPrompt = this.prompt.trim();
           if (!trimmedPrompt) {
             return;
+          }
+
+          // Stop any active recording before sending.
+          if (this.isRecording) {
+            this.stopRecording();
+          }
+
+          // Prevent stale ReceiveTranscript events from repopulating the prompt.
+          this._audioInputSent = true;
+
+          // In single-response mode, clear all previous messages.
+          if (this.singleResponseMode) {
+            this.messages.splice(0, this.messages.length);
           }
           this.addMessage({
             role: 'user',
             content: trimmedPrompt
           });
-          this.streamMessage(trimmedPrompt);
+          this.streamMessage(this.getProfileId(), trimmedPrompt, null);
           this.inputElement.value = '';
           this.prompt = '';
         },
-        streamMessage: function streamMessage(trimmedPrompt) {
-          var _this5 = this;
+        startRecording: function startRecording() {
+          var _this7 = this;
+          if (this.isRecording || !this.connection) {
+            return;
+          }
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this7.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this7.preRecordingPrompt = _this7.prompt;
+            _this7._audioInputSent = false;
+            var subject = new signalR.Subject();
+            var profileId = _this7.getProfileId();
+            var sessionId = _this7.getSessionId() || '';
+            var pendingChunk = Promise.resolve();
+            _this7.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context7) {
+                    while (1) switch (_context7.n) {
+                      case 0:
+                        _context7.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context7.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte) {
+                          return str + String.fromCharCode(_byte);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        subject.next(base64);
+                      case 2:
+                        return _context7.a(2);
+                    }
+                  }, _callee7);
+                })));
+              }
+            });
+            _this7.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                return subject.complete();
+              });
+            });
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
+            _this7.mediaRecorder.start(250);
+            _this7.isRecording = true;
+            _this7.updateMicButton();
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+          });
+        },
+        stopRecording: function stopRecording() {
+          if (!this.isRecording || !this.mediaRecorder) {
+            return;
+          }
+          this.mediaRecorder.stop();
+          this.isRecording = false;
+          this.updateMicButton();
+        },
+        toggleRecording: function toggleRecording() {
+          if (this.isRecording) {
+            this.stopRecording();
+          } else {
+            this.startRecording();
+          }
+        },
+        updateMicButton: function updateMicButton() {
+          if (!this.micButton) {
+            return;
+          }
+          if (this.isRecording) {
+            this.micButton.classList.add('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+          } else {
+            this.micButton.classList.remove('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+          }
+        },
+        streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
+          var _this8 = this;
           if (this.stream) {
             this.stream.dispose();
             this.stream = null;
           }
           this.streamingStarted();
           this.showTypingIndicator();
+          this.autoScroll = true;
           var content = '';
           var references = {};
+          var lastResponseId = null;
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
           var currentSessionId = this.getSessionId();
-          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null).subscribe({
+          this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
             next: function next(chunk) {
-              var message = _this5.messages[messageIndex];
+              var message = _this8.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentSessionId) {
-                  _this5.setSessionId(chunk.sessionId);
+                  _this8.initializeSession(chunk.sessionId);
                 }
-                _this5.hideTypingIndicator();
+                _this8.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
-                messageIndex = _this5.messages.length;
+                messageIndex = _this8.messages.length;
                 var newMessage = {
+                  id: chunk.messageId,
                   role: "assistant",
+                  title: chunk.title,
                   content: "",
-                  htmlContent: ""
+                  htmlContent: "",
+                  isStreaming: true,
+                  userRating: null
                 };
-                _this5.messages.push(newMessage);
+                _this8.messages.push(newMessage);
                 message = newMessage;
               }
+              if (chunk.title && (!message.title || message.title !== chunk.title)) {
+                message.title = chunk.title;
+              }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
-                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
-                    key = _Object$entries3$_i[0],
-                    value = _Object$entries3$_i[1];
-                  references[key] = value;
+                for (var _i4 = 0, _Object$entries2 = Object.entries(chunk.references); _i4 < _Object$entries2.length; _i4++) {
+                  var _normalizeReference2;
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i4], 2),
+                    key = _Object$entries2$_i[0],
+                    value = _Object$entries2$_i[1];
+                  references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
                 }
               }
               if (chunk.content) {
-                var processedContent = chunk.content;
-                for (var _i4 = 0, _Object$entries4 = Object.entries(references); _i4 < _Object$entries4.length; _i4++) {
-                  var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
-                    _key2 = _Object$entries4$_i[0],
-                    _value2 = _Object$entries4$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value2.index, "</strong></sup>"));
+                // When the responseId changes (e.g., after an internal tool call),
+                // insert a line break to visually separate response segments.
+                if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                  content += '\n\n';
                 }
-
-                // Append processed content to the message.
-                // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                if (chunk.responseId) {
+                  lastResponseId = chunk.responseId;
+                }
+                content += chunk.content;
               }
 
               // Update the existing message
-              message.content = content;
-              message.htmlContent = marked.parse(content, {
-                renderer: renderer
+              message.rawContent = content;
+              updateMessagePresentation(message, references);
+              _this8.messages[messageIndex] = message;
+              _this8.$nextTick(function () {
+                renderChartsInMessage(message);
+                _this8.scrollToBottom();
               });
-              _this5.messages[messageIndex] = message;
-              _this5.scrollToBottom();
             },
             complete: function complete() {
-              var _this5$stream;
-              _this5.processReferences(references, messageIndex);
-              _this5.streamingFinished();
-              if (!_this5.messages[messageIndex].content) {
-                // Blank message received.
-                _this5.hideTypingIndicator();
-                _this5.addMessage(_this5.getServiceDownMessage());
-                console.log('blank message');
+              var _this8$stream;
+              _this8.processReferences(references, messageIndex);
+              _this8.streamingFinished();
+              var msg = _this8.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
               }
-              (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
-              _this5.stream = null;
+              if (!msg || !msg.content) {
+                // No content received at all.
+                _this8.hideTypingIndicator();
+              }
+
+              // Trigger text-to-speech only in conversation mode.
+              if (_this8.isConversationMode && _this8.textToSpeechEnabled && msg && msg.content) {
+                _this8.synthesizeSpeech(msg.content);
+              }
+              (_this8$stream = _this8.stream) === null || _this8$stream === void 0 || _this8$stream.dispose();
+              _this8.stream = null;
             },
             error: function error(err) {
-              var _this5$stream2;
-              _this5.processReferences(references, messageIndex);
-              _this5.streamingFinished();
-              _this5.hideTypingIndicator();
-              _this5.addMessage(_this5.getServiceDownMessage());
-              (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
-              _this5.stream = null;
+              var _this8$stream2;
+              _this8.processReferences(references, messageIndex);
+              _this8.streamingFinished();
+              var msg = _this8.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
+              }
+              _this8.hideTypingIndicator();
+              if (!_this8.isNavigatingAway) {
+                _this8.addMessage(_this8.getServiceDownMessage());
+              }
+              (_this8$stream2 = _this8.stream) === null || _this8$stream2 === void 0 || _this8$stream2.dispose();
+              _this8.stream = null;
               console.error("Stream error:", err);
             }
           });
@@ -287,48 +1716,484 @@ window.openAIChatManager = function () {
           return newMessage;
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this9 = this;
+          references = normalizeReferences(references);
           if (Object.keys(references).length) {
-            var _message$content;
+            var _ref23, _message$rawContent2;
             var message = this.messages[messageIndex];
-            message.content = ((_message$content = message.content) === null || _message$content === void 0 ? void 0 : _message$content.trim()) + '<br><br>' || '';
-            for (var _i5 = 0, _Object$entries5 = Object.entries(references); _i5 < _Object$entries5.length; _i5++) {
-              var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i5], 2),
-                key = _Object$entries5$_i[0],
-                value = _Object$entries5$_i[1];
-              message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
-            }
-            message.htmlContent = marked.parse(message.content, {
-              renderer: renderer
-            });
+            message.rawContent = (_ref23 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref23 !== void 0 ? _ref23 : '';
+            updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this9.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
           var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
           if (stopIcon) {
-            this.buttonElement.innerHTML = stopIcon;
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(stopIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          }
+          if (this.inputElement) {
+            this.inputElement.setAttribute('disabled', 'disabled');
           }
         },
         streamingFinished: function streamingFinished() {
           var startIcon = this.buttonElement.getAttribute('data-start-icon');
           if (startIcon) {
-            this.buttonElement.innerHTML = startIcon;
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(startIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
           }
+          if (this.inputElement) {
+            this.inputElement.removeAttribute('disabled');
+            this.inputElement.focus();
+          }
+
+          // Directly manipulate the DOM to stop all streaming animations.
+          if (this.chatContainer) {
+            var icons = this.chatContainer.querySelectorAll('.ai-streaming-icon');
+            for (var i = 0; i < icons.length; i++) {
+              icons[i].classList.remove('ai-streaming-icon');
+              icons[i].classList.add('ai-bot-icon');
+            }
+          }
+
+          // Also update Vue data for consistency.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
+        },
+        handleExternalTtsStop: function handleExternalTtsStop(e) {
+          var _e$detail;
+          if ((e === null || e === void 0 || (_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.sourceId) === this.ttsInstanceId) {
+            return;
+          }
+          this.stopAudio(false);
+        },
+        updateTtsPlaybackButtons: function updateTtsPlaybackButtons() {
+          var _this0 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-tts-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
+            var isPlaying = buttonIndex === _this0.ttsPlayingMessageIndex;
+            button.classList.toggle('tts-playing', isPlaying);
+            button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+          });
+        },
+        updateCopyButtons: function updateCopyButtons() {
+          var _this1 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-copy-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-copy-message-index'));
+            var isCopied = buttonIndex === _this1.copiedMessageIndex;
+            var iconHtml = isCopied ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-copy"></i>';
+            button.classList.toggle('text-success', isCopied);
+            button.classList.toggle('text-secondary', !isCopied);
+            button.setAttribute('title', isCopied ? _this1.copiedTitle : _this1.copyTitle);
+            button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          });
+        },
+        setCopyButtonState: function setCopyButtonState(button, isCopied) {
+          if (!button) {
+            return;
+          }
+          var iconHtml = isCopied ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-copy"></i>';
+          button.classList.toggle('text-success', isCopied);
+          button.classList.toggle('text-secondary', !isCopied);
+          button.setAttribute('title', isCopied ? this.copiedTitle : this.copyTitle);
+          button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+            RETURN_DOM_FRAGMENT: true
+          }));
+        },
+        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+          var _this10 = this;
+          if (!this.textToSpeechEnabled || !text || !this.connection) {
+            return;
+          }
+          this.audioChunks = [];
+          this.isPlayingAudio = true;
+          this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
+          this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
+            console.error("TTS synthesis error:", err);
+            _this10.isPlayingAudio = false;
+            _this10.ttsPlayingMessageIndex = -1;
+            _this10._ttsCacheIndex = -1;
+            _this10.$nextTick(function () {
+              return _this10.updateTtsPlaybackButtons();
+            });
+          });
+        },
+        toggleMessageTts: function toggleMessageTts(message, index) {
+          var _this11 = this;
+          if (this.ttsPlayingMessageIndex === index) {
+            this.stopAudio();
+            return;
+          }
+          this.stopAudio(false);
+          window.dispatchEvent(new CustomEvent('crestapps-ai-chat-stop-tts', {
+            detail: {
+              sourceId: this.ttsInstanceId
+            }
+          }));
+          this.ttsPlayingMessageIndex = index;
+          this.$nextTick(function () {
+            return _this11.updateTtsPlaybackButtons();
+          });
+          if (this.ttsAudioCache[index]) {
+            this.playAudioBlob(this.ttsAudioCache[index]);
+            return;
+          }
+          this.synthesizeSpeech(message.content, index);
+        },
+        playCollectedAudio: function playCollectedAudio() {
+          var _this12 = this;
+          if (this.audioChunks.length === 0) {
+            if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
+              this.isPlayingAudio = false;
+              this.ttsPlayingMessageIndex = -1;
+              this.$nextTick(function () {
+                return _this12.updateTtsPlaybackButtons();
+              });
+            }
+            return;
+          }
+          var totalLength = this.audioChunks.reduce(function (sum, chunk) {
+            return sum + chunk.length;
+          }, 0);
+          var combined = new Uint8Array(totalLength);
+          var offset = 0;
+          var _iterator6 = _createForOfIteratorHelper(this.audioChunks),
+            _step6;
+          try {
+            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+              var chunk = _step6.value;
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } catch (err) {
+            _iterator6.e(err);
+          } finally {
+            _iterator6.f();
+          }
+          this.audioChunks = [];
+          var blob = new Blob([combined], {
+            type: 'audio/mp3'
+          });
+          if (this._ttsCacheIndex >= 0) {
+            this.ttsAudioCache[this._ttsCacheIndex] = blob;
+            this._ttsCacheIndex = -1;
+          }
+
+          // If audio is already playing, queue this blob for sequential playback.
+          if (this.currentAudioElement) {
+            this.audioPlayQueue.push(blob);
+            return;
+          }
+          this.playAudioBlob(blob);
+        },
+        playAudioBlob: function playAudioBlob(blob) {
+          var _this13 = this;
+          var url = URL.createObjectURL(blob);
+          var audio = new Audio(url);
+          this.currentAudioUrl = url;
+          this.currentAudioElement = audio;
+          this.isPlayingAudio = true;
+          audio.addEventListener('ended', function () {
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
+            URL.revokeObjectURL(url);
+            _this13.playNextInQueue();
+          });
+          audio.addEventListener('error', function () {
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
+            URL.revokeObjectURL(url);
+            _this13.playNextInQueue();
+          });
+          audio.play()["catch"](function (err) {
+            console.error("Audio playback error:", err);
+            _this13.currentAudioElement = null;
+            _this13.currentAudioUrl = null;
+            URL.revokeObjectURL(url);
+            _this13.audioPlayQueue = [];
+            _this13.isPlayingAudio = false;
+            _this13.ttsPlayingMessageIndex = -1;
+            _this13.$nextTick(function () {
+              return _this13.updateTtsPlaybackButtons();
+            });
+          });
+        },
+        playNextInQueue: function playNextInQueue() {
+          var _this14 = this;
+          if (this.audioPlayQueue.length > 0) {
+            var nextBlob = this.audioPlayQueue.shift();
+            this.playAudioBlob(nextBlob);
+          } else {
+            this.isPlayingAudio = false;
+            this.ttsPlayingMessageIndex = -1;
+            this.$nextTick(function () {
+              return _this14.updateTtsPlaybackButtons();
+            });
+            this.conversationModeOnAudioEnded();
+          }
+        },
+        stopAudio: function stopAudio() {
+          var _this15 = this;
+          if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement.currentTime = 0;
+            this.currentAudioElement = null;
+          }
+          if (this.currentAudioUrl) {
+            URL.revokeObjectURL(this.currentAudioUrl);
+            this.currentAudioUrl = null;
+          }
+          this.audioChunks = [];
+          this.audioPlayQueue = [];
+          this.isPlayingAudio = false;
+          this.ttsPlayingMessageIndex = -1;
+          this.$nextTick(function () {
+            return _this15.updateTtsPlaybackButtons();
+          });
+        },
+        toggleConversationMode: function toggleConversationMode() {
+          if (this.isConversationMode) {
+            this.stopConversationMode();
+          } else {
+            this.startConversationMode();
+          }
+        },
+        startConversationMode: function startConversationMode() {
+          var _this16 = this;
+          if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
+            return;
+          }
+          this.isConversationMode = true;
+          this.updateConversationButton();
+          this._conversationPartialTranscript = '';
+          this._conversationAssistantMessage = null;
+          this._conversationPartialMessage = null;
+
+          // Remove any previous conversation ended notification.
+          this.removeNotification('conversation-ended');
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this16.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this16._conversationSubject = new signalR.Subject();
+            _this16._conversationStream = stream;
+
+            // Create an AnalyserNode for volume-based interrupt detection.
+            // During TTS playback, detect when the user speaks above
+            // the threshold to stop TTS (interrupt). Audio chunks are
+            // always forwarded — browser echo cancellation handles
+            // speaker echo so the STT stream has no gaps.
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              _this16._conversationAudioCtx = new AudioCtx();
+              _this16._conversationAnalyser = _this16._conversationAudioCtx.createAnalyser();
+              _this16._conversationAnalyser.fftSize = 256;
+              var micSource = _this16._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this16._conversationAnalyser);
+            }
+            var pendingChunk = Promise.resolve();
+            var analyser = _this16._conversationAnalyser;
+            var interruptVolumeThreshold = 30;
+            _this16.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                // During TTS playback, check mic volume to detect
+                // user interruption (speaking above threshold).
+                if (_this16.isPlayingAudio && analyser) {
+                  var freqData = new Uint8Array(analyser.frequencyBinCount);
+                  analyser.getByteFrequencyData(freqData);
+                  var sum = 0;
+                  for (var k = 0; k < freqData.length; k++) {
+                    sum += freqData[k];
+                  }
+                  var avg = sum / freqData.length;
+                  if (avg >= interruptVolumeThreshold) {
+                    // User is speaking — interrupt TTS playback.
+                    _this16.stopAudio();
+                  }
+                }
+
+                // Always send audio to STT — browser echo cancellation
+                // handles speaker echo; continuous audio avoids gaps
+                // that increase recognition latency.
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context8) {
+                    while (1) switch (_context8.n) {
+                      case 0:
+                        _context8.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context8.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte2) {
+                          return str + String.fromCharCode(_byte2);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        try {
+                          _this16._conversationSubject.next(base64);
+                        } catch (err) {
+                          // Subject may have been completed already.
+                        }
+                      case 2:
+                        return _context8.a(2);
+                    }
+                  }, _callee8);
+                })));
+              }
+            });
+            _this16.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                try {
+                  _this16._conversationSubject.complete();
+                } catch (err) {
+                  // Already completed.
+                }
+              });
+            });
+            var profileId = _this16.getProfileId();
+            var sessionId = _this16.getSessionId() || '';
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this16.connection.send("StartConversation", profileId, sessionId, _this16._conversationSubject, mimeType, language);
+            _this16.mediaRecorder.start(250);
+            _this16.isRecording = true;
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+            _this16.isConversationMode = false;
+            _this16.updateConversationButton();
+          });
+        },
+        stopConversationMode: function stopConversationMode() {
+          if (!this.isConversationMode) {
+            return;
+          }
+          this.isConversationMode = false;
+          this.updateConversationButton();
+
+          // Signal the server to cancel all in-progress STT/TTS streams immediately.
+          if (this.connection) {
+            this.connection.invoke("StopConversation")["catch"](function () {});
+          }
+          if (this.isRecording && this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+          }
+          this.stopAudio();
+          this._conversationPartialTranscript = '';
+          this._conversationPartialMessage = null;
+
+          // Clean up the AudioContext used for volume monitoring.
+          if (this._conversationAudioCtx) {
+            this._conversationAudioCtx.close()["catch"](function () {});
+            this._conversationAudioCtx = null;
+            this._conversationAnalyser = null;
+          }
+
+          // Mark any in-flight assistant message as done to stop the spinner.
+          if (this._conversationAssistantMessage) {
+            var msg = this.messages[this._conversationAssistantMessage.index];
+            if (msg) {
+              msg.isStreaming = false;
+            }
+            this._conversationAssistantMessage = null;
+          }
+
+          // Safety net: clear all lingering streaming indicators.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
+
+          // Show a "conversation ended" notification system message.
+          this.receiveNotification({
+            type: 'conversation-ended',
+            content: 'Conversation ended.',
+            icon: 'fa-solid fa-circle-check',
+            dismissible: true,
+            autoDismissMs: 5000
+          });
+        },
+        updateConversationButton: function updateConversationButton() {
+          if (!this.conversationButton) {
+            return;
+          }
+          if (this.isConversationMode) {
+            this.conversationButton.classList.add('active', 'btn-primary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
+            var endHtml = this.conversationButton.getAttribute('data-end-html');
+            if (endHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(endHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          } else {
+            this.conversationButton.classList.remove('active', 'btn-primary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.add('btn-outline-dark');
+            this.conversationButton.blur();
+            this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
+            var startHtml = this.conversationButton.getAttribute('data-start-html');
+            if (startHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(startHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          }
+        },
+        conversationModeSendPrompt: function conversationModeSendPrompt() {
+          // Legacy: only used by AudioInput mode's ReceiveTranscript.
+        },
+        conversationModeOnAudioEnded: function conversationModeOnAudioEnded() {
+          // Legacy: in conversation mode, audio playback continuation
+          // is handled by the persistent stream. This method is only
+          // called from playCollectedAudio for non-conversation TTS.
         },
         generatePrompt: function generatePrompt(element) {
           if (!element) {
             console.error('The element paramter is required.');
             return;
           }
-          var profileId = element.getAttribute('data-profile-id');
+          var templateProfileId = element.getAttribute('data-profile-id');
           var sessionId = this.getSessionId();
-          if (!profileId || !sessionId) {
+          var sessionProfileId = this.getProfileId();
+          if (!templateProfileId || !sessionId) {
             console.error('The given element is missing data-profile-id or the session has not yet started.');
             return;
           }
-          this.showTypingIndicator();
-          this.streamMessage(null);
+
+          // streamMessage() already shows the typing indicator.
+          this.streamMessage(templateProfileId, null, sessionProfileId);
         },
         createSessionUrl: function createSessionUrl(baseUrl, param, value) {
           var fullUrl = baseUrl.toLowerCase().startsWith('http') ? baseUrl : window.location.origin + baseUrl;
@@ -350,66 +2215,306 @@ window.openAIChatManager = function () {
           var removedCount = originalLength - this.messages.length;
           return removedCount;
         },
+        receiveNotification: function receiveNotification(notification) {
+          var _this17 = this;
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
+          var existingIndex = this.notifications.findIndex(function (n) {
+            return n.type === notification.type;
+          });
+          if (existingIndex >= 0) {
+            this.notifications.splice(existingIndex, 1, notification);
+          } else {
+            this.notifications.push(notification);
+          }
+          this.scheduleNotificationDismiss(notification);
+          this.$nextTick(function () {
+            _this17.scrollToBottom();
+          });
+        },
+        updateNotification: function updateNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
+          var existingIndex = this.notifications.findIndex(function (n) {
+            return n.type === notification.type;
+          });
+          if (existingIndex >= 0) {
+            this.notifications.splice(existingIndex, 1, notification);
+            this.scheduleNotificationDismiss(notification);
+          }
+        },
+        scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
+          var _this18 = this;
+          if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+            return;
+          }
+          this.notificationDismissTimers[notification.type] = setTimeout(function () {
+            _this18.removeNotification(notification.type);
+          }, notification.autoDismissMs);
+        },
+        clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
+          var timerId = this.notificationDismissTimers[notificationType];
+          if (!timerId) {
+            return;
+          }
+          clearTimeout(timerId);
+          delete this.notificationDismissTimers[notificationType];
+        },
+        removeNotification: function removeNotification(notificationType) {
+          this.clearNotificationDismiss(notificationType);
+          this.notifications = this.notifications.filter(function (n) {
+            return n.type !== notificationType;
+          });
+        },
+        dismissNotification: function dismissNotification(notificationType) {
+          this.removeNotification(notificationType);
+        },
+        handleNotificationAction: function handleNotificationAction(notificationType, actionName) {
+          if (!this.connection) {
+            return;
+          }
+          var sessionId = this.getSessionId();
+          this.connection.invoke("HandleNotificationAction", sessionId, notificationType, actionName)["catch"](function (err) {
+            console.error("Error handling notification action:", err);
+          });
+        },
         scrollToBottom: function scrollToBottom() {
-          var _this6 = this;
+          var _this19 = this;
+          if (!this.autoScroll) {
+            return;
+          }
           setTimeout(function () {
-            _this6.chatContainer.scrollTop = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight;
+            _this19.chatContainer.scrollTop = _this19.chatContainer.scrollHeight - _this19.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
           this.prompt = event.target.value;
         },
         getProfileId: function getProfileId() {
-          return this.inputElement.getAttribute('data-profile-id');
+          return this.inputElement ? this.inputElement.getAttribute('data-profile-id') : null;
         },
         setSessionId: function setSessionId(sessionId) {
+          if (!this.inputElement) {
+            return;
+          }
           this.inputElement.setAttribute('data-session-id', sessionId || '');
         },
         resetSession: function resetSession() {
+          this.stopRecording();
+          this.rejectPendingSessionRequest('Session was reset.');
           this.setSessionId('');
           this.isSessionStarted = false;
-          if (this.widgetIsInitialized) {
-            localStorage.removeItem(this.chatWidgetStateSession);
-          }
+          this.sessionRating = null;
           this.messages = [];
-          this.showPlaceholder();
+          this.documents = [];
+
+          // When an initial prompt is configured, show it as the first
+          // assistant message instead of the generic placeholder.
+          if (config.initialPrompt) {
+            this.addMessage({
+              role: 'assistant',
+              content: config.initialPrompt
+            });
+          } else {
+            this.showPlaceholder();
+          }
+          if (widgetBehavior && typeof widgetBehavior.onSessionReset === 'function') {
+            widgetBehavior.onSessionReset(this, config);
+          }
+        },
+        startNewSession: function startNewSession() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
+          var profileId = this.getProfileId();
+          if (!profileId || !this.connection) {
+            return;
+          }
+          this.requestNewSession(profileId)["catch"](function (err) {
+            return console.error(err);
+          });
+        },
+        ensureSessionForDocuments: function ensureSessionForDocuments(profileId) {
+          var _this20 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+            var sessionId;
+            return _regenerator().w(function (_context9) {
+              while (1) switch (_context9.n) {
+                case 0:
+                  sessionId = _this20.getSessionId();
+                  if (!sessionId) {
+                    _context9.n = 1;
+                    break;
+                  }
+                  return _context9.a(2, sessionId);
+                case 1:
+                  if (!(!profileId || !_this20.connection)) {
+                    _context9.n = 2;
+                    break;
+                  }
+                  return _context9.a(2, null);
+                case 2:
+                  _context9.n = 3;
+                  return _this20.requestNewSession(profileId);
+                case 3:
+                  return _context9.a(2, _context9.v);
+              }
+            }, _callee9);
+          }))();
+        },
+        requestNewSession: function requestNewSession(profileId) {
+          var _this21 = this;
+          if (this.pendingSessionPromise) {
+            return this.pendingSessionPromise;
+          }
+          if (!profileId || !this.connection) {
+            return Promise.resolve(null);
+          }
+          this.pendingSessionPromise = new Promise(function (resolve, reject) {
+            _this21.pendingSessionResolver = resolve;
+            _this21.pendingSessionRejector = reject;
+            _this21.pendingSessionTimeoutId = window.setTimeout(function () {
+              _this21.rejectPendingSessionRequest('Timed out while creating a chat session.');
+            }, 15000);
+          });
+          this.connection.invoke("StartSession", profileId, null)["catch"](function (err) {
+            _this21.rejectPendingSessionRequest(err);
+          });
+          return this.pendingSessionPromise;
+        },
+        resolvePendingSessionRequest: function resolvePendingSessionRequest(sessionId) {
+          if (this.pendingSessionResolver) {
+            this.pendingSessionResolver(sessionId);
+          }
+          this.clearPendingSessionRequest();
+        },
+        rejectPendingSessionRequest: function rejectPendingSessionRequest(error) {
+          if (this.pendingSessionRejector) {
+            this.pendingSessionRejector(error);
+          }
+          this.clearPendingSessionRequest();
+        },
+        clearPendingSessionRequest: function clearPendingSessionRequest() {
+          if (this.pendingSessionTimeoutId) {
+            window.clearTimeout(this.pendingSessionTimeoutId);
+          }
+          this.pendingSessionPromise = null;
+          this.pendingSessionResolver = null;
+          this.pendingSessionRejector = null;
+          this.pendingSessionTimeoutId = null;
         },
         initializeApp: function initializeApp() {
-          var _this7 = this;
+          var _this22 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
-          this.inputElement.addEventListener('keyup', function (event) {
-            if (_this7.stream != null) {
+          if (!this.inputElement || !this.buttonElement || !this.chatContainer || !this.placeholder) {
+            console.error('AI chat app could not initialize because one or more required elements were not found.', {
+              inputElementSelector: config.inputElementSelector,
+              sendButtonElementSelector: config.sendButtonElementSelector,
+              chatContainerElementSelector: config.chatContainerElementSelector,
+              placeholderElementSelector: config.placeholderElementSelector
+            });
+            return false;
+          }
+          this.applyOrchestratorAvailability();
+          var sessionId = this.getSessionId();
+          if (!hasWidgetConfig && sessionId) {
+            this.loadSession(sessionId);
+          }
+
+          // Initialize document bar if enabled.
+          if (config.sessionDocumentsEnabled && config.documentBarSelector) {
+            this.documentBar = document.querySelector(config.documentBarSelector);
+            if (this.documentBar) {
+              this.renderDocumentBar();
+
+              // Create hidden file input for document uploads.
+              var fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.id = 'ai-chat-doc-input';
+              fileInput.className = 'd-none';
+              fileInput.multiple = true;
+              if (config.allowedExtensions) {
+                fileInput.accept = config.allowedExtensions;
+              }
+              fileInput.addEventListener('change', function (e) {
+                return _this22.handleFileInputChange(e);
+              });
+              this.documentBar.parentElement.appendChild(fileInput);
+
+              // Set up drag-and-drop on the input area.
+              var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+              if (inputArea) {
+                inputArea.addEventListener('dragover', function (e) {
+                  return _this22.handleDragOver(e);
+                });
+                inputArea.addEventListener('dragleave', function (e) {
+                  return _this22.handleDragLeave(e);
+                });
+                inputArea.addEventListener('drop', function (e) {
+                  return _this22.handleDrop(e);
+                });
+              }
+            }
+          }
+
+          // Pause auto-scroll when the user manually scrolls up during streaming.
+          this.chatContainer.addEventListener('scroll', function () {
+            if (!_this22.stream) {
+              return;
+            }
+            var threshold = 30;
+            var atBottom = _this22.chatContainer.scrollHeight - _this22.chatContainer.clientHeight - _this22.chatContainer.scrollTop <= threshold;
+            _this22.autoScroll = atBottom;
+          });
+          this.inputElement.addEventListener('keydown', function (event) {
+            if (_this22.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this7.buttonElement.click();
+              event.preventDefault();
+              _this22.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this7.handleUserInput(e);
+            _this22.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this7.buttonElement.removeAttribute('disabled');
+              _this22.buttonElement.removeAttribute('disabled');
             } else {
-              _this7.buttonElement.setAttribute('disabled', true);
+              _this22.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this7.stream != null) {
-              _this7.stream.dispose();
-              _this7.stream = null;
-              _this7.streamingFinished();
+            if (_this22.stream != null) {
+              _this22.stream.dispose();
+              _this22.stream = null;
+              _this22.streamingFinished();
+              _this22.hideTypingIndicator();
+
+              // Clean up: remove empty assistant message or stop streaming animation.
+              if (_this22.messages.length > 0) {
+                var lastMsg = _this22.messages[_this22.messages.length - 1];
+                if (lastMsg.role === 'assistant' && !lastMsg.content) {
+                  _this22.messages.pop();
+                } else if (lastMsg.isStreaming) {
+                  lastMsg.isStreaming = false;
+                }
+              }
               return;
             }
-            _this7.sendMessage();
+            _this22.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this7.generatePrompt(e.target);
+              _this22.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -421,13 +2526,73 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this7.loadSession(sessionId);
-              _this7.showChatScreen();
+              _this22.loadSession(sessionId);
+              _this22.showChatScreen();
             });
           }
-          for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
-            this.addMessage(config.messages[_i6]);
+          var initialMessages = Array.isArray(config.messages) ? config.messages : [];
+          for (var _i5 = 0; _i5 < initialMessages.length; _i5++) {
+            this.addMessage(initialMessages[_i5]);
           }
+
+          // When no messages were loaded and an initial prompt is configured,
+          // display it as the first assistant message without invoking the AI.
+          if (this.messages.length === 0 && config.initialPrompt) {
+            this.addMessage({
+              role: 'assistant',
+              content: config.initialPrompt
+            });
+          }
+
+          // Update feedback icons in the DOM after initial messages have rendered.
+          this.$nextTick(function () {
+            _this22.refreshAllFeedbackIcons();
+          });
+
+          // Delegate click for code block copy buttons.
+          if (this.chatContainer) {
+            this.chatContainer.addEventListener('click', function (e) {
+              var btn = e.target.closest('.ai-code-copy-btn');
+              if (!btn) {
+                return;
+              }
+              var block = btn.closest('.ai-code-block') || btn.closest('pre');
+              if (!block) {
+                return;
+              }
+              var codeEl = block.querySelector('code');
+              if (codeEl) {
+                navigator.clipboard.writeText(codeEl.textContent);
+                var copiedText = config.codeCopiedText || 'Copied!';
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                setTimeout(function () {
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                }, 2000);
+              }
+            });
+          }
+
+          // Initialize speech-to-text microphone button.
+          if (this.speechToTextEnabled && config.micButtonElementSelector) {
+            this.micButton = document.querySelector(config.micButtonElementSelector);
+            if (this.micButton) {
+              this.micButton.style.display = '';
+              this.micButton.addEventListener('click', function () {
+                _this22.toggleRecording();
+              });
+            }
+          }
+
+          // Initialize conversation mode button.
+          if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+            this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
+            if (this.conversationButton) {
+              this.conversationButton.addEventListener('click', function () {
+                _this22.toggleConversationMode();
+              });
+            }
+          }
+          return true;
         },
         loadSession: function loadSession(sessionId) {
           this.connection.invoke("LoadSession", sessionId)["catch"](function (err) {
@@ -442,136 +2607,232 @@ window.openAIChatManager = function () {
         },
         initializeSession: function initializeSession(sessionId, force) {
           if (this.isSessionStarted && !force) {
+            if (sessionId && this.getSessionId() === sessionId) {
+              this.resolvePendingSessionRequest(sessionId);
+            }
             return;
           }
-          this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", {
+          this.fireEvent(new CustomEvent("initializingSessionCoreAIChat", {
             detail: {
               sessionId: sessionId
             }
           }));
           this.setSessionId(sessionId);
           this.isSessionStarted = true;
-          if (this.widgetIsInitialized) {
-            localStorage.setItem(this.chatWidgetStateSession, sessionId);
+          this.resolvePendingSessionRequest(sessionId);
+          if (widgetBehavior && typeof widgetBehavior.onSessionInitialized === 'function') {
+            widgetBehavior.onSessionInitialized(this, sessionId, config);
           }
-        },
-        initializeWidget: function initializeWidget() {
-          var _this8 = this;
-          if (!config.widget.showChatButton) {
-            console.error('The widget showChatButton is required.');
-            return;
+
+          // For non-widget pages, update the browser URL so that a page
+          // refresh reloads the correct session instead of starting fresh.
+          if (!hasWidgetConfig && sessionId && config.sessionUrlTemplate && typeof history !== 'undefined' && history.replaceState) {
+            var sessionUrl = config.sessionUrlTemplate.replace('{sessionId}', encodeURIComponent(sessionId));
+            history.replaceState(null, '', sessionUrl);
           }
-          if (!config.widget.chatWidgetContainer) {
-            console.error('The widget chatWidgetContainer is required.');
-            return;
-          }
-          if (!config.widget.chatWidgetStateName) {
-            console.error('The widget chatWidgetStateName is required.');
-            return;
-          }
-          var showChatButton = document.querySelector(config.widget.showChatButton);
-          if (!showChatButton) {
-            return;
-          }
-          var chatWidgetContainer = document.querySelector(config.widget.chatWidgetContainer);
-          if (!chatWidgetContainer) {
-            return;
-          }
-          if (config.widget.chatHistorySection) {
-            this.chatHistorySection = document.querySelector(config.widget.chatHistorySection);
-          }
-          this.chatWidgetStateName = config.widget.chatWidgetStateName;
-          this.chatWidgetStateSession = config.widget.chatWidgetStateName + 'Session';
-          this.widgetIsInitialized = true;
-          var isOpen = localStorage.getItem(this.chatWidgetStateName) === 'open';
-          if (isOpen) {
-            this.reloadCurrentSession();
-            chatWidgetContainer.classList.remove('d-none');
-          }
-          showChatButton.addEventListener('click', function () {
-            var isHidden = chatWidgetContainer.classList.contains('d-none');
-            if (isHidden) {
-              chatWidgetContainer.classList.remove('d-none');
-              localStorage.setItem(_this8.chatWidgetStateName, 'open');
-              _this8.reloadCurrentSession();
-            } else {
-              chatWidgetContainer.classList.add('d-none');
-              localStorage.setItem(_this8.chatWidgetStateName, 'closed');
-            }
-          });
-          if (config.widget.closeChatButton) {
-            var closeChatButton = document.querySelector(config.widget.closeChatButton);
-            if (closeChatButton) {
-              closeChatButton.addEventListener('click', function () {
-                chatWidgetContainer.classList.add('d-none');
-                localStorage.setItem(_this8.chatWidgetStateName, 'closed');
-              });
-            }
-          }
-          if (config.widget.showHistoryButton && this.chatHistorySection) {
-            var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
-            if (showHistoryButton) {
-              showHistoryButton.addEventListener('click', function () {
-                _this8.chatHistorySection.classList.toggle('show');
-              });
-            }
-            if (config.widget.closeHistoryButton) {
-              var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
-              if (closeHistoryButton) {
-                closeHistoryButton.addEventListener('click', function () {
-                  _this8.showChatScreen();
-                });
-              }
-            }
-          }
-          if (config.widget.newChatButton) {
-            var newChatButton = document.querySelector(config.widget.newChatButton);
-            if (newChatButton) {
-              newChatButton.addEventListener('click', function () {
-                _this8.resetSession();
-                _this8.showChatScreen();
-              });
-            }
-          }
-        },
-        showChatScreen: function showChatScreen() {
-          if (!this.chatHistorySection) {
-            return;
-          }
-          this.chatHistorySection.classList.remove('show');
         },
         getSessionId: function getSessionId() {
-          var sessionId = this.inputElement.getAttribute('data-session-id');
-          if (!sessionId && this.widgetIsInitialized) {
-            sessionId = localStorage.getItem(this.chatWidgetStateSession);
+          var sessionId = this.inputElement ? this.inputElement.getAttribute('data-session-id') : null;
+          if (!sessionId && widgetBehavior && typeof widgetBehavior.resolveSessionId === 'function') {
+            sessionId = widgetBehavior.resolveSessionId(this, config);
           }
           return sessionId;
         },
-        copyResponse: function copyResponse(message) {
-          navigator.clipboard.writeText(message);
+        clearCopiedMessageState: function clearCopiedMessageState() {
+          if (this.copyResetTimeoutId) {
+            window.clearTimeout(this.copyResetTimeoutId);
+            this.copyResetTimeoutId = null;
+          }
+          if (this.activeCopyButton) {
+            this.setCopyButtonState(this.activeCopyButton, false);
+            this.activeCopyButton = null;
+          }
+          this.copiedMessageIndex = -1;
+        },
+        copyResponse: function copyResponse(message, index, event) {
+          var _ref25,
+            _message$copyContent,
+            _event$target,
+            _event$target$closest,
+            _this23 = this;
+          var text = message && _typeof(message) === 'object' ? (_ref25 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref25 !== void 0 ? _ref25 : '' : message !== null && message !== void 0 ? message : '';
+          var button = (event === null || event === void 0 ? void 0 : event.currentTarget) || (event === null || event === void 0 || (_event$target = event.target) === null || _event$target === void 0 || (_event$target$closest = _event$target.closest) === null || _event$target$closest === void 0 ? void 0 : _event$target$closest.call(_event$target, '[data-copy-message-index]')) || null;
+          navigator.clipboard.writeText(text).then(function () {
+            _this23.clearCopiedMessageState();
+            _this23.copiedMessageIndex = typeof index === 'number' ? index : -1;
+            _this23.activeCopyButton = button;
+            if (button) {
+              _this23.setCopyButtonState(button, true);
+            } else {
+              _this23.$nextTick(function () {
+                return _this23.updateCopyButtons();
+              });
+            }
+            _this23.copyResetTimeoutId = window.setTimeout(function () {
+              _this23.clearCopiedMessageState();
+              _this23.$nextTick(function () {
+                return _this23.updateCopyButtons();
+              });
+            }, Number(config.copyResetDelayMs) || 2000);
+          })["catch"](function (err) {
+            return console.error('Failed to copy response:', err);
+          });
+        },
+        updateFeedbackIcons: function updateFeedbackIcons(container, userRating) {
+          if (!container) {
+            return;
+          }
+          var upBtn = container.querySelector('.rate-up-btn');
+          var downBtn = container.querySelector('.rate-down-btn');
+
+          // Keep feedback icons as simple span-based Font Awesome markup so
+          // later state updates do not depend on i2svg replacement.
+          if (upBtn) {
+            var upClass = userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
+            var upIcon = document.createElement('span');
+            upIcon.className = upClass;
+            upIcon.style.fontSize = '0.9rem';
+            upBtn.textContent = '';
+            upBtn.appendChild(upIcon);
+          }
+          if (downBtn) {
+            var downClass = userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
+            var downIcon = document.createElement('span');
+            downIcon.className = downClass;
+            downIcon.style.fontSize = '0.9rem';
+            downBtn.textContent = '';
+            downBtn.appendChild(downIcon);
+          }
+        },
+        refreshAllFeedbackIcons: function refreshAllFeedbackIcons() {
+          var containers = this.$el.querySelectorAll('.ai-chat-message-assistant-feedback');
+          for (var i = 0; i < containers.length; i++) {
+            var msgId = containers[i].getAttribute('data-message-id');
+            var msg = this.messages.find(function (m) {
+              return m.id === msgId;
+            });
+            if (msg) {
+              this.updateFeedbackIcons(containers[i], msg.userRating);
+            }
+          }
+        },
+        rateMessage: function rateMessage(message, isPositive, event) {
+          var sessionId = this.getSessionId();
+          if (!sessionId || !message.id || !this.connection) {
+            return;
+          }
+
+          // Toggle: clicking the same rating again clears it.
+          var newRating = message.userRating === isPositive ? null : isPositive;
+          message.userRating = newRating;
+
+          // Find the feedback container by message ID for reliable DOM targeting.
+          var feedbackContainer = this.$el.querySelector('.ai-chat-message-assistant-feedback[data-message-id="' + message.id + '"]');
+          this.updateFeedbackIcons(feedbackContainer, newRating);
+
+          // Trigger spark animation after Font Awesome has re-processed icons.
+          if (newRating !== null && feedbackContainer) {
+            setTimeout(function () {
+              var btnClass = isPositive ? '.rate-up-btn' : '.rate-down-btn';
+              var btn = feedbackContainer.querySelector(btnClass);
+              if (btn) {
+                btn.classList.remove('spark-effect');
+                void btn.offsetWidth;
+                btn.classList.add('spark-effect');
+                btn.addEventListener('animationend', function onEnd() {
+                  btn.removeEventListener('animationend', onEnd);
+                  btn.classList.remove('spark-effect');
+                });
+              }
+            }, 50);
+          }
+          this.connection.invoke("RateMessage", sessionId, message.id, isPositive)["catch"](function (err) {
+            console.error('Failed to rate message:', err);
+          });
+        }
+      },
+      watch: {
+        documents: {
+          handler: function handler() {
+            this.renderDocumentBar();
+            if (widgetBehavior && typeof widgetBehavior.onDocumentsChanged === 'function') {
+              widgetBehavior.onDocumentsChanged(this, this.documents, config);
+            }
+          },
+          deep: true
+        },
+        isUploading: function isUploading() {
+          this.renderDocumentBar();
+        },
+        isDocumentOperationPending: function isDocumentOperationPending() {
+          this.renderDocumentBar();
+        },
+        isPlayingAudio: function isPlayingAudio() {
+          // Reserved for future use — volume-based interrupt detection
+          // no longer mutes tracks; browser echo cancellation handles echo.
+        },
+        copiedMessageIndex: function copiedMessageIndex() {
+          var _this24 = this;
+          this.$nextTick(function () {
+            return _this24.updateCopyButtons();
+          });
+        },
+        isConversationMode: function isConversationMode(active) {
+          // Hide/show mic button.
+          if (this.micButton) {
+            this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
+          }
+
+          // Hide/show send button.
+          if (this.buttonElement) {
+            this.buttonElement.style.display = active ? 'none' : '';
+          }
+
+          // Disable/enable textarea.
+          if (this.inputElement) {
+            this.inputElement.disabled = active;
+            if (active) {
+              this.inputElement.placeholder = '';
+            }
+          }
         }
       },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-            while (1) switch (_context2.prev = _context2.next) {
+        var _this25 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
+          var isInitialized;
+          return _regenerator().w(function (_context0) {
+            while (1) switch (_context0.n) {
               case 0:
-                _context2.next = 2;
-                return _this9.startConnection();
-              case 2:
-                _this9.initializeApp();
-                if (config.widget) {
-                  _this9.initializeWidget();
+                _context0.n = 1;
+                return _this25.startConnection();
+              case 1:
+                isInitialized = _this25.initializeApp();
+                if (isInitialized && hasWidgetConfig && widgetBehavior && typeof widgetBehavior.onMounted === 'function') {
+                  widgetBehavior.onMounted(_this25, config);
                 }
-              case 4:
-              case "end":
-                return _context2.stop();
+                _this25.$nextTick(function () {
+                  _this25.updateCopyButtons();
+                  refreshFontAwesomeIcons(_this25.$el);
+                  _this25.fontAwesomeObserver = observeFontAwesomeIcons(_this25.$el);
+                });
+              case 2:
+                return _context0.a(2);
             }
-          }, _callee2);
+          }, _callee0);
         }))();
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
       },
       beforeUnmount: function beforeUnmount() {
+        window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        window.removeEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
+        if (this.fontAwesomeObserver) {
+          this.fontAwesomeObserver.disconnect();
+          this.fontAwesomeObserver = null;
+        }
+        this.clearCopiedMessageState();
+        this.stopAudio(false);
         if (this.stream) {
           this.stream.dispose();
           this.stream = null;
@@ -579,12 +2840,215 @@ window.openAIChatManager = function () {
         if (this.connection) {
           this.connection.stop();
         }
+        if (widgetBehavior && typeof widgetBehavior.onBeforeUnmount === 'function') {
+          widgetBehavior.onBeforeUnmount(this, config);
+        }
       },
       template: config.messageTemplate
-    }).mount(config.appElementSelector);
+    };
+    var app = Vue.createApp(appDefinition).mount(config.appElementSelector);
+    if (widgetBehavior && typeof widgetBehavior.attach === 'function') {
+      widgetBehavior.attach(app, config);
+    }
     return app;
   };
+  var autoInitializeSelector = '[data-coreai-chat-config],[data-coreai-chat-app-element-selector]';
+  function getAttributeValue(element, attributeName) {
+    var value = element.getAttribute(attributeName);
+    return value === null || value === '' ? null : value;
+  }
+  function parseBooleanAttributeValue(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    var normalized = String(value).trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+    return null;
+  }
+  function parseJsonAttribute(element, attributeName, description) {
+    var rawValue = getAttributeValue(element, attributeName);
+    if (!rawValue) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      console.error('Failed to parse ' + description + ' JSON.', error);
+      return null;
+    }
+  }
+  function buildConfigFromDataAttributes(element, options) {
+    var _parseJsonAttribute, _parseJsonAttribute2;
+    var settings = options || {};
+    if (element.hasAttribute('data-coreai-chat-widget-container-selector') && settings.allowWidgetHost !== true) {
+      return null;
+    }
+    var appElementSelector = getAttributeValue(element, 'data-coreai-chat-app-element-selector');
+    if (!appElementSelector) {
+      return null;
+    }
+    var config = {
+      signalRHubUrl: getAttributeValue(element, 'data-coreai-chat-signalr-hub-url'),
+      appElementSelector: appElementSelector,
+      chatContainerElementSelector: getAttributeValue(element, 'data-coreai-chat-container-element-selector'),
+      inputElementSelector: getAttributeValue(element, 'data-coreai-chat-input-element-selector'),
+      sendButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-send-button-element-selector'),
+      placeholderElementSelector: getAttributeValue(element, 'data-coreai-chat-placeholder-element-selector'),
+      messages: (_parseJsonAttribute = parseJsonAttribute(element, 'data-coreai-chat-messages', 'CoreAI chat messages')) !== null && _parseJsonAttribute !== void 0 ? _parseJsonAttribute : undefined,
+      chatMode: getAttributeValue(element, 'data-coreai-chat-mode'),
+      micButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-mic-button-element-selector'),
+      conversationButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-conversation-button-element-selector'),
+      ttsVoiceName: getAttributeValue(element, 'data-coreai-chat-tts-voice-name'),
+      documentBarSelector: getAttributeValue(element, 'data-coreai-chat-document-bar-selector'),
+      uploadDocumentUrl: getAttributeValue(element, 'data-coreai-chat-upload-document-url'),
+      removeDocumentUrl: getAttributeValue(element, 'data-coreai-chat-remove-document-url'),
+      allowedExtensions: getAttributeValue(element, 'data-coreai-chat-allowed-extensions'),
+      supportedExtensionsText: getAttributeValue(element, 'data-coreai-chat-supported-extensions-text'),
+      existingDocuments: (_parseJsonAttribute2 = parseJsonAttribute(element, 'data-coreai-chat-existing-documents', 'CoreAI chat existing documents')) !== null && _parseJsonAttribute2 !== void 0 ? _parseJsonAttribute2 : undefined,
+      initialPrompt: getAttributeValue(element, 'data-coreai-chat-initial-prompt'),
+      sessionUrlTemplate: getAttributeValue(element, 'data-coreai-chat-session-url-template'),
+      userLabel: getAttributeValue(element, 'data-coreai-chat-user-label'),
+      assistantLabel: getAttributeValue(element, 'data-coreai-chat-assistant-label'),
+      copyTitle: getAttributeValue(element, 'data-coreai-chat-copy-title'),
+      copiedTitle: getAttributeValue(element, 'data-coreai-chat-copied-title')
+    };
+    var booleanAttributes = {
+      metricsEnabled: 'data-coreai-chat-metrics-enabled',
+      textToSpeechEnabled: 'data-coreai-chat-text-to-speech-enabled',
+      sessionDocumentsEnabled: 'data-coreai-chat-session-documents-enabled',
+      singleResponseMode: 'data-coreai-chat-single-response-mode'
+    };
+    Object.keys(booleanAttributes).forEach(function (key) {
+      var parsed = parseBooleanAttributeValue(getAttributeValue(element, booleanAttributes[key]));
+      if (parsed !== null) {
+        config[key] = parsed;
+      }
+    });
+    return compactObject(config);
+  }
+  function buildConfigFromElement(element, options) {
+    var jsonConfig = parseJsonAttribute(element, 'data-coreai-chat-config', 'CoreAI chat config');
+    var attributeConfig = buildConfigFromDataAttributes(element, options);
+    if (!jsonConfig && !attributeConfig) {
+      return null;
+    }
+    return Object.assign({}, jsonConfig || {}, attributeConfig || {});
+  }
+  function initializeFromElement(element) {
+    if (!element || element.dataset.coreAiChatInitialized === 'true') {
+      return element ? element.__coreAIChatApp || null : null;
+    }
+    var config = buildConfigFromElement(element);
+    if (!config) {
+      return null;
+    }
+    var app = initialize(config);
+    if (!app) {
+      return null;
+    }
+    element.dataset.coreAiChatInitialized = 'true';
+    element.__coreAIChatApp = app;
+    return app;
+  }
+  function scanForAutoInitialization(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+    if (typeof root.matches === 'function' && root.matches(autoInitializeSelector)) {
+      initializeFromElement(root);
+    }
+    root.querySelectorAll(autoInitializeSelector).forEach(initializeFromElement);
+  }
+  function startAutoInitialization() {
+    scanForAutoInitialization(document);
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node && node.nodeType === 1) {
+            scanForAutoInitialization(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAutoInitialization, {
+      once: true
+    });
+  } else {
+    startAutoInitialization();
+  }
   return {
-    initialize: initialize
+    initialize: initialize,
+    initializeFromElement: initializeFromElement,
+    buildConfigFromElement: buildConfigFromElement
   };
 }();
+
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
+  if (!canvas) {
+    console.error('Chart canvas not found:', chartId);
+    return;
+  }
+  var link = document.createElement('a');
+  link.download = 'chart-' + chartId + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+// Intercept download clicks for data-URI images and convert to blob downloads.
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.ai-download-image');
+  if (!link) {
+    return;
+  }
+  var container = link.closest('.generated-image-container');
+  var img = container === null || container === void 0 ? void 0 : container.querySelector('img');
+  if (!img) {
+    return;
+  }
+  var src = img.src;
+  if (!src || !src.startsWith('data:')) {
+    return; // Normal URL – let the default <a> behaviour handle it.
+  }
+  e.preventDefault();
+  fetch(src).then(function (res) {
+    return res.blob();
+  }).then(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = link.getAttribute('download') || 'generated-image.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 100);
+  })["catch"](function (err) {
+    console.error('Failed to download image:', err);
+  });
+});
+//# sourceMappingURL=ai-chat.js.map

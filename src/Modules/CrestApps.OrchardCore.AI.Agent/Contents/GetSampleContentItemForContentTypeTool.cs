@@ -1,0 +1,95 @@
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Json;
+
+namespace CrestApps.OrchardCore.AI.Agent.Contents;
+
+/// <summary>
+/// AI tool that performs get content item schema operations.
+/// </summary>
+public sealed class GetSampleContentItemForContentTypeTool : AIFunction
+{
+    /// <summary>
+    /// The name constant.
+    /// </summary>
+    public const string TheName = "getSampleContentItemForContentType";
+
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
+        }
+      },
+      "required": [
+        "contentType"
+      ],
+      "additionalProperties": false
+    }
+    """);
+
+    public override string Name => TheName;
+
+    public override string Description => $"Generates a structured sample content item for a specified content type. If the '{GetContentItemSchemaTool.TheName}' tool is available, call it first to inspect the exact schema contract. If the sample contains nested or contained content items, include them in the parent payload when later calling '{CreateOrUpdateContentTool.TheName}' instead of creating them separately.";
+
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
+
+    protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<GetSampleContentItemForContentTypeTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
+
+        if (!arguments.TryGetFirstString("contentType", out var contentType))
+        {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentType argument in the function arguments.", TheName);
+
+            return "Unable to find a contentType argument in the function arguments.";
+        }
+
+        if (await contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
+        {
+            logger.LogWarning("AI tool '{ToolName}': The given content type '{ContentType}' does not exist.", TheName, contentType);
+
+            return "The given content type does not exists";
+        }
+
+        var contentItem = await contentManager.NewAsync(contentType);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return JsonSerializer.Serialize(contentItem, options.SerializerOptions);
+    }
+}

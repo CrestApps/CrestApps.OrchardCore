@@ -1,10 +1,12 @@
+using CrestApps.Core.AI;
+using CrestApps.OrchardCore.AI.Agent.Analytics;
 using CrestApps.OrchardCore.AI.Agent.Communications;
 using CrestApps.OrchardCore.AI.Agent.Contents;
 using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
+using CrestApps.OrchardCore.AI.Agent.Profiles;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
-using CrestApps.OrchardCore.AI.Agent.Schemas;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
@@ -12,16 +14,23 @@ using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent;
 
-[Feature(AIConstants.Feature.OrchardCoreAIAgent)]
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -29,20 +38,38 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName, (o) =>
-        {
-            o.Title = S["List System Time Zones"];
-            o.Description = S["Retrieves a list of the available time zones in the system."];
-            o.Category = S["System"];
-        });
+        services.AddCoreAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName)
+            .WithTitle(S["List System Time Zones"])
+            .WithDescription(S["Retrieves a list of the available time zones in the system."])
+            .WithCategory(S["System"])
+            .Selectable();
+
+        services.AddCoreAITool<ListAIProfilesTool>(ListAIProfilesTool.TheName)
+            .WithTitle(S["List AI Profiles"])
+            .WithDescription(S["Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
+
+        services.AddCoreAITool<ViewAIProfileTool>(ViewAIProfileTool.TheName)
+            .WithTitle(S["View AI Profile"])
+            .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RecipesStartup(IStringLocalizer<RecipesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -50,45 +77,57 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<RecipeExecutionService>();
-        services.AddScoped<RecipeStepsService>();
-        services.AddScoped<IRecipeStep, SettingsSchemaStep>();
+        services.AddCoreAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName)
+            .WithTitle(S["Apply Site Configuration"])
+            .WithDescription(S["Applies predefined system configurations and settings using AI assistance."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName, (o) =>
-        {
-            o.Title = S["Apply Site Configuration"];
-            o.Description = S["Applies predefined system configurations and settings using AI assistance."];
-            o.Category = S["Recipes"];
-        });
+        services.AddCoreAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
+            .WithTitle(S["Get Orchard Core Recipe JSON Schema"])
+            .WithDescription(S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step. Call this immediately before importOrchardCoreRecipe whenever that tool is available, then build the recipe JSON to match the schema."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
-        {
-            o.Title = S["Import Orchard Core Recipe"];
-            o.Description = S["Enables AI agents to import and run Orchard Core recipes within your site."];
-            o.Category = S["Recipes"];
-        });
+        services.AddCoreAITool<ListRecipeStepsAndSchemasTool>(ListRecipeStepsAndSchemasTool.TheName)
+            .WithTitle(S["List Orchard Core Recipe Steps and Schemas"])
+            .WithDescription(S["Lists all available Orchard Core recipe steps and returns their JSON schema definitions."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["List Non-Startup Recipes"];
-            o.Description = S["Retrieves all available Orchard Core recipes that are not executed during startup."];
-            o.Category = S["Recipes"];
-        });
+        services.AddCoreAITool<ImportOrchardTool>(ImportOrchardTool.TheName)
+            .WithTitle(S["Import Orchard Core Recipe"])
+            .WithDescription(S["Enables AI agents to import and run Orchard Core recipes within your site. Before calling this tool, call getOrchardCoreRecipeJsonSchema first whenever it is available, then build the recipe JSON to match that schema exactly."])
+            .WithCategory(S["Recipes"])
+            .WithDependency(GetRecipeJsonSchemaTool.TheName)
+            .Selectable();
 
-        services.AddAITool<ExecuteStartupRecipesTool>(ExecuteStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["Run Non-Startup Recipes"];
-            o.Description = S["Executes Orchard Core recipes that are not configured to run at application startup."];
-            o.Category = S["Recipes"];
-        });
+        services.AddCoreAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName)
+            .WithTitle(S["List Non-Startup Recipes"])
+            .WithDescription(S["Retrieves all available Orchard Core recipes that are not executed during startup."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
+
+        services.AddCoreAITool<ExecuteStartupRecipesTool>(ExecuteStartupRecipesTool.TheName)
+            .WithTitle(S["Run Non-Startup Recipes"])
+            .WithDescription(S["Executes Orchard Core recipes that are not configured to run at application startup."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Tenants")]
+/// <summary>
+/// Registers services and configuration for the Tenants feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Tenants")]
 public sealed class TenantsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TenantsStartup(IStringLocalizer<TenantsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -96,76 +135,74 @@ public sealed class TenantsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ListStartupRecipesTool>(ListStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["List Startup Recipes"];
-            o.Description = S["Retrieves a list of Orchard Core recipes configured to run at application startup."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<ListStartupRecipesTool>(ListStartupRecipesTool.TheName)
+            .WithTitle(S["List Startup Recipes"])
+            .WithDescription(S["Retrieves a list of Orchard Core recipes configured to run at application startup."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<CreateTenantTool>(CreateTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Create Tenant"];
-            o.Description = S["Creates a new tenant in the Orchard Core application."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<CreateTenantTool>(CreateTenantTool.TheName)
+            .WithTitle(S["Create Tenant"])
+            .WithDescription(S["Creates a new tenant in the Orchard Core application."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<GetTenantTool>(GetTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Get Tenant Information"];
-            o.Description = S["Retrieves detailed information about a specific tenant."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<GetTenantTool>(GetTenantTool.TheName)
+            .WithTitle(S["Get Tenant Information"])
+            .WithDescription(S["Retrieves detailed information about a specific tenant."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<ListTenantTool>(ListTenantTool.TheName, (o) =>
-        {
-            o.Title = S["List All Tenants"];
-            o.Description = S["Returns information about all tenants in the system."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<ListTenantTool>(ListTenantTool.TheName)
+            .WithTitle(S["List All Tenants"])
+            .WithDescription(S["Returns information about all tenants in the system."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<EnableTenantTool>(EnableTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Enable Tenant"];
-            o.Description = S["Enables a tenant that is currently disabled."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<EnableTenantTool>(EnableTenantTool.TheName)
+            .WithTitle(S["Enable Tenant"])
+            .WithDescription(S["Enables a tenant that is currently disabled."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<DisableTenantTool>(DisableTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Disable Tenant"];
-            o.Description = S["Disables a tenant that is currently active."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<DisableTenantTool>(DisableTenantTool.TheName)
+            .WithTitle(S["Disable Tenant"])
+            .WithDescription(S["Disables a tenant that is currently active."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<RemoveTenantTool>(RemoveTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Tenant"];
-            o.Description = S["Removes an existing tenant that can be safely deleted."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<RemoveTenantTool>(RemoveTenantTool.TheName)
+            .WithTitle(S["Remove Tenant"])
+            .WithDescription(S["Removes an existing tenant that can be safely deleted."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<ReloadTenantTool>(ReloadTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Reload Tenant"];
-            o.Description = S["Reloads the configuration and state of an existing tenant."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<ReloadTenantTool>(ReloadTenantTool.TheName)
+            .WithTitle(S["Reload Tenant"])
+            .WithDescription(S["Reloads the configuration and state of an existing tenant."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<SetupTenantTool>(SetupTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Setup Tenant"];
-            o.Description = S["Sets up new tenants."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddCoreAITool<SetupTenantTool>(SetupTenantTool.TheName)
+            .WithTitle(S["Setup Tenant"])
+            .WithDescription(S["Sets up new tenants."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Contents")]
+/// <summary>
+/// Registers services and configuration for the Contents feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Contents")]
 public sealed class ContentsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentsStartup(IStringLocalizer<ContentsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -173,78 +210,106 @@ public sealed class ContentsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, CommonPartDefinitionSchemaDefinition>();
+        services.TryAddScoped<IContentItemPayloadAssistanceService, DefaultContentItemPayloadAssistanceService>();
+        services.TryAddScoped<ContentItemPreparationService>();
 
-        services.AddAITool<SearchForContentsTool>(SearchForContentsTool.TheName, (o) =>
-        {
-            o.Title = S["Search Content Items"];
-            o.Description = S["Provides a way to search for content items."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
+            .WithTitle(S["Search Content Items"])
+            .WithDescription(S["Provides a way to search for content items."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName, (o) =>
-        {
-            o.Title = S["Generate Content Item Sample"];
-            o.Description = S["Generates a structured sample content item for a specified content type."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<GetSampleContentItemForContentTypeTool>(GetSampleContentItemForContentTypeTool.TheName)
+            .WithTitle(S["Generate Content Item Sample"])
+            .WithDescription(S["Generates a structured sample content item for a specified content type. Before calling createOrUpdateContentItem, call getContentItemSchema first whenever it is available to inspect the exact schema contract. If the sample contains nested or contained content items, include them in the parent payload when calling createOrUpdateContentItem instead of creating them separately."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<PublishContentTool>(PublishContentTool.TheName, (o) =>
-        {
-            o.Title = S["Publish Content Item"];
-            o.Description = S["Publishes a draft or previously unpublished content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<PublishContentTool>(PublishContentTool.TheName)
+            .WithTitle(S["Publish Content Item"])
+            .WithDescription(S["Publishes a draft or previously unpublished content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<UnpublishContentTool>(UnpublishContentTool.TheName, (o) =>
-        {
-            o.Title = S["Unpublish Content Item"];
-            o.Description = S["Unpublishes a currently published content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<UnpublishContentTool>(UnpublishContentTool.TheName)
+            .WithTitle(S["Unpublish Content Item"])
+            .WithDescription(S["Unpublishes a currently published content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<GetContentTool>(GetContentTool.TheName, (o) =>
-        {
-            o.Title = S["Retrieve Content Item"];
-            o.Description = S["Retrieves a specific content item by its ID or type."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<GetContentTool>(GetContentTool.TheName)
+            .WithTitle(S["Retrieve Content Item"])
+            .WithDescription(S["Retrieves a specific content item by its ID or type."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<DeleteContentTool>(DeleteContentTool.TheName, (o) =>
-        {
-            o.Title = S["Delete Content Item"];
-            o.Description = S["Deletes a content item from the system."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<DeleteContentTool>(DeleteContentTool.TheName)
+            .WithTitle(S["Delete Content Item"])
+            .WithDescription(S["Deletes a content item from the system."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<CloneContentTool>(CloneContentTool.TheName, (o) =>
-        {
-            o.Title = S["Clone Content Item"];
-            o.Description = S["Creates a duplicate of an existing content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<CloneContentTool>(CloneContentTool.TheName)
+            .WithTitle(S["Clone Content Item"])
+            .WithDescription(S["Creates a duplicate of an existing content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Item"];
-            o.Description = S["Creates a new content item or updates an existing one."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName)
+            .WithTitle(S["Create or Update Content Item"])
+            .WithDescription(S["Creates a new content item or updates an existing one. Before calling this tool, call getContentItemSchema first whenever it is available and request the parent content type plus any nested content types you plan to include. Call this tool once for the top-level content item and include any nested or contained content items in the same payload instead of calling it separately for each nested item."])
+            .WithCategory(S["Content Management"])
+            .WithDependency(GetContentItemSchemaTool.TheName)
+            .Selectable();
 
-        services.AddAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName, (o) =>
-        {
-            o.Title = S["Retrieve a Link for a Content Item"];
-            o.Description = S["Retrieves a link for a content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddCoreAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName)
+            .WithTitle(S["Retrieve a Link for a Content Item"])
+            .WithDescription(S["Retrieves a link for a content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes")]
+/// <summary>
+/// Registers recipe-backed content payload assistance when the Recipes feature is enabled.
+/// </summary>
+[RequireFeatures("OrchardCore.Contents", "CrestApps.OrchardCore.Recipes")]
+public sealed class ContentRecipesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentRecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ContentRecipesStartup(IStringLocalizer<ContentRecipesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Scoped<IContentItemPayloadAssistanceService, RecipeContentItemPayloadAssistanceService>());
+
+        services.AddCoreAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName)
+            .WithTitle(S["Get Content Item Schema"])
+            .WithDescription(S["Returns the current content-item JSON schema for one or more Orchard Core content types. Call this immediately before createOrUpdateContentItem whenever that tool is available so the payload follows the exact schema contract for the parent content type and any nested content types."])
+            .WithCategory(S["Content Management"]);
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ContentDefinitions feature.
+/// </summary>
+[RequireFeatures("OrchardCore.ContentTypes")]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDefinitionsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentDefinitionsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -254,48 +319,50 @@ public sealed class ContentDefinitionsStartup : StartupBase
     {
         services.AddScoped<ContentMetadataService>();
 
-        services.AddAITool<GetContentTypeDefinitionsTool>(GetContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Get Content Type Definitions"];
-            o.Description = S["Retrieves the definitions of all available content types."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<GetContentTypeDefinitionsTool>(GetContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Get Content Type Definitions"])
+            .WithDescription(S["Retrieves the definitions of all available content types."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<GetContentPartDefinitionsTool>(GetContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Get Content Part Definitions"];
-            o.Description = S["Retrieves the definitions of all available content parts."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<GetContentPartDefinitionsTool>(GetContentPartDefinitionsTool.TheName)
+            .WithTitle(S["Get Content Part Definitions"])
+            .WithDescription(S["Retrieves the definitions of all available content parts."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Types Definitions"];
-            o.Description = S["Provides a list of available content types definitions."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName)
+            .WithTitle(S["List Available Content Types Definitions"])
+            .WithDescription(S["Provides a list of available content types definitions."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Parts Definitions"];
-            o.Description = S["Provides a list of available content parts definitions."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName)
+            .WithTitle(S["List Available Content Parts Definitions"])
+            .WithDescription(S["Provides a list of available content parts definitions."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Fields"];
-            o.Description = S["Provides a list of available content fields."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName)
+            .WithTitle(S["List Available Content Fields"])
+            .WithDescription(S["Provides a list of available content fields."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the ContentDefinitionRecipesTools feature.
+/// </summary>
+[RequireFeatures("OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
 public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentDefinitionRecipesToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ContentDefinitionRecipesToolsStartup(IStringLocalizer<ContentDefinitionRecipesToolsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -303,36 +370,38 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
+        services.AddCoreAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Remove Content Type Definitions"])
+            .WithDescription(S["Removes the content type definition."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Content Type Definitions"];
-            o.Description = S["Removes the content type definition."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName)
+            .WithTitle(S["Remove Content Part Definitions"])
+            .WithDescription(S["Removes the content part definition."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Content Part Definitions"];
-            o.Description = S["Removes the content part definition."];
-            o.Category = S["Content Definitions"];
-        });
-
-        services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Type Definition"];
-            o.Description = S["Creates a new content type definition or updates an existing one."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddCoreAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Create or Update Content Type Definition"])
+            .WithDescription(S["Creates a new content type definition or updates an existing one."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Features")]
+/// <summary>
+/// Registers services and configuration for the Features feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Features")]
 public sealed class FeaturesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeaturesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public FeaturesStartup(IStringLocalizer<FeaturesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -340,48 +409,50 @@ public sealed class FeaturesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<DisableFeatureTool>(DisableFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Disable Site Feature"];
-            o.Description = S["Disabled site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddCoreAITool<DisableFeatureTool>(DisableFeatureTool.TheName)
+            .WithTitle(S["Disable Site Feature"])
+            .WithDescription(S["Disabled site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<EnableFeatureTool>(EnableFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Enable Site Feature"];
-            o.Description = S["Enable site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddCoreAITool<EnableFeatureTool>(EnableFeatureTool.TheName)
+            .WithTitle(S["Enable Site Feature"])
+            .WithDescription(S["Enable site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<FeaturesSearchTool>(FeaturesSearchTool.TheName, (o) =>
-        {
-            o.Title = S["Search for Site Feature"];
-            o.Description = S["Search available features for a match."];
-            o.Category = S["Features Management"];
-        });
+        services.AddCoreAITool<FeaturesSearchTool>(FeaturesSearchTool.TheName)
+            .WithTitle(S["Search for Site Feature"])
+            .WithDescription(S["Search available features for a match."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<ListFeaturesTool>(ListFeaturesTool.TheName, (o) =>
-        {
-            o.Title = S["List Site Features"];
-            o.Description = S["Retrieves available site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddCoreAITool<ListFeaturesTool>(ListFeaturesTool.TheName)
+            .WithTitle(S["List Site Features"])
+            .WithDescription(S["Retrieves available site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<GetFeatureTool>(GetFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Get Site Features"];
-            o.Description = S["Retrieves info about a feature."];
-            o.Category = S["Features Management"];
-        });
+        services.AddCoreAITool<GetFeatureTool>(GetFeatureTool.TheName)
+            .WithTitle(S["Get Site Features"])
+            .WithDescription(S["Retrieves info about a feature."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Notifications")]
+/// <summary>
+/// Registers services and configuration for the Notifications feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Notifications")]
 public sealed class NotificationsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NotificationsStartup(IStringLocalizer<NotificationsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -389,20 +460,26 @@ public sealed class NotificationsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendNotificationTool>(SendNotificationTool.TheName, (o) =>
-        {
-            o.Title = S["Send User Notification"];
-            o.Description = S["Sends a notification message to a user."];
-            o.Category = S["Communications"];
-        });
+        services.AddCoreAITool<SendNotificationTool>(SendNotificationTool.TheName)
+            .WithTitle(S["Send User Notification"])
+            .WithDescription(S["Sends a notification message to a user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Email")]
+/// <summary>
+/// Registers services and configuration for the Email feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Email")]
 public sealed class EmailStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public EmailStartup(IStringLocalizer<EmailStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -410,20 +487,26 @@ public sealed class EmailStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendEmailTool>(SendEmailTool.TheName, (o) =>
-        {
-            o.Title = S["Send Emails"];
-            o.Description = S["Sends a email message on the behalf of the logged user."];
-            o.Category = S["Communications"];
-        });
+        services.AddCoreAITool<SendEmailTool>(SendEmailTool.TheName)
+            .WithTitle(S["Send Emails"])
+            .WithDescription(S["Sends a email message on the behalf of the logged user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Sms")]
+/// <summary>
+/// Registers services and configuration for the Sms feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Sms")]
 public sealed class SmsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public SmsStartup(IStringLocalizer<SmsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -431,20 +514,26 @@ public sealed class SmsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendSmsTool>(SendSmsTool.TheName, (o) =>
-        {
-            o.Title = S["Send SMS message"];
-            o.Description = S["Sends a SMS message to a user."];
-            o.Category = S["Communications"];
-        });
+        services.AddCoreAITool<SendSmsTool>(SendSmsTool.TheName)
+            .WithTitle(S["Send SMS message"])
+            .WithDescription(S["Sends a SMS message to a user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Users")]
+/// <summary>
+/// Registers services and configuration for the Users feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Users")]
 public sealed class UsersStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UsersStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UsersStartup(IStringLocalizer<UsersStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -452,27 +541,32 @@ public sealed class UsersStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetUserTool>(GetUserTool.TheName, (o) =>
-        {
-            o.Title = S["Get User Info"];
-            o.Description = S["Gets information about a user."];
-            o.Category = S["Users Management"];
-        });
+        services.AddCoreAITool<GetUserInfoTool>(GetUserInfoTool.TheName)
+            .WithTitle(S["Get User Info"])
+            .WithDescription(S["Gets information about a user."])
+            .WithCategory(S["Users Management"])
+            .Selectable();
 
-        services.AddAITool<SearchForUsersTool>(SearchForUsersTool.TheName, (o) =>
-        {
-            o.Title = S["Search Users"];
-            o.Description = S["Search the system for users."];
-            o.Category = S["Users Management"];
-        });
+        services.AddCoreAITool<SearchForUsersTool>(SearchForUsersTool.TheName)
+            .WithTitle(S["Search Users"])
+            .WithDescription(S["Search the system for users."])
+            .WithCategory(S["Users Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Roles")]
+/// <summary>
+/// Registers services and configuration for the Roles feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RolesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RolesStartup(IStringLocalizer<RolesStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -480,20 +574,26 @@ public sealed class RolesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetRoleTool>(GetRoleTool.TheName, (o) =>
-        {
-            o.Title = S["Get Role Info"];
-            o.Description = S["Gets information about a role."];
-            o.Category = S["Roles Management"];
-        });
+        services.AddCoreAITool<GetRoleTool>(GetRoleTool.TheName)
+            .WithTitle(S["Get Role Info"])
+            .WithDescription(S["Gets information about a role."])
+            .WithCategory(S["Roles Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows")]
+/// <summary>
+/// Registers services and configuration for the Workflows feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public WorkflowsStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -501,27 +601,32 @@ public sealed class WorkflowsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName, (o) =>
-        {
-            o.Title = S["Get Workflow Type Info"];
-            o.Description = S["Gets information about a workflow type."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddCoreAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName)
+            .WithTitle(S["Get Workflow Type Info"])
+            .WithDescription(S["Gets information about a workflow type."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
 
-        services.AddAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName, (o) =>
-        {
-            o.Title = S["List Workflow Type"];
-            o.Description = S["List information about a workflow types."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddCoreAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName)
+            .WithTitle(S["List Workflow Type"])
+            .WithDescription(S["List information about a workflow types."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
+/// <summary>
+/// Registers services and configuration for the WorkflowsRecipes feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
 public sealed class WorkflowsRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkflowsRecipesStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public WorkflowsRecipesStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -529,120 +634,43 @@ public sealed class WorkflowsRecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
+        services.AddCoreAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName)
+            .WithTitle(S["Create Workflows"])
+            .WithDescription(S["Create or update information a workflow."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
 
-        services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName, (o) =>
-        {
-            o.Title = S["Create Workflows"];
-            o.Description = S["Create or update information a workflow."];
-            o.Category = S["Workflow Management"];
-        });
-
-        services.AddAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName, (o) =>
-        {
-            o.Title = S["List Workflow Activities"];
-            o.Description = S["List all available tasks and activities a workflow."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddCoreAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName)
+            .WithTitle(S["List Workflow Activities"])
+            .WithDescription(S["List all available tasks and activities a workflow."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Title")]
-public sealed class TitleStartup : StartupBase
+/// <summary>
+/// Registers services and configuration for the ChatAnalyticsTools feature.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsToolsStartup : StartupBase
 {
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, TitlePartDefinitionSchemaDefinition>();
-    }
-}
+    internal readonly IStringLocalizer S;
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Autoroute")]
-public sealed class AutorouteStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatAnalyticsToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ChatAnalyticsToolsStartup(IStringLocalizer<ChatAnalyticsToolsStartup> stringLocalizer)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AutoroutePartDefinitionSchemaDefinition>();
+        S = stringLocalizer;
     }
-}
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Alias")]
-public sealed class AliasStartup : StartupBase
-{
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AliasPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Html")]
-public sealed class HtmlStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, HtmlBodyPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Markdown")]
-public sealed class MarkdownStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, MarkdownBodyPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.List")]
-public sealed class ListStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, ListPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Flows")]
-public sealed class FlowsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, FlowPartDefinitionSchemaDefinition>();
-        services.AddScoped<IContentDefinitionSchemaDefinition, BagPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Widgets")]
-public sealed class WidgetsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, WidgetsListPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentPreview")]
-public sealed class ContentPreviewStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, PreviewPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Seo")]
-public sealed class SeoStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, SeoMetaPartDefinitionSchemaDefinition>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.AuditTrail")]
-public sealed class AuditTrailStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentDefinitionSchemaDefinition, AuditTrailPartDefinitionSchemaDefinition>();
+        services.AddCoreAITool<QueryChatSessionMetricsTool>(QueryChatSessionMetricsTool.TheName)
+            .WithTitle(S["Query Chat Session Metrics"])
+            .WithDescription(S["Queries aggregated chat session analytics metrics with optional date range and profile filters. Returns statistics for generating charts and reports."])
+            .WithCategory(S["AI Analytics"])
+            .Selectable();
     }
 }

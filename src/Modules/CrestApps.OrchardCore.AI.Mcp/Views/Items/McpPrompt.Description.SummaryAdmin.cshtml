@@ -1,0 +1,8 @@
+@using CrestApps.Core.AI.Mcp.Models
+
+@model ShapeViewModel<McpPrompt>
+
+@if (!string.IsNullOrEmpty(Model.Value.Prompt?.Description))
+{
+    <small class="text-muted">@Model.Value.Prompt.Description</small>
+}

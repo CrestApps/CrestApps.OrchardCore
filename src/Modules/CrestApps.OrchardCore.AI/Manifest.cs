@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Prompting;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -22,39 +23,6 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.Deployments,
-    Name = "AI Deployments",
-    Description = "Manages AI model deployments.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
-    Id = AIConstants.Feature.Tools,
-    Name = "AI Tool Management",
-    Description = "Provides a way to manage AI Tool instances.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
-    Id = AIConstants.Feature.DataSources,
-    Name = "AI Data Source Management",
-    Description = "Provides a way to manage AI data sources.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
     Name = "AI Chat Services",
     Description = "Provides all the necessary services to enable chatting with AI models using profiles.",
@@ -64,6 +32,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
+        AIPromptingConstants.Feature.Area,
         AIConstants.Feature.Area,
     ]
 )]
@@ -87,6 +56,16 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.Area,
-        AIConstants.Feature.Deployments,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ToolInstances,
+    Name = "AI Tool Instances",
+    Description = "Provides user interface to manage AI tool instances.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
     ]
 )]

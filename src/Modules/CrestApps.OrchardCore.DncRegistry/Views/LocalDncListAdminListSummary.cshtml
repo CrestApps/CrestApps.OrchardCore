@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.DncRegistry.Models.LocalDncListOptions
+
+@if (Model.TotalItemCount > 0)
+{
+    <span class="text-muted">
+        @T["{0} - {1} of {2} lists", Model.StartIndex + 1, Model.EndIndex + 1, Model.TotalItemCount]
+    </span>
+}
+else
+{
+    <span class="text-muted">@T["0 lists"]</span>
+}

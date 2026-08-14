@@ -25,7 +25,7 @@ Update the source, so everything looks like on the new version.
 - [ ] Create an issue branch out of this branch as usual.
 - [ ] Check the [release_ci](https://github.com/OrchardCMS/OrchardCore/blob/main/.github/workflows/release_ci.yml) workflow is using the expected .NET version to build the Docker images.
 - [ ] Update the `OrchardCore.Commons.props` file with `<VersionSuffix></VersionSuffix>` such that preview build numbers are not injected in packages. Verify the `VersionPrefix` tag matches the released version.
-- [ ] Update module versions in `src/OrchardCore/OrchardCore.Abstractions/Modules/Manifest/ManifestConstants.cs`.
+- [ ] Update module versions in `src/OrchardCore.Abstractions/Modules/Manifest/ManifestConstants.cs`.
 - [ ] Create a new milestone.
 - [ ] Change the Orchard Core version in the project templates, more specifically in `dotnetcli.host.json` and `template.json` files.
 - [ ] Add final updates to the release notes in the documentation. It should include the following, at least:

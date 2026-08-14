@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ListOmnichannelActivityFilterViewModel
+
+<div class="col-lg-2">
+    <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select"></select>
+</div>
+
+@await Component.InvokeAsync("DateRangePicker", new
+{
+    fromName = Html.NameFor(m => m.ScheduledFrom),
+    toName = Html.NameFor(m => m.ScheduledTo),
+    fromId = Html.IdFor(m => m.ScheduledFrom),
+    toId = Html.IdFor(m => m.ScheduledTo),
+    from = Model.ScheduledFrom,
+    to = Model.ScheduledTo,
+    selectedRangeName = Html.NameFor(m => m.ScheduledRange),
+    selectedRange = Model.ScheduledRange,
+    placeholder = T["Any schedule"].Value,
+    wrapperCssClass = "col-lg-2",
+})

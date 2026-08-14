@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore AI Documents - Azure Blob Storage</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure Blob Storage support for uploaded AI documents.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Documents Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.Media.Azure" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      Ensure this module directly depends on the required packages so that when someone installs it, 
+      they won't need to manually include the AI Documents package.
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

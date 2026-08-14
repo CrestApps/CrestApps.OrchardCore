@@ -1,0 +1,208 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using System.Text.Json.Nodes;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
+using CrestApps.OrchardCore.PhoneNumbers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Email;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+
+internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
+    private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IEmailAddressValidator _emailAddressValidator;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
+    /// <param name="emailAddressValidator">The email address validator.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OmnichannelChannelEndpointHandler(
+        IHttpContextAccessor httpContextAccessor,
+        IClock clock,
+        IPhoneNumberService phoneNumberService,
+        IEmailAddressValidator emailAddressValidator,
+        IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
+        _phoneNumberService = phoneNumberService;
+        _emailAddressValidator = emailAddressValidator;
+        S = stringLocalizer;
+    }
+
+    public override async Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        await PopulateAsync(context.Model, context.Data);
+
+        Canonicalize(context.Model);
+    }
+
+    public override async Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        await PopulateAsync(context.Model, context.Data);
+
+        Canonicalize(context.Model);
+    }
+
+    /// <inheritdoc/>
+    public override Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        // An editor builds a new endpoint before it binds the form to it, so the value is still empty when the entry is
+        // initialized and only the create raises after the form has been bound.
+        Canonicalize(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    private void Canonicalize(OmnichannelChannelEndpoint endpoint)
+    {
+        // A phone endpoint is matched against inbound traffic by its value, so the value a caller is recognised by
+        // has to be the same however it was written. Canonicalizing only in the editor left a recipe or an import
+        // storing whatever it was given, and an endpoint that never matched anything.
+        if (string.IsNullOrWhiteSpace(endpoint.Value))
+        {
+            return;
+        }
+
+        endpoint.Value = endpoint.Value.Trim();
+
+        if (endpoint.Channel != OmnichannelConstants.Channels.Phone &&
+            endpoint.Channel != OmnichannelConstants.Channels.Sms)
+        {
+            return;
+        }
+
+        if (_phoneNumberService.TryParse(endpoint.Value, null, out var canonicalNumber))
+        {
+            endpoint.Value = canonicalNumber.Value;
+        }
+    }
+
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
+        {
+            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OmnichannelChannelEndpoint.DisplayText)]));
+        }
+
+        var hasValue = !string.IsNullOrWhiteSpace(context.Model.Value);
+
+        if (!hasValue)
+        {
+            context.Result.Fail(new ValidationResult(S["Endpoint Value is required."], [nameof(OmnichannelChannelEndpoint.Value)]));
+        }
+
+        if (string.IsNullOrWhiteSpace(context.Model.Channel))
+        {
+            context.Result.Fail(new ValidationResult(S["Channel is required."], [nameof(OmnichannelChannelEndpoint.Channel)]));
+        }
+        else if (hasValue)
+        {
+            if (context.Model.Channel == OmnichannelConstants.Channels.Phone || context.Model.Channel == OmnichannelConstants.Channels.Sms)
+            {
+                if (!_phoneNumberService.TryParse(context.Model.Value, null, out _))
+                {
+                    context.Result.Fail(new ValidationResult(S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."], [nameof(OmnichannelChannelEndpoint.Value)]));
+                }
+            }
+            else if (context.Model.Channel == OmnichannelConstants.Channels.Email)
+            {
+                if (!_emailAddressValidator.Validate(context.Model.Value))
+                {
+                    context.Result.Fail(new ValidationResult(S["Invalid email address."], [nameof(OmnichannelChannelEndpoint.Value)]));
+                }
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.CreatedUtc = _clock.UtcNow;
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user != null)
+        {
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
+    {
+        OmnichannelDeploymentSerializer.Populate(enabpoint, data);
+
+        var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(displayText))
+        {
+            enabpoint.DisplayText = displayText;
+        }
+
+        var descriptionText = data[nameof(OmnichannelChannelEndpoint.Description)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(descriptionText))
+        {
+            enabpoint.Description = descriptionText;
+        }
+
+        var channelText = data[nameof(OmnichannelChannelEndpoint.Channel)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(channelText))
+        {
+            enabpoint.Channel = channelText;
+        }
+
+        var valueText = data[nameof(OmnichannelChannelEndpoint.Value)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(valueText))
+        {
+            enabpoint.Value = NormalizePhoneValue(enabpoint.Channel, valueText);
+        }
+
+        var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            enabpoint.Properties ??= new Dictionary<string, object>();
+            foreach (var (key, value) in properties)
+            {
+                enabpoint.Properties[key] = value;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private string NormalizePhoneValue(string channel, string value)
+    {
+        if ((channel != OmnichannelConstants.Channels.Phone && channel != OmnichannelConstants.Channels.Sms) ||
+            !_phoneNumberService.TryParse(value, null, out var canonicalNumber))
+        {
+            return value;
+        }
+
+        return canonicalNumber.Value;
+    }
+}

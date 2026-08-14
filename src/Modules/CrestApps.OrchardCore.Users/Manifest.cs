@@ -11,7 +11,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Name = "Users Core Components",
-    Id = UsersConstants.Feature.Users,
+    Id = UsersConstants.Feature.Area,
     Category = "Users",
     Description = "Provides user components core services",
     EnabledByDependencyOnly = true
@@ -25,7 +25,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.ContentFields",
-        UsersConstants.Feature.Users,
+        UsersConstants.Feature.Area,
     ]
 )]
 
@@ -37,6 +37,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.Media",
-        UsersConstants.Feature.Users,
+        UsersConstants.Feature.Area,
     ]
 )]

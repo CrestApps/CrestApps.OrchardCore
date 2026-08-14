@@ -1,31 +1,17 @@
-using CrestApps.OrchardCore.AI.Agent.Recipes;
-using CrestApps.OrchardCore.AI.Agent.Schemas;
-using CrestApps.OrchardCore.AI.Agent.Services;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+﻿using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
+/// <summary>
+/// Represents the create or update workflow tool.
+/// </summary>
 public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 {
     public const string TheName = "createOrUpdateWorkflow";
-
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public CreateOrUpdateWorkflowTool(
-        RecipeExecutionService recipeExecutionService,
-        RecipeStepsService recipeStepsService,
-        IEnumerable<IRecipeStep> recipeSteps,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-        : base(recipeExecutionService, recipeStepsService, recipeSteps)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-    }
 
     public override string Name => TheName;
 
@@ -34,17 +20,27 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
+        var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateWorkflowTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to manage workflows.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "recipe");
+
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(recipe);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
+
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
     }
 }

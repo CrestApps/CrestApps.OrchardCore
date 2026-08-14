@@ -1,0 +1,28 @@
+@using CrestApps.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["New '{0}' data source", Model.DisplayName])</h1>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["After creating a data source, the source index, knowledge base index, and field mappings can't be changed."]
+            </div>
+        </div>
+    </div>
+
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

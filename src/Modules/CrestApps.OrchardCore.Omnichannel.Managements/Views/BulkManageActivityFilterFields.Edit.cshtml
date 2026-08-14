@@ -1,0 +1,184 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model BulkManageActivityFilterViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
+<fieldset class="border rounded p-3">
+    <legend class="float-none w-auto px-2 fs-6">@T["Contact filters"]</legend>
+    <div class="row gx-2 gy-2">
+
+    @if (Model.ContactPublishedOptions.Any())
+    {
+        <div class="col-lg-3">
+            <label asp-for="ContactIsPublished" class="form-label form-label-sm mb-1">@T["Contact status"]</label>
+            <select asp-for="ContactIsPublished" asp-items="Model.ContactPublishedOptions" class="form-select form-select-sm"></select>
+        </div>
+    }
+
+    <div class="col-lg-6">
+        <label asp-for="PhoneNumber" class="form-label form-label-sm mb-1">@T["Phone number"]</label>
+        <div class="input-group input-group-sm">
+            <label asp-for="PhoneNumberMatchType" class="visually-hidden">@T["Phone match type"]</label>
+            <select asp-for="PhoneNumberMatchType" asp-items="Model.PhoneNumberMatchTypes" class="form-select form-select-sm" style="max-width: 140px;"></select>
+            <input asp-for="PhoneNumber"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Phone number"]" />
+        </div>
+        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+        <span class="hint">@T["Enter a national number or fragment (e.g., 702499). Start with + to search E.164 values (e.g., +1702499). Searches primary cell and home numbers."]</span>
+    </div>
+
+    <div class="col-lg-3">
+        <label asp-for="TimeZoneIds" class="form-label form-label-sm mb-1">@T["Time zones"]</label>
+        <select asp-for="TimeZoneIds" asp-items="Model.TimeZones" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select time zones"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} time zones selected" data-style="btn-light btn-sm" title="@T["Time zones"]">
+        </select>
+    </div>
+
+    <div class="col-lg-3">
+        @await Component.InvokeAsync("DateRangePicker", new
+        {
+            fromName = Html.NameFor(m => m.DoNotCallFrom),
+            toName = Html.NameFor(m => m.DoNotCallTo),
+            fromId = Html.IdFor(m => m.DoNotCallFrom),
+            toId = Html.IdFor(m => m.DoNotCallTo),
+            from = Model.DoNotCallFrom,
+            to = Model.DoNotCallTo,
+            selectedRangeName = Html.NameFor(m => m.DoNotCallRange),
+            selectedRange = Model.DoNotCallRange,
+            label = T["Do not call"].Value,
+            labelCssClass = "form-label form-label-sm mb-1",
+            toggleCssClass = "form-select form-select-sm",
+            placeholder = T["Any do-not-call date"].Value,
+            wrapperCssClass = "mb-1",
+        })
+        <span class="hint">@T["Only include contacts marked as do-not-call within the selected date range."]</span>
+    </div>
+    </div>
+</fieldset>
+
+<fieldset class="border rounded p-3 mt-3">
+    <legend class="float-none w-auto px-2 fs-6">@T["Activity filters"]</legend>
+    <div class="row gx-2 gy-2">
+
+        <div class="col-lg-3">
+            <label asp-for="AttemptFilter" class="form-label form-label-sm mb-1">@T["Attempts"]</label>
+            <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="SubjectContentType" class="form-label form-label-sm mb-1">@T["Subject type"]</label>
+            <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="Channel" class="form-label form-label-sm mb-1">@T["Channel"]</label>
+            <select asp-for="Channel" asp-items="Model.Channels" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="Source" class="form-label form-label-sm mb-1">@T["Source"]</label>
+            <select asp-for="Source" asp-items="Model.Sources" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="InteractionType" class="form-label form-label-sm mb-1">@T["Interaction type"]</label>
+            <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="Status" class="form-label form-label-sm mb-1">@T["Status"]</label>
+            <select asp-for="Status" asp-items="Model.Statuses" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="AssignmentStatus" class="form-label form-label-sm mb-1">@T["Assignment status"]</label>
+            <select asp-for="AssignmentStatus" asp-items="Model.AssignmentStatuses" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="CampaignId" class="form-label form-label-sm mb-1">@T["Campaign"]</label>
+            <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="UrgencyLevel" class="form-label form-label-sm mb-1">@T["Urgency level"]</label>
+            <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="col-lg-3">
+            @await Component.InvokeAsync("DateRangePicker", new
+            {
+                fromName = Html.NameFor(m => m.ScheduledFrom),
+                toName = Html.NameFor(m => m.ScheduledTo),
+                fromId = Html.IdFor(m => m.ScheduledFrom),
+                toId = Html.IdFor(m => m.ScheduledTo),
+                from = Model.ScheduledFrom,
+                to = Model.ScheduledTo,
+                selectedRangeName = Html.NameFor(m => m.ScheduledRange),
+                selectedRange = Model.ScheduledRange,
+                label = T["Scheduled"].Value,
+                labelCssClass = "form-label form-label-sm mb-1",
+                toggleCssClass = "form-select form-select-sm",
+                placeholder = T["Any schedule"].Value,
+                wrapperCssClass = "mb-0",
+            })
+        </div>
+
+        <div class="col-lg-3">
+            @await Component.InvokeAsync("DateRangePicker", new
+            {
+                fromName = Html.NameFor(m => m.CreatedFrom),
+                toName = Html.NameFor(m => m.CreatedTo),
+                fromId = Html.IdFor(m => m.CreatedFrom),
+                toId = Html.IdFor(m => m.CreatedTo),
+                from = Model.CreatedFrom,
+                to = Model.CreatedTo,
+                selectedRangeName = Html.NameFor(m => m.CreatedRange),
+                selectedRange = Model.CreatedRange,
+                label = T["Created"].Value,
+                labelCssClass = "form-label form-label-sm mb-1",
+                toggleCssClass = "form-select form-select-sm",
+                placeholder = T["Any created date"].Value,
+                wrapperCssClass = "mb-0",
+            })
+        </div>
+
+        <div class="col-lg-3">
+            <label class="form-label form-label-sm mb-1" for="bulk-limit">@T["Limit"]</label>
+            <input type="number"
+                   id="bulk-limit"
+                   asp-for="Limit"
+                   class="form-control form-control-sm"
+                   placeholder="@T["Max records"]"
+                   min="1" />
+            <span class="hint">@T["Limit the number of records to retrieve."]</span>
+        </div>
+
+        <div class="col-12 mt-2">
+            <label class="form-label form-label-sm mb-1">@T["Assigned to users"]</label>
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "bulk-filter-assigned-user-selector",
+                inputName = Html.NameFor(m => m.AssignedToUserIds),
+                endpoint = Model.UserSearchEndpoint,
+                initialItemsJson = Model.SelectedAssignedUsersJson,
+                multiple = true,
+                enableSearch = true,
+                enableSelectAll = false,
+                enableDeselectAll = true,
+                buttonText = T["Assigned to"].Value,
+                searchPlaceholder = T["Search users"].Value,
+                emptyResultsText = T["No users found."].Value,
+                noSelectionText = T["Any user"].Value,
+                loadingText = T["Loading..."].Value,
+                loadErrorText = T["Unable to load users."].Value,
+                resultsTextFormat = T["Found {0} user(s)."].Value,
+                selectedItemsLabel = T["Selected"].Value,
+                availableItemsLabel = T["Available"].Value,
+                searchButtonText = T["Search"].Value,
+            })
+        </div>
+    </div>
+</fieldset>

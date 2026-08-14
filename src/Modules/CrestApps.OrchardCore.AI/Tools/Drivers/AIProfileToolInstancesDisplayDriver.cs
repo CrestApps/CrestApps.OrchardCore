@@ -1,73 +1,20 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
-using Microsoft.Extensions.Localization;
-using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Tools.Services;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
-internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProfile>
+/// <summary>
+/// Display driver that presents the configured AI tool instances on AI profiles, allowing administrators
+/// to choose which instances the profile exposes to the AI model.
+/// </summary>
+internal sealed class AIProfileToolInstancesDisplayDriver : AIToolInstancesDisplayDriverBase<AIProfile>
 {
-    private readonly ICatalog<AIToolInstance> _toolInstanceStore;
-
-    internal readonly IStringLocalizer S;
-
-    public AIProfileToolInstancesDisplayDriver(
-        ICatalog<AIToolInstance> toolInstanceStore,
-        IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileToolInstancesDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="instanceAccessor">The accessor used to resolve the instances the current user may assign.</param>
+    public AIProfileToolInstancesDisplayDriver(IAIToolInstanceAccessor instanceAccessor)
+        : base(instanceAccessor)
     {
-        _toolInstanceStore = toolInstanceStore;
-        S = stringLocalizer;
-    }
-
-    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
-    {
-        var instances = await _toolInstanceStore.GetAllAsync();
-
-        if (instances.Count == 0)
-        {
-            return null;
-        }
-
-        return Initialize<EditProfileToolInstancesViewModel>("EditProfileToolInstances_Edit", model =>
-        {
-            var toolMetadata = profile.As<AIProfileFunctionInstancesMetadata>();
-
-            model.Instances = instances.Select(instance => new ToolEntry
-            {
-                ItemId = instance.ItemId,
-                DisplayText = instance.DisplayText,
-                Description = instance.As<InvokableToolMetadata>()?.Description,
-                IsSelected = toolMetadata.InstanceIds?.Contains(instance.ItemId) ?? false,
-            }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
-        }).Location("Content:8Content:8.5#Capabilities:5");
-    }
-
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
-    {
-        var instances = await _toolInstanceStore.GetAllAsync();
-
-        if (instances.Count == 0)
-        {
-            return null;
-        }
-
-        var model = new EditProfileToolInstancesViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        var metadata = new AIProfileFunctionInstancesMetadata
-        {
-            InstanceIds = model.Instances?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray() ?? []
-        };
-
-        profile.Put(metadata);
-
-        return Edit(profile, context);
     }
 }

@@ -1,15 +1,30 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Security;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Security;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Filters;
+using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.SignalR.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -17,31 +32,67 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.ResourceManagement;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat;
 
-[Feature(AIConstants.Feature.Chat)]
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Chat notification services and hub options.
+        // Action handlers and sender are registered by the framework (AddChatNotificationServices).
+        // Only the OC-specific transport is registered here.
+        services.AddCoreAIChatNotifications();
+
         services
+            .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddScoped<AIChatProfileAccessEvaluator>()
+            .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
-            .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
-            .AddNavigationProvider<ChatAdminMenu>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMenuDisplayDriver>()
+            .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
+            .AddNavigationProvider<ChatAdminMenu>()
+            .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionSettingsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePromptSecurityDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePromptSecurityDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddSiteDisplayDriver<PromptSecurityOptionsDisplayDriver>()
+            .AddSiteDisplayDriver<AIVisitorIdentityOptionsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>()
+            .AddTransient<IConfigureOptions<PromptSecurityOptions>, PromptSecurityOptionsConfiguration>()
+            .AddTransient<IConfigureOptions<AIVisitorIdentityOptions>, AIVisitorIdentityOptionsConfiguration>();
+
+        services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
+        services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
+        services.AddDataProtection();
+        services.AddOptions<AIVisitorIdentityOptions>();
+        services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-
-        hubRouteManager.MapHub<AIChatHub>(routes);
+        app.UseAIAnonymousVisitorCookie();
+        routes.MapHub<AIChatHub>(SignalRHubRoutes.GetHubPath<AIChatHub>());
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Widgets feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Widgets")]
 public sealed class WidgetsStartup : StartupBase
 {
@@ -52,5 +103,75 @@ public sealed class WidgetsStartup : StartupBase
             .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
 
         services.AddDataMigration<AIChatMigrations>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the AdminWidget feature.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAdminWidget)]
+public sealed class AdminWidgetStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
+        services.Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<AIChatAdminWidgetFilter>();
+        });
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ChatAnalyticsUI feature.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsUIStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
+            .AddNavigationProvider<ChatAnalyticsAdminMenu>()
+            .AddDataMigration<AIChatSessionExtractedDataMigrations>()
+            .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsTimeOfDayDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsDayOfWeekDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsUserSegmentDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers recipe schema contributors for the AI Chat widget feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Recipes", "OrchardCore.Widgets")]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AIProfilePartSchemaDefinition>();
+    }
+}
+
+/// <summary>
+/// Registers recipe schema contributors for AI chat site settings.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class SiteSettingsRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISiteSettingsSchemaDefinition, PromptSecurityOptionsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, AIVisitorIdentityOptionsSchema>();
     }
 }

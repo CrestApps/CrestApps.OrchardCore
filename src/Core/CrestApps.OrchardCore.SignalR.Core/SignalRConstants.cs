@@ -1,9 +1,19 @@
-namespace CrestApps.OrchardCore.SignalR.Core;
+﻿namespace CrestApps.OrchardCore.SignalR.Core;
 
+/// <summary>
+/// Contains constant values for signal r.
+/// </summary>
 public static class SignalRConstants
 {
+    /// <summary>
+    /// Represents the feature.
+    /// </summary>
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.SignalR";
+
+        public const string RedisBackplane = "CrestApps.OrchardCore.SignalR.Redis";
+
+        public const string AzureBackplane = "CrestApps.OrchardCore.SignalR.Azure";
     }
 }

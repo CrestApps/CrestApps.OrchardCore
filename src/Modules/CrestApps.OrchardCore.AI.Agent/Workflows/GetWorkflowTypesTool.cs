@@ -1,54 +1,44 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+﻿using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Json;
 using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
+/// <summary>
+/// Represents the get workflow types tool.
+/// </summary>
 public sealed class GetWorkflowTypesTool : AIFunction
 {
     public const string TheName = "getWorkflowType";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IWorkflowTypeStore _workflowTypeStore;
-    private readonly DocumentJsonSerializerOptions _options;
-
-    public GetWorkflowTypesTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IWorkflowTypeStore workflowTypeStore,
-        IOptions<DocumentJsonSerializerOptions> options)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _workflowTypeStore = workflowTypeStore;
-        _options = options.Value;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "workflowTypeId": {
-                  "type": "string",
-                  "description": "The workflowTypeId to get the information for."
-                }
-              },
-              "required": ["workflowTypeId"],
-              "additionalProperties": false
-            }     
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "workflowTypeId": {
+          "type": "string",
+          "description": "The workflowTypeId to get the information for."
+        }
+      },
+      "required": [
+        "workflowTypeId"
+      ],
+      "additionalProperties": false
     }
+
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Get workflow type information.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -57,23 +47,40 @@ public sealed class GetWorkflowTypesTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<GetWorkflowTypesTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage workflows.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var workflowTypeStore = arguments.Services.GetRequiredService<IWorkflowTypeStore>();
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
         if (!arguments.TryGetFirst<string>("workflowTypeId", out var workflowTypeId))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "workflowTypeId");
+
             return "Unable to find a workflowTypeId argument in the function arguments.";
         }
 
-        var workflowType = await _workflowTypeStore.GetAsync(workflowTypeId);
+        var workflowType = await workflowTypeStore.GetAsync(workflowTypeId);
 
         if (workflowType is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find workflow type with ID '{WorkflowTypeId}'.", Name, workflowTypeId);
+
             return "Unable to find a workflowType with the provided workflowTypeId.";
         }
 
-        return JsonSerializer.Serialize(workflowType, _options.SerializerOptions);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
+
+        return JsonSerializer.Serialize(workflowType, options.SerializerOptions);
     }
 }

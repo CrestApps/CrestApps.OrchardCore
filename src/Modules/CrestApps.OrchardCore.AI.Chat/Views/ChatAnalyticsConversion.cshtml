@@ -1,0 +1,122 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsConversionViewModel
+
+@if (Model.HasResolutionData || Model.HasConversionData)
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fa-solid fa-bullseye me-1"></i>@T["Resolution & Conversion"]
+                <i class="fa-solid fa-circle-info ms-1 small" data-bs-toggle="tooltip" title="@T["Metrics based on resolution detection and goal-based conversion scoring configured per profile."]"></i>
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (Model.HasResolutionData)
+            {
+                <h6 class="text-muted mb-3">
+                    <i class="fa-solid fa-robot me-1"></i>@T["Resolution Detection"]
+                </h6>
+                <div class="row text-center mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-success">@Model.AIResolutionRatePercent%</div>
+                            <div class="text-muted">
+                                @T["Resolution Rate"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of closed sessions that were determined to be semantically resolved. Unlike simple timeout-based detection, this uses semantic analysis of the conversation content to determine if the user's needs were met."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-success">@Model.AIResolvedSessions</div>
+                            <div class="text-muted">
+                                @T["Resolved"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["Sessions where semantic analysis determined the user's query or task was successfully addressed, regardless of how the session ended."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-warning">@Model.AIUnresolvedSessions</div>
+                            <div class="text-muted">
+                                @T["Unresolved"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["Sessions where semantic analysis determined the user's needs were not fully met. Review these to identify areas for improvement."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (Model.HasConversionData)
+            {
+                <h6 class="text-muted mb-3">
+                    <i class="fa-solid fa-chart-bar me-1"></i>@T["Goal-Based Conversion"]
+                </h6>
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-primary">@Model.AverageConversionScorePercent%</div>
+                            <div class="text-muted">
+                                @T["Avg Conversion Score"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The average conversion score as a percentage of the maximum possible score across all evaluated sessions. Based on AI evaluation of configured conversion goals."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-info">@Model.SessionsWithConversionData</div>
+                            <div class="text-muted">
+                                @T["Evaluated Sessions"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions that were evaluated against the configured conversion goals."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-success">@Model.HighPerformingPercent%</div>
+                            <div class="text-muted">
+                                @T["High Performing"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["Percentage of evaluated sessions that scored 70% or higher on conversion goals. These sessions are meeting or exceeding expectations."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="fs-2 fw-bold text-danger">@Model.LowPerformingPercent%</div>
+                            <div class="text-muted">
+                                @T["Low Performing"]
+                                <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["Percentage of evaluated sessions that scored below 30% on conversion goals. These sessions need attention and may indicate configuration or response quality issues."]"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>@T["Overall Conversion Progress"]</span>
+                            <span>@Model.TotalConversionScore / @Model.TotalConversionMaxScore</span>
+                        </div>
+                        <div class="progress" style="height: 24px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @(Model.AverageConversionScorePercent)%">
+                                @Model.AverageConversionScorePercent%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fa-solid fa-bullseye me-1"></i>@T["Resolution & Conversion"]
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-0">@T["No resolution or conversion data available. Enable Resolution Detection and/or Conversion Metrics in your profile analytics settings to start collecting this data."]</p>
+        </div>
+    </div>
+}

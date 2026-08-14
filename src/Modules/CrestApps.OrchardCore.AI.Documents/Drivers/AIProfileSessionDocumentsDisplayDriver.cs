@@ -1,0 +1,49 @@
+﻿using CrestApps.Core;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.AI.Documents.Drivers;
+
+internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIProfile>
+{
+    private readonly ISiteService _siteService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileSessionDocumentsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service.</param>
+    public AIProfileSessionDocumentsDisplayDriver(ISiteService siteService)
+    {
+        _siteService = siteService;
+    }
+
+    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    {
+        return Initialize<EditAIProfileSessionDocumentsViewModel>("AIProfileSessionDocuments_Edit", async model =>
+        {
+            var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
+            model.AllowSessionDocuments = metadata.AllowSessionDocuments;
+            model.AllowSessionImageUploads = metadata.AllowSessionImageUploads;
+
+            var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+            model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
+        }).Location("Content:2#Knowledge;2");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    {
+        var model = new EditAIProfileSessionDocumentsViewModel();
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
+        metadata.AllowSessionDocuments = model.AllowSessionDocuments;
+        metadata.AllowSessionImageUploads = model.AllowSessionImageUploads;
+        profile.Put(metadata);
+
+        return Edit(profile, context);
+    }
+}

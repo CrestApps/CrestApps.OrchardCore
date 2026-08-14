@@ -1,21 +1,29 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
-    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly INamedSourceCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProviderConnectionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="connectionsCatalog">The catalog for retrieving AI provider connections by name.</param>
+    /// <param name="shellReleaseManager">The shell release manager for requesting tenant restarts.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProviderConnectionDisplayDriver(
-        INamedCatalog<AIProviderConnection> connectionsCatalog,
+        INamedSourceCatalog<AIProviderConnection> connectionsCatalog,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _connectionsCatalog = connectionsCatalog;
@@ -34,20 +42,13 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<AIProviderConnectionFieldsViewModel>("AIProviderConnectionFields_Edit", model =>
         {
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
-            model.Type = connection.Type;
-            model.DefaultDeploymentName = connection.DefaultDeploymentName;
-            model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
-            model.Types =
-            [
-                new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
-                new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
-            ];
-
         }).Location("Content:1");
     }
 
@@ -73,26 +74,10 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display text is required."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.DefaultDeploymentName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultDeploymentName), S["Default deployment name is required."]);
-        }
-
-        if (!model.Type.HasValue)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Type), S["A connection type is required."]);
-        }
-        else
-        {
-            model.Type = model.Type.Value;
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Title is required."]);
         }
 
         connection.DisplayText = model.DisplayText;
-        connection.DefaultDeploymentName = model.DefaultDeploymentName;
-        connection.IsDefault = model.IsDefault;
 
         return Edit(connection, context);
     }

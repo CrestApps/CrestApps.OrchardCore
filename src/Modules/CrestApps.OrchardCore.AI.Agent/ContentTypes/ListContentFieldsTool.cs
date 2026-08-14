@@ -1,42 +1,32 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
+/// <summary>
+/// Represents the list content fields tool.
+/// </summary>
 public sealed class ListContentFieldsTool : AIFunction
 {
     public const string TheName = "listContentFieldDefinitions";
 
-    private readonly ContentMetadataService _contentMetadataService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public ListContentFieldsTool(
-        ContentMetadataService contentMetadataService,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _contentMetadataService = contentMetadataService;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "required": [],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves the available content fields which can be used to create content parts.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -46,14 +36,26 @@ public sealed class ListContentFieldsTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        var logger = arguments.Services.GetRequiredService<ILogger<ListContentFieldsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to view content types.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
-        var fieldTypes = await _contentMetadataService.GetFieldsAsync();
+        var contentMetadataService = arguments.Services.GetRequiredService<ContentMetadataService>();
 
-        return JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
+        var fieldTypes = await contentMetadataService.GetFieldsAsync();
+
+        var result = JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result;
     }
 }

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Roles.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -18,6 +18,11 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RolePickerPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="roleManager">The role manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public RolePickerPartDisplayDriver(
         RoleManager<IRole> roleManager,
         IStringLocalizer<RolePickerPartDisplayDriver> stringLocalizer)
@@ -36,17 +41,15 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
             m.Settings = settings;
             m.Roles = part.RoleNames;
 
-            if (!settings.AllowSelectMultiple)
-            {
-                m.AvailableRoles = _roleManager.Roles
-                    .Select(role => role.RoleName)
-                    .Except(m.Settings.ExcludedRoles ?? [])
-                    .Order()
-                    .Select(x => new SelectListItem(x, x))
-                    .ToArray();
-            }
+            m.AvailableRoles = _roleManager.Roles
+                .Select(role => role.RoleName)
+                .Except(settings.ExcludedRoles ?? [])
+                .Order()
+                .Select(x => new SelectListItem(x, x))
+                .ToArray();
         });
     }
+
     public override async Task<IDisplayResult> UpdateAsync(RolePickerPart part, UpdatePartEditorContext context)
     {
         var model = new RolePickerViewModel();
@@ -55,7 +58,7 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
 
         var settings = context.TypePartDefinition.GetSettings<RolePickerPartSettings>();
 
-        var selectedRoles = model.Roles.Except(settings.ExcludedRoles ?? []).ToArray();
+        var selectedRoles = (model.Roles ?? []).Except(settings.ExcludedRoles ?? []).ToArray();
 
         if (settings.Required && selectedRoles.Length == 0)
         {

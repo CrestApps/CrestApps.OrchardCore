@@ -1,5 +1,63 @@
 [
   {
+    "inputs": [
+      "Assets/js/date-range-picker.js"
+    ],
+    "output": "wwwroot/scripts/date-range-picker.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/list-management-ui.js"
+    ],
+    "output": "wwwroot/scripts/list-management-ui.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/item-selector.js"
+    ],
+    "output": "wwwroot/scripts/item-selector.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/collapsible-panel.js"
+    ],
+    "output": "wwwroot/scripts/collapsible-panel.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/item-selector.css"
+    ],
+    "output": "wwwroot/styles/item-selector.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/chart.js/dist/chart.umd.js"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/chart.js/dist/chart.umd.js.map"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.umd.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/chart.js/dist/chart.umd.min.js.map"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.umd.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/chart.js/dist/chart.umd.min.js"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.min.js"
+  },
+  {
     "copy": true,
     "inputs": [
       "node_modules/easymde/dist/easymde.min.js"
@@ -26,5 +84,164 @@
       "node_modules/easymde/dist/easymde.min.css"
     ],
     "output": "wwwroot/vendors/easymde/css/easymde.min.css"
+  },
+  {
+    "inputs": [
+      "node_modules/marked/lib/marked.umd.js"
+    ],
+    "output": "wwwroot/scripts/marked.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.js"
+    ],
+    "output": "wwwroot/vendors/flatpickr/js/flatpickr.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.min.js"
+    ],
+    "output": "wwwroot/vendors/flatpickr/js/flatpickr.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.css"
+    ],
+    "output": "wwwroot/vendors/flatpickr/css/flatpickr.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.min.css"
+    ],
+    "output": "wwwroot/vendors/flatpickr/css/flatpickr.min.css"
+  },
+  {
+    "inputs": [
+      "Assets/js/flatpickr-culture.js"
+    ],
+    "output": "wwwroot/scripts/flatpickr-culture.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/dompurify/dist/purify.js"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/dompurify/dist/purify.min.js"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/dompurify/dist/purify.min.js.map"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/highlight.js/styles/github.css"
+    ],
+    "output": "wwwroot/vendors/highlightjs/css/highlightjs.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/highlight.js/styles/github.min.css"
+    ],
+    "output": "wwwroot/vendors/highlightjs/css/highlightjs.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/technical-name-generator.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/technical-name-generator.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.css"
+    ],
+    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.min.js"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/css/intlTelInput.css"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/css/intlTelInput.min.css"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/img/flags.webp"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/img/flags.webp"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/intl-tel-input/dist/img/flags@2x.webp"
+    ],
+    "output": "wwwroot/vendors/intl-tel-input/img/flags@2x.webp"
   }
 ]

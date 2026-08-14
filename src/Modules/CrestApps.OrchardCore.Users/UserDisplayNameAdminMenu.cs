@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Core;
+﻿using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Drivers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -6,6 +6,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Represents the user display name admin menu.
+/// </summary>
 public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
@@ -14,9 +17,12 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
         { "groupId", DisplayNameSettingsDisplayDriver.GroupId },
     };
 
-
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserDisplayNameAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UserDisplayNameAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -49,9 +55,7 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
                     .Id("userDisplayName")
                     .Action("Index", "Admin", _routeValues)
                     .Permission(UserPermissions.ManageDisplaySettings)
-                    .LocalNav()
-                )
-            );
+                    .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AICompletionWithConfigConnectionViewModel
+
+@if (Model.Orchestrators is not null)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="OrchestratorName" class="ocat-label">@T["Orchestrator"]</label>
+        <div class="ocat-end">
+            <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
+            </select>
+            <span class="hint">@T["The orchestrator controls how tools are selected and how the AI execution loop is managed."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="ChatDeploymentName" class="ocat-label">@T["Chat deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
+            <option value="">@T["Default"]</option>
+        </select>
+        <span class="hint">@T["Select the deployment to use for chat completions. Leave as Default to use the site's default chat deployment."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UtilityDeploymentName" class="ocat-label">@T["Utility deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="UtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
+            <option value="">@T["Default"]</option>
+        </select>
+        <span class="hint">@T["Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set."]</span>
+    </div>
+</div>

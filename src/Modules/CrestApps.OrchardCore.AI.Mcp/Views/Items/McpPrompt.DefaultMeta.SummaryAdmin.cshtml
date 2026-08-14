@@ -1,0 +1,29 @@
+@using CrestApps.Core.AI.Mcp.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Shapes
+@using System.Globalization
+
+@model ShapeViewModel<McpPrompt>
+
+@{
+    var modifiedAt = Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc;
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@modifiedAt.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: modifiedAt))</time>
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Author))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Author"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.Author
+    </span>
+}
+
+@if (Model.Value.Prompt?.Arguments is not null && Model.Value.Prompt.Arguments.Count > 0)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Arguments"]">
+        <i class="fa-solid fa-sitemap text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Prompt.Arguments.Count, "1 argument", "{0} arguments")
+    </span>
+}

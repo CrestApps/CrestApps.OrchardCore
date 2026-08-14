@@ -1,0 +1,190 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCoreSignalRStartup = OrchardCore.SignalR.Startup;
+
+namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
+
+/// <summary>
+/// Hosts a minimal web application that serves the real soft phone client and maps a test telephony
+/// hub, so a browser-driven test can exercise the widget end to end.
+/// </summary>
+public sealed class SoftPhoneTestServer : IAsyncDisposable
+{
+    private const string SignalRResourceName = "OrchardCore.SignalR.wwwroot>Scripts>signalr.js";
+
+    private WebApplication _app;
+
+    public string BaseUrl { get; private set; }
+
+    public async Task StartAsync()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+
+        builder.Services.AddSingleton<InMemoryTelephonyProvider>();
+        builder.Services
+            .AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            });
+
+        var app = builder.Build();
+        app.Urls.Add("http://127.0.0.1:0");
+
+        app.MapHub<TestTelephonyHub>("/telephony");
+        app.MapGet("/", (HttpContext context) => Results.Content(
+            BuildHtml(context.Request.Query.ContainsKey("browserAudio")),
+            "text/html; charset=utf-8"));
+        app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
+        app.MapGet("/signalr.js", ServeSignalRAsset);
+
+        await app.StartAsync();
+
+        var addresses = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>().Addresses;
+        BaseUrl = addresses.First();
+        _app = app;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_app is not null)
+        {
+            await _app.DisposeAsync();
+        }
+    }
+
+    private static IResult ServeAsset(string name)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "assets", name);
+
+        return Results.File(path, "application/javascript");
+    }
+
+    private static IResult ServeSignalRAsset()
+    {
+        var stream = typeof(OrchardCoreSignalRStartup).Assembly.GetManifestResourceStream(SignalRResourceName);
+        if (stream is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Stream(stream, "application/javascript");
+    }
+
+    private static string BuildHtml(bool browserAudio)
+    {
+        var config = new Dictionary<string, object>
+        {
+            ["hubUrl"] = "/telephony",
+            ["capabilities"] = 2047,
+            ["audioCapabilities"] = browserAudio ? 1 : 2,
+            ["audioMode"] = browserAudio ? 1 : 2,
+            ["browserMediaAdapterName"] = browserAudio ? "in-memory" : null,
+            ["strings"] = new Dictionary<string, string>
+            {
+                ["idle"] = "Ready",
+                ["connecting"] = "Connecting...",
+                ["ringing"] = "Ringing...",
+                ["connected"] = "In call",
+                ["onHold"] = "On hold",
+                ["disconnected"] = "Call ended",
+                ["failed"] = "Call failed",
+                ["disconnectedHub"] = "Disconnected",
+                ["invalidNumber"] = "Enter a phone number to call.",
+                ["transferPrompt"] = "Transfer to number",
+                ["transfer"] = "Transfer",
+                ["keypad"] = "Keypad",
+                ["directoryEmpty"] = "No directory entries are available.",
+                ["activeCalls"] = "Active calls",
+                ["selectCallsToMerge"] = "Select two calls to conference.",
+                ["conference"] = "Conference selected calls",
+                ["disconnectAll"] = "Disconnect all calls",
+                ["microphoneUnavailable"] = "The microphone is unavailable.",
+                ["browserAudioUnavailable"] = "The browser audio adapter is unavailable.",
+            },
+        };
+
+        var configJson = JsonSerializer.Serialize(config);
+
+        return $$"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8" />
+            <title>Soft Phone Test</title>
+        </head>
+        <body>
+            <div id="telephony-soft-phone" data-config='{{configJson}}'>
+                <button type="button" data-telephony-toggle><i class="fa-solid fa-phone" data-telephony-toggle-icon></i></button>
+                <div data-telephony-panel hidden>
+                    <audio data-telephony-remote-audio autoplay></audio>
+                    <span data-telephony-status>Ready</span>
+                    <button type="button" data-telephony-close>Close</button>
+                    <div data-telephony-unavailable hidden><span data-telephony-unavailable-text></span></div>
+                    <div data-telephony-connect-panel hidden><button type="button" data-telephony-connect>Connect</button></div>
+                    <div data-telephony-body>
+                        <div data-telephony-view="keypad">
+                            <input type="tel" data-telephony-number />
+                            <div data-telephony-error hidden></div>
+                            <div data-telephony-active-calls hidden>
+                                <div data-telephony-active-calls-list></div>
+                            </div>
+                            <div data-telephony-transfer-panel hidden>
+                                <input type="tel" data-telephony-transfer-input />
+                                <div data-telephony-directory hidden>
+                                    <div data-telephony-directory-list></div>
+                                </div>
+                                <button type="button" data-telephony-transfer-cancel>Cancel</button>
+                                <button type="button" data-telephony-transfer-confirm>Transfer</button>
+                            </div>
+                            <div data-telephony-keypad-panel>
+                                <button type="button" data-telephony-key="1">1</button>
+                            </div>
+                            <button type="button" data-telephony-dial>Call</button>
+                            <button type="button" data-telephony-hold hidden>Hold</button>
+                            <button type="button" data-telephony-resume hidden>Resume</button>
+                            <button type="button" data-telephony-mute hidden>Mute</button>
+                            <button type="button" data-telephony-unmute hidden>Unmute</button>
+                            <button type="button" data-telephony-transfer hidden>
+                                <i data-telephony-transfer-icon></i>
+                                <span data-telephony-transfer-label>Transfer</span>
+                            </button>
+                            <button type="button" data-telephony-merge hidden>Merge</button>
+                            <button type="button" data-telephony-hangup hidden>Hangup</button>
+                            <button type="button" data-telephony-hangup-all hidden>Disconnect all</button>
+                        </div>
+                        <div data-telephony-incoming hidden>
+                            <div data-telephony-incoming-caller></div>
+                            <div data-telephony-incoming-queue hidden></div>
+                            <div data-telephony-incoming-cards hidden></div>
+                            <button type="button" data-telephony-incoming-answer>Answer</button>
+                            <button type="button" data-telephony-incoming-voicemail hidden>Voicemail</button>
+                            <button type="button" data-telephony-incoming-ignore>Ignore</button>
+                        </div>
+                        <div data-telephony-view="history" data-telephony-history hidden>
+                            <div data-telephony-history-list></div>
+                        </div>
+                        <div data-telephony-view="contact-center" hidden>
+                            <span>Contact Center Work</span>
+                        </div>
+                    </div>
+                    <div data-telephony-footer hidden>
+                        <button type="button" data-telephony-tab="keypad" aria-selected="true">Keypad</button>
+                        <button type="button" data-telephony-tab="history" aria-selected="false">Recent</button>
+                        <button type="button" data-telephony-tab="contact-center" aria-selected="false">Work</button>
+                    </div>
+                </div>
+            </div>
+            <script src="/signalr.js"></script>
+            <script src="/soft-phone.js"></script>
+        </body>
+        </html>
+        """;
+    }
+}

@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.AI.Documents.ViewModels
+
+@model EditAIProfileSessionDocumentsViewModel
+
+@if (!Model.HasIndexProfile)
+{
+    <div id="sessionDocumentsIndexWarning" class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div id="sessionDocumentsIndexWarning" class="alert alert-warning @(Model.AllowSessionDocuments ? string.Empty : "d-none")" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["Index not configured"]</strong>
+                <p class="mb-0">
+                    @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
+                </p>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
+            <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow session document uploads"]</label>
+            <span class="hint">@T["When enabled, users can upload documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowSessionImageUploads" />
+            <label class="form-check-label" asp-for="AllowSessionImageUploads">@T["Allow session image uploads"]</label>
+            <span class="hint">@T["When enabled, users can upload images to chat sessions using this profile. Requires a vision deployment to be configured in the global AI settings."]</span>
+        </div>
+    </div>
+</div>
+
+@if (!Model.HasIndexProfile)
+{
+    <script at="Foot">
+        (function () {
+            const toggle = document.getElementById('@Html.IdFor(m => m.AllowSessionDocuments)');
+            const warning = document.getElementById('sessionDocumentsIndexWarning');
+            if (!toggle || !warning) return;
+
+            const syncWarning = function () {
+                warning.classList.toggle('d-none', !toggle.checked);
+            };
+
+            toggle.addEventListener('change', syncWarning);
+            syncWarning();
+        })();
+    </script>
+}

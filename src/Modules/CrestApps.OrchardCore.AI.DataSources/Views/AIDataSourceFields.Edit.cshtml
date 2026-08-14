@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model EditAIDataSourceFieldsViewModel
+
+<div data-ai-data-source-editor>
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayText" class="form-control" />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
+        </div>
+    </div>
+
+    @if (Model.IsConfigurationLocked)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-info mb-0">
+                    @T["The source type, knowledge base index, and field mappings are locked. Delete this data source and create a new one to change that structure."]
+                </div>
+            </div>
+        </div>
+    }
+
+    <input type="hidden" asp-for="SourceType" data-ai-data-source-source-type />
+
+    <span asp-validation-for="SourceType" class="text-danger"></span>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.AI.DataSources/scripts/ai-data-source-editor.js" at="Foot"></script>

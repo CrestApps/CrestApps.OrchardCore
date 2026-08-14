@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Core
+
+@inject IUserCacheService UserCacheService
+@inject IDisplayNameProvider DisplayNameProvider
+
+@{
+    string username = Model.UserName;
+
+    if (string.IsNullOrEmpty(username))
+    {
+        return;
+    }
+
+    var user = await UserCacheService.GetUserAsync(username);
+}
+
+@if (user is not null)
+{
+    var displayName = await DisplayNameProvider.GetAsync(user);
+
+    @displayName
+}
+else
+{
+    @username
+}

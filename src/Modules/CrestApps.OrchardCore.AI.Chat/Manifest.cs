@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,7 +19,31 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
         AIConstants.Feature.ChatCore,
-        SignalRConstants.Feature.Area,
+        "OrchardCore.SignalR",
         AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ChatAdminWidget,
+    Name = "AI Chat Admin Widget",
+    Description = "Provides a floating AI chat widget on every admin page, allowing users to interact with a predefined AI profile.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Chat,
+        AIConstants.Feature.OrchardCoreAIAgent,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ChatAnalytics,
+    Name = "AI Chat Session Analytics",
+    Description = "Tracks chat session usage metrics (unique visitors, handle time, containment rate, abandonment rate) and provides reporting with extensible display drivers.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Chat,
+        AIConstants.Feature.ChatCore,
     ]
 )]

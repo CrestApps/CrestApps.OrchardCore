@@ -1,0 +1,59 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model GeneralAISettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableAIUsageTracking" />
+            <label class="form-check-label" asp-for="EnableAIUsageTracking">
+                @T["Enable AI usage tracking"]
+            </label>
+            <span class="hint dashed">@T["Disabled by default to avoid extra provider-call tracking overhead. Enable this to capture future AI usage data for the AI Usage Analytics report. This does not affect per-profile session metrics."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnablePreemptiveMemoryRetrieval" />
+            <label class="form-check-label" asp-for="EnablePreemptiveMemoryRetrieval">
+                @T["Enable preemptive memory retrieval"]
+            </label>
+            <span class="hint dashed">@T["When enabled, authenticated user memory can be searched and injected before the LLM call. Disabling this keeps memory tools available but skips upfront memory retrieval."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaximumIterationsPerRequest" class="ocat-label">@T["Maximum iterations per request"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="@Model.AbsoluteMaximumIterationsPerRequest" />
+        <span class="hint">@T["This value is used directly and is always capped at {0}.", Model.AbsoluteMaximumIterationsPerRequest]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableDistributedCaching" />
+            <label class="form-check-label" asp-for="EnableDistributedCaching">
+                @T["Enable distributed caching"]
+            </label>
+            <span class="hint dashed">@T["When enabled, AI completion services can use distributed caching for eligible responses."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOpenTelemetry" />
+            <label class="form-check-label" asp-for="EnableOpenTelemetry">
+                @T["Enable OpenTelemetry"]
+            </label>
+            <span class="hint dashed">@T["When enabled, AI requests emit OpenTelemetry instrumentation where supported."]</span>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,6 @@
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -14,25 +14,47 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         AIPermissions.QueryAnyAIProfile,
     ];
 
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
+    private readonly ILogger _logger;
 
-    public AIPermissionsProvider(INamedCatalog<AIProfile> profilesCatalog)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIPermissionsProvider"/> class.
+    /// </summary>
+    /// <param name="profileStore">The profile store.</param>
+    /// <param name="logger">The logger.</param>
+    public AIPermissionsProvider(
+        IAIProfileStore profileStore,
+        ILogger<AIPermissionsProvider> logger)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
+        _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves the permissions async.
+    /// </summary>
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
 
-        foreach (var profile in await _profilesCatalog.GetProfilesAsync(AIProfileType.Chat))
+        try
         {
-            permissions.Add(AIPermissions.CreateProfilePermission(profile.Name));
+            foreach (var profile in await _profileStore.GetAllAsync())
+            {
+                permissions.Add(AIPermissions.CreateProfilePermission(profile.Name));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while retrieving AI profiles to generate permissions.");
         }
 
         return permissions;
     }
 
+    /// <summary>
+    /// Retrieves the default stereotypes.
+    /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
     {
         return

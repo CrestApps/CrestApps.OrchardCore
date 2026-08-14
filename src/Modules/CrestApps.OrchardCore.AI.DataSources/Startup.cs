@@ -1,0 +1,129 @@
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
+using CrestApps.OrchardCore.AI.DataSources.Deployments;
+using CrestApps.OrchardCore.AI.DataSources.Drivers;
+using CrestApps.OrchardCore.AI.DataSources.Endpoints;
+using CrestApps.OrchardCore.AI.DataSources.Handlers;
+using CrestApps.OrchardCore.AI.DataSources.Migrations;
+using CrestApps.OrchardCore.AI.DataSources.Recipes;
+using CrestApps.OrchardCore.AI.DataSources.Services;
+using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement.Handlers;
+using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
+
+namespace CrestApps.OrchardCore.AI.DataSources;
+
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAIDataSourceRag()
+            .AddCoreAIDataSourceStoresYesSql();
+
+        services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
+        services.AddDataMigration<AIDataSourceIndexMigrations>();
+        services.AddDataMigration<DataSourceMetadataMigrations>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceSearchIndexProfileDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceExternalFieldsDisplayDriver>();
+        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
+        services.AddNavigationProvider<AIDataProviderAdminMenu>();
+        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataSourceDisplayDriver>();
+        services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
+        services
+            .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
+        services.RemoveAll<IAIDataSourceIndexingQueue>()
+            .AddScoped<IAIDataSourceIndexingQueue, OrchardAIDataSourceIndexingQueue>();
+
+        services.RemoveAll<IAIDataSourceIndexingService>()
+            .AddScoped<DataSourceIndexingService>()
+            .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
+        services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
+
+        services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
+        services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
+        services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
+        services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddGetDataSourceFieldsEndpoint();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the DataSourcesContents feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Contents")]
+public sealed class DataSourcesContentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentHandler, DataSourceContentHandler>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the DataSourcesRecipes feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DataSourcesRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIDataSourceStep>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the DataSourcesOCDeployment feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DataSourcesOCDeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Contributes the data source configuration to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigDataSourceDisplayDriver>();
+    }
+}

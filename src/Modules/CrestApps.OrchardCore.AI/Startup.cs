@@ -1,6 +1,20 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances;
+using CrestApps.Core.AI.Tooling.Instances.Documentation;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Drivers;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
@@ -8,21 +22,25 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
-using CrestApps.OrchardCore.AI.Indexes;
+using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Migrations;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Prompting;
+using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using CrestApps.OrchardCore.Services;
-using Fluid;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -30,173 +48,265 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.Scripting;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICoreServices();
+        services.AddAICoreServices()
+            .AddCoreAIServicesStoresYesSql()
+            .AddDataMigration<AIDeploymentIndexMigrations>()
+            .AddDataMigration<AIProfileIndexMigrations>()
+            .AddDataMigration<AIProviderConnectionIndexMigrations>()
+            .AddCatalogManagers()
+            .TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
+
+        services.AddSingleton<TimeProvider, ClockTimeProviderAdapter>();
+
+        // Register embedded templates from this module so they are always
+        // available, even when the Templating feature is not enabled.
+        services.AddTemplatesFromAssembly(typeof(Startup).Assembly);
         services.AddPermissionProvider<AIPermissionsProvider>();
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIProfile>();
-            o.MemberAccessStrategy.Register<AIChatSession>();
-            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
-        });
 
         services
-            .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
+            .AddCatalogs()
+            .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
+            .AddScoped<CompositeAIReferenceLinkResolver>()
+            .AddScoped<Core.Services.CitationReferenceCollector>()
+            .AddScoped<PromptTemplateSelectionService>()
+            .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
         services
-            .AddScoped<IAIToolsService, DefaultAIToolsService>()
-            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+            .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
+        services
+            .AddAIDeploymentServices()
+            .AddPermissionProvider<AIDeploymentPermissionProvider>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
+            .AddNavigationProvider<AIDeploymentAdminMenu>()
+            .AddDataMigration<AIDeploymentTypeMigrations>()
+            .AddDataMigration<AIDeploymentV1DocumentMigrations>()
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>();
 
         // Add tools core functionality.
         services
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
-            .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
+            .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
+            .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
+            .AddPermissionProvider<AIToolPermissionProvider>();
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<ProfileStoreMigrations>();
-        services.AddDataMigration<CatalogItemMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
+        services.AddDataMigration<AIProfileDefaultContextMigrations>();
+        services.AddDataMigration<AIProfileDocumentMigrations>();
+        services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();
+        services.AddDataMigration<AIProfileV1DocumentMigrations>();
+
+        // AI Profile Template services.
+        services
+            .AddCoreAIProfileTemplateStoresYesSql()
+            .AddDataMigration<AIProfileTemplateIndexMigrations>()
+            .AddScoped<DefaultAIProfileTemplateManager>()
+            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
+            .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
+            .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
+            .AddNavigationProvider<AITemplateAdminMenu>()
+            .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddGetDeploymentsEndpoint()
+            .AddGetConnectionsEndpoint()
+            .AddGetVoicesEndpoint();
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Indexing feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Indexing")]
+public sealed class IndexingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<IndexProfileEmbeddingMetadataMigrations>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the Recipes feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<IGlobalMethodProvider, AITemplateMethodProvider>();
         services.AddRecipeExecutionStep<AIProfileStep>();
+        services.AddRecipeExecutionStep<CreateAIProfileFromTemplateStep>();
+        services.AddRecipeExecutionStep<AIProfileTemplateStep>();
+        services.AddRecipeExecutionStep<AIDeploymentStep>();
+        services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Workflows feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIResponseMessage>();
-        });
-        services.AddActivity<AICompletionTask, AICompletionTaskDisplayDriver>();
+        services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
+        services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
     }
 }
 
+/// <summary>
+/// Registers the AI completion with config workflow activity and its feature-contributed display drivers.
+/// The activity relies on the Chat Interactions completion context builder to translate its configuration
+/// into an AI completion, so it is only available when that feature is enabled.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", "OrchardCore.Workflows")]
+public sealed class ChatInteractionsWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigConnectionDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigParametersDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigToolsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Contributes the prompt template selection field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIPromptingConstants.Feature.Area, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsPromptingWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigPromptSelectionDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Contributes the AI tool instances field to the AI completion with config workflow activity.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.ToolInstances, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsToolInstancesWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigToolInstancesDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the OCDeployments feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class OCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIProfileTemplateDeploymentSource, AIProfileTemplateDeploymentStep, AIProfileTemplateDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+        services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
 }
 
-# region Data Sources Feature
-
-[Feature(AIConstants.Feature.DataSources)]
-public sealed class DataSourceStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIDataSourceServices();
-        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
-        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
-        services.AddNavigationProvider<AIDataProviderAdminMenu>();
-        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.DataSources)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DataSourcesRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDataSourceStep>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.DataSources, "OrchardCore.Deployment")]
-public sealed class DataSourcesOCDeploymentStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
-    }
-}
-#endregion
-
-#region Deployments Feature
-
-[Feature(AIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddAIDeploymentServices()
-            .AddPermissionProvider<AIDeploymentPermissionProvider>()
-            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddNavigationProvider<AIDeploymentAdminMenu>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<DeploymentStoreMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddGetDeploymentsEndpoint();
-    }
-}
-
-[Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures(AIConstants.Feature.ChatCore)]
-public sealed class ChatDeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>()
-            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DeploymentRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDeploymentStep>();
-    }
-}
-#endregion
-
+/// <summary>
+/// Registers services and configuration for the ChatCore feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>();
+            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+
+        services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
+
+        // Register the AI chat session prompt store.
+        services
+            .AddDataMigration<AIChatSessionPromptIndexMigrations>()
+            .AddDataMigration<AIChatSessionPromptDataMigrations>()
+            .AddDataMigration<AIChatSessionV1PromptDataMigrations>();
+
+        services.AddCoreAIChatSessionProcessing();
+
+        // OC uses IBackgroundTask with distributed locking instead of IHostedService,
+        // so remove the framework's hosted service and runner.
+        services.RemoveAll<AIChatSessionCloseRunner>();
+
+        var hostedServiceDescriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IHostedService) &&
+            d.ImplementationType == typeof(AIChatSessionCloseBackgroundService));
+
+        if (hostedServiceDescriptor is not null)
+        {
+            services.Remove(hostedServiceDescriptor);
+        }
+
+        // Register orchestration services for AI Profile chat
+        services.AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>();
+
+        // Register the default orchestrator settings UI.
+        services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
+        services.AddNavigationProvider<AISiteSettingsAdminMenu>();
+
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ChatWorkflows feature.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ChatCore, "OrchardCore.Workflows")]
+public sealed class ChatWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ApiChat feature.
+/// </summary>
 [Feature(AIConstants.Feature.ChatApi)]
 public sealed class ApiChatStartup : StartupBase
 {
@@ -209,59 +319,25 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
-#region Tools Feature
-
-[Feature(AIConstants.Feature.Tools)]
-public sealed class ToolsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
-        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
-        services.AddPermissionProvider<AIToolPermissionProvider>();
-
-        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
-        services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Recipes.Core")]
-public sealed class RecipesToolsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIToolInstanceStep>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Deployment")]
-public sealed class ToolOCDeploymentStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
-    }
-}
-#endregion
-
-#region Connection Management Feature
-
+/// <summary>
+/// Registers services and configuration for the ConnectionManagement feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AIProviderConnectionHandler>();
-        services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
+
         services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
         services.AddNavigationProvider<AIConnectionsAdminMenu>();
         services.AddPermissionProvider<AIConnectionPermissionsProvider>();
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagementRecipes feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class ConnectionManagementRecipesStartup : StartupBase
@@ -272,6 +348,9 @@ public sealed class ConnectionManagementRecipesStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the ConnectionManagementOCDeployments feature.
+/// </summary>
 [Feature(AIConstants.Feature.ConnectionManagement)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
@@ -281,4 +360,54 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
         services.AddDeployment<AIProviderConnectionDeploymentSource, AIProviderConnectionDeploymentStep, AIProviderConnectionDeploymentStepDisplayDriver>();
     }
 }
-#endregion
+
+/// <summary>
+/// Registers services and configuration for the ChatAnalytics feature.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
+            .AddDataMigration<AICompletionUsageIndexMigrations>()
+            .AddIndexProvider<AICompletionUsageIndexProvider>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+public sealed class ToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The default registry surfaces every stored instance to the model, so it is skipped in favor of
+        // OrchardCoreToolInstanceRegistryProvider, which only surfaces instances the current user may access.
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddToolInstances(toolInstances => toolInstances
+                    .AddHttpApiRequestSource()
+                    .AddDocumentationSearchSources()
+                    .AddYesSqlStores(),
+                    useDefaultRegistry: false)
+            )
+        );
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
+
+        services
+            .AddDataMigration<AIToolInstanceIndexMigrations>()
+            .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, SitemapDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, SearchIndexDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, AlgoliaDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
+            .AddNavigationProvider<AIToolInstanceAdminMenu>()
+            .AddPermissionProvider<AIToolInstancePermissionsProvider>();
+    }
+}

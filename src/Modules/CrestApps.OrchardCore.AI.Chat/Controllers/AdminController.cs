@@ -1,67 +1,104 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+
+using OrchardCore.DisplayManagement.Notify;
+
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
+/// <summary>
+/// Provides endpoints for managing admin resources.
+/// </summary>
 [Admin]
 public sealed class AdminController : Controller
 {
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IEnumerable<IAIChatSessionAccessProvider> _sessionAccessProviders;
     private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly AIOptions _aiOptions;
+    private readonly IShapeFactory _shapeFactory;
 
+    private readonly INotifier _notifier;
+
+    internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminController"/> class.
+    /// </summary>
+    /// <param name="profileManager">The profile manager.</param>
+    /// <param name="sessionManager">The session manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="sessionAccessProviders">The resource-specific system session access providers.</param>
+    /// <param name="sessionDisplayManager">The session display manager.</param>
+    /// <param name="optionsDisplayManager">The options display manager.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="notifier">The notifier.</param>
+    /// <param name="htmlLocalizer">The html localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AdminController(
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
+        IEnumerable<IAIChatSessionAccessProvider> sessionAccessProviders,
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
-        IOptions<AIOptions> aiOptions,
+        IShapeFactory shapeFactory,
+        INotifier notifier,
+        IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer
         )
     {
         _profileManager = profileManager;
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
+        _sessionAccessProviders = sessionAccessProviders;
         _sessionDisplayManager = sessionDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
-        _aiOptions = aiOptions.Value;
+        _shapeFactory = shapeFactory;
+        _notifier = notifier;
+        H = htmlLocalizer;
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Performs the index operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="sessionId">The session id.</param>
+    /// <param name="resourceId">The external resource that owns a system session.</param>
+    /// <param name="pagerOptions">The pager options.</param>
     [Admin("ai/chat/session/{profileId}/{sessionId?}", "AIChatSessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
         string sessionId,
+        string resourceId,
         [FromServices] IOptions<PagerOptions> pagerOptions)
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 
         if (profile is null)
-        {
-            return NotFound();
-        }
-
-        if (!_aiOptions.Clients.TryGetValue(profile.Source, out var clientOptions))
         {
             return NotFound();
         }
@@ -78,6 +115,7 @@ public sealed class AdminController : Controller
         };
 
         var userId = CurrentUserId();
+
         if (!string.IsNullOrEmpty(sessionId))
         {
             var chatSession = await _sessionManager.FindAsync(sessionId);
@@ -87,7 +125,13 @@ public sealed class AdminController : Controller
                 return NotFound();
             }
 
-            if (chatSession.UserId != userId)
+            if (!string.IsNullOrEmpty(chatSession.UserId) && chatSession.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            if (string.IsNullOrEmpty(chatSession.UserId) &&
+                !await CanAccessSystemSessionAsync(profile.ItemId, sessionId, resourceId))
             {
                 return Forbid();
             }
@@ -111,10 +155,10 @@ public sealed class AdminController : Controller
             ProfileId = profileId,
         });
 
-        foreach (var session in sessionResult.Sessions)
+        foreach (var entry in sessionResult.Sessions)
         {
-            var summary = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
-            summary.Properties["Session"] = session;
+            var summary = await _shapeFactory.CreateAsync("AIChatSessionListItem");
+            summary.Properties["Entry"] = entry;
 
             model.History.Add(summary);
         }
@@ -122,6 +166,30 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
+    private async Task<bool> CanAccessSystemSessionAsync(
+        string profileId,
+        string sessionId,
+        string resourceId)
+    {
+        foreach (var provider in _sessionAccessProviders)
+        {
+            if (await provider.CanAccessAsync(User, profileId, sessionId, resourceId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Performs the history operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="options">The options.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/chat/history/{profileId}", "AIChatHistory")]
     public async Task<IActionResult> History(
         string profileId,
@@ -145,6 +213,7 @@ public sealed class AdminController : Controller
         if (!string.IsNullOrWhiteSpace(options.SearchText))
         {
             // Populate route values to maintain previous route data when generating page links.
+
             options.RouteValues.TryAdd("q", options.SearchText);
         }
 
@@ -175,21 +244,40 @@ public sealed class AdminController : Controller
             viewModel.ChatSessions = sessionResult.Sessions;
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
+
             viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
         });
 
         return View(shapeViewModel);
     }
 
+    /// <summary>
+    /// Performs the history post operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     [HttpPost]
     [ActionName(nameof(History))]
     public async Task<ActionResult> HistoryPost(string profileId)
     {
+        var profile = await _profileManager.FindByIdAsync(profileId);
+
+        if (profile is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
         var options = new AIChatSessionListOptions();
+
         // Evaluate the values provided in the form post and map them to the filter result and route values.
         await _optionsDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
 
         // The route value must always be added after the editors have updated the models.
+
         options.RouteValues.TryAdd("q", options.SearchText);
         options.RouteValues.TryAdd("profileId", profileId);
 
@@ -197,8 +285,129 @@ public sealed class AdminController : Controller
     }
 
     [Admin("ai/chat/interact/{profileId}/", "AIChatNewSession")]
+
+    /// <summary>
+    /// Performs the chat operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
+
+    /// <summary>
+    /// Performs the test operation.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    [Admin("ai/chat/test/{profileId}", "AIChatTestProfile")]
+    public async Task<IActionResult> Test(string profileId)
+    {
+        var profile = await _profileManager.FindByIdAsync(profileId);
+
+        if (profile is null)
+        {
+            return NotFound();
+        }
+
+        if (profile.Type != AIProfileType.Utility && profile.Type != AIProfileType.Agent)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
+        var model = new TestProfileViewModel
+        {
+            ProfileId = profileId,
+            Profile = profile,
+        };
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Removes the .
+    /// </summary>
+    /// <param name="sessionId">The session id.</param>
+    [HttpPost]
+    [Admin("ai/chat/chat-session/delete/{sessionId}", "DeleteChatSession")]
+    public async Task<IActionResult> Delete(string sessionId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatSession))
+        {
+            return Forbid();
+        }
+
+        var chatSession = await _sessionManager.FindAsync(sessionId);
+
+        if (chatSession == null)
+        {
+            return NotFound();
+        }
+
+        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
+
+        if (profile == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
+        if (await _sessionManager.DeleteAsync(sessionId))
+        {
+            await _notifier.SuccessAsync(H["Chat session has been deleted successfully."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Unable to delete the chat session."]);
+        }
+
+        return RedirectToAction(nameof(History), new { profileId = chatSession.ProfileId });
+    }
+
+    /// <summary>
+    /// Removes the all.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    [HttpPost]
+    [Admin("ai/chat/history/{profileId}/delete-all", "DeleteAllChatSessions")]
+    public async Task<IActionResult> DeleteAll(string profileId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatSessions))
+        {
+            return Forbid();
+        }
+
+        var profile = await _profileManager.FindByIdAsync(profileId);
+
+        if (profile == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
+        var count = await _sessionManager.DeleteAllAsync(profileId);
+
+        if (count > 0)
+        {
+            await _notifier.SuccessAsync(H["All chat sessions have been deleted successfully."]);
+        }
+        else
+        {
+            await _notifier.InformationAsync(H["No chat sessions found to delete."]);
+        }
+
+        return RedirectToAction(nameof(Index), new { profileId });
+    }
 
     private string CurrentUserId()
         => User.FindFirstValue(ClaimTypes.NameIdentifier);

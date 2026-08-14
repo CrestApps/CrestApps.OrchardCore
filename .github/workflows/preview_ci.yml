@@ -4,6 +4,9 @@ on:
   schedule:
     # 4:19 AM UTC every day. A random time to avoid peak times of GitHub Actions.
     - cron: '19 4 * * *'
+permissions:
+  contents: read
+  packages: write
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -12,7 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Build, Test, Deploy
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
     - name: Check if should publish
       id: check-publish
       shell: pwsh
@@ -21,24 +27,23 @@ jobs:
         Write-Output "Commits found in the last 24 hours: $hasCommitFromLastDay."
         $shouldPublish = ($hasCommitFromLastDay -and '${{ github.event_name }}' -eq 'schedule') -or ('${{ github.event_name }}' -eq 'workflow_dispatch')
         "should-publish=$($shouldPublish ? 'true' : 'false')" >> $Env:GITHUB_OUTPUT
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v4
+    - uses: actions/setup-dotnet@v6
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         dotnet-version: |
-          8.0.x
-          9.0.x
+          10.0.x
     - name: Set build number
       if: steps.check-publish.outputs.should-publish == 'true'
-      run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER ))" >> $GITHUB_ENV
+      run: echo "BuildNumber=$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
     - name: Build
       if: steps.check-publish.outputs.should-publish == 'true'
       # See pr_ci.yml for the reason why we disable NuGet audit warnings.
       run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
+        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       if: steps.check-publish.outputs.should-publish == 'true'
       run: |

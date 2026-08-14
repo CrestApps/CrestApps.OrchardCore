@@ -1,7 +1,6 @@
 var fs = require("graceful-fs"),
     glob = require("glob"),
     path = require("path-posix"),
-    merge = require("merge-stream"),
     gulp = require("gulp"),
     gulpif = require("gulp-if"),
     newer = require("gulp-newer"),
@@ -16,13 +15,17 @@ var fs = require("graceful-fs"),
     concat = require("gulp-concat"),
     header = require("gulp-header"),
     eol = require("gulp-eol"),
-    util = require('gulp-util'),
+    log = require('fancy-log'),
     postcss = require('gulp-postcss'),
     rtl = require('postcss-rtl'),
-    babel = require('gulp-babel');
+    babel = require('gulp-babel'),
+    finished = require('stream/promises').finished;
 
 // For compat with older versions of Node.js.
 require("es6-promise").polyfill();
+
+// Suppress Node.js deprecation warnings during build output.
+// process.noDeprecation = true;
 
 // To suppress memory leak warning from gulp.watch().
 require("events").EventEmitter.prototype._maxListeners = 100;
@@ -37,7 +40,7 @@ gulp.task("build-assets", function () {
         var doRebuild = false;
         return createAssetGroupTask(assetGroup, doRebuild);
     });
-    return merge(assetGroupTasks);
+    return waitForAll(assetGroupTasks);
 });
 
 // Full rebuild (all assets groups are built regardless of timestamps).
@@ -46,7 +49,7 @@ gulp.task("rebuild-assets", function () {
         var doRebuild = true;
         return createAssetGroupTask(assetGroup, doRebuild);
     });
-    return merge(assetGroupTasks);
+    return waitForAll(assetGroupTasks);
 });
 
 // Continuous watch (each asset group is built whenever one of its inputs changes).
@@ -78,7 +81,7 @@ gulp.task("watch", function () {
 });
 
 gulp.task('help', function () {
-    util.log(`
+    log(`
   Usage: gulp [TASK]
   Tasks:
       build     Incremental build (each asset group is built only if one or more inputs are newer than the output).
@@ -96,7 +99,7 @@ gulp.task('default', gulp.series(['build']));
 */
 
 function getAssetGroups() {
-    var assetManifestPaths = glob.sync("./src/{Modules,Themes}/*/Assets.json", {});
+    var assetManifestPaths = glob.sync("./src/{Modules,Resources,Startup,Themes}/*/Assets.json", {});
     var assetGroups = [];
     assetManifestPaths.forEach(function (assetManifestPath) {
         var assetManifest = require("./" + assetManifestPath);
@@ -121,9 +124,16 @@ function resolveAssetGroupPaths(assetGroup, assetManifestPath) {
     assetGroup.inputs.forEach(inputPath => {
 
         var resolvedPath = path.resolve(path.join(assetGroup.basePath, inputPath)).replace(/\\/g, '/');
+        var isNodeModulesPath = inputPath.startsWith("node_modules/") || inputPath.startsWith("./node_modules/");
 
         if (resolvedPath.includes('*')) {
             var sortedPaths = glob.sync(resolvedPath, {});
+
+            // Fall back to repo root 'node_modules' when modules are not restored locally.
+            if (isNodeModulesPath && sortedPaths.length === 0) {
+                var rootResolvedPath = path.resolve(inputPath).replace(/\\/g, '/');
+                sortedPaths = glob.sync(rootResolvedPath, {});
+            }
 
             sortedPaths.sort();
 
@@ -131,6 +141,14 @@ function resolveAssetGroupPaths(assetGroup, assetManifestPath) {
                 inputPaths.push(sortedPath.replace(/\\/g, '/'));
             });
         } else {
+            // Fall back to repo root 'node_modules' when modules are not restored locally.
+            if (isNodeModulesPath && !fs.existsSync(resolvedPath)) {
+                var rootResolvedPath = path.resolve(inputPath).replace(/\\/g, '/');
+                if (fs.existsSync(rootResolvedPath)) {
+                    resolvedPath = rootResolvedPath;
+                }
+            }
+
             inputPaths.push(resolvedPath);
         }
     });
@@ -173,6 +191,18 @@ function createAssetGroupTask(assetGroup, doRebuild) {
     }
 }
 
+function waitForAll(results) {
+    return Promise.all(results.filter(Boolean).map(waitForCompletion));
+}
+
+function waitForCompletion(result) {
+    if (typeof result?.then === "function") {
+        return result;
+    }
+
+    return finished(result);
+}
+
 /*
 ** PROCESSING PIPELINES
 */
@@ -205,6 +235,7 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
             precision: 10,
+            silenceDeprecations: ["legacy-js-api"],
 
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
@@ -239,7 +270,8 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
-            precision: 10
+            precision: 10,
+            silenceDeprecations: ["legacy-js-api"]
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
         .pipe(gulpif(generateRTL, postcss([rtl()])))
@@ -248,7 +280,7 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulp.dest(assetGroup.outputDir));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
-    return merge([minifiedStream, devStream]);
+    return waitForAll([minifiedStream, devStream]);
 }
 
 function buildJsPipeline(assetGroup, doConcat, doRebuild) {
@@ -266,59 +298,61 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
         declaration: false,
         noImplicitAny: true,
         noEmitOnError: true,
-        lib: [
-            "dom",
-            "es5",
-            "scripthost",
-            "es2015.iterable"
-        ],
         target: "es5",
     };
 
-    return gulp.src(assetGroup.inputPaths)
-        .pipe(gulpif(!doRebuild,
-            gulpif(doConcat,
-                newer(assetGroup.outputPath),
-                newer({
-                    dest: assetGroup.outputDir,
-                    ext: ".js"
-                }))))
-        .pipe(plumber())
-        .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
-        .pipe(gulpif("*.ts", typescript(tsCompilerOptions)))
-        .pipe(babel({
-            "presets": [
-                [
-                    "@babel/preset-env",
-                    {
-                        "modules": false
-                    },
-                    "@babel/preset-flow"
+    function createJsStream(enableSourceMaps) {
+        return gulp.src(assetGroup.inputPaths)
+            .pipe(gulpif(!doRebuild,
+                gulpif(doConcat,
+                    newer(assetGroup.outputPath),
+                    newer({
+                        dest: assetGroup.outputDir,
+                        ext: ".js"
+                    }))))
+            .pipe(plumber())
+            .pipe(gulpif(enableSourceMaps, sourcemaps.init()))
+            .pipe(gulpif("*.ts", typescript(tsCompilerOptions)))
+            .pipe(babel({
+                "presets": [
+                    [
+                        "@babel/preset-env",
+                        {
+                            "modules": false
+                        },
+                        "@babel/preset-flow"
+                    ]
                 ]
-            ]
-        }))
-        .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
-        .pipe(header(
-            "/*\n" +
-            "** NOTE: This file is generated by Gulp and should not be edited directly!\n" +
-            "** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.\n" +
-            "*/\n\n"))
+            }))
+            .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
+            .pipe(header(
+                "/*\n" +
+                "** NOTE: This file is generated by Gulp and should not be edited directly!\n" +
+                "** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.\n" +
+                "*/\n\n"));
+    }
+
+    var devStream = createJsStream(generateSourceMaps)
         .pipe(gulpif(generateSourceMaps, sourcemaps.write()))
-        .pipe(gulp.dest(assetGroup.outputDir))
-        // Uncomment to copy assets to wwwroot
-        //.pipe(gulp.dest(assetGroup.webroot))
+        .pipe(gulp.dest(assetGroup.outputDir));
+    // Uncomment to copy assets to wwwroot
+    //.pipe(gulp.dest(assetGroup.webroot));
+
+    var minifiedStream = createJsStream(false)
         .pipe(terser())
         .pipe(rename({
             suffix: ".min"
         }))
         .pipe(eol('\n'))
-        .pipe(gulp.dest(assetGroup.outputDir))
+        .pipe(gulp.dest(assetGroup.outputDir));
     // Uncomment to copy assets to wwwroot
     //.pipe(gulp.dest(assetGroup.webroot));
+
+    return waitForAll([devStream, minifiedStream]);
 }
 
 function buildCopyPipeline(assetGroup, doRebuild) {
-    var stream = gulp.src(assetGroup.inputPaths);
+    var stream = gulp.src(assetGroup.inputPaths, { encoding: false });
 
     if (!doRebuild) {
         stream = stream.pipe(newer(assetGroup.outputDir))

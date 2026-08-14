@@ -1,0 +1,36 @@
+@using CrestApps.OrchardCore.AI.Memory.ViewModels
+
+@model AIMemorySettingsViewModel
+
+@if (!Model.IndexProfiles.Any())
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning mb-0" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                <strong>@T["No index profiles configured"]</strong>
+                <p class="mb-0">
+                    @T["There are no memory index profiles configured yet. To enable AI memory, go to Search > Indexing and create an `AI Memory` index with either Azure AI Search or Elasticsearch."]
+                </p>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="IndexProfileName" class="ocat-label">@T["Index profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="IndexProfileName" asp-items="Model.IndexProfiles" class="form-select">
+            <option value="">@T["Select a profile"]</option>
+        </select>
+        <span class="hint">@T["The master index profile used to store each user memory as a single indexed record. Avoid changing this after production data is created unless you plan a re-index."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TopN" class="ocat-label">@T["Default top N"]</label>
+    <div class="ocat-end">
+        <input asp-for="TopN" class="form-control" type="number" min="1" max="20" />
+        <span class="hint">@T["The default number of memories returned when the AI searches user memory."]</span>
+    </div>
+</div>

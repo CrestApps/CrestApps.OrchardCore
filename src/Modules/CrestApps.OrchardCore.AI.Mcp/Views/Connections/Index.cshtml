@@ -1,5 +1,4 @@
-@using CrestApps.OrchardCore.AI.Mcp.Core.Models
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Mcp.Models
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
@@ -9,14 +8,14 @@
 <zone Name="Title"><h1>@RenderTitleSegments(T["MCP Connections"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />
     <input type="submit" name="submit.BulkAction" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-1">
                 <div class="col">
                     <div class="has-search">
                         <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
@@ -33,7 +32,8 @@
     <ul class="list-group with-checkbox" id="rewrite-rules-sortable-list">
         @if (Model.Models.Count > 0)
         {
-            int startIndex = 0;
+            var pager = (dynamic)Model.Pager;
+            int startIndex = (pager.Page - 1) * pager.PageSize + 1;
             int endIndex = startIndex + Model.Models.Count - 1;
 
             <li class="list-group-item text-bg-theme ignore-elements">
@@ -45,7 +45,7 @@
                             <label id="items" for="select-all">
                                 @T.Plural(Model.Models.Count, "1 item", "{0} items")
                                 <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
-                                    @T.Plural(Model.Models.Count, " / {0} item in total", " / {0} items in total")
+                                    @T.Plural((int)pager.TotalItemCount, " / {0} item in total", " / {0} items in total")
                                 </span>
                             </label>
                             <label id="selected-items" class="text-muted" for="select-all"></label>
@@ -131,10 +131,4 @@
     </div>
 </div>
 
-<script asp-src="~/CrestApps.OrchardCore.AI/scripts/admin-ui.min.js" debug-src="~/CrestApps.OrchardCore.AI/scripts/admin-ui.min.js" asp-name="ai-admin-ui" at="Foot"></script>
-
-<script at="Foot" depends-on="ai-admin-ui">
-    document.addEventListener('DOMContentLoaded', () => {
-        aiChatProfileAdmin.initialize('@T["selected"]');
-    });
-</script>
+<script asp-name="list-management-ui" at="Foot"></script>

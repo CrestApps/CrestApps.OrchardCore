@@ -1,34 +1,30 @@
+using OrchardCore.Indexing.Core;
+
 namespace CrestApps.OrchardCore.AI.Core;
 
+/// <summary>
+/// Contains constant values for AI.
+/// </summary>
 public static class AIConstants
 {
-    public const string TitleGeneratorSystemMessage =
-    """
-    - Generate a short topic title about the user prompt.
-    - Response using title case.
-    - Response must be under 255 characters in length.
-    """;
-
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
 
-    public const string CollectionName = "AI";
+    public const string DefaultBlankSessionTitle = "Untitled";
 
     public const string ConnectionProtectorName = "AIProviderConnection";
 
-    public static class SystemMessages
-    {
-        public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
-    }
+    public const string AISettingsGroupId = "ai-settings";
 
+    /// <summary>
+    /// Represents the feature.
+    /// </summary>
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.AI";
 
         public const string ConnectionManagement = "CrestApps.OrchardCore.AI.ConnectionManagement";
 
-        public const string Deployments = "CrestApps.OrchardCore.AI.Deployments";
-
-        public const string Tools = "CrestApps.OrchardCore.AI.Tools";
+        public const string ToolInstances = "CrestApps.OrchardCore.AI.ToolInstances";
 
         public const string OrchardCoreAIAgent = "CrestApps.OrchardCore.AI.Agent";
 
@@ -38,9 +34,86 @@ public static class AIConstants
 
         public const string DataSources = "CrestApps.OrchardCore.AI.DataSources";
 
+        public const string DataSourceElasticsearch = "CrestApps.OrchardCore.AI.DataSources.Elasticsearch";
+
+        public const string DataSourceAzureAI = "CrestApps.OrchardCore.AI.DataSources.AzureAI";
+
+        public const string DataSourcePostgreSQL = "CrestApps.OrchardCore.AI.DataSources.PostgreSQL";
+
+        public const string DataSourceMongoDB = "CrestApps.OrchardCore.AI.DataSources.MongoDB";
+
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
+
+        public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Documents.Profiles";
+
+        public const string ChatAdminWidget = "CrestApps.OrchardCore.AI.Chat.AdminWidget";
+
+        public const string ChatSessionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatSessions";
+
+        public const string ChatAnalytics = "CrestApps.OrchardCore.AI.Chat.Analytics";
     }
 
+    /// <summary>
+    /// Gets the task type identifier for AI documents indexing.
+    /// </summary>
+    public static readonly string AIDocumentsIndexingTaskType = "AIDocuments";
+
+    /// <summary>
+    /// Represents the document reference types.
+    /// </summary>
+    public static class DocumentReferenceTypes
+    {
+        public const string Profile = "profile";
+
+        public const string ProfileTemplate = "profile-template";
+
+        public const string ChatInteraction = "chat-interaction";
+
+        public const string ChatSession = "chat-session";
+    }
+
+    /// <summary>
+    /// Represents the data source reference types.
+    /// </summary>
+    public static class DataSourceReferenceTypes
+    {
+        /// <summary>
+        /// Reference type for content items indexed by OrchardCore.
+        /// Matches <c>IndexingConstants.ContentsIndexSource</c>.
+        /// </summary>
+        public const string Content = IndexingConstants.ContentsIndexSource;
+
+        /// <summary>
+        /// Reference type for uploaded documents in chat interactions or profiles.
+        /// </summary>
+        public const string Document = "Document";
+    }
+
+    /// <summary>
+    /// Represents the column names.
+    /// </summary>
+    public static class ColumnNames
+    {
+        public const string ChunkId = "chunkId";
+
+        public const string Content = "content";
+
+        public const string DocumentId = "documentId";
+
+        public const string FileName = "fileName";
+
+        public const string ReferenceId = "referenceId";
+
+        public const string ReferenceType = "referenceType";
+
+        public const string Embedding = "embedding";
+
+        public const string ChunkIndex = "chunkIndex";
+    }
+
+    /// <summary>
+    /// Represents the route names.
+    /// </summary>
     public static class RouteNames
     {
         public const string AICompletionRoute = "AIChatCompletion";
@@ -50,5 +123,17 @@ public static class AIConstants
         public const string AIChatSessionRouteName = "AIChatSession";
 
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
+
+        public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
+
+        public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
+
+        public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
+
+        public const string ChatSessionUploadDocument = "ChatSessionUploadDocument";
+
+        public const string ChatSessionRemoveDocument = "ChatSessionRemoveDocument";
+
+        public const string GetVoices = "AIApiGetVoices";
     }
 }

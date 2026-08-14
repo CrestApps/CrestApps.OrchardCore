@@ -1,0 +1,92 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model TryAgainSubjectActionViewModel
+
+@{
+    var specificOwnerContainerId = $"{Html.IdFor(m => m.AssignmentType)}_SpecificOwner";
+    var specificOwnerClass = Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner
+        ? "ocat-wrapper"
+        : "ocat-wrapper d-none";
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxAttempt" class="ocat-label">@T["Maximum attempts"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxAttempt" class="form-control" type="number" min="1" />
+        <span class="hint">@T["The maximum number of retry attempts allowed. Leave empty for unlimited retries."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
+    <div class="ocat-end">
+        <select asp-for="UrgencyLevel" class="form-select">
+            <option value="">@T["Use original activity's urgency level"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.VeryLow)">@T["Very low"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.Low)">@T["Low"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.Normal)">@T["Normal"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.Medium)">@T["Medium"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.High)">@T["High"]</option>
+            <option value="@nameof(ActivityUrgencyLevel.VeryHigh)">@T["Very high"]</option>
+        </select>
+        <span class="hint">@T["Override the urgency level for the retry activity."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AssignmentType" class="ocat-label">@T["Assignment type"]</label>
+    <div class="ocat-end">
+        <select asp-for="AssignmentType"
+                class="form-select"
+                data-subject-action-assignment-toggle
+                data-assignment-target-id="@specificOwnerContainerId"
+                data-assignment-specific-owner-value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)"
+                aria-controls="@specificOwnerContainerId"
+                aria-expanded="@(Model.AssignmentType == SubjectActionOwnerAssignmentType.SpecificOwner ? "true" : "false")">
+            <option value="@nameof(SubjectActionOwnerAssignmentType.SameOwner)">@T["Same owner"]</option>
+            <option value="@nameof(SubjectActionOwnerAssignmentType.SpecificOwner)">@T["Specific owner"]</option>
+        </select>
+        <span class="hint">@T["Choose whether the retry stays with the completing user or is assigned to a specific user."]</span>
+    </div>
+</div>
+
+<div id="@specificOwnerContainerId" class="@specificOwnerClass">
+    <label asp-for="NormalizedUserName" class="ocat-label">@T["Assign to user"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = $"{Html.IdFor(m => m.NormalizedUserName)}_Selector",
+            inputName = Html.NameFor(m => m.NormalizedUserName),
+            endpoint = Url.RouteUrl("CrestApps.Users.Search", new { valueType = "normalizedUserName" }),
+            initialItemsJson = JsonSerializer.Serialize(Model.SelectedUsers.Select(x => new { value = x.Value, text = x.Text, selected = true })),
+            multiple = false,
+            enableSearch = true,
+            enableSelectAll = false,
+            enableDeselectAll = true,
+            buttonText = T["Browse users"].Value,
+            searchPlaceholder = T["Search users"].Value,
+            emptyResultsText = T["No users found."].Value,
+            noSelectionText = T["No user selected."].Value,
+            loadingText = T["Loading users..."].Value,
+            loadErrorText = T["Unable to load users."].Value,
+            resultsTextFormat = T["Found {0} user(s)."].Value,
+            selectedItemsLabel = T["Selected user"].Value,
+            availableItemsLabel = T["Available users"].Value,
+            searchButtonText = T["Search"].Value,
+        })
+        <span asp-validation-for="NormalizedUserName" class="text-danger"></span>
+        <span class="hint">@T["Select the user who will own the retry activity."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultScheduleHours" class="ocat-label">@T["Default schedule hours"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultScheduleHours" class="form-control" type="number" min="1" />
+        <span class="hint">@T["Default hours ahead to schedule the retry. Used when no schedule date is provided during completion. Defaults to 24 hours."]</span>
+    </div>
+</div>
+
+<script asp-name="subject-action-assignment-toggle" at="Foot"></script>

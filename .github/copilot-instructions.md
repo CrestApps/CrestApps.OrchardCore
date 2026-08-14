@@ -4,25 +4,29 @@
 
 ## Project Overview
 
-CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 9**. The repository contains AI modules, user management enhancements, content access control, and other CMS extensions.
+CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 10**. The repository contains AI modules, omnichannel communication, user management enhancements, content access control, and other CMS extensions.
+
+**License**: MIT  
+**Target Framework**: .NET 10.0 (net10.0)  
+**Architecture**: Modular, multi-tenant application framework
 
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
 
-Install .NET 9.0 SDK first:
+Install .NET 10.0 SDK first:
 ```bash
 # Add Microsoft package repository (Ubuntu/Debian)
 wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 sudo dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
 
-# Install .NET 9.0 SDK - TAKES 1-2 MINUTES
+# Install .NET 10.0 SDK - TAKES 1-2 MINUTES
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-9.0
+sudo apt-get install -y dotnet-sdk-10.0
 
 # Verify installation
-dotnet --version  # Should show 9.0.x
+dotnet --version  # Should show 10.0.x
 ```
 
 ### Build Process
@@ -47,6 +51,8 @@ gulp rebuild
 dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
 ```
 
+**Important for Copilot skills**: In a fresh environment, build the project early and then check for newly generated skills under `.agents\skills`. One of the packages can create `.agents\skills` on the first build, and those generated skills may contain important, up-to-date capabilities that are not visible before the build runs.
+
 **If build fails with NU1301 errors** about `nuget.cloudsmith.io`, this is expected in restricted environments. Document this limitation rather than attempting workarounds.
 
 #### Unit Tests (Requires Successful Build)
@@ -67,6 +73,108 @@ dotnet run
 # Application runs on: http://localhost:5000
 # Admin setup occurs on first run
 ```
+
+**Aspire Orchestration**: For full-stack local development with Ollama, Elasticsearch, and Redis, use the Aspire AppHost:
+
+```bash
+cd src/Startup/CrestApps.Aspire.AppHost
+dotnet run
+```
+
+### Code Guidelines
+
+* Follow `.editorconfig` at all times.
+* Prefer constructor injection.
+* Do not add `ArgumentNullException.ThrowIf...` guards in constructors.
+
+#### Null Handling
+
+* Add null guards in public implementation methods when a non-nullable input is required and the method does not intentionally support `null`.
+* Skip null guards for nullable or intentionally null-tolerant parameters.
+* After the final null-check or argument-validation line in a method, add a blank line before the next statement (even if it is the only guard).
+
+#### Formatting & Layout
+
+* Never use more than one consecutive blank line.
+* Add a blank line before a `return` statement unless it is the first statement in a `{ ... }` block.
+* Add a blank line before and after `if`, `switch`, and loop blocks unless the block is immediately preceded by `{`.
+* Do not add a blank line between a control statement (`if`/`else`/`switch`/loop) and its opening `{`.
+* Do not leave extra blank lines between consecutive closing braces.
+* Add a blank line after `};` and after multi-line object initializers unless returned inline.
+* When an object initializer spans multiple lines, place each property assignment on its own line.
+* Format conditional (`?:`) operators across multiple lines with the condition, `?`, and `:` each on their own properly indented lines.
+* Always keep exactly one trailing newline at the end of each file.
+* In `.cshtml` files, never introduce stray carriage returns (`^M`) or CRCRLF line endings; keep view files normalized so they do not render with artificial blank lines.
+
+#### `#pragma` Rules
+
+* Do not add a blank line immediately after `#pragma warning disable`.
+* Do not add a blank line immediately before `#pragma warning restore`.
+* Do not add a blank line after `#pragma warning restore` if followed by `{`.
+* Add a blank line before a `#pragma warning disable` block when it starts a new member after a `}`.
+* Add a blank line between `#pragma warning restore` and the next `#pragma warning disable` when guarding separate members.
+
+#### Usings & Types
+
+* Do not use `global using`; declare explicit `using` statements at the top of each file.
+* Prefer top-of-file `using` directives over fully qualified type names.
+* Prefer `using` statements over fully qualified names when there is no conflict.
+* Use `var` consistently with repository style.
+
+#### Members & Structure
+
+* Only use expression-bodied members when the entire member fits on a single short line.
+* Use full block bodies for anything longer or multi-line.
+* When a constructor has more than one parameter, place each parameter on its own line.
+* Place constructor initializer clauses (`: base(...)`) on their own indented line.
+* Seal publicly accessible classes by default unless inheritance is intentionally required (Except for View Models). In OrchardCore, we can't seal view models.
+
+#### Time Abstraction
+
+* Avoid `DateTime.UtcNow`; always use an injected `IClock`.
+
+#### Documentation
+
+* Keep public docs and comments accurate and aligned with the code.
+* Always document:
+
+  * Every public method (including constructors) with XML `<summary>` and `<param>` tags.
+  * Every public property with an XML `<summary>`.
+  * All interfaces and their members.
+* Only include `<param>` tags for actual parameters, in the exact order of the signature.
+* Improve existing XML docs in place—do not duplicate `<summary>` blocks.
+* Always insert a blank line before XML `<summary>` blocks unless immediately preceded by `{`.
+* Never insert a blank line between an XML doc block and the member it documents.
+* Always leave a blank line between a property and a following XML documentation block.
+* Remove decorative or low-value comments; prefer meaningful XML documentation.
+
+#### Testing
+
+* In unit tests:
+
+  * Separate setup, act, and assert sections.
+  * Use `// Arrange`, `// Act`, and `// Assert` when helpful.
+  * Wrap long fluent chains across multiple lines with consistent indentation.
+  * Add a blank line after multi-line setup statements.
+
+#### JavaScript in `.cshtml`
+
+* Ensure proper indentation for all JavaScript inside `.cshtml` files.
+* When editing `.cshtml` files, preserve normalized line endings and remove any stray `^M`/CRCRLF formatting damage instead of leaving it in place.
+
+#### Architecture & Design
+
+* Prefer SOLID, DRY, KISS, and YAGNI principles.
+* Consolidate duplicated provider, transport, or store logic into shared abstractions before introducing new one-off implementations.
+* Favor additive shared infrastructure first, then migrate consumers in safe, incremental steps.
+* Optimize framework code for consistency, extensibility, and long-term maintainability across providers and hosts.
+* For optional provider integrations in sample hosts, do not eagerly read validated options in UI setup paths—unconfigured providers should appear unavailable rather than cause failures.
+
+#### Quality Enforcement
+
+* Treat all warnings as errors and resolve every warning.
+* Continuously evolve and update `copilot-instructions.md` with newly established preferences and patterns.
+* Use ASD-STE100 Simplified Technical English for all responses.
 
 ### Validation Scenarios
 
@@ -91,24 +199,68 @@ dotnet run
 ### Key Directories
 ```
 src/
-├── Modules/                    # All CrestApps modules
-│   ├── CrestApps.OrchardCore.AI/           # AI core services
-│   ├── CrestApps.OrchardCore.AI.Chat/      # AI chat interface  
-│   ├── CrestApps.OrchardCore.AI.Agent/     # AI agents
-│   ├── CrestApps.OrchardCore.AI.Mcp/       # Model Context Protocol
-│   ├── CrestApps.OrchardCore.OpenAI/       # OpenAI integration
-│   ├── CrestApps.OrchardCore.OpenAI.Azure/ # Azure OpenAI
-│   ├── CrestApps.OrchardCore.Ollama/       # Ollama integration
-│   ├── CrestApps.OrchardCore.Users/        # Enhanced user management
-│   ├── CrestApps.OrchardCore.Roles/        # Enhanced roles
-│   ├── CrestApps.OrchardCore.ContentAccessControl/ # Content permissions
-│   ├── CrestApps.OrchardCore.SignalR/      # SignalR integration
-│   └── CrestApps.OrchardCore.Resources/    # Shared resources
-├── Core/                       # Core libraries
-├── Abstractions/              # Interface definitions
-├── Startup/                   # Web applications
-│   └── CrestApps.OrchardCore.Cms.Web/     # Main CMS web app
-└── Targets/                   # Package bundles
+├── Abstractions/               # Shared interface/abstraction libraries
+│   ├── CrestApps.OrchardCore.Abstractions/         # Core abstractions
+│   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
+│   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
+├── Common/                     # Shared utility libraries
+│   └── CrestApps.Core.Support/                          # General support utilities
+├── Core/                       # Core service libraries (not Orchard modules)
+│   ├── CrestApps.Core.Azure.Core/                       # Azure utilities
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
+│   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
+│   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
+│   ├── CrestApps.OrchardCore.Core/                 # General OrchardCore core
+│   ├── CrestApps.OrchardCore.Omnichannel.Core/     # Omnichannel core services
+│   ├── CrestApps.OrchardCore.OpenAI.Azure.Core/    # Azure OpenAI core
+│   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
+│   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
+│   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
+│   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
+│   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
+├── Modules/                    # All CrestApps Orchard Core modules
+│   ├── CrestApps.OrchardCore.AI/                   # AI base services and deployments
+│   ├── CrestApps.OrchardCore.AI.Agent/             # AI agents
+│   ├── CrestApps.OrchardCore.AI.Chat/              # AI chat interface and profiles
+│   ├── CrestApps.OrchardCore.AI.Chat.Copilot/      # GitHub Copilot-style AI chat
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions/ # Real-time AI chat interactions (SignalR hub)
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents/          # Document-based chat interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI/  # Azure AI document interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch/ # Elasticsearch document interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/            # OpenXml document chat interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/                # PDF document chat interactions
+│   ├── CrestApps.OrchardCore.AI.DataSources/                          # AI data source management
+│   ├── CrestApps.OrchardCore.AI.DataSources.AzureAI/                  # Azure AI Search data sources
+│   ├── CrestApps.OrchardCore.AI.DataSources.Elasticsearch/            # Elasticsearch data sources
+│   ├── CrestApps.OrchardCore.AI.Documents/                            # AI document indexing and management
+│   ├── CrestApps.OrchardCore.AI.Documents.AzureAI/                    # Azure AI document storage
+│   ├── CrestApps.OrchardCore.AI.Documents.Elasticsearch/              # Elasticsearch document storage
+│   ├── CrestApps.OrchardCore.AI.Documents.OpenXml/                    # OpenXml document parsing
+│   ├── CrestApps.OrchardCore.AI.Documents.Pdf/                        # PDF document parsing
+│   ├── CrestApps.OrchardCore.AI.Mcp/                                  # Model Context Protocol server
+│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/                    # MCP FTP resource handler
+│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/                   # MCP SFTP resource handler
+│   ├── CrestApps.OrchardCore.AzureAIInference/     # Azure AI Inference / GitHub Models provider
+│   ├── CrestApps.OrchardCore.ContentAccessControl/ # Content item access control
+│   ├── CrestApps.OrchardCore.Ollama/               # Ollama (local LLM) provider
+│   ├── CrestApps.OrchardCore.Omnichannel/          # Omnichannel communication base
+│   ├── CrestApps.OrchardCore.Omnichannel.EventGrid/ # Event Grid omnichannel integration
+│   ├── CrestApps.OrchardCore.Omnichannel.Managements/ # Omnichannel management UI
+│   ├── CrestApps.OrchardCore.Omnichannel.Sms/      # SMS omnichannel channel
+│   ├── CrestApps.OrchardCore.OpenAI/               # OpenAI provider
+│   ├── CrestApps.OrchardCore.OpenAI.Azure/         # Azure OpenAI provider
+│   ├── CrestApps.OrchardCore.Recipes/              # Recipe enhancements
+│   ├── CrestApps.OrchardCore.Resources/            # Shared frontend resources
+│   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
+│   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
+│   └── CrestApps.OrchardCore.Users/               # Enhanced user management
+├── CrestApps.Docs/  # Docusaurus documentation site
+├── Startup/                    # Runnable applications
+│   ├── CrestApps.Aspire.AppHost/                        # .NET Aspire orchestration host
+│   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
+│   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
+└── Targets/                    # MSBuild package bundle targets
+    └── CrestApps.OrchardCore.Cms.Core.Targets/
 
 tests/
 └── CrestApps.OrchardCore.Tests/    # Unit test project
@@ -117,12 +269,14 @@ tests/
 ```
 
 ### Important Files
-- `CrestApps.OrchardCore.sln` - Main solution file
-- `global.json` - .NET SDK version (9.0.100)
-- `Directory.Build.props` - Common MSBuild properties
-- `NuGet.config` - Package source configuration (includes CloudSmith feed)
+- `CrestApps.OrchardCore.slnx` - Main solution file (Visual Studio XML format)
+- `global.json` - .NET SDK version (10.0.100)
+- `Directory.Build.props` - Common MSBuild properties (TFM, versioning, analysis rules)
+- `Directory.Packages.props` - Centralized NuGet package versions
+- `NuGet.config` - Package source configuration (includes CloudSmith feed for Orchard Core previews)
 - `package.json` - npm dependencies and scripts
 - `gulpfile.js` - Asset build configuration
+- `.editorconfig` - Code style and formatting rules
 
 ## Common Development Tasks
 
@@ -131,15 +285,30 @@ tests/
 2. Add module project file following existing patterns
 3. Include `Manifest.cs` with module definition
 4. Add module reference to appropriate target package
+5. **Update Targets**: Add a reference to the new module in the targets project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.targets` so it is discoverable by Orchard Core.
 
 ### Working with AI Modules
-- **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes
-- **Chat Interface**: `CrestApps.OrchardCore.AI.Chat` - UI and chat functionality
-- **Integrations**: Specific provider modules (OpenAI, Azure, Ollama)
+- **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes; manages deployments and provider connections
+- **Chat Interface**: `CrestApps.OrchardCore.AI.Chat` - AI chat profiles and UI
+- **Real-time Chat**: `CrestApps.OrchardCore.AI.Chat.Interactions` - SignalR-based interactive chat hub
+- **Copilot Chat**: `CrestApps.OrchardCore.AI.Chat.Copilot` - GitHub Copilot-style embedded chat experience
+- **Document Indexing**: `CrestApps.OrchardCore.AI.Documents` - indexes documents for AI retrieval
+- **Data Sources**: `CrestApps.OrchardCore.AI.DataSources` - configures external AI data sources
+- **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
+- **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
+- **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
+- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `Templates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `ITemplateService`.
+- **AI function catalog docs**: Whenever you add, remove, rename, re-categorize, or change the description or feature requirements of an AI function/tool, update `src\CrestApps.Docs\docs\ai\tools.md` and any related feature doc (for example `ai\memory.md`) in the same change so the documented function lists stay synchronized with the codebase.
+
+### Working with Omnichannel Modules
+- **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
+- **SMS Channel**: `CrestApps.OrchardCore.Omnichannel.Sms` - SMS messaging support
+- **Event Grid**: `CrestApps.OrchardCore.Omnichannel.EventGrid` - Azure Event Grid integration
+- **Management UI**: `CrestApps.OrchardCore.Omnichannel.Managements` - admin management interface
 
 ### Frontend Development
-- CSS/SCSS files are in individual module directories
-- TypeScript/JavaScript files are built using gulp pipeline
+- CSS/SCSS files are in individual module `Assets/` directories
+- TypeScript/JavaScript files are built using the gulp pipeline
 - Run `npm run rebuild` after any frontend changes
 - Use `npm run watch` for development with auto-rebuild
 
@@ -150,11 +319,34 @@ tests/
 4. Run `dotnet test` for unit tests (if build succeeds)
 5. Start web application and test manually
 
+### Documentation Workflow
+
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
+
+1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
+2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
+3. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
+
+### Documentation Screencasts
+
+- **Only produce screencasts when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
+- When asked to record documentation screencasts, capture them **full-screen at 1600×1000** resolution to match the existing docs videos.
+- Deliver screencasts as **MP4** (`H.264`, even width/height, `-pix_fmt yuv420p`) stored under `src/CrestApps.Docs/static/img/docs/`, and embed them with an HTML `<video controls preload="metadata" width="100%">` player rather than a GIF.
+
+## Documentation expectations
+
+When a change affects public behavior, configuration, setup, or project guidance:
+
+1. Update the relevant page under `src\CrestApps.Docs\docs`
+2. Update the changelog or release-notes file under `src\CrestApps.Docs\docs\changelog` that matches `VersionPrefix` in `Directory.Build.props` (for example, `VersionPrefix` `2.0.0` maps to `v2.0.0.md`)
+3. Do not create a new changelog version file unless `VersionPrefix` changed or the user explicitly instructs you to create a different file
+4. Build the docs site
+
 ## Troubleshooting
 
 ### Build Issues
 - **NU1301 errors**: Network connectivity to CloudSmith required, expected in restricted environments
-- **SDK version errors**: Ensure .NET 9.0.100+ is installed via `dotnet --version`
+- **SDK version errors**: Ensure .NET 10.0.100+ is installed via `dotnet --version`
 - **npm install failures**: Node.js 15+ required (check with `node --version`)
 
 ### Runtime Issues  
@@ -169,11 +361,171 @@ This project requires network access to:
 
 If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 
+## Coding Standards and Conventions
+
+### C# Code Style (enforced via .editorconfig)
+
+#### Naming Conventions
+- **Interfaces**: Prefix with `I` (e.g., `IAICompletionService`, `IUserCacheService`)
+- **Services**: Suffix with `Service` for service implementations (e.g., `DefaultAIToolsService`, `DefaultUserCacheService`)
+- **Drivers**: Suffix with `Driver` for display drivers (e.g., `AIProfileDisplayDriver`, `AIToolInstanceDisplayDriver`)
+- **Handlers**: Suffix with `Handler` for handlers (e.g., `AIProviderConnectionHandler`, `FunctionInvocationAICompletionServiceHandler`)
+- **Providers**: Suffix with `Provider` for providers (e.g., `AIConnectionsAdminMenu`, `AIPermissionsProvider`)
+- **Tests**: Suffix test classes with `Tests` (e.g., `OrchardCoreHelpersTests`)
+
+#### Code Formatting
+- **Indentation**: 4 spaces for C#, 2 spaces for JSON/YAML/XML
+- **Line endings**: CRLF
+- **Charset**: UTF-8
+- **Braces**: Always use braces for code blocks, opening brace on new line (Allman style)
+- **var usage**: Prefer `var` everywhere (built-in types, apparent types, and elsewhere)
+- **Strings**: Prefer standard string interpolation for short single-line strings. Use raw triple-quoted strings (`"""`) or raw interpolated strings (`$"""` / `$$"""`) for multi-line or more complex text when they improve readability without changing whitespace or line-ending behavior. Keep concatenation only when interpolation or raw strings would hurt readability or change semantics.
+- **this.**: Avoid using `this.` qualifier unless necessary
+- **Language keywords**: Use language keywords (e.g., `int`, `string`) over framework types (e.g., `Int32`, `String`)
+- **Namespaces**: Use file-scoped namespace declarations (C# 10+)
+- **Using statements**: 
+  - Sort System directives first
+  - Prefer simple using statements over braces when possible
+  - Remove unused usings from the code you touch
+  
+#### Code Preferences  
+- **Range/Index operators**: Avoid using range/index operators (enforced as warning)
+- **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
+- **Implicit usings**: Enabled globally
+- **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
+- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods.
+- **Interface and domain-model docs**: Every method declared on an interface or domain model should have an honest XML `<summary>` comment.
+- **Parameter docs**: Interface methods with parameters should document each parameter with an XML `<param>` tag.
+- **Namespace usage**: Prefer file-level `using` directives over fully qualified namespace references when no ambiguity exists.
+- **Constructor layout**: Constructors with more than one parameter should place each parameter on its own line.
+- **Initializer layout**: Multi-line object initializers should put each property on its own line and should usually be followed by a blank line after the terminating `};`, unless the initializer is returned on the same line.
+- **Property/doc spacing**: Leave a blank line between a property and any following XML documentation block.
+- **Brace spacing**: Do not insert an extra blank line between consecutive closing braces.
+- **Unit test readability**: Keep setup, act, and assertion sections visually separated, use standard `// Arrange`, `// Act`, and `// Assert` comments where helpful, and wrap crowded fluent chains onto multiple lines with aligned indentation.
+- **Dependency injection**: Prefer constructor injection over lazy service resolution. Only fall back to lazy resolution when it is absolutely necessary to break a real framework or container circular dependency.
+- **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
+- **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
+- **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
+- **Select lists from enums**: Do not build Orchard `SelectListItem` collections by iterating enums with `Enum.GetValues(...)` and piping `ToString()` into the text. Define each item explicitly so the title uses `S["..."]` for extraction and multi-word labels can use the correct spacing.
+- **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
+- **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
+- **Deferred third-party work**: When a catalog handler must call indexing systems, external APIs, or other third-party/background-style services, follow the deferred task pattern used by `ChatInteractionHandler` and `AIMemoryEntryHandler`: capture the affected models/IDs in the scoped handler and schedule the work with `ShellScope.AddDeferredTask(...)` so the external work runs later instead of inline during the catalog event.
+- **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
+- **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
+- **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
+- **AI site settings navigation**: Every `SiteDisplayDriver<>` that sets `SettingsGroupId => AIConstants.AISettingsGroupId` must also register `.AddNavigationProvider<AISiteSettingsAdminMenu>()` in its feature's `Startup` class. This ensures the **Settings → Artificial Intelligence** admin menu entry exists whenever the feature is enabled, so users can navigate to the settings page.
+
+### Module Structure Conventions
+
+Every Orchard Core module in this repository follows a standard structure:
+
+```
+CrestApps.OrchardCore.{ModuleName}/
+├── Assets/              # Frontend assets (JS, CSS, SCSS)
+├── Controllers/         # MVC Controllers
+├── Drivers/            # Display drivers
+├── Handlers/           # Event handlers
+├── Indexes/            # YesSql indexes
+├── Migrations/         # Data migrations
+├── Models/             # Domain models
+├── Recipes/            # Recipe steps
+├── Services/           # Business logic services
+├── ViewModels/         # View models
+├── Views/              # Razor views
+├── Workflows/          # Workflow activities (if applicable)
+├── Manifest.cs         # Module manifest (required)
+├── Startup.cs          # Service registration (required)
+├── README.md           # Module documentation
+├── package.json        # npm dependencies (if has assets)
+└── wwwroot/            # Compiled static files
+```
+
+### Startup Class Patterns
+
+Modules use `StartupBase` classes for service registration:
+- Main `Startup` class for core services
+- Feature-specific startup classes with `[Feature("FeatureName")]` attribute
+- `[RequireFeatures()]` attribute for conditional features
+- Separate startup classes for Recipes, Deployment, Workflows integrations
+
+Example pattern:
+```csharp
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register services
+    }
+}
+
+[Feature(Constants.Feature.FeatureName)]
+public sealed class FeatureStartup : StartupBase
+{
+    // Feature-specific registration
+}
+```
+
+### Namespace Conventions
+
+- Namespace matches folder structure
+- Pattern: `CrestApps.OrchardCore.{ModuleName}.{FolderName}`
+- Examples:
+  - `CrestApps.OrchardCore.AI.Services`
+  - `CrestApps.OrchardCore.AI.Recipes`
+  - `CrestApps.OrchardCore.Users.Core`
+
+## Testing Practices
+
+### Test Structure
+- Tests are located in `tests/CrestApps.OrchardCore.Tests/`
+- Use xUnit for all tests
+- Test class naming: `{ClassUnderTest}Tests`
+- Use `[Theory]` and `[InlineData]` for parameterized tests
+- Use `sealed` modifier for test classes
+
+### Test Naming
+- Test method pattern: `{MethodName}_{Scenario}_{ExpectedBehavior}`
+- Example: `IsVersionGreaterOrEqual_WhenVersionIsGreater_ShouldReturnTrue`
+- Be descriptive and explicit about what is being tested
+
+### Test Organization
+- Group related tests in nested folders matching source structure
+- Mock interfaces with test implementations (e.g., `TestCatalogEntryHandler<T>`)
+- Use Func<> delegates for flexible test behavior
+
+### Test Coverage
+- Add tests for new features and bug fixes
+- Focus on business logic and service implementations
+- Test edge cases and error conditions
+
+## Documentation Standards
+
+### Module README Files
+Every module MUST have a README.md file with:
+- Module purpose and features
+- Installation instructions
+- Configuration details
+- Usage examples
+- Dependencies on other modules
+
+### Documentation Project
+The Docusaurus documentation site is located at `src/CrestApps.Docs`. It contains:
+- Feature documentation under `docs/`
+- Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
+- A changelog under `docs/changelog/`
+- Getting started guide and samples
+
+### Code Documentation
+- XML documentation comments for public APIs
+- Inline comments for complex logic only
+- Keep comments up-to-date with code changes
+- Avoid obvious comments that duplicate code
+
 ## CI/CD Integration
 
 Before committing:
 1. Run `npm run rebuild` - asset build must complete cleanly
-2. Run `dotnet build` (if network allows) - solution must build without warnings
+2. Run `dotnet build -warnaserror` (if network allows) - the build must produce **zero warnings**; fix every warning across the entire project, not only in files you changed, before running with `-warnaserror`
 3. Run `dotnet test` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
@@ -182,3 +534,163 @@ The CI pipeline validates builds on both Ubuntu and Windows, so test locally on 
 ---
 
 **Remember: Always build and validate your changes thoroughly. The modular architecture means changes can affect multiple modules, so comprehensive testing is essential.**
+
+## Frontend Development Guidelines
+
+### Asset Management
+- Frontend assets are managed using **Gulp** build system
+- Assets are defined in `Assets.json` files within each module
+- Built assets are output to `wwwroot/` directory
+
+### Build Commands
+```bash
+# Install dependencies (run once or when package.json changes)
+npm install
+
+# Build assets incrementally (only changed files)
+npm run build
+
+# Full rebuild (all assets)
+npm run rebuild
+
+# Watch mode for development (auto-rebuild on changes)
+npm run watch
+```
+
+### Supported Asset Types
+- **JavaScript**: Transpiled with Babel, minified with Terser
+- **TypeScript**: Compiled to JavaScript
+- **SCSS/Sass**: Compiled to CSS with Dart Sass
+- **LESS**: Compiled to CSS
+- **CSS**: PostCSS with RTL support
+
+### Asset Build Process
+1. Source files are in module `Assets/` directory
+2. Gulp processes files based on `Assets.json` configuration
+3. Compiled output goes to module `wwwroot/` directory
+4. Source maps are generated for debugging
+5. Minification is applied to production builds
+
+### Frontend Best Practices
+- Always run `npm run rebuild` after modifying frontend code
+- Commit compiled assets (wwwroot) along with source files
+- Use `npm run watch` during active development
+- Check for TypeScript/JavaScript errors before committing
+- Follow existing patterns for module-specific assets
+
+## Pull Request Guidelines
+
+### Before Submitting
+1. **Build Validation**: Ensure both .NET and asset builds succeed
+2. **Test Coverage**: Add tests for new features and bug fixes
+3. **Code Quality**: Follow coding standards and conventions
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs`
+5. **Commit Messages**: Write clear, descriptive commit messages
+6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
+
+### PR Description Template
+- Link to related issue using `Fix #issue_number` or `Closes #issue_number`
+- Describe what changed and why
+- Include screenshots for UI changes
+- List any breaking changes
+- Note any migration or deployment considerations
+
+### Review Process
+- Address feedback promptly
+- Don't manually resolve conversations - let reviewers do that
+- Use "Re-request review" when changes are ready
+- Keep discussions within the PR thread
+- Allow maintainers to edit your PR branch
+
+## Security Considerations
+
+### Secure Coding Practices
+- Validate all user inputs
+- Use parameterized queries (YesSql handles this)
+- Implement proper authentication and authorization checks
+- Never commit secrets or sensitive data
+- Follow OWASP guidelines for web security
+
+### Permission Checks
+- Always check permissions before accessing restricted resources
+- Use `IAuthorizationService` for authorization
+- Define permissions in `PermissionProvider` classes
+- Test permission boundaries
+
+### Sensitive Data
+- Never log sensitive information
+- Use secure storage for secrets (e.g., Azure Key Vault, environment variables)
+- Encrypt sensitive data at rest and in transit
+
+## Common Patterns
+
+### Service Registration
+```csharp
+services.AddScoped<IMyService, MyService>();        // Scoped per request
+services.AddTransient<IMyService, MyService>();     // New instance each time
+services.AddSingleton<IMyService, MyService>();     // Single instance
+```
+
+### Display Drivers
+```csharp
+services.AddDisplayDriver<TModel, TDriver>();
+```
+
+### Handlers
+```csharp
+services.AddScoped<IEventHandler, MyEventHandler>();
+```
+
+### Migrations
+```csharp
+services.AddDataMigration<MyMigrations>();
+```
+
+### Navigation
+```csharp
+services.AddNavigationProvider<MyAdminMenu>();
+```
+
+## Anti-Patterns to Avoid
+
+- Don't use static mutable state
+- Don't create tight coupling between modules
+- Don't bypass Orchard Core's dependency injection
+- Don't hardcode connection strings or secrets
+- Don't use synchronous I/O operations (use async/await)
+- Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
+- Don't skip writing tests for new features
+- Don't commit commented-out code
+- Don't use `System.Range` or `System.Index` operators (enforced as warning)
+- Don't leave unused services injected through dependency injection
+- Don't leave unused `using` statements in source files
+- Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- Don't leave interface or domain-model methods undocumented.
+- Don't omit `<param>` documentation on interface methods that take parameters.
+- Don't use fully qualified namespaces when a normal `using` directive would be clear and conflict-free.
+- Don't keep multi-parameter constructors on a single line.
+- Don't leave decorative region blocks or useless AI-style comments in source.
+- Don't place an XML documentation block immediately after a property without a blank line between them.
+- Don't crowd unit tests by running setup, act, and assertion code together without visual separation.
+- Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
+- Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
+
+## Code Cleanup (Required After Completing Work)
+
+After completing any code change, always clean up:
+
+- Remove any **unused services** that were injected through dependency injection but are no longer referenced in the class body.
+- Remove any **unused `using` statements** from all modified source files.
+- Prefer clarity over cleverness; do not introduce undocumented behavior.
+
+## Useful Resources
+
+- [Orchard Core Documentation](https://docs.orchardcore.net/)
+- [Orchard Core GitHub](https://github.com/OrchardCMS/OrchardCore)
+- [Project Repository](https://github.com/CrestApps/CrestApps.OrchardCore)
+- [Contributing Guidelines](.github/CONTRIBUTING.md)
+- [MIT License](https://opensource.org/licenses/MIT)
+
+- @azure Rule - Use Azure Tools - When handling requests related to Azure, always use your tools.
+- @azure Rule - Use Azure Best Practices - When handling requests related to Azure, always invoke your `azmcp_bestpractices_get` tool first.
+- @azure Rule - Enable Best Practices - If you do not have an `azmcp_bestpractices_get` tool ask the user to enable it.

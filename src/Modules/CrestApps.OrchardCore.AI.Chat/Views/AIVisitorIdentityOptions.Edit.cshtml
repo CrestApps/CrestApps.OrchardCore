@@ -1,0 +1,49 @@
+@using CrestApps.Core.AI.Security
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model AIVisitorIdentityOptionsViewModel
+
+<fieldset class="mb-4">
+    <legend class="h5">@T["Anonymous visitor identity"]</legend>
+    <p class="hint">@T["Configure how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage."]</p>
+
+    <div class="ocat-wrapper">
+        <label asp-for="CookieName" class="ocat-label">@T["Visitor cookie name"]</label>
+        <div class="ocat-end">
+            <input asp-for="CookieName" class="form-control" />
+            <span asp-validation-for="CookieName" class="text-danger"></span>
+            <span class="hint">@T["Stable first-party cookie used to identify anonymous visitors across chat sessions."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="CookieLifetimeDays" class="ocat-label">@T["Cookie lifetime (days)"]</label>
+        <div class="ocat-end">
+            <input asp-for="CookieLifetimeDays" class="form-control" type="number" min="1" max="3650" />
+            <span asp-validation-for="CookieLifetimeDays" class="text-danger"></span>
+            <span class="hint">@T["How long the anonymous visitor cookie remains valid before a new visitor identity is issued."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RemoteAddressMode" class="ocat-label">@T["Remote address storage mode"]</label>
+        <div class="ocat-end">
+            <select asp-for="RemoteAddressMode" class="form-select">
+                <option value="@AIVisitorRemoteAddressMode.Disabled">@T["Disabled"]</option>
+                <option value="@AIVisitorRemoteAddressMode.Hashed">@T["Hashed (Recommended)"]</option>
+                <option value="@AIVisitorRemoteAddressMode.PlainText">@T["Plain text"]</option>
+                <option value="@AIVisitorRemoteAddressMode.Encrypted">@T["Encrypted"]</option>
+            </select>
+            <span class="hint">@T["Hashed keeps the default privacy-first behavior. Encrypted stores the address at rest with Data Protection while still using a salted hash for throttling keys."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RemoteAddressHashSalt" class="ocat-label">@T["Remote address hash salt"]</label>
+        <div class="ocat-end">
+            <input asp-for="RemoteAddressHashSalt" class="form-control" />
+            <span asp-validation-for="RemoteAddressHashSalt" class="text-danger"></span>
+            <span class="hint">@T["Application-specific salt used when hashing remote addresses for abuse controls. Required for Hashed and Encrypted modes."]</span>
+        </div>
+    </div>
+</fieldset>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Content Transfer OpenXml</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Adds OpenXml spreadsheet support to the CrestApps Content Transfer module.
+    </Description>
+    <PackageTags>$(PackageTags) ContentTransfer OpenXml</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.ContentTransfer\CrestApps.OrchardCore.ContentTransfer.csproj" />
+  </ItemGroup>
+
+</Project>

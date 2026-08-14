@@ -1,0 +1,188 @@
+using CrestApps.OrchardCore.ContentFields.Settings;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using OrchardCore.ContentFields.Settings;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Settings;
+using OrchardCore.Data.Migration;
+using OrchardCore.Title.Models;
+using PhoneNumbers;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
+
+/// <summary>
+/// Defines database migrations for the Migrations module.
+/// </summary>
+public sealed class ContactMethodMigrations : DataMigration
+{
+    private static readonly PhoneNumberUtil _phoneNumberUtil = PhoneNumberUtil.GetInstance();
+
+    private const int _batchSize = 100;
+    private const string _defaultRegionCode = "CA";
+
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactMethodMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    public ContactMethodMigrations(IContentDefinitionManager contentDefinitionManager)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+    }
+
+    /// <summary>
+    /// Creates a new async.
+    /// </summary>
+    public async Task<int> CreateAsync()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.EmailInfo, part => part
+            .Attachable()
+            .Reusable()
+            .WithDisplayName("Email Info Part")
+            .WithDescription("Provides a way to capture a required email address")
+                .WithField("Email", field => field
+                .WithPosition("1")
+                .OfType("TextField")
+                .WithDisplayName("Email")
+                .WithEditor("Email")
+                .WithSettings(new TextFieldSettings()
+                {
+                    Required = true,
+                })
+            )
+        );
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
+            .Attachable()
+            .Reusable()
+            .WithDisplayName("Phone Number Info Part")
+            .WithDescription("Provides a way to capture required phone number info")
+            .WithField("Number", field => field
+                .WithPosition("1")
+                .OfType("PhoneField")
+                .WithDisplayName("Number")
+                .WithSettings(new PhoneFieldSettings()
+                {
+                    Required = true,
+                    InitialCountryMode = InitialCountryMode.CurrentCulture,
+                })
+            )
+        .WithField("Extension", field => field
+            .WithPosition("2")
+            .OfType("TextField")
+            .WithDisplayName("Extension")
+            )
+        .WithField("Type", field => field
+            .WithPosition("3")
+            .OfType("TextField")
+            .WithDisplayName("Type")
+            .WithEditor("PredefinedList")
+            .MergeSettings<TextFieldPredefinedListEditorSettings>(settings =>
+            {
+                settings.Editor = EditorOption.Dropdown;
+                settings.DefaultValue = string.Empty;
+                settings.Options =
+                [
+                    new ListValueOption()
+                    {
+                        Name = "Home",
+                        Value = "Home",
+                    },
+                    new ListValueOption()
+                    {
+                        Name = "Cell",
+                        Value = "Cell",
+                    },
+                    new ListValueOption()
+                    {
+                        Name = "Fax",
+                        Value = "Fax",
+                    },
+                    new ListValueOption()
+                    {
+                        Name = "Work",
+                        Value = "Work",
+                    },
+                    new ListValueOption()
+                    {
+                        Name = "Office",
+                        Value = "Office",
+                    },
+                    new ListValueOption()
+                    {
+                        Name = "Other",
+                        Value = "Other",
+                    }
+
+                ];
+            })
+            )
+        );
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.EmailAddress, type => type
+            .Creatable()
+            .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
+            .WithDisplayName("Email Address")
+            .WithPart("TitlePart", part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings()
+                {
+                    Options = TitlePartOptions.GeneratedHidden,
+                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.EmailInfo + ".Email.Text }}",
+                })
+            )
+            .WithPart(OmnichannelConstants.ContentParts.EmailInfo, part =>
+                part.WithPosition("5")
+            )
+        );
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
+            .WithDisplayName("Phone Number")
+            .Creatable()
+            .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
+            .WithPart<TitlePart>(part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings()
+                {
+                    Options = TitlePartOptions.GeneratedHidden,
+                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
+                })
+            )
+            .WithPart(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part.WithPosition("5"))
+        );
+
+        return 4;
+    }
+
+    /// <summary>
+    /// Migrates the Number field from TextField to PhoneField and schedules background
+    /// data migration for existing phone number records.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
+            .RemoveField("Number"));
+
+        await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
+            .WithField("Number", field => field
+                .OfType("PhoneField")
+                .WithDisplayName("Number")
+                .WithPosition("1")
+                .WithSettings(new PhoneFieldSettings
+                {
+                    Required = true,
+                    InitialCountryMode = InitialCountryMode.CurrentCulture,
+                })));
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
+            .WithPart<TitlePart>(part => part
+                .WithPosition("1")
+                .WithSettings(new TitlePartSettings()
+                {
+                    Options = TitlePartOptions.GeneratedHidden,
+                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.PhoneNumber }}",
+                })));
+
+        return 4;
+    }
+}

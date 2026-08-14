@@ -1,0 +1,22 @@
+{
+  "name": "crestapps.orchardcore.ai.chat.interactions",
+  "version": "1.0.0",
+  "description": "Provides ad-hoc AI chat interactions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@crestapps/ai-chat-ui": "1.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.5.0"
+  },
+  "overrides": {
+    "ajv": "^6.14.0",
+    "brace-expansion": "^5.0.6",
+    "minimatch": "^10.0.1"
+  }
+}

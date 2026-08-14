@@ -1,5 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Models;
@@ -7,50 +9,66 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
+/// <summary>
+/// Represents the list non startup recipes tool.
+/// </summary>
 public sealed class ListNonStartupRecipesTool : AIFunction
 {
     public const string TheName = "listNonStartupRecipes";
 
-    private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
-    private readonly IShellFeaturesManager _shellFeaturesManager;
-
-    public ListNonStartupRecipesTool(
-        IEnumerable<IRecipeHarvester> recipeHarvesters,
-        IShellFeaturesManager shellFeaturesManager)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _recipeHarvesters = recipeHarvesters;
-        _shellFeaturesManager = shellFeaturesManager;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-                "additionalProperties": false,
-                "required": []
-            }
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves a list of predefined recipes that can be executed manually and are not designated to run at application startup.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
-        var recipes = await GetRecipesAsync(features);
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<ListNonStartupRecipesTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
+        var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
+        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+
+        var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
+        var recipes = await GetRecipesAsync(recipeHarvesters, features);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(recipes.Select(x => x.AsAIObject()));
     }
 
-    private async Task<IEnumerable<RecipeDescriptor>> GetRecipesAsync(IEnumerable<IFeatureInfo> features)
+    private static async Task<IEnumerable<RecipeDescriptor>> GetRecipesAsync(IEnumerable<IRecipeHarvester> recipeHarvesters, IEnumerable<IFeatureInfo> features)
     {
-        var recipeCollections = await Task.WhenAll(_recipeHarvesters.Select(x => x.HarvestRecipesAsync()));
+        var recipeCollections = await Task.WhenAll(recipeHarvesters.Select(x => x.HarvestRecipesAsync()));
         var recipes = recipeCollections.SelectMany(x => x)
             .Where(r => !r.IsSetupRecipe &&
                 (r.Tags == null || !r.Tags.Contains("hidden", StringComparer.InvariantCultureIgnoreCase)) &&
-                features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                    features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
 
         return recipes;
     }

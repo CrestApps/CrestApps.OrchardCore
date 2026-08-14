@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.AI.Mcp.Deployments.ViewModels
+
+@model DisplayMcpResourceDeploymentStepViewModel
+
+@{
+    var includeAll = Model.IncludeAll;
+}
+
+<h5>@T["MCP Resources"]</h5>
+
+@if (includeAll)
+{
+    <span class="badge text-bg-success">@T["All MCP resources"]</span>
+}
+else if (Model.Names is not null && Model.Names.Any())
+{
+    foreach (var name in Model.Names)
+    {
+        <span class="badge ta-badge">@name</span>
+    }
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No MCP resources selected."]</span>
+}

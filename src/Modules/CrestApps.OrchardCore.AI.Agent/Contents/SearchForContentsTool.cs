@@ -1,74 +1,54 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 using OrchardCore.Contents.Services;
 using OrchardCore.Contents.ViewModels;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
+using YesSql.Filters.Query;
+using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// Represents the search for contents tool.
+/// </summary>
 public sealed class SearchForContentsTool : AIFunction
 {
     public const string TheName = "searchForContentItems";
 
-    private readonly IContentManager _contentManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IContentsAdminListQueryService _contentsAdminListQueryService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly DocumentJsonSerializerOptions _options;
-    private readonly PagerOptions _pagerOptions;
-
-    public SearchForContentsTool(
-        IContentManager contentManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IContentsAdminListQueryService contentsAdminListQueryService,
-        IUpdateModelAccessor updateModelAccessor,
-        IOptions<DocumentJsonSerializerOptions> options,
-        IOptions<PagerOptions> pagerOptions)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _contentManager = contentManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _contentsAdminListQueryService = contentsAdminListQueryService;
-        _updateModelAccessor = updateModelAccessor;
-        _pagerOptions = pagerOptions.Value;
-        _options = options.Value;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "term": {
-                  "type": "string",
-                  "description": "The query string to search for."
-                },
-                "pageNumber": {
-                  "type": "integer",
-                  "description": "The page number of results to return.",
-                  "default": 1
-                }
-              },
-              "required": ["term"],
-              "additionalProperties": false
-            }     
-            """, JsonSerializerOptions);
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
     }
+    """);
 
     public override string Name => TheName;
 
     public override string Description => "Search for content items that match the given query along with a way to paginate the results.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -79,47 +59,60 @@ public sealed class SearchForContentsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListContent))
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<SearchForContentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to list content items.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
+        var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
+
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
+        var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("term", out var term))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a term argument in the function arguments.", TheName);
+
             return "Unable to find a term argument in the function arguments.";
         }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
-        if (page < 1)
-        {
-            page = 1;
-        }
+        var startingIndex = (Math.Max(1, page) - 1) * pagerOptions.PageSize;
 
-        var startingIndex = (page - 1) * _pagerOptions.PageSize;
-
-        var query = await _contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
+        var query = await contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
         {
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
-        }, _updateModelAccessor.ModelUpdater);
+            FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
+        }, updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
-            .Take(_pagerOptions.PageSize)
-            .ListAsync(_contentManager);
+            .Take(pagerOptions.PageSize)
+            .ListAsync(contentManager);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
 
         return
         $$"""
-            {
-                "contentItems": {{JsonSerializer.Serialize(contentItems, _options.SerializerOptions)}},
-                "pageSize": {{_pagerOptions.PageSize}},
-                "contentItemsCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / _pagerOptions.PageSize)}},
-                "pageSize": {{_pagerOptions.PageSize}},
-            }
-            """;
+{
+"contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"contentItemsCount": {{contentItemsCount}},
+"totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

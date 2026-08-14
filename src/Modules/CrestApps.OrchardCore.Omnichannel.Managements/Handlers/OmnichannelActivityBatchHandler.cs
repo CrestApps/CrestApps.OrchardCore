@@ -1,0 +1,97 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using System.Text.Json.Nodes;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
+using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
+
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+
+internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<OmnichannelActivityBatch>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClock _clock;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelActivityBatchHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public OmnichannelActivityBatchHandler(
+        IHttpContextAccessor httpContextAccessor,
+        IClock clock,
+        IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _clock = clock;
+        S = stringLocalizer;
+    }
+
+    public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
+        => PopulateAsync(context.Model, context.Data);
+
+    public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return PopulateAsync(context.Model, context.Data);
+    }
+
+    public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
+        {
+            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OmnichannelActivityBatch.DisplayText)]));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.CreatedUtc = _clock.UtcNow;
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user != null)
+        {
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static Task PopulateAsync(OmnichannelActivityBatch enabpoint, JsonNode data)
+    {
+        OmnichannelDeploymentSerializer.Populate(enabpoint, data);
+
+        var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(displayText))
+        {
+            enabpoint.DisplayText = displayText;
+        }
+
+        var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            enabpoint.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties)
+            {
+                enabpoint.Properties[key] = value;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+}

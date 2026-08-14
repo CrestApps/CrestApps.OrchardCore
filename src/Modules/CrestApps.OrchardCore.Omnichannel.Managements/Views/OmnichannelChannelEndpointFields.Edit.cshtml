@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelChannelEndpointViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
+        <select asp-for="Channel" class="form-select" asp-items="Model.Channels">
+            <option value="">@T["Select a channel"]</option>
+        </select>
+        <span asp-validation-for="Channel" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Value" class="ocat-label">@T["Endpoint value"]</label>
+    <div class="ocat-end">
+        <input asp-for="Value" class="form-control" />
+        <span asp-validation-for="Value" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>

@@ -1,0 +1,100 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@model CreateInboundActivityViewModel
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Log Inbound Activity"])</h1>
+</zone>
+
+@{
+    var contentItemId = Model.ContactContentItem.ContentItemId;
+    var shape = new ContactNavigationAdminShapeViewModel
+    {
+        ContactContentItem = Model.ContactContentItem,
+        ShowEdit = true,
+    };
+}
+
+@await DisplayAsync(shape)
+
+@if (!Model.HasInboundSubjects)
+{
+    <div class="alert alert-warning">
+        @T["There is no configured inbound subject yet. You can't log an inbound activity until an inbound subject flow is configured."]
+    </div>
+
+    <a class="btn btn-secondary" asp-action="List" asp-route-contentItemId="@contentItemId">@T["Back to activities"]</a>
+
+    return;
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Subject"]
+    </div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label for="inbound-subject-selector" class="ocat-label">@T["Inbound subject"]</label>
+            <div class="ocat-end">
+                <select id="inbound-subject-selector" name="subjectContentTypeSelector" class="form-select">
+                    <option value="">@T["Select an inbound subject"]</option>
+                    @foreach (var item in Model.SubjectContentTypes)
+                    {
+                        if (string.Equals(item.Value, Model.SubjectContentType, StringComparison.Ordinal))
+                        {
+                            <option value="@item.Value" selected>@item.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+                <span class="hint">@T["The subject determines the contact fields, dispositions, and workflow for this inbound activity."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-action="CreateInbound" asp-route-contentItemId="@contentItemId" enctype="multipart/form-data" class="no-multisubmit">
+    <input type="hidden" name="subjectContentType" value="@Model.SubjectContentType" />
+    @Html.ValidationSummary()
+
+    @if (Model.Subject is not null)
+    {
+        @await DisplayAsync(Model.Subject)
+    }
+
+    @if (Model.Container is not null)
+    {
+        @await DisplayAsync(Model.Container)
+    }
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Log Activity"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="List" asp-route-contentItemId="@contentItemId">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var selector = document.getElementById('inbound-subject-selector');
+
+        if (selector) {
+            selector.value = '@Model.SubjectContentType';
+
+            selector.addEventListener('change', function () {
+                var url = '@Url.Action("CreateInbound", new { contentItemId = contentItemId })';
+                var separator = url.indexOf('?') === -1 ? '?' : '&';
+
+                if (this.value) {
+                    url += separator + 'subjectContentType=' + encodeURIComponent(this.value);
+                }
+
+                window.location.href = url;
+            });
+        }
+    });
+</script>

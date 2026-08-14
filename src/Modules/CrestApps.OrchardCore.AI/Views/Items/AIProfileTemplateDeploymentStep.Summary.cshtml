@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileTemplateDeploymentStep>
+
+@{
+    var includeAll = Model.Value.IncludeAll;
+    var names = Model.Value.TemplateNames;
+}
+
+<h5>@T["AI Profile Templates"]</h5>
+
+@if (includeAll)
+{
+    <span class="badge text-bg-success">@T["All templates"]</span>
+}
+else if (names?.Length > 0)
+{
+    foreach (var name in names)
+    {
+        <span class="badge ta-badge">@name</span>
+    }
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected template."]</span>
+}

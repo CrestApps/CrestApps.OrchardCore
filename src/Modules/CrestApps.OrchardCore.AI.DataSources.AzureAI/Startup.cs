@@ -1,0 +1,74 @@
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
+using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.AI.DataSources.AzureAI;
+
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
+public sealed class Startup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceContentManager, OrchardCoreAzureAISearchDataSourceContentManager>(AzureAISearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreAzureAISearchDataSourceDocumentReader>(AzureAISearchConstants.ProviderName);
+        services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
+        services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
+        services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
+        services.AddKeyedScoped<IAIDataSourceSourceHandler, AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
+        services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
+            AIDataSourceSourceTypes.AzureAISearch,
+            S["Azure AI Search"],
+            S["Read source documents from an external Azure AI Search index using explicit connection settings."]));
+
+        services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
+        {
+            o.DisplayName = S["AI Knowledge Base Index (Azure AI Search)"];
+            o.Description = S["Create an Azure AI Search index to store AI knowledge base document embeddings for vector search."];
+        });
+
+        services.Configure<AIDataSourceOptions>(options =>
+        {
+            options.AddFieldMapping(AzureAISearchConstants.ProviderName, IndexingConstants.ContentsIndexSource, mapping =>
+            {
+                mapping.DefaultKeyField = "ContentItemId";
+                mapping.DefaultTitleField = "Content__ContentItem__DisplayText__keyword";
+                mapping.DefaultContentField = "Content__ContentItem__FullText";
+            });
+
+            options.AddFieldMapping(AzureAISearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
+            {
+                mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
+                mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
+                mapping.DefaultContentField = AIConstants.ColumnNames.Content;
+            });
+        });
+    }
+}

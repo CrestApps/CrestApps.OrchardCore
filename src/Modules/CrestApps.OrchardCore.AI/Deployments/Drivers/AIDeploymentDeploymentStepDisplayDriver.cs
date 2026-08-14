@@ -1,7 +1,7 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,25 +12,31 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIDeploymentDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly INamedSourceCatalog<AIDeployment> _deploymentCatalog;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIDeploymentDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentCatalog">The deployment catalog.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIDeploymentDeploymentStepDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog,
+        INamedSourceCatalog<AIDeployment> deploymentCatalog,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _deploymentCatalog = deploymentCatalog;
         S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(AIDeploymentDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+
+        CombineAsync(
+            View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
+            View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIDeploymentDeploymentStep step, BuildEditorContext context)
@@ -39,7 +45,7 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
         {
             model.IncludeAll = step.IncludeAll;
             model.DeploymentNames = step.DeploymentNames;
-            model.AllDeploymentName = (await _profilesCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
+            model.AllDeploymentName = (await _deploymentCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
         }).Location("Content");
     }
 

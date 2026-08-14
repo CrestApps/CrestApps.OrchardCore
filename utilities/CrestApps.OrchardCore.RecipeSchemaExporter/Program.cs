@@ -1,0 +1,760 @@
+using System.Text.Json;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
+using CrestApps.OrchardCore.Recipes.Core.Services;
+using Json.Schema;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
+using Moq;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Deployment;
+using OrchardCore.Environment.Extensions.Features;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Localization;
+using OrchardCore.Recipes.Services;
+using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Security.Services;
+using OrchardCore.Workflows.Activities;
+using OrchardCore.Workflows.Services;
+
+namespace CrestApps.OrchardCore.RecipeSchemaExporter;
+
+internal sealed class Program
+{
+    private const string _agentSkillsRepositoryName = "CrestApps.AgentSkills";
+
+    private static readonly string[] _recipeSchemasRelativeSegments =
+    [
+        "src",
+        "CrestApps.AgentSkills",
+        "orchardcore",
+        "orchardcore-recipes",
+        "references",
+        "recipe-schemas",
+    ];
+
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    private static string[] _featureIds = [];
+    private static string[] _themeIds = [];
+    private static string[] _eventActivityNames = [];
+    private static string[] _taskActivityNames = [];
+    private static string[] _permissionNames = [];
+
+    private static readonly string[] _roleNames =
+    [
+        "Administrator",
+        "Anonymous",
+        "Author",
+        "Authenticated",
+        "Contributor",
+        "Editor",
+        "Moderator",
+    ];
+
+    private static readonly string[] _contentTypeNames =
+    [
+        "Article",
+        "BlogPost",
+        "Page",
+    ];
+
+    private static readonly string[] _cultureNames =
+    [
+        "en",
+        "en-US",
+        "fr",
+        "fr-FR",
+    ];
+
+    private static readonly string[] _indexProfileNames =
+    [
+        "articles",
+        "blogposts",
+        "pages",
+    ];
+
+    private static readonly string[] _fieldTypeNames =
+    [
+        "BooleanField",
+        "ContentPickerField",
+        "DateField",
+        "DateTimeField",
+        "GeoPointField",
+        "HtmlField",
+        "LinkField",
+        "LocalizationSetContentPickerField",
+        "MarkdownField",
+        "MediaField",
+        "MultiTextField",
+        "NumericField",
+        "TaxonomyField",
+        "TextField",
+        "TimeField",
+        "UserPickerField",
+        "YoutubeField",
+    ];
+
+    public static async Task<int> Main(string[] args)
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        _featureIds = ManifestScanner.DiscoverFeatureIds(repositoryRoot);
+        _themeIds = ManifestScanner.DiscoverThemeIds(repositoryRoot);
+        (_eventActivityNames, _taskActivityNames) = ManifestScanner.DiscoverWorkflowActivities(repositoryRoot);
+        _permissionNames = ManifestScanner.DiscoverPermissionNames(repositoryRoot);
+
+        Console.WriteLine($"Discovered {_featureIds.Length} feature IDs and {_themeIds.Length} theme IDs.");
+        Console.WriteLine($"Discovered {_eventActivityNames.Length} workflow events, {_taskActivityNames.Length} workflow tasks, and {_permissionNames.Length} permissions.");
+
+        var outputPath = ResolveOutputPath(args, repositoryRoot);
+        var recipeSteps = CreateRecipeSteps(out var recipeStepServiceProvider)
+            .OrderBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        await using var _ = recipeStepServiceProvider;
+
+        Directory.CreateDirectory(outputPath);
+        ClearGeneratedArtifacts(outputPath);
+
+        using var memoryCache = new NoOpMemoryCache();
+        var schemaService = new RecipeSchemaService([], recipeSteps, memoryCache);
+        var indexEntries = new List<RecipeSchemaIndexEntry>();
+
+        foreach (var recipeStep in recipeSteps)
+        {
+            var stepSchema = await recipeStep.GetSchemaAsync();
+            var fileName = GetSchemaFileName(recipeStep.Name);
+            var filePath = Path.Combine(outputPath, fileName);
+
+            await WriteSchemaAsync(filePath, stepSchema);
+            indexEntries.Add(new RecipeSchemaIndexEntry(recipeStep.Name, fileName));
+        }
+
+        await WriteSchemaAsync(
+            Path.Combine(outputPath, "recipe.schema.json"),
+            await schemaService.GetRecipeSchemaAsync(CancellationToken.None));
+
+        var indexPath = Path.Combine(outputPath, "index.json");
+        var indexDocument = new RecipeSchemaIndexDocument(
+            DateTimeOffset.UtcNow,
+            "recipe.schema.json",
+            indexEntries);
+
+        await File.WriteAllTextAsync(
+            indexPath,
+            JsonSerializer.Serialize(indexDocument, _jsonSerializerOptions));
+
+        Console.WriteLine($"Exported {indexEntries.Count} step schemas to '{outputPath}'.");
+        Console.WriteLine("Generated files:");
+        Console.WriteLine(" - recipe.schema.json");
+        Console.WriteLine(" - index.json");
+
+        foreach (var entry in indexEntries)
+        {
+            Console.WriteLine($" - {entry.File}");
+        }
+
+        return 0;
+    }
+
+    private static string ResolveOutputPath(string[] args, string repositoryRoot)
+    {
+        if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
+        {
+            return Path.GetFullPath(args[0]);
+        }
+
+        return GetDefaultOutputPath(repositoryRoot);
+    }
+
+    private static string GetDefaultOutputPath(string repositoryRoot)
+    {
+        var parentDirectory = Directory.GetParent(repositoryRoot)
+            ?? throw new DirectoryNotFoundException($"Could not determine the parent directory for '{repositoryRoot}'.");
+        var agentSkillsRoot = Path.Combine(parentDirectory.FullName, _agentSkillsRepositoryName);
+
+        if (!Directory.Exists(agentSkillsRoot))
+        {
+            var fallbackPath = Path.Combine(repositoryRoot, "artifacts", "recipe-schemas");
+            Console.WriteLine($"Warning: Could not locate the sibling '{_agentSkillsRepositoryName}' repository.");
+            Console.WriteLine($"  Expected: '{agentSkillsRoot}'");
+            Console.WriteLine($"  Falling back to local output: '{fallbackPath}'");
+            Console.WriteLine();
+
+            return fallbackPath;
+        }
+
+        return Path.Combine([agentSkillsRoot, .._recipeSchemasRelativeSegments]);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var candidateDirectories = new[]
+        {
+            AppContext.BaseDirectory,
+            Environment.CurrentDirectory,
+        }
+            .Select(path => new DirectoryInfo(path))
+            .DistinctBy(directory => directory.FullName)
+            .ToArray();
+
+        foreach (var candidateDirectory in candidateDirectories)
+        {
+            for (var current = candidateDirectory; current is not null; current = current.Parent)
+            {
+                if (IsRepositoryRoot(current))
+                {
+                    return current.FullName;
+                }
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not locate the CrestApps.OrchardCore repository root. " +
+            "Expected a parent directory containing global.json, NuGet.config, CrestApps.OrchardCore.sln, or CrestApps.OrchardCore.slnx.");
+    }
+
+    private static bool IsRepositoryRoot(DirectoryInfo directory)
+        => File.Exists(Path.Combine(directory.FullName, "global.json")) ||
+            File.Exists(Path.Combine(directory.FullName, "NuGet.config")) ||
+                File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.sln")) ||
+                File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx"));
+
+    private static void ClearGeneratedArtifacts(string outputPath)
+    {
+        foreach (var filePath in Directory.EnumerateFiles(outputPath, "*.schema.json", SearchOption.TopDirectoryOnly))
+        {
+            File.Delete(filePath);
+        }
+
+        var indexPath = Path.Combine(outputPath, "index.json");
+        if (File.Exists(indexPath))
+        {
+            File.Delete(indexPath);
+        }
+    }
+
+    private static async Task WriteSchemaAsync(string filePath, JsonSchema schema)
+    {
+        await File.WriteAllTextAsync(
+            filePath,
+            JsonSerializer.Serialize(schema, _jsonSerializerOptions));
+    }
+
+    private static string GetSchemaFileName(string stepName)
+    {
+        var invalidFileNameChars = Path.GetInvalidFileNameChars();
+        var safeName = new string(stepName.Select(character => invalidFileNameChars.Contains(character) ? '-' : character).ToArray());
+        return $"{safeName}.schema.json";
+    }
+
+    private static IRecipeStep[] CreateRecipeSteps(out ServiceProvider serviceProvider)
+    {
+        var schemaDefinitions = CreateContentSchemaDefinitions();
+        var partNames = schemaDefinitions
+            .Where(definition => definition.Type == ContentDefinitionSchemaType.Part)
+            .Select(definition => definition.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        serviceProvider = CreateRecipeStepServiceProvider(schemaDefinitions, partNames);
+
+        var provider = serviceProvider;
+
+        return typeof(IRecipeStep).Assembly.ExportedTypes
+            .Where(type =>
+                typeof(IRecipeStep).IsAssignableFrom(type) &&
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => CreateRecipeStep(type, provider))
+                    .ToArray();
+    }
+
+    private static IContentSchemaDefinition[] CreateContentSchemaDefinitions()
+    {
+        return typeof(IContentSchemaDefinition).Assembly.ExportedTypes
+            .Where(type =>
+                typeof(IContentSchemaDefinition).IsAssignableFrom(type) &&
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => (IContentSchemaDefinition)Activator.CreateInstance(type)!)
+                    .ToArray();
+    }
+
+    private static ISiteSettingsSchemaDefinition[] CreateSiteSettingsSchemaDefinitions()
+    {
+        return typeof(ISiteSettingsSchemaDefinition).Assembly.ExportedTypes
+            .Where(type =>
+                typeof(ISiteSettingsSchemaDefinition).IsAssignableFrom(type) &&
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => (ISiteSettingsSchemaDefinition)Activator.CreateInstance(type)!)
+                    .ToArray();
+    }
+
+    private static ServiceProvider CreateRecipeStepServiceProvider(
+        IReadOnlyList<IContentSchemaDefinition> schemaDefinitions,
+        IReadOnlyList<string> partNames)
+    {
+        var services = new ServiceCollection();
+        var siteSettingsSchemaDefinitions = CreateSiteSettingsSchemaDefinitions();
+        var contentDefinitionManager = CreateContentDefinitionManager(partNames);
+        var contentSchemaProvider = new StubContentSchemaProvider(partNames, _fieldTypeNames);
+        var contentItemSchemaService = new ContentItemSchemaService(contentDefinitionManager, schemaDefinitions);
+
+        services.AddSingleton<IContentItemSchemaService>(contentItemSchemaService);
+        services.AddSingleton<IContentSchemaProvider>(contentSchemaProvider);
+        services.AddSingleton<IFeatureSchemaProvider>(new StubFeatureSchemaProvider());
+        services.AddSingleton<IOptions<AIOptions>>(Options.Create(new AIOptions()));
+        services.AddSingleton<IOptions<AIDataSourceSourceOptions>>(Options.Create(new AIDataSourceSourceOptions()));
+        services.AddSingleton(CreateShellFeaturesManager());
+        services.AddSingleton(CreatePermissionService());
+        services.AddSingleton(CreateRoleService());
+        services.AddSingleton(contentDefinitionManager);
+        services.AddSingleton(CreateLocalizationService());
+        services.AddSingleton(CreateIndexProfileStore());
+        services.AddSingleton(CreateActivityLibrary());
+        services.AddSingleton<IRecipeSchemaExampleService, RecipeSchemaExampleService>();
+        services.AddSingleton<IWorkflowActivitySchemaService, WorkflowActivitySchemaService>();
+        RegisterWorkflowActivitySchemaDefinitions(services);
+
+        services.AddSingleton<IRuleSchemaService, RuleSchemaService>();
+        RegisterRuleConditionSchemaDefinitions(services);
+        RegisterRuleConditionOperatorSchemaDefinitions(services);
+
+        services.AddSingleton<ISitemapSchemaService, SitemapSchemaService>();
+        RegisterSitemapSourceSchemaDefinitions(services);
+
+        services.AddSingleton<IAdminMenuSchemaService, AdminMenuSchemaService>();
+        RegisterAdminNodeSchemaDefinitions(services);
+
+        services.AddSingleton<IQuerySchemaService, QuerySchemaService>();
+        RegisterQuerySourceSchemaDefinitions(services);
+
+        services.AddSingleton<IRewriteRuleSchemaService, RewriteRuleSchemaService>();
+        RegisterRewriteRuleSourceSchemaDefinitions(services);
+
+        services.AddSingleton<IPlacementSchemaService, PlacementSchemaService>();
+        RegisterPlacementNodeFilterSchemaDefinitions(services);
+
+        foreach (var deploymentStepFactory in CreateDeploymentStepFactories())
+        {
+            services.AddSingleton(deploymentStepFactory);
+        }
+
+        services.AddSingleton<IDeploymentSchemaService, DeploymentSchemaService>();
+        RegisterDeploymentStepSchemaDefinitions(services);
+
+        foreach (var schemaDefinition in schemaDefinitions)
+        {
+            services.AddSingleton<IContentSchemaDefinition>(schemaDefinition);
+        }
+
+        foreach (var siteSettingsSchemaDefinition in siteSettingsSchemaDefinitions)
+        {
+            services.AddSingleton<ISiteSettingsSchemaDefinition>(siteSettingsSchemaDefinition);
+        }
+
+        foreach (var recipeHarvester in CreateRecipeHarvesters())
+        {
+            services.AddSingleton<IRecipeHarvester>(recipeHarvester);
+        }
+
+        return services.BuildServiceProvider();
+    }
+
+    private static IRecipeStep CreateRecipeStep(
+        Type stepType,
+        IServiceProvider serviceProvider)
+    {
+        return (IRecipeStep)ActivatorUtilities.CreateInstance(serviceProvider, stepType);
+    }
+
+    private static IContentDefinitionManager CreateContentDefinitionManager(IReadOnlyList<string> partNames)
+    {
+        var typeDefinitions = _contentTypeNames
+            .Select(name => new ContentTypeDefinition(name, name))
+            .ToArray();
+
+        var partDefinitions = partNames
+            .Select(name => new ContentPartDefinition(name))
+            .ToArray();
+
+        var manager = new Mock<IContentDefinitionManager>();
+        manager.Setup(service => service.ListTypeDefinitionsAsync())
+            .ReturnsAsync(typeDefinitions);
+        manager.Setup(service => service.ListPartDefinitionsAsync())
+            .ReturnsAsync(partDefinitions);
+
+        return manager.Object;
+    }
+
+    private static ILocalizationService CreateLocalizationService()
+    {
+        var localizationService = new Mock<ILocalizationService>();
+        localizationService.Setup(service => service.GetSupportedCulturesAsync())
+            .ReturnsAsync(_cultureNames);
+
+        return localizationService.Object;
+    }
+
+    private static IIndexProfileStore CreateIndexProfileStore()
+    {
+        var profiles = _indexProfileNames
+            .Select(name => new IndexProfile
+            {
+                Name = name,
+            })
+            .ToArray();
+
+        var indexProfileStore = new Mock<IIndexProfileStore>();
+        indexProfileStore.Setup(service => service.GetAllAsync())
+            .ReturnsAsync(profiles);
+
+        return indexProfileStore.Object;
+    }
+
+    private static void RegisterWorkflowActivitySchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRuleConditionSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRuleConditionOperatorSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRuleConditionOperatorSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterSitemapSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(ISitemapSourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterDeploymentStepSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterAdminNodeSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IAdminNodeSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterQuerySourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IQuerySourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterRewriteRuleSourceSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IRewriteRuleSourceSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static void RegisterPlacementNodeFilterSchemaDefinitions(IServiceCollection services)
+    {
+        var definitionType = typeof(IPlacementNodeFilterSchemaDefinition);
+        var implementations = definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type));
+
+        foreach (var implementation in implementations)
+        {
+            services.AddSingleton(definitionType, implementation);
+        }
+    }
+
+    private static IEnumerable<IDeploymentStepFactory> CreateDeploymentStepFactories()
+    {
+        foreach (var stepType in GetDeploymentStepDefinitionNames())
+        {
+            var factory = new Mock<IDeploymentStepFactory>();
+            factory.SetupGet(item => item.Name).Returns(stepType);
+            yield return factory.Object;
+        }
+    }
+
+    private static IEnumerable<string> GetDeploymentStepDefinitionNames()
+    {
+        var definitionType = typeof(IDeploymentStepSchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IDeploymentStepSchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.StepType)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
+    }
+
+    private static IActivityLibrary CreateActivityLibrary()
+    {
+        var eventNames = new SortedSet<string>(_eventActivityNames, StringComparer.Ordinal);
+        var taskNames = new SortedSet<string>(_taskActivityNames, StringComparer.Ordinal);
+
+        // Ensure every registered activity schema definition is represented, even when the source
+        // scan did not surface its activity name, so no property schema is silently dropped.
+        foreach (var definitionName in GetWorkflowActivityDefinitionNames())
+        {
+            if (eventNames.Contains(definitionName) || taskNames.Contains(definitionName))
+            {
+                continue;
+            }
+
+            if (definitionName.EndsWith("Event", StringComparison.Ordinal))
+            {
+                eventNames.Add(definitionName);
+            }
+            else
+            {
+                taskNames.Add(definitionName);
+            }
+        }
+
+        var activities = new List<IActivity>();
+
+        foreach (var eventName in eventNames)
+        {
+            var activity = new Mock<IEvent>();
+            activity.SetupGet(item => item.Name).Returns(eventName);
+            activities.Add(activity.Object);
+        }
+
+        foreach (var taskName in taskNames)
+        {
+            var activity = new Mock<ITask>();
+            activity.SetupGet(item => item.Name).Returns(taskName);
+            activities.Add(activity.Object);
+        }
+
+        var library = new Mock<IActivityLibrary>();
+        library.Setup(service => service.ListActivities())
+            .Returns(activities);
+
+        return library.Object;
+    }
+
+    private static IEnumerable<string> GetWorkflowActivityDefinitionNames()
+    {
+        var definitionType = typeof(IWorkflowActivitySchemaDefinition);
+
+        return definitionType.Assembly
+            .GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && definitionType.IsAssignableFrom(type))
+            .Select(type => (IWorkflowActivitySchemaDefinition)Activator.CreateInstance(type)!)
+            .Select(definition => definition.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name));
+    }
+
+    private static IPermissionService CreatePermissionService()
+    {
+        var permissions = _permissionNames
+            .Select(name => new Permission(name, name))
+            .ToArray();
+
+        var permissionService = new Mock<IPermissionService>();
+        permissionService.Setup(service => service.GetPermissionsAsync())
+            .Returns(new ValueTask<IEnumerable<Permission>>(permissions));
+        permissionService.Setup(service => service.FindByNameAsync(It.IsAny<string>()))
+            .ReturnsAsync((Permission)null);
+
+        return permissionService.Object;
+    }
+
+    private static IRoleService CreateRoleService()
+    {
+        var roles = _roleNames
+            .Select(name =>
+            {
+                var role = new Mock<IRole>();
+                role.SetupGet(instance => instance.RoleName).Returns(name);
+
+                return role.Object;
+            })
+            .ToArray();
+
+        var roleService = new Mock<IRoleService>();
+        roleService.Setup(service => service.GetRolesAsync())
+            .ReturnsAsync(roles);
+
+        return roleService.Object;
+    }
+
+    private static IEnumerable<IRecipeHarvester> CreateRecipeHarvesters()
+    {
+        var recipeHarvester = new Mock<IRecipeHarvester>();
+        recipeHarvester.Setup(service => service.HarvestRecipesAsync())
+            .ReturnsAsync([]);
+
+        return [recipeHarvester.Object];
+    }
+
+    private static IShellFeaturesManager CreateShellFeaturesManager()
+    {
+        var features = _featureIds
+            .Select(id =>
+            {
+                var feature = new Mock<IFeatureInfo>();
+                feature.SetupGet(item => item.Id).Returns(id);
+                return feature.Object;
+            })
+            .ToArray();
+
+        var manager = new Mock<IShellFeaturesManager>();
+        manager.Setup(service => service.GetAvailableFeaturesAsync())
+            .ReturnsAsync(features);
+
+        return manager.Object;
+    }
+
+    private sealed class StubContentSchemaProvider(
+        IReadOnlyList<string> partNames,
+        IReadOnlyList<string> fieldTypeNames) : IContentSchemaProvider
+    {
+        public Task<IEnumerable<string>> GetFieldTypeNamesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
+
+        public Task<IEnumerable<string>> GetPartNamesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<string>>(partNames);
+    }
+
+    private sealed class StubFeatureSchemaProvider : IFeatureSchemaProvider
+    {
+        public Task<IEnumerable<string>> GetFeatureIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<string>>(_featureIds);
+
+        public Task<IEnumerable<string>> GetThemeIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<string>>(_themeIds);
+    }
+
+    private sealed class NoOpMemoryCache : IMemoryCache
+    {
+        public void Dispose()
+        {
+        }
+
+        public bool TryGetValue(object key, out object value)
+        {
+            value = null;
+            return false;
+        }
+
+        public ICacheEntry CreateEntry(object key)
+            => new NoOpCacheEntry(key);
+
+        public void Remove(object key)
+        {
+        }
+    }
+
+    private sealed class NoOpCacheEntry(object key) : ICacheEntry
+    {
+        public object Key { get; } = key;
+
+        public object Value { get; set; }
+
+        public DateTimeOffset? AbsoluteExpiration { get; set; }
+
+        public TimeSpan? AbsoluteExpirationRelativeToNow { get; set; }
+
+        public TimeSpan? SlidingExpiration { get; set; }
+
+        public IList<IChangeToken> ExpirationTokens { get; } = [];
+
+        public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks { get; } = [];
+
+        public CacheItemPriority Priority { get; set; }
+
+        public long? Size { get; set; }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed record RecipeSchemaIndexDocument(
+        DateTimeOffset GeneratedUtc,
+        string RootSchema,
+        IReadOnlyList<RecipeSchemaIndexEntry> Steps);
+
+    private sealed record RecipeSchemaIndexEntry(string Name, string File);
+}

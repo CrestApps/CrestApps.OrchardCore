@@ -1,31 +1,35 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly AIOptions _aiOptions;
-    private readonly AIProviderOptions _providerOptions;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileDeploymentDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="deploymentManager">The manager for retrieving AI deployments.</param>
+    /// <param name="siteService">The site service for accessing site settings.</param>
+    /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IOptions<AIOptions> aiOptions,
-        IOptions<AIProviderOptions> providerOptions,
+        ISiteService siteService,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _aiOptions = aiOptions.Value;
-        _providerOptions = providerOptions.Value;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -33,58 +37,56 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
-            {
-                return;
-            }
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            model.ChatDeploymentName = profile.ChatDeploymentName;
+            model.UtilityDeploymentName = profile.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
-            model.ConnectionName = profile.ConnectionName;
-            model.DeploymentId = profile.DeploymentId;
-            model.ProviderName = profileSource.ProviderName;
+            model.ChatDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
 
-            if (!string.IsNullOrEmpty(profile.DeploymentId))
-            {
-                var deployment = await _deploymentManager.FindByIdAsync(profile.DeploymentId);
-
-                if (deployment is not null)
-                {
-                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, deployment.ConnectionName))
-                    .Select(x => new SelectListItem(x.Name, x.ItemId));
-                }
-            }
-
-            if (model.Deployments is null || !model.Deployments.Any())
-            {
-                var connectionName = profile.ConnectionName;
-
-                if (string.IsNullOrEmpty(connectionName) && _providerOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
-                {
-                    connectionName = provider.DefaultConnectionName;
-                }
-
-                if (!string.IsNullOrEmpty(connectionName))
-                {
-                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, connectionName))
-                    .Select(x => new SelectListItem(x.Name, x.ItemId));
-                }
-            }
-        }).Location("Content:3");
+            model.UtilityDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+        }).Location("Content:1%Deployments;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var _))
-        {
-            return null;
-        }
-
         var model = new EditProfileDeploymentViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.DeploymentId = model.DeploymentId;
-        profile.ConnectionName = model.ConnectionName;
+        profile.ChatDeploymentName = model.ChatDeploymentName;
+        profile.UtilityDeploymentName = model.UtilityDeploymentName;
 
         return Edit(profile, context);
+    }
+
+    private IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
+    {
+        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
+
+        return deployments
+            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(d =>
+            {
+                var groupKey = d.ConnectionName ?? S["Standalone"].Value;
+                SelectListGroup group = null;
+
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
+                {
+                    group = new SelectListGroup { Name = groupKey };
+
+                    groups[groupKey] = group;
+                }
+
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
+            });
     }
 }

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+
+@model ShapeViewModel<OmnichannelActivityBatch>
+
+<a asp-action="Load"
+   asp-route-id="@Model.Value.ItemId"
+   class="text-danger dropdown-item"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-title="@T["Load Batch"]"
+   data-message="@T["Are you sure you want to load this batch?"]">@T["Load batch"]</a>

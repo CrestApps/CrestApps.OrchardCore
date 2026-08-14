@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model EditProfileDataSourcesViewModel
+
+<div class="ocat-wrapper data-source-filter-dependent">
+    <label asp-for="Filter" class="ocat-label">@T["Filter"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="Filter">
+        <span class="hint">@T["Optional OData filter expression to narrow search results. The filter is applied to the knowledge base index before retrieval. Example: status eq 'active' and category eq 'docs'"]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
+
+        const toggleDataSourceDependentElements = () => {
+            const dependentElements = document.querySelectorAll('.data-source-filter-dependent');
+
+            if (!dataSourceSelect || dependentElements.length === 0) {
+                return;
+            }
+
+            const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
+
+            dependentElements.forEach(element => {
+                element.classList.toggle('d-none', !hasDataSource);
+            });
+        };
+
+        toggleDataSourceDependentElements();
+        dataSourceSelect?.addEventListener('change', toggleDataSourceDependentElements);
+    });
+</script>

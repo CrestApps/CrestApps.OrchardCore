@@ -1,68 +1,118 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
+/// <summary>
+/// AI tool that performs get content item link operations.
+/// </summary>
 public sealed class GetContentItemLinkTool : AIFunction
 {
+    /// <summary>
+    /// The name constant.
+    /// </summary>
     public const string TheName = "getLinkForContentItem";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
-
-    public GetContentItemLinkTool(
-        IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
     {
-        _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Specifies the type of link to generate.",
+          "enum": [
+            "display",
+            "edit"
+          ],
+          "default": "display"
+        }
+      },
+      "required": [
 
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentItemId": {
-                  "type": "string",
-                  "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Specifies the type of link to generate.",
-                  "enum": ["display", "edit"],
-                  "default": "display"
-                }
-              },
-              "required": ["contentItemId"],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
+        "contentItemId"
+      ],
+      "additionalProperties": false
     }
-
+    """);
     public override string Name => TheName;
 
     public override string Description => "Get a URL for the given content item based on the type.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
+    /// <summary>
+    /// Gets the additional properties for the AI function, such as strict mode configuration.
+    /// </summary>
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
     };
 
-    protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    protected async override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemLinkTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
-            return ValueTask.FromResult<object>("Unable to find a contentItemId argument in the function arguments.");
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
+
+            return "Unable to find a contentItemId argument in the function arguments.";
         }
 
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var httpContext = httpContextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Returning content item ID only.", TheName);
+            }
+
+            return $"Unable to generate a URL because the request context is not available (background execution). The content item ID is '{contentItemId}'.";
+        }
+
+        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
         var type = arguments.GetFirstValueOrDefault("type", "display");
+
+        var contentItem = await contentManager.GetAsync(contentItemId);
+
+        if (contentItem is not null)
+        {
+            var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+            if (type == "edit" && metadata.AdminRouteValues is not null)
+            {
+                return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
+            }
+
+            else if (metadata.DisplayRouteValues is not null)
+            {
+                return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);
+            }
+        }
 
         var routeValues = type switch
         {
@@ -82,8 +132,20 @@ public sealed class GetContentItemLinkTool : AIFunction
             },
         };
 
-        var link = _linkGenerator.GetUriByRouteValues(_httpContextAccessor.HttpContext, null, routeValues);
+        var link = linkGenerator.GetUriByRouteValues(httpContext, null, routeValues);
 
-        return ValueTask.FromResult<object>(link);
+        if (string.IsNullOrEmpty(link))
+        {
+            logger.LogWarning("AI tool '{ToolName}': Unable to generate a link for content item '{ContentItemId}'.", TheName, contentItemId);
+
+            return "Unable to generate a link for the given content item.";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return link;
     }
 }

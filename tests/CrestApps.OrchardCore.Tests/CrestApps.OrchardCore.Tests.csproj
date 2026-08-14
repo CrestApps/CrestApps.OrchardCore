@@ -4,9 +4,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1852</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="CrestApps.Core" />
+    <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Moq" />
     <PackageReference Include="xunit.v3" />
@@ -14,8 +22,47 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/CrestApps.OrchardCore.AI.Chat.Claude.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/CrestApps.OrchardCore.AI.Documents.AzureAI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Azure/CrestApps.OrchardCore.AI.Documents.Azure.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Memory.AzureAI/CrestApps.OrchardCore.AI.Memory.AzureAI.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/CrestApps.OrchardCore.Omnichannel.Sms.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +71,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Modules\Omnichannel\Managements\Migrations\" />
+    <Folder Include="Modules\SignalR\" />
   </ItemGroup>
 
 </Project>

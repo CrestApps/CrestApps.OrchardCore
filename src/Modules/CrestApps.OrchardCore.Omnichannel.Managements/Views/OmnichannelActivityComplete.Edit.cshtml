@@ -1,0 +1,283 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelActivityViewModel
+
+<h5 class="mb-3">@T["Activity information"]</h5>
+
+<div class="ocat-wrapper">
+    <label asp-for="InteractionType" class="ocat-label">@T["Interaction type"]</label>
+    <div class="ocat-end">
+        <input id="@Html.IdFor(x => x.InteractionType)" class="form-control-plaintext" value="@Model.InteractionType" readonly />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <div class="ocat-end">
+        <input id="@Html.IdFor(x => x.Channel)" class="form-control-plaintext" value="@Model.Channel" readonly />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CampaignTitle" class="ocat-label">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <input id="@Html.IdFor(x => x.CampaignTitle)" class="form-control-plaintext" value="@Model.CampaignTitle" readonly />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UrgencyLevel" class="ocat-label">@T["Urgency level"]</label>
+    <div class="ocat-end">
+        @{
+            var value = Model.UrgencyLevel switch
+            {
+                ActivityUrgencyLevel.VeryLow => T["Very low"],
+                ActivityUrgencyLevel.Low => T["Low"],
+                ActivityUrgencyLevel.Medium => T["Medium"],
+                ActivityUrgencyLevel.High => T["High"],
+                ActivityUrgencyLevel.VeryHigh => T["Very high"],
+                _ => T["Normal"],
+            };
+        }
+        <input id="@Html.IdFor(x => x.UrgencyLevel)" class="form-control-plaintext" value="@value.Value" readonly />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AssignedToName" class="ocat-label">@T["Assigned to"]</label>
+    <div class="ocat-end">
+        <input id="@Html.IdFor(x => x.AssignedToName)" class="form-control-plaintext" value="@Model.AssignedToName" readonly />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ScheduledLocal" class="ocat-label">@T["Scheduled at"]</label>
+    <div class="ocat-end">
+        <input id="@Html.IdFor(x => x.ScheduledLocal)" class="form-control-plaintext" value="@Model.ScheduledLocal.ToString("g")" readonly />
+    </div>
+</div>
+
+@if (Model.CompletedLocal.HasValue)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="CompletedByName" class="ocat-label">@T["Completed by"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.CompletedByName)" class="form-control-plaintext" value="@Model.CompletedByName" readonly />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="CompletedLocal" class="ocat-label">@T["Completed at"]</label>
+        <div class="ocat-end">
+            <input id="@Html.IdFor(x => x.CompletedLocal)" class="form-control-plaintext" value="@Model.CompletedLocal.Value.ToString("g")" readonly />
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Instructions))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Instructions" class="ocat-label">@T["Instructions"]</label>
+        <div class="ocat-end">
+            <textarea id="@Html.IdFor(x => x.Instructions)" class="form-control-plaintext" rows="3" readonly>@Model.Instructions</textarea>
+        </div>
+    </div>
+}
+
+@if (Model.RequiresContactResolution)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="SelectedContactContentItemId" class="ocat-label">@T["Contact"]</label>
+        <div class="ocat-end">
+            <select asp-for="SelectedContactContentItemId" asp-items="Model.ContactCandidates" class="form-select">
+                <option value="">@T["Select the contact associated with this activity"]</option>
+            </select>
+            <span asp-validation-for="SelectedContactContentItemId" class="text-danger"></span>
+            <span class="hint">@T["Multiple contacts match the caller. Select one before completing the activity."]</span>
+        </div>
+    </div>
+}
+
+<hr class="my-4" />
+<h5 class="mb-3">@T["Workflow"]</h5>
+
+@if (Model.ShowWorkflowPreview || !string.IsNullOrWhiteSpace(Model.Notes))
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Notes" class="form-control" rows="4" placeholder="@T["Capture call notes and follow-up details"]"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
+        </div>
+    </div>
+}
+
+@if (Model.RequireDisposition || Model.Dispositions.Any())
+{
+    <div class="activity-wrapper">
+        <div class="ocat-wrapper">
+            <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
+            <div class="ocat-end">
+                <select asp-for="DispositionId" class="form-select">
+                    <option value="">@T["Select a disposition"]</option>
+                    @foreach (var disposition in Model.Dispositions)
+                    {
+                        <option value="@disposition.ItemId">@disposition.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="DispositionId" class="text-danger"></span>
+
+                @if (Model.ShowWorkflowPreview)
+                {
+                    <div id="campaign-actions-preview" class="d-none my-3">
+                        <h5 class="text-uppercase">@T["Workflow Results"]</h5>
+                        <div id="actions-list"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.ShowWorkflowPreview && (Model.RequireDisposition || Model.Dispositions.Any()))
+{
+    <style asp-name="flatpickr"></style>
+    <script asp-name="flatpickr" at="Foot"></script>
+    <script asp-name="flatpickr-culture" at="Foot"></script>
+
+    <script at="Foot" depends-on="flatpickr,flatpickr-culture">
+        document.addEventListener("DOMContentLoaded", function () {
+            var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
+            var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
+
+            const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
+            const previewContainer = document.getElementById("campaign-actions-preview");
+            const actionsList = document.getElementById("actions-list");
+            const currentSubjectTitle = @Html.Raw(JsonSerializer.Serialize(Model.Subject));
+            const currentSubjectContentType = @Html.Raw(JsonSerializer.Serialize(Model.SubjectContentType));
+            const currentAttempts = @Model.Attempts;
+            const scheduleAtText = @Html.Raw(JsonSerializer.Serialize(T["Schedule at"].Value));
+            const preparationNotesText = @Html.Raw(JsonSerializer.Serialize(T["Preparation notes"].Value));
+            const preparationNotesPlaceholder = @Html.Raw(JsonSerializer.Serialize(T["Notes to prepare the agent for the next activity (optional)"].Value));
+
+            function initFlatpickr(input) {
+                flatpickr(input, flatpickrCulture.createLocalizedDateTimeConfig(datePattern, timePattern, {
+                    altInputClass: input.className,
+                }));
+            }
+
+            async function loadDispositionActions() {
+                const dispositionId = dispositionMenu.value;
+
+                if (!dispositionId) {
+                    previewContainer.classList.add("d-none");
+                    actionsList.replaceChildren();
+                    return;
+                }
+
+                try {
+                    const response = await fetch('@Url.RouteUrl("CrestApps.Omnichannel.SubjectDispositionActions")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            dispositionId: dispositionId,
+                            currentSubjectTitle: currentSubjectTitle,
+                            subjectContentType: currentSubjectContentType,
+                            currentAttempts: currentAttempts
+                        })
+                    });
+
+                    if (!response.ok) {
+                        previewContainer.classList.add("d-none");
+                        return;
+                    }
+
+                    const actions = await response.json();
+
+                    if (!actions || actions.length === 0) {
+                        previewContainer.classList.add("d-none");
+                        actionsList.replaceChildren();
+                        return;
+                    }
+
+                    actionsList.replaceChildren();
+
+                    actions.forEach(function (action) {
+                        const card = document.createElement("div");
+                        card.className = "card mb-2";
+                        const cardBody = document.createElement("div");
+                        cardBody.className = "card-body";
+                        const previewTitle = document.createElement("strong");
+                        previewTitle.textContent = action.previewTitle;
+
+                        cardBody.appendChild(previewTitle);
+
+                        if (action.requiresScheduleDate) {
+                            const inputId = 'schedule-' + action.actionId;
+                            const inputName = 'ActionScheduleDates[' + action.actionId + ']';
+                            const defaultDate = action.defaultScheduleDate
+                                ? flatpickrCulture.formatMachineDateTime(new Date(action.defaultScheduleDate))
+                                : '';
+                            const scheduleContainer = document.createElement("div");
+                            scheduleContainer.className = "mt-2";
+                            const label = document.createElement("label");
+                            label.htmlFor = inputId;
+                            label.className = "form-label";
+                            label.textContent = scheduleAtText;
+                            const input = document.createElement("input");
+                            input.type = "text";
+                            input.id = inputId;
+                            input.name = inputName;
+                            input.value = defaultDate;
+                            input.className = "form-control schedule-date-input";
+                            input.placeholder = scheduleAtText;
+
+                            scheduleContainer.append(label, input);
+                            cardBody.appendChild(scheduleContainer);
+                        }
+
+                        const notesInputId = 'notes-' + action.actionId;
+                        const notesInputName = 'ActionPreparationNotes[' + action.actionId + ']';
+                        const notesContainer = document.createElement("div");
+                        notesContainer.className = "mt-2";
+                        const notesLabel = document.createElement("label");
+                        notesLabel.htmlFor = notesInputId;
+                        notesLabel.className = "form-label";
+                        notesLabel.textContent = preparationNotesText;
+                        const notesInput = document.createElement("textarea");
+                        notesInput.id = notesInputId;
+                        notesInput.name = notesInputName;
+                        notesInput.rows = 2;
+                        notesInput.className = "form-control";
+                        notesInput.placeholder = preparationNotesPlaceholder;
+
+                        notesContainer.append(notesLabel, notesInput);
+                        cardBody.appendChild(notesContainer);
+
+                        card.appendChild(cardBody);
+                        actionsList.appendChild(card);
+
+                        if (action.requiresScheduleDate) {
+                            const dateInput = card.querySelector('.schedule-date-input');
+                            if (dateInput) {
+                                initFlatpickr(dateInput);
+                            }
+                        }
+                    });
+
+                    previewContainer.classList.remove("d-none");
+                } catch (e) {
+                    console.error("Unable to load disposition workflow actions.", e);
+                    previewContainer.classList.add("d-none");
+                }
+            }
+
+            dispositionMenu.addEventListener("change", loadDispositionActions);
+
+            // Load on page load if a disposition is already selected.
+            loadDispositionActions();
+        });
+    </script>
+}

@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileTemplateConnectionViewModel
+
+@if (Model.Orchestrators?.Count > 1)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="OrchestratorName" class="ocat-label">@T["Orchestrator"]</label>
+        <div class="ocat-end">
+            <select asp-for="OrchestratorName" class="form-select">
+                <option value="">@T["Default"]</option>
+                @foreach (var orchestrator in Model.Orchestrators)
+                {
+                    <option value="@orchestrator.Value" selected="@(orchestrator.Value == Model.OrchestratorName)">@orchestrator.Text</option>
+                }
+            </select>
+            <span asp-validation-for="OrchestratorName" class="text-danger"></span>
+            <span class="hint">@T["The orchestrator to use for profiles created from this template."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
+}

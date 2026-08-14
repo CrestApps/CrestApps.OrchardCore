@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore AI Memory - Azure AI</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure AI Search support for AI memory embeddings and indexing.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Memory AzureAI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="C:\Code\CrestApps\CrestApps.OrchardCore\src\README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.AzureAI.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

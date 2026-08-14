@@ -1,15 +1,20 @@
+using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Handlers;
 using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Drivers;
+using CrestApps.OrchardCore.Users.Endpoints;
 using CrestApps.OrchardCore.Users.Filters;
 using CrestApps.OrchardCore.Users.Indexes;
 using CrestApps.OrchardCore.Users.Migrations;
 using CrestApps.OrchardCore.Users.Models;
 using CrestApps.OrchardCore.Users.Recipes;
+using CrestApps.OrchardCore.Users.Schemas;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentFields.Drivers;
@@ -22,13 +27,11 @@ using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes.Services;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
@@ -37,6 +40,9 @@ using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Users;
 
+/// <summary>
+/// Registers services and configuration for this feature.
+/// </summary>
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -44,11 +50,18 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
-        services.AddDisplayDriver<UserBadgeContext, UserBadgeNameDisplayDriver>();
-        services.AddShapeTableProvider<DisplayUserShapeTableProvider>();
+        // services.AddShapeTableProvider<NavbarShapeTableProvider>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddUserSearchEndpoint();
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Liquid feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Liquid")]
 public sealed class LiquidStartup : StartupBase
 {
@@ -58,18 +71,11 @@ public sealed class LiquidStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Contents")]
-public sealed class CoreContentUserStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddShapeTableProvider<ContentShapeTableProvider>();
-        services.AddScoped<IContentDisplayDriver, UserContentsDriver>();
-    }
-}
-
+/// <summary>
+/// Registers services and configuration for the Caching feature.
+/// </summary>
 [RequireFeatures("OrchardCore.DynamicCache")]
-public sealed class CashingStartup : StartupBase
+public sealed class CachingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -77,15 +83,15 @@ public sealed class CashingStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the DisplayName feature.
+/// </summary>
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.PostConfigure<DisplayUserOptions>(options =>
-        {
-            options.ConvertAuthorToShape = true;
-        });
+        services.AddShapeTableProvider<DisplayNameShapeTableProvider>();
 
         var oldProvider = services.FirstOrDefault(x => x.ServiceType == typeof(IUserPickerResultProvider) && x.ImplementationType == typeof(DefaultUserPickerResultProvider));
 
@@ -118,6 +124,9 @@ public sealed class DisplayNameStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Users feature.
+/// </summary>
 [RequireFeatures(UserConstants.Features.Users)]
 public sealed class UsersStartup : StartupBase
 {
@@ -127,6 +136,9 @@ public sealed class UsersStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the UserOverride feature.
+/// </summary>
 [Feature(UsersConstants.Feature.DisplayName)]
 [RequireFeatures(UserConstants.Features.Users)]
 public sealed class UserOverrideStartup : StartupBase
@@ -141,28 +153,40 @@ public sealed class UserOverrideStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers services and configuration for the Avatar feature.
+/// </summary>
 [Feature(UsersConstants.Feature.Avatars)]
 public sealed class AvatarStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.PostConfigure<DisplayUserOptions>(options =>
-        {
-            options.ConvertAuthorToShape = true;
-        });
+        services.AddShapeTableProvider<AvatarShapeTableProvider>();
 
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
-        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, AvatarResourceManagementOptionsConfiguration>();
+        services.AddResourceConfiguration<AvatarResourceManagementOptionsConfiguration>();
         services.Configure<MvcOptions>(options =>
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
+
         services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
-        services.AddScoped<IDisplayDriver<UserBadgeContext>, UserBadgeAvatarDisplayDriver>();
-        services.AddScoped<IShapeTableProvider, AvatarUserShapeTableProvider>();
+    }
+}
+
+/// <summary>
+/// Registers recipe schema contributors for the DisplayName feature.
+/// </summary>
+[Feature(UsersConstants.Feature.DisplayName)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class DisplayNameRecipesSchemaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, UserFullNamePartSchemaDefinition>();
     }
 }

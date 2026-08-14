@@ -1,0 +1,168 @@
+@using CrestApps.OrchardCore.AI
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model DefaultAIDeploymentSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultChatDeploymentName" class="ocat-label">@T["Default chat deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for chat sessions and chat interactions when the selected deployment is set to default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultUtilityDeploymentName" class="ocat-label">@T["Default utility deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultUtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default lightweight deployment used for auxiliary tasks like planning and intent detection."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultEmbeddingDeploymentName" class="ocat-label">@T["Default embedding deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultEmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for embedding generation in document indexing and vector search."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultImageDeploymentName" class="ocat-label">@T["Default image deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultImageDeploymentName" asp-items="Model.ImageDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for image generation."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultVisionDeploymentName" class="ocat-label">@T["Default vision deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultVisionDeploymentName" asp-items="Model.VisionDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for image-aware chat interactions when no specific vision-capable deployment is configured."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultSpeechToTextDeploymentName" class="ocat-label">@T["Default speech-to-text deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for speech-to-text transcription."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultTextToSpeechDeploymentName" class="ocat-label">@T["Default text-to-speech deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultTextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default deployment used for text-to-speech synthesis."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultTextToSpeechVoiceId" class="ocat-label">@T["Default text-to-speech voice"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select">
+            <option value="">@T["Default voice"]</option>
+        </select>
+        <span class="hint">@T["The default voice for text-to-speech synthesis. When a profile does not specify a voice, this value is used. Leave as default to use the provider's default voice."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechDeploymentName)');
+        const voiceSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechVoiceId)');
+        let currentVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? "")';
+
+        const defaultVoiceOption = '<option value="">@T["Default voice"]</option>';
+        const unknownLanguage = '@T["Unknown"]';
+
+        function resetVoices() {
+            voiceSelect.innerHTML = defaultVoiceOption;
+        }
+
+        function loadVoices() {
+            const deploymentName = ttsDeploymentSelect.value;
+
+            if (!deploymentName) {
+                resetVoices();
+                return;
+            }
+
+            fetch('@Url.RouteUrl(AIConstants.RouteNames.GetVoices)' + '?deploymentName=' + encodeURIComponent(deploymentName))
+                .then(response => response.json())
+                .then(data => {
+                    resetVoices();
+
+                    if (!data || !data.voices) {
+                        return;
+                    }
+
+                    const groups = {};
+
+                    data.voices.forEach(voice => {
+                        const lang = voice.languageDisplayName || voice.language || unknownLanguage;
+
+                        if (!groups[lang]) {
+                            groups[lang] = [];
+                        }
+
+                        groups[lang].push(voice);
+                    });
+
+                    Object.keys(groups).sort().forEach(lang => {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = lang;
+
+                        groups[lang].forEach(voice => {
+                            const option = document.createElement('option');
+                            option.value = voice.id;
+                            option.textContent = voice.name;
+
+                            if (voice.id === currentVoiceId) {
+                                option.selected = true;
+                            }
+
+                            optgroup.appendChild(option);
+                        });
+
+                        voiceSelect.appendChild(optgroup);
+                    });
+
+                    currentVoiceId = '';
+                })
+                .catch(() => {
+                    resetVoices();
+                });
+        }
+
+        if (!ttsDeploymentSelect || !voiceSelect) {
+            return;
+        }
+
+        ttsDeploymentSelect.addEventListener('change', function () {
+            currentVoiceId = '';
+            loadVoices();
+        });
+
+        if (ttsDeploymentSelect.value) {
+            loadVoices();
+        }
+    });
+</script>
