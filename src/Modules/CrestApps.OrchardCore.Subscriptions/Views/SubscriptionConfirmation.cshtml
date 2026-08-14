@@ -1,2 +1,121 @@
-<h3 class="alert-success">@T["Awesome!"]</h3>
-<p class="alert-success">@T["Thank you for subscribing! Your subscription has been successfully processed."]</p>
+@using CrestApps.OrchardCore.Subscriptions.Extensions
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionConfirmationViewModel
+
+<div class="mb-4">
+    <h3 class="text-success">@T["Awesome!"]</h3>
+    <p>@T["Thank you for subscribing! Your subscription has been successfully processed."]</p>
+</div>
+
+@if (Model.Invoice is not null)
+{
+    <div class="card mb-4">
+        <div class="card-header">@T["Payment summary"]</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-6">@T["Amount paid today"]</dt>
+                <dd class="col-sm-6">@Model.Invoice.DueNow.ToString("C")</dd>
+
+                @if (Model.Invoice.GrandTotal > Model.Invoice.DueNow)
+                {
+                    <dt class="col-sm-6">@T["Order total"]</dt>
+                    <dd class="col-sm-6">@Model.Invoice.GrandTotal.ToString("C")</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Invoice.Currency))
+                {
+                    <dt class="col-sm-6">@T["Currency"]</dt>
+                    <dd class="col-sm-6">@Model.Invoice.Currency.ToUpperInvariant()</dd>
+                }
+            </dl>
+        </div>
+    </div>
+}
+
+@if (Model.Subscriptions is not null && Model.Subscriptions.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header">@T["Subscription details"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var subscription in Model.Subscriptions)
+            {
+                <li class="list-group-item">
+                    @if (subscription.LineItems is not null)
+                    {
+                        foreach (var lineItem in subscription.LineItems)
+                        {
+                            <div class="d-flex justify-content-between">
+                                <span>@lineItem.Description</span>
+                                @if (lineItem.Subscription is not null)
+                                {
+                                    <span>@T.GetAmount(lineItem.Subscription.DurationType, lineItem.Subscription.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)</span>
+                                }
+                                else
+                                {
+                                    <span>@lineItem.GetLineTotal().ToString("C")</span>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @if (subscription.ExpiresAt.HasValue)
+                    {
+                        <div class="text-body-secondary mt-1">
+                            <small>@T["Next payment date: {0}", subscription.ExpiresAt.Value.ToString("D")]</small>
+                        </div>
+                    }
+
+                    @if (subscription.PaymentMethod?.Card is not null && !string.IsNullOrEmpty(subscription.PaymentMethod.Card.LastFour))
+                    {
+                        <div class="text-body-secondary">
+                            <small>@T["Paid with {0} ending in {1}", subscription.PaymentMethod.Card.Brand, subscription.PaymentMethod.Card.LastFour]</small>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model.TenantOnboarding is not null)
+{
+    <div class="card mb-4">
+        <div class="card-header">@T["Your new site"]</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                @if (!string.IsNullOrEmpty(Model.TenantOnboarding.SiteTitle))
+                {
+                    <dt class="col-sm-4">@T["Site name"]</dt>
+                    <dd class="col-sm-8">@Model.TenantOnboarding.SiteTitle</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.TenantOnboarding.AdminUsername))
+                {
+                    <dt class="col-sm-4">@T["Administrator username"]</dt>
+                    <dd class="col-sm-8">@Model.TenantOnboarding.AdminUsername</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.TenantOnboarding.AdminEmail))
+                {
+                    <dt class="col-sm-4">@T["Administrator email"]</dt>
+                    <dd class="col-sm-8">@Model.TenantOnboarding.AdminEmail</dd>
+                }
+
+                @if (Model.TenantOnboarding.Domains is not null && Model.TenantOnboarding.Domains.Count > 0)
+                {
+                    <dt class="col-sm-4">@T["Site address"]</dt>
+                    <dd class="col-sm-8">
+                        @foreach (var domain in Model.TenantOnboarding.Domains)
+                        {
+                            <div>@domain</div>
+                        }
+                    </dd>
+                }
+            </dl>
+            <p class="text-body-secondary mt-2 mb-0">
+                <small>@T["For security reasons your password is not shown here. Use the credentials you chose during signup to sign in and manage your subscription."]</small>
+            </p>
+        </div>
+    </div>
+}

@@ -1,19 +1,36 @@
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
 public sealed class DefaultSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
+    private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
+
+    public DefaultSubscriptionFlowDisplayDriver(IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions)
+    {
+        _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(SubscriptionFlow model, BuildDisplayContext context)
     {
         return CombineAsync(
             View("SubscriptionFlowStepper", model)
             .Location("Confirmation", "Steps"),
 
-            View("SubscriptionConfirmation", model)
+            Initialize<SubscriptionConfirmationViewModel>("SubscriptionConfirmation", vm =>
+            {
+                var confirmation = SubscriptionConfirmationViewModel.Create(model.Session, _documentJsonSerializerOptions.SerializerOptions);
+
+                vm.Invoice = confirmation.Invoice;
+                vm.Subscriptions = confirmation.Subscriptions;
+                vm.TenantOnboarding = confirmation.TenantOnboarding;
+            })
             .Location("Confirmation", "Content")
         );
     }

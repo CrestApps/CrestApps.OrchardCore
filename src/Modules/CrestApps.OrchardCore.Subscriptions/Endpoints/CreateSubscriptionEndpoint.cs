@@ -150,14 +150,7 @@ public static class CreateSubscriptionEndpoint
             {
                 SubscriptionId = result.Id,
                 CreatedAt = now,
-                ExpiresAt = subscription.Key.Type switch
-                {
-                    DurationType.Day => now.AddDays(subscription.Key.Duration),
-                    DurationType.Week => now.AddDays(subscription.Key.Duration * 7),
-                    DurationType.Month => now.AddMonths(subscription.Key.Duration),
-                    DurationType.Year => now.AddYears(subscription.Key.Duration),
-                    _ => null
-                },
+                ExpiresAt = BillingSchedule.GetNextBillingDate(now, subscription.Key.Type, subscription.Key.Duration),
             };
 
             stripeMetadata.Subscriptions[result.Id] = stringSubscriptionMetadata;

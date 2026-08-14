@@ -111,14 +111,7 @@ public static class CreatePayLaterEndpoint
             {
                 SubscriptionId = subscriptionId,
                 StartedAt = now,
-                ExpiresAt = subscription.Key.Type switch
-                {
-                    DurationType.Day => now.AddDays(subscription.Key.Duration),
-                    DurationType.Week => now.AddDays(subscription.Key.Duration * 7),
-                    DurationType.Month => now.AddMonths(subscription.Key.Duration),
-                    DurationType.Year => now.AddYears(subscription.Key.Duration),
-                    _ => null
-                },
+                ExpiresAt = BillingSchedule.GetNextBillingDate(now, subscription.Key.Type, subscription.Key.Duration),
                 GatewayMode = Payments.GatewayMode.Live,
                 Gateway = SubscriptionConstants.PayLaterProcessorKey,
             });
