@@ -97,15 +97,28 @@ public sealed class StripePriceService : IStripePriceService
 
     public async Task<PriceResponse[]> ListAsync()
     {
-        var prices = await _priceService.ListAsync();
+        // Auto-paging enumerates every price. A plain ListAsync() only returns the first page (Stripe's
+        // default limit of 10), which previously caused the sync to treat existing prices as missing and
+        // recreate/deactivate them incorrectly once more than a page of prices existed.
+        var results = new List<PriceResponse>();
 
-        return prices.Select(price => new PriceResponse()
+        var options = new PriceListOptions
         {
-            Id = price.Id,
-            LookupKey = price.LookupKey,
-            Title = price.Nickname,
-            ProductId = price.ProductId,
-            IsActive = price.Active,
-        }).ToArray();
+            Limit = 100,
+        };
+
+        await foreach (var price in _priceService.ListAutoPagingAsync(options))
+        {
+            results.Add(new PriceResponse()
+            {
+                Id = price.Id,
+                LookupKey = price.LookupKey,
+                Title = price.Nickname,
+                ProductId = price.ProductId,
+                IsActive = price.Active,
+            });
+        }
+
+        return results.ToArray();
     }
 }

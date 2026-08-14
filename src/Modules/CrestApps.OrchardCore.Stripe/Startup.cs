@@ -38,7 +38,13 @@ public class Startup : StartupBase
         {
             var options = sp.GetRequiredService<IOptions<StripeOptions>>();
 
-            return new StripeClient(options.Value.ApiKey);
+            // Enable Stripe.net's built-in exponential-backoff retries for transient failures and rate
+            // limiting (HTTP 409/429/5xx). This keeps bulk price synchronization resilient to Stripe's
+            // per-second request limits. Stripe.net reuses the idempotency key across automatic retries,
+            // so retried create calls do not produce duplicate objects.
+            var httpClient = new SystemNetHttpClient(maxNetworkRetries: 3);
+
+            return new StripeClient(options.Value.ApiKey, httpClient: httpClient);
         });
     }
 

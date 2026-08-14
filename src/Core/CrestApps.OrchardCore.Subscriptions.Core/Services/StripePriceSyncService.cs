@@ -9,6 +9,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Services;
@@ -19,24 +20,34 @@ public sealed class StripePriceSyncService
 {
     private const int _batchSize = 500;
 
+    // Bounds how many Stripe write calls run at once so a large catalog does not fire hundreds of
+    // simultaneous requests and trip Stripe's per-second rate limits. Combined with the client's
+    // automatic retry/backoff this keeps the sync reliable.
+    private const int _maxConcurrency = 8;
+
+    private const string _syncLockKey = "STRIPE_PRICE_SYNC_LOCK";
+
     private readonly ISiteService _siteService;
     private readonly IStripeProductService _stripeProductService;
     private readonly IStripePriceService _stripePriceService;
     private readonly ISession _session;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IDistributedLock _distributedLock;
 
     public StripePriceSyncService(
         ISiteService siteService,
         IStripeProductService stripeProductService,
         IStripePriceService stripePriceService,
         ISession session,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        IDistributedLock distributedLock)
     {
         _siteService = siteService;
         _stripeProductService = stripeProductService;
         _stripePriceService = stripePriceService;
         _session = session;
         _contentDefinitionManager = contentDefinitionManager;
+        _distributedLock = distributedLock;
     }
 
     public async Task UpdateOrCreateAsync(ContentItem contentItem)
@@ -120,6 +131,27 @@ public sealed class StripePriceSyncService
 
     public async Task CreateOrUpdateAllAsync(string currency = null)
     {
+        // Only one full synchronization may run at a time across all instances. Two concurrent syncs
+        // would read each other's partial Stripe state and recreate or deactivate prices incorrectly.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+            _syncLockKey,
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromMinutes(30));
+
+        if (!locked)
+        {
+            // Another synchronization is already in progress; skip rather than duplicate work.
+            return;
+        }
+
+        await using (locker)
+        {
+            await CreateOrUpdateAllInternalAsync(currency);
+        }
+    }
+
+    private async Task CreateOrUpdateAllInternalAsync(string currency)
+    {
         var existingPrices = await _stripePriceService.ListAsync();
 
         var lookupIds = existingPrices.Where(x => !string.IsNullOrEmpty(x.LookupKey))
@@ -132,21 +164,15 @@ public sealed class StripePriceSyncService
         }
 
         var definitions = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-           .Where(x => x.StereotypeEquals(SubscriptionConstants.Stereotype));
+           .Where(x => x.StereotypeEquals(SubscriptionConstants.Stereotype))
+           .ToArray();
 
-        if (!definitions.Any())
+        if (definitions.Length == 0)
         {
             return;
         }
 
-        var productTasks = new List<Task>();
-
-        foreach (var definition in definitions)
-        {
-            productTasks.Add(CreateProductIfNotExistsAsync(definition));
-        }
-
-        await Task.WhenAll(productTasks);
+        await RunBoundedAsync(definitions, definition => CreateProductIfNotExistsAsync(definition));
 
         var contentTypes = definitions
             .Select(x => x.Name)
@@ -177,24 +203,14 @@ public sealed class StripePriceSyncService
         var existingIndexes = (await _session.QueryIndex<ContentItemIndex>(x => x.ContentItemVersionId.IsIn(lookupIds) && x.Published).ListAsync())
             .ToDictionary(x => x.ContentItemVersionId);
 
-        var priceUpdateTasks = new List<Task>();
+        var toDeactivate = lookupIds
+            .Where(lookupId => !existingIndexes.ContainsKey(lookupId))
+            .ToArray();
 
-        foreach (var lookupId in lookupIds)
+        await RunBoundedAsync(toDeactivate, lookupId => _stripePriceService.UpdateAsync(lookupId, new UpdatePriceRequest()
         {
-            if (existingIndexes.ContainsKey(lookupId))
-            {
-                continue;
-            }
-
-            var task = _stripePriceService.UpdateAsync(lookupId, new UpdatePriceRequest()
-            {
-                IsActive = false,
-            });
-
-            priceUpdateTasks.Add(task);
-        }
-
-        await Task.WhenAll(priceUpdateTasks);
+            IsActive = false,
+        }));
     }
 
     private async Task CreateMissingPriceItemsAsync(string[] existingLookupIds, string[] contentTypes, string currency)
@@ -221,31 +237,56 @@ public sealed class StripePriceSyncService
                 break;
             }
 
-            var createPriceTasks = new List<Task>();
+            var priceItems = new List<(ContentItem ContentItem, SubscriptionPart Subscription, ProductPart Product)>();
 
             foreach (var contentItem in contentItems)
             {
-                if (!contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
-                    !contentItem.TryGet<ProductPart>(out var productPart))
+                if (contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) &&
+                    contentItem.TryGet<ProductPart>(out var productPart))
                 {
-                    continue;
+                    priceItems.Add((contentItem, subscriptionPart, productPart));
                 }
-
-                var createPriceTask = _stripePriceService.CreateAsync(new CreatePriceRequest()
-                {
-                    LookupKey = contentItem.ContentItemVersionId,
-                    ProductId = contentItem.ContentType,
-                    Title = contentItem.DisplayText,
-                    Amount = productPart.Price,
-                    Currency = currency,
-                    IntervalCount = subscriptionPart.BillingDuration,
-                    Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
-                });
-
-                createPriceTasks.Add(createPriceTask);
             }
 
-            await Task.WhenAll(createPriceTasks);
+            await RunBoundedAsync(priceItems, item => _stripePriceService.CreateAsync(new CreatePriceRequest()
+            {
+                LookupKey = item.ContentItem.ContentItemVersionId,
+                ProductId = item.ContentItem.ContentType,
+                Title = item.ContentItem.DisplayText,
+                Amount = item.Product.Price,
+                Currency = currency,
+                IntervalCount = item.Subscription.BillingDuration,
+                Interval = item.Subscription.DurationType.ToString().ToLowerInvariant(),
+            }));
+        }
+    }
+
+    // Runs an asynchronous action over a set of items with a bounded degree of parallelism so bulk
+    // Stripe writes never exceed the provider's rate limits. The first failure is surfaced to the caller.
+    private static async Task RunBoundedAsync<T>(IEnumerable<T> items, Func<T, Task> action)
+    {
+        using var semaphore = new SemaphoreSlim(_maxConcurrency);
+        var tasks = new List<Task>();
+
+        foreach (var item in items)
+        {
+            await semaphore.WaitAsync();
+
+            tasks.Add(ProcessAsync(item));
+        }
+
+        await Task.WhenAll(tasks);
+
+        async Task ProcessAsync(T item)
+        {
+            try
+            {
+                await action(item);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
     }
 
