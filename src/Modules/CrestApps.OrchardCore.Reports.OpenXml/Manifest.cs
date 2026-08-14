@@ -8,16 +8,16 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Adds Excel (.xlsx) exports to the Reports framework using Open XML.",
-    Category = "Reporting",
-    Dependencies =
-    [
-        ReportsConstants.Feature,
-    ]
+    Category = "Reporting"
 )]
 
 [assembly: Feature(
     Id = ReportsConstants.OpenXmlFeature,
     Name = "Reports (OpenXml)",
     Description = "Adds Excel (.xlsx) workbook exports to the Reports area using Open XML.",
-    Category = "Reporting"
+    Category = "Reporting",
+    Dependencies =
+    [
+        ReportsConstants.Feature,
+    ]
 )]

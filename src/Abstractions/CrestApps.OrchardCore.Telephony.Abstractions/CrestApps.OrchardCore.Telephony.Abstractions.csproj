@@ -7,7 +7,7 @@
       $(CrestAppsDescription)
 
       Provider-agnostic abstractions for the CrestApps OrchardCore Telephony module. Contains the
-      contracts a telephony provider (such as DialPad) must implement to integrate a soft phone.
+      contracts a telephony provider (such as Dialpad) must implement to integrate a soft phone.
     </Description>
     <PackageTags>$(PackageTags) Telephony SoftPhone Abstractions</PackageTags>
   </PropertyGroup>

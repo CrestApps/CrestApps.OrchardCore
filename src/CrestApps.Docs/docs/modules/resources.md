@@ -43,6 +43,8 @@ The feature also registers reusable scripts that other modules can require by na
 
 `date-range-picker` enhances two machine-formatted date/time inputs (a "from" and a "to") with a single Bootstrap dropdown that offers common presets grouped into **Relative days** (Today, Yesterday, Last 7 Days, Last 30 Days, Last 90 Days), **Calendar periods** (This Week, Last Week, This Month, Last Month, This Quarter, Last Quarter, This Year, Last Year), and **Rolling months** (Last 3 Months, Last 6 Months, Last 12 Months), a **Custom Range** (two Flatpickr date-time inputs), and single **On or before** / **On or after** date-time bounds. The dropdown button always shows the current selection as readable text (for example, _From Jan 1, 2026 to Jan 31, 2026_).
 
+When a user opens an empty custom or single-bound panel, the picker seeds it with today's local date. Lower-bound inputs default to `00:00`; upper-bound inputs default to `23:59`.
+
 Although it was introduced for the [Reports](reports.md) module, it is a general-purpose resource and can be used anywhere. It is purely client-side: it reads and writes the two underlying inputs, so the surrounding form submits their values unchanged.
 
 ### Rendering with the view component (recommended)
