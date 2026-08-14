@@ -16,7 +16,7 @@ public sealed class RedisBackplaneOptionsTests
         var services = new ServiceCollection();
 
         // Act
-        new CrestApps.OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
+        new OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
 
         // Assert
         Assert.DoesNotContain(
@@ -58,7 +58,7 @@ public sealed class RedisBackplaneOptionsTests
             options.InstancePrefix = "test-environment:";
         });
 
-        new CrestApps.OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
+        new OrchardCore.SignalR.Redis.Startup().ConfigureServices(services);
 
         return services
             .BuildServiceProvider()

@@ -46,6 +46,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@microsoft/signalr": "10.0.0",
     "chart.js": "^4.5.1",
     "extendable-media-recorder": "^9.2.36",
     "sip.js": "0.21.2"
