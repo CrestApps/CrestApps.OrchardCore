@@ -159,7 +159,10 @@ public sealed class SendEmailTool : AIFunction
             return "The email was sent successfully.";
         }
 
-        logger.LogWarning("AI tool '{ToolName}' failed to send email to '{To}'.", Name, to);
-        return $"The email was not sent successfully due to the following: {string.Join(' ', result.Errors)}";
+        var messages = string.Join("; ", result.Errors.Select(x => x.Message));
+
+        logger.LogWarning("AI tool '{ToolName}' failed to send email to '{To}' due to the following error(s): {Messages}.", Name, to, messages);
+
+        return $"The email was not sent successfully due to the following: {messages}";
     }
 }
