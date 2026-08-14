@@ -30,7 +30,6 @@
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Redis.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
-    <PackageReference Include="CrestApps.Core.SignalR" />
   </ItemGroup>
 
   <ItemGroup>

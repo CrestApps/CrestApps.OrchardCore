@@ -1,4 +1,3 @@
-using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
@@ -34,6 +33,6 @@ public sealed class RealTimeStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        HubRouteManager.MapHub<ContactCenterHub>(routes);
+        routes.MapHub<ContactCenterHub>(SignalRHubRoutes.GetHubPath<ContactCenterHub>());
     }
 }

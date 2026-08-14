@@ -1,4 +1,3 @@
-using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -27,7 +26,6 @@ public sealed class AgentWorkspaceController : Controller
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
-    private readonly HubRouteManager _hubRouteManager;
     private readonly ISiteService _siteService;
 
     /// <summary>
@@ -37,21 +35,18 @@ public sealed class AgentWorkspaceController : Controller
     /// <param name="reasonCodeManager">The agent state reason code manager used to build presence options.</param>
     /// <param name="userManager">The user manager used to resolve the current Orchard user.</param>
     /// <param name="displayNameProvider">The display name provider used to render the agent's full name.</param>
-    /// <param name="hubRouteManager">The hub route manager used to resolve the real-time hub URL.</param>
     /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
     public AgentWorkspaceController(
         IAuthorizationService authorizationService,
         IAgentStateReasonCodeManager reasonCodeManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        HubRouteManager hubRouteManager,
         ISiteService siteService)
     {
         _authorizationService = authorizationService;
         _reasonCodeManager = reasonCodeManager;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
-        _hubRouteManager = hubRouteManager;
         _siteService = siteService;
     }
 
@@ -84,7 +79,7 @@ public sealed class AgentWorkspaceController : Controller
         {
             DisplayName = displayName,
             CanMonitor = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.MonitorContactCenter),
-            HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
+            HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(HttpContext),
             StateUrl = Url.RouteUrl(AgentWorkspaceEndpoints.StateRouteName),
             SetPresenceUrl = Url.RouteUrl(AgentWorkspaceEndpoints.SetPresenceRouteName),
             PauseRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.PauseRecordingRouteName),

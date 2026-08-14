@@ -25,9 +25,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Reports](reports) | `CrestApps.OrchardCore.Reports` | Reusable reporting framework with a shared admin Reports area, extensible filters, and exports |
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
-| [SignalR](signalr) | `CrestApps.OrchardCore.SignalR` | Real-time communication via SignalR |
-| [SignalR Redis Backplane](signalr) | `CrestApps.OrchardCore.SignalR.Redis` | Redis backplane for scaling SignalR across nodes |
-| [SignalR Azure Backplane](signalr) | `CrestApps.OrchardCore.SignalR.Azure` | Azure SignalR Service backplane for scaling SignalR across nodes |
+| [SignalR compatibility](signalr) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module |
 | [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
 | [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
 
@@ -43,7 +41,6 @@ Or install individual modules as needed:
 
 ```bash
 dotnet add package CrestApps.OrchardCore.Users
-dotnet add package CrestApps.OrchardCore.SignalR
 # etc.
 ```
 

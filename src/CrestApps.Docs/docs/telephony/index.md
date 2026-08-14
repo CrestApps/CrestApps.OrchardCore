@@ -98,14 +98,16 @@ The built-in Asterisk provider now also keeps a tenant-scoped ARI event-stream l
 
 ## SignalR hub
 
-The hub is registered with the [SignalR](../modules/signalr) module's `HubRouteManager`:
+The hub is registered with the Orchard Core [SignalR](../modules/signalr) module:
 
 ```csharp
 public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
 {
-    HubRouteManager.MapHub<TelephonyHub>(routes);
+    routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
 }
 ```
+
+The soft phone view uses `Html.SignalRHubUrl<TelephonyHub>()` so the generated hub URL includes the current tenant path base.
 
 Every hub method runs in its own Orchard Core shell scope and is authorized against the `Use the telephony soft phone` permission. Authorized connections join a user destination qualified by the immutable Orchard shell name, and every server-side incoming-call or call-state projection uses that tenant-qualified destination. This remains required when a multi-node deployment uses a shared SignalR backplane because Orchard user identifiers are not globally unique across tenants. Call-control methods return a `TelephonyResult` that acknowledges the command but do not optimistically push its returned call as authoritative state. The hub exposes `GetActiveCall` for compatibility and `GetActiveCalls` for provider-authoritative multi-call restoration and recovery, while provider event projections push `CallStateChanged`, `IncomingCall` (with its contextual cards), and `ReceiveError` events through the strongly typed `ITelephonyClient` interface. It also exposes `Answer`, `Reject`, and `Voicemail` operations for a ringing inbound call.
 

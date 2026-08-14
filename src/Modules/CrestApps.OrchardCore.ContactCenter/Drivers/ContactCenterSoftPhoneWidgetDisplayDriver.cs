@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
@@ -22,7 +21,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     private readonly IActivityQueueManager _queueManager;
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
-    private readonly HubRouteManager _hubRouteManager;
     private readonly IResourceManager _resourceManager;
 
     /// <summary>
@@ -33,7 +31,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="optionsProvider">The admin form options provider.</param>
-    /// <param name="hubRouteManager">The SignalR hub route manager.</param>
     /// <param name="resourceManager">The Orchard resource manager.</param>
     /// <param name="reasonCodeManagers">The optional agent state reason code managers, available when the Agents feature is enabled.</param>
     public ContactCenterSoftPhoneWidgetDisplayDriver(
@@ -42,7 +39,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         IAgentProfileManager agentProfileManager,
         IActivityQueueManager queueManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
-        HubRouteManager hubRouteManager,
         IResourceManager resourceManager,
         IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers)
     {
@@ -51,7 +47,6 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         _agentProfileManager = agentProfileManager;
         _queueManager = queueManager;
         _optionsProvider = optionsProvider;
-        _hubRouteManager = hubRouteManager;
         _resourceManager = resourceManager;
         _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
     }
@@ -59,7 +54,14 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     /// <inheritdoc/>
     public override async Task<IDisplayResult> DisplayAsync(SoftPhoneWidget widget, BuildDisplayContext context)
     {
-        var user = _httpContextAccessor.HttpContext?.User;
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            return null;
+        }
+
+        var user = httpContext.User;
 
         if (user?.Identity?.IsAuthenticated != true ||
             !await _authorizationService.AuthorizeAsync(user, ContactCenterPermissions.SignIntoQueues))
@@ -92,7 +94,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
 
         var viewModel = new AgentSoftPhoneViewModel
         {
-            HubUrl = _hubRouteManager.GetPathByHub<ContactCenterHub>(),
+            HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(httpContext),
             Profile = profile,
             AvailableQueues = entitledQueues,
             SelectedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile?.QueueIds, profile?.AllowedQueueIds),

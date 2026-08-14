@@ -287,6 +287,7 @@ public sealed class ChatCoreStartup : StartupBase
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
+
     }
 }
 

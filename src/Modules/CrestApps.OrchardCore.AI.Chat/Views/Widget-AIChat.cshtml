@@ -1,19 +1,14 @@
 @using CrestApps.Core
-@using CrestApps.Core.AI
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
-@using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.Core.AI.Models
-@using CrestApps.Core.SignalR.Services
-@using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement
 @using OrchardCore.Entities
 @using OrchardCore.Environment.Shell
 @using OrchardCore.Environment.Shell.Scope
 @using Microsoft.Extensions.DependencyInjection
 @using CrestApps.OrchardCore.AI.Chat.Hubs
-@using CrestApps.Core.Services
 @using Microsoft.Extensions.Options
 @using System.Text.Json
 @using CrestApps.Core.AI.Profiles
@@ -22,7 +17,6 @@
 @inject IAIProfileStore ProfileCatalog
 @inject AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 @inject ShellSettings ShellSettings
-@inject HubRouteManager HubRouteManager
 @inject IAIDeploymentManager AIDeploymentManager
 
 @{
@@ -46,7 +40,7 @@
         return;
     }
 
-    var hubLink = HubRouteManager.GetPathByHub<AIChatHub>();
+    var hubLink = Html.SignalRHubUrl<AIChatHub>();
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
     var baseId = $"Widget_{contentItem.ContentItemId}";

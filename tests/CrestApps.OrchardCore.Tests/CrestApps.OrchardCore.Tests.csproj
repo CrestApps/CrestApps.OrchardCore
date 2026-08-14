@@ -59,9 +59,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SignalR.Redis/CrestApps.OrchardCore.SignalR.Redis.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.SignalR.Azure/CrestApps.OrchardCore.SignalR.Azure.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
@@ -81,6 +79,7 @@
 
   <ItemGroup>
     <Folder Include="Modules\Omnichannel\Managements\Migrations\" />
+    <Folder Include="Modules\SignalR\" />
   </ItemGroup>
 
 </Project>

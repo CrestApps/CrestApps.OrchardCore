@@ -1,23 +1,15 @@
-@using CrestApps.Core
-@using CrestApps.OrchardCore.AI
-@using CrestApps.Core.AI
+@using System.Text.Json
 @using CrestApps.Core.AI.Deployments
+@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
-@using CrestApps.Core.SignalR.Services
-@using CrestApps.OrchardCore.AI.Core.Models
-@using CrestApps.Core.AI.Models
-@using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
-@using OrchardCore.Entities
 @using OrchardCore.Settings
-@using System.Text.Json
 
 @model ChatInteractionCapsuleViewModel
 
 @inject IUpdateModelAccessor UpdateModelAccessor
-@inject HubRouteManager HubRouteManager
 @inject ISiteService SiteService
 @inject IAIDeploymentManager AIDeploymentManager
 @{
@@ -103,7 +95,7 @@
 
     var chatInteractionConfigJson = JsonSerializer.Serialize(new
     {
-        signalRHubUrl = HubRouteManager.GetPathByHub<ChatInteractionHub>(),
+        signalRHubUrl = Html.SignalRHubUrl<ChatInteractionHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
         chatContainerElementSelector = $"#{chatContainerHtmlId}",
         inputElementSelector = $"#{userPromptHtmlId}",

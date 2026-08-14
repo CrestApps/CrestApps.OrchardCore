@@ -1,14 +1,8 @@
-@using CrestApps.Core
-@using CrestApps.Core.AI
-@using CrestApps.OrchardCore.AI.Core
+@using System.Text.Json
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
-@using CrestApps.Core.SignalR.Services
-@using System.Text.Json
 
 @model TestProfileViewModel
-
-@inject HubRouteManager HubRouteManager
 
 @{
     var baseId = Html.IdForModel();
@@ -19,7 +13,7 @@
     var placeholderHtmlId = $"{baseId}_Placeholder";
     var chatConfigJson = JsonSerializer.Serialize(new
     {
-        signalRHubUrl = HubRouteManager.GetPathByHub<AIChatHub>(),
+        signalRHubUrl = Html.SignalRHubUrl<AIChatHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
         chatContainerElementSelector = $"#{chatContainerHtmlId}",
         inputElementSelector = $"#{userPromptHtmlId}",
