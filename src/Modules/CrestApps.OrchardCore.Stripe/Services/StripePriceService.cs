@@ -49,7 +49,7 @@ public sealed class StripePriceService : IStripePriceService
             LookupKey = model.LookupKey,
             Product = model.ProductId,
             Nickname = model.Title,
-            UnitAmount = (long)((model.Amount ?? 0) * 100),
+            UnitAmount = StripeCurrency.ToMinorUnits(model.Amount ?? 0, model.Currency),
             Currency = model.Currency,
             Recurring = new PriceRecurringOptions()
             {

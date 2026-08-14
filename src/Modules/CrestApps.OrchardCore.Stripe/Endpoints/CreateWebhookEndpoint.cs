@@ -84,7 +84,7 @@ public static class CreateWebhookEndpoint
                     }
                     var successContext = new PaymentSucceededContext()
                     {
-                        AmountPaid = Math.Round(invoice.AmountPaid / 100d, 2),
+                        AmountPaid = StripeCurrency.FromMinorUnitsToDouble(invoice.AmountPaid, invoice.Currency),
                         Currency = invoice.Currency,
                         TransactionId = invoice.Id,
                         GatewayMode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
@@ -147,9 +147,10 @@ public static class CreateWebhookEndpoint
                         createdContext.GatewayMode = subscription.Livemode ? GatewayMode.Live : GatewayMode.Testing;
                         createdContext.GatewayId = StripeConstants.ProcessorKey;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
-                        if (subscription.Items.Data[0].Plan.Amount.HasValue)
+                        var plan = subscription.Items.Data[0].Plan;
+                        if (plan.Amount.HasValue)
                         {
-                            createdContext.PlanAmount = Math.Round(subscription.Items.Data[0].Plan.Amount.Value / 100d, 2); // Amount in dollars
+                            createdContext.PlanAmount = StripeCurrency.FromMinorUnitsToDouble(plan.Amount.Value, plan.Currency);
                         }
                         createdContext.PlanCurrency = subscription.Items.Data[0].Plan.Currency;
                         createdContext.PlanInterval = subscription.Items.Data[0].Plan.Interval;
@@ -172,7 +173,7 @@ public static class CreateWebhookEndpoint
                         GatewayMode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                         GatewayId = StripeConstants.ProcessorKey,
                         Currency = paymentIntent.Currency,
-                        Amount = Math.Round(paymentIntent.Amount / 100d, 2),
+                        Amount = StripeCurrency.FromMinorUnitsToDouble(paymentIntent.Amount, paymentIntent.Currency),
                     };
 
                     foreach (var data in paymentIntent.Metadata)

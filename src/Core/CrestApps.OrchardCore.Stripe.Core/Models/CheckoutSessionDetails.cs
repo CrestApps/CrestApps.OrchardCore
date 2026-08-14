@@ -22,6 +22,12 @@ public sealed class CheckoutSessionDetails
 
     public string CustomerId { get; set; }
 
+    /// <summary>
+    /// The caller-supplied correlation token (the local subscription session id) echoed back by Stripe.
+    /// Used to prove the returned checkout session belongs to the local session being finalized.
+    /// </summary>
+    public string ClientReferenceId { get; set; }
+
     public string SubscriptionId { get; set; }
 
     public string Currency { get; set; }

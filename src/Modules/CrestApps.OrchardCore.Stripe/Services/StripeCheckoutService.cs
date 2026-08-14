@@ -67,10 +67,13 @@ public sealed class StripeCheckoutService : IStripeCheckoutService
             PaymentStatus = session.PaymentStatus,
             Mode = session.Mode,
             CustomerId = session.CustomerId ?? session.Customer?.Id,
+            ClientReferenceId = session.ClientReferenceId,
             SubscriptionId = session.SubscriptionId ?? session.Subscription?.Id,
             Currency = session.Currency,
-            // Stripe reports amounts in the smallest currency unit (for example cents).
-            AmountTotal = session.AmountTotal.HasValue ? Math.Round(session.AmountTotal.Value / 100d, 2) : 0,
+            // Stripe reports amounts in the smallest currency unit; convert using the currency's precision.
+            AmountTotal = session.AmountTotal.HasValue
+                ? StripeCurrency.FromMinorUnitsToDouble(session.AmountTotal.Value, session.Currency)
+                : 0,
             Livemode = session.Livemode,
         };
     }

@@ -40,7 +40,7 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
 
         var paymentIntentOptions = new PaymentIntentCreateOptions
         {
-            Amount = (int)(model.Amount * 100), // Amount in cents (e.g., 1000 equals $10.00)
+            Amount = StripeCurrency.ToMinorUnits(model.Amount ?? 0, model.Currency), // Currency-aware minor units (e.g. 1000 == $10.00, 500 == ¥500).
             Currency = model.Currency,
             PaymentMethod = model.PaymentMethodId,
             Customer = model.CustomerId,

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
@@ -96,23 +97,31 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             .GroupBy(x => new BillingDurationKey(x.Subscription.DurationType, x.Subscription.BillingDuration))
             .ToDictionary(x => x.Key, x => x.Sum(y => y.UnitPrice * y.Quantity));
 
+        // Round monetary amounts at the currency's own precision (e.g. 0 decimals for JPY) so the
+        // expected amounts match what the gateway actually charges. Rounding zero-decimal currencies to
+        // two decimals would otherwise reject a valid payment during confirmation.
+        var decimals = GetCurrencyDecimals(invoice.Currency);
+
         if (invoice.InitialPaymentAmount.HasValue)
         {
-            invoice.InitialPaymentAmount = Math.Round(invoice.InitialPaymentAmount.Value, 2);
+            invoice.InitialPaymentAmount = Math.Round(invoice.InitialPaymentAmount.Value, decimals, MidpointRounding.AwayFromZero);
         }
 
         if (invoice.FirstSubscriptionPaymentAmount.HasValue)
         {
-            invoice.FirstSubscriptionPaymentAmount = Math.Round(invoice.FirstSubscriptionPaymentAmount.Value, 2);
+            invoice.FirstSubscriptionPaymentAmount = Math.Round(invoice.FirstSubscriptionPaymentAmount.Value, decimals, MidpointRounding.AwayFromZero);
         }
 
-        invoice.DueNow = Math.Round(invoice.DueNow, 2);
+        invoice.DueNow = Math.Round(invoice.DueNow, decimals, MidpointRounding.AwayFromZero);
 
         // TODO, add tax.
-        invoice.GrandTotal = Math.Round(invoice.DueNow, 2);
+        invoice.GrandTotal = Math.Round(invoice.DueNow, decimals, MidpointRounding.AwayFromZero);
 
         context.Flow.Session.Put(invoice);
     }
+
+    private static int GetCurrencyDecimals(string currency)
+        => string.IsNullOrEmpty(currency) ? 2 : StripeCurrency.GetDecimalPlaces(currency);
 
     public override Task LoadingAsync(SubscriptionFlowLoadingContext context)
     {
