@@ -62,7 +62,8 @@ public sealed class SubscriptionCookieManager
         {
             _httpContext.Response.Cookies.Append(_cookieName, JsonSerializer.Serialize(values), new CookieOptions()
             {
-                HttpOnly = true
+                HttpOnly = true,
+                Secure = true
             });
         }
     }
