@@ -24,6 +24,8 @@ This feature registers reusable Orchard resource-manager assets that can be cons
 
 Current shared libraries include:
 
+- `crestapps-bootstrap-select` script and stylesheet resources, backed by `@crestapps/bootstrap-select` 1.2.4 with CDN fallbacks and SRI hashes
+- CrestApps AI UI helper assets from `@crestapps/ai-chat-ui` 1.2.0, including `technical-name-generator` and `document-drop-zone`
 - `intl-tel-input` script and stylesheet resources, backed by local copied assets with CDN fallbacks
 
 ## Named script resources
