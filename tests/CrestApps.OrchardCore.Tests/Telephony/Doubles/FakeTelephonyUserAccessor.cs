@@ -15,11 +15,9 @@ internal sealed class FakeTelephonyUserAccessor : ITelephonyUserAccessor
         _user = user;
     }
 
-    public int UpdateCount { get; private set; }
+    public int PersistCount { get; private set; }
 
     public int ReloadCount { get; private set; }
-
-    public int SaveChangesCount { get; private set; }
 
     public Task<IUser> GetCurrentUserAsync() => Task.FromResult(_user);
 
@@ -30,16 +28,14 @@ internal sealed class FakeTelephonyUserAccessor : ITelephonyUserAccessor
         return Task.FromResult(_user);
     }
 
-    public Task UpdateUserAsync(IUser user)
+    public Task PersistCurrentUserAsync(Func<IUser, bool> mutate)
     {
-        UpdateCount++;
+        ArgumentNullException.ThrowIfNull(mutate);
 
-        return Task.CompletedTask;
-    }
-
-    public Task SaveChangesAsync()
-    {
-        SaveChangesCount++;
+        if (mutate(_user))
+        {
+            PersistCount++;
+        }
 
         return Task.CompletedTask;
     }

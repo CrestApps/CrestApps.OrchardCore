@@ -212,9 +212,8 @@ namespace CrestApps.OrchardCore.Telephony.Services
     {
         public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor> logger) { }
         public System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync() { }
+        public System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate) { }
         public System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync() { }
-        public System.Threading.Tasks.Task SaveChangesAsync() { }
-        public System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user) { }
     }
     public sealed class DefaultTelephonyUserTokenStore : CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore
     {
@@ -226,9 +225,8 @@ namespace CrestApps.OrchardCore.Telephony.Services
     public interface ITelephonyUserAccessor
     {
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync();
+        System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate);
         System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync();
-        System.Threading.Tasks.Task SaveChangesAsync();
-        System.Threading.Tasks.Task UpdateUserAsync(OrchardCore.Users.IUser user);
     }
     public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
     {

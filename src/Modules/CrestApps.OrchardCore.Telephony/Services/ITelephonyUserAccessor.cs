@@ -23,19 +23,14 @@ public interface ITelephonyUserAccessor
     Task<IUser> ReloadCurrentUserAsync();
 
     /// <summary>
-    /// Persists changes made to the given user.
+    /// Loads the current user in an isolated unit of work, applies <paramref name="mutate"/> to it, and durably
+    /// commits only that user document when the mutation reports a change. The isolated commit lets a serialized
+    /// token refresh or a disconnect make its write visible to other requests immediately, before the refresh
+    /// lock is released or the remote call is made, without flushing unrelated changes staged by the ambient
+    /// request scope.
     /// </summary>
-    /// <param name="user">The user to persist.</param>
+    /// <param name="mutate">A callback that applies the change to the loaded user and returns <see langword="true"/> when it mutated the user, or <see langword="false"/> to skip the commit.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="Exception">Thrown when the changes could not be persisted, so callers never report success after a failed save.</exception>
-    Task UpdateUserAsync(IUser user);
-
-    /// <summary>
-    /// Durably commits pending user changes so a peer that reloads the user after this call observes them.
-    /// This makes a token refresh visible to other requests before the refresh lock is released, rather than
-    /// at the end of the ambient request scope.
-    /// </summary>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="Exception">Thrown when the pending changes could not be committed, so a caller never reports success after a failed commit.</exception>
-    Task SaveChangesAsync();
+    /// <exception cref="Exception">Thrown when there is no current user or the change could not be committed, so a caller never reports success after a failed persist.</exception>
+    Task PersistCurrentUserAsync(Func<IUser, bool> mutate);
 }

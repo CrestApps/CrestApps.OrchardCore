@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Telephony.Services;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,46 +11,31 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class DefaultTelephonyUserAccessorTests
 {
     [Fact]
-    public async Task UpdateUserAsync_WhenIdentityResultFails_Throws()
+    public async Task PersistCurrentUserAsync_WhenMutateIsNull_Throws()
     {
         // Arrange
-        var user = new FakeUser();
-        var userManager = CreateUserManager();
-        userManager
-            .Setup(manager => manager.UpdateAsync(user))
-            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Code = "ConcurrencyFailure", Description = "Optimistic concurrency failure." }));
-
         var accessor = new DefaultTelephonyUserAccessor(
-            userManager.Object,
+            CreateUserManager().Object,
             new HttpContextAccessor(),
             new Mock<ISession>().Object,
             NullLogger<DefaultTelephonyUserAccessor>.Instance);
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(() => accessor.UpdateUserAsync(user));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => accessor.PersistCurrentUserAsync(null!));
     }
 
     [Fact]
-    public async Task UpdateUserAsync_WhenIdentityResultSucceeds_DoesNotThrow()
+    public async Task PersistCurrentUserAsync_WhenNoAuthenticatedUser_Throws()
     {
         // Arrange
-        var user = new FakeUser();
-        var userManager = CreateUserManager();
-        userManager
-            .Setup(manager => manager.UpdateAsync(user))
-            .ReturnsAsync(IdentityResult.Success);
-
         var accessor = new DefaultTelephonyUserAccessor(
-            userManager.Object,
+            CreateUserManager().Object,
             new HttpContextAccessor(),
             new Mock<ISession>().Object,
             NullLogger<DefaultTelephonyUserAccessor>.Instance);
 
-        // Act
-        await accessor.UpdateUserAsync(user);
-
-        // Assert
-        userManager.Verify(manager => manager.UpdateAsync(user), Times.Once);
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<Exception>(() => accessor.PersistCurrentUserAsync(_ => true));
     }
 
     private static Mock<UserManager<IUser>> CreateUserManager()

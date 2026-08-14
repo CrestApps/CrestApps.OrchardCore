@@ -207,12 +207,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         var tokens = await _tokenStore.GetAsync(name, cancellationToken);
 
-        // Clear the local interactive credentials first and commit the deletion durably before attempting
-        // the remote revocation, so the user is disconnected locally immediately, concurrent requests can
-        // no longer observe the credentials, and a canceled or failing remote call cannot leave the local
-        // tokens behind.
+        // Clear the local interactive credentials first and durably before attempting the remote revocation,
+        // so the user is disconnected locally immediately, concurrent requests can no longer observe the
+        // credentials, and a canceled or failing remote call cannot leave the local tokens behind. The token
+        // store commits the removal on its own isolated unit of work.
         await _tokenStore.RemoveAsync(name, cancellationToken);
-        await _userAccessor.SaveChangesAsync();
 
         if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
         {
@@ -340,12 +339,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
 
         refreshed.ProviderName = providerName;
 
+        // Store the refreshed tokens. The token store commits them durably on its own isolated unit of work,
+        // so a waiting peer that reloads the user before this method releases the lock observes them and reuses
+        // them instead of rotating the refresh token a second time, without this write depending on the ambient
+        // request scope committing.
         await _tokenStore.StoreAsync(providerName, refreshed, cancellationToken);
-
-        // Commit the refreshed tokens durably before releasing the lock so a waiting peer that reloads the user
-        // observes them and reuses them instead of rotating the refresh token a second time. Without this the
-        // write would only commit at the end of the request scope, after the lock has already been released.
-        await _userAccessor.SaveChangesAsync();
 
         return refreshed;
     }

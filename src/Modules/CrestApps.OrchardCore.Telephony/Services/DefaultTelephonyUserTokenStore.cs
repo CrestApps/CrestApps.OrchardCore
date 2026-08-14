@@ -56,20 +56,21 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentNullException.ThrowIfNull(tokens);
 
-        var user = await _userAccessor.GetCurrentUserAsync();
-
-        if (user is not IEntity entity)
+        await _userAccessor.PersistCurrentUserAsync(user =>
         {
-            throw new TelephonyUserPersistenceException("There is no current user to persist telephony tokens for.");
-        }
+            if (user is not IEntity entity)
+            {
+                throw new TelephonyUserPersistenceException("The current user cannot store telephony tokens.");
+            }
 
-        var connections = entity.GetOrCreate<TelephonyUserConnections>();
-        connections.Connections ??= [];
-        connections.Connections[providerName] = Protect(providerName, tokens);
+            var connections = entity.GetOrCreate<TelephonyUserConnections>();
+            connections.Connections ??= [];
+            connections.Connections[providerName] = Protect(providerName, tokens);
 
-        entity.Put(connections);
+            entity.Put(connections);
 
-        await _userAccessor.UpdateUserAsync(user);
+            return true;
+        });
     }
 
     /// <inheritdoc/>
@@ -80,19 +81,22 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
             return;
         }
 
-        var user = await _userAccessor.GetCurrentUserAsync();
-
-        if (user is not IEntity entity || !entity.TryGet<TelephonyUserConnections>(out var connections) || connections.Connections is null)
+        await _userAccessor.PersistCurrentUserAsync(user =>
         {
-            return;
-        }
+            if (user is not IEntity entity || !entity.TryGet<TelephonyUserConnections>(out var connections) || connections.Connections is null)
+            {
+                return false;
+            }
 
-        if (connections.Connections.Remove(providerName))
-        {
+            if (!connections.Connections.Remove(providerName))
+            {
+                return false;
+            }
+
             entity.Put(connections);
 
-            await _userAccessor.UpdateUserAsync(user);
-        }
+            return true;
+        });
     }
 
     private TelephonyUserTokens Protect(string providerName, TelephonyUserTokens tokens)
