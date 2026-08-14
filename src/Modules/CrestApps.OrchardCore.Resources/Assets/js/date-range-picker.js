@@ -135,7 +135,7 @@
 
     function formatMachine(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
-            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
+            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
     }
 
     function formatDisplay(date) {
@@ -184,51 +184,31 @@
         var priorPicker = null;
         var afterPicker = null;
 
-        function addSecondsToAltFormat(format) {
-            if (!format) {
-                return format;
-            }
-
-            if (format.indexOf('S') !== -1) {
-                return format;
-            }
-
-            if (format.indexOf('K') !== -1) {
-                return format.replace(/\s*K\b/, ':S K');
-            }
-
-            return format + ':S';
-        }
-
-        function withDefaultTime(config, hour, minute, second) {
+        function withDefaultTime(config, hour, minute) {
             return Object.assign({}, config, {
-                dateFormat: 'Y-m-d\\TH:i:S',
-                altFormat: addSecondsToAltFormat(config.altFormat),
-                enableSeconds: true,
                 defaultHour: hour,
-                defaultMinute: minute,
-                defaultSeconds: second
+                defaultMinute: minute
             });
         }
 
         if (typeof flatpickr === 'function') {
             var config = typeof flatpickrCulture !== 'undefined'
                 ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control flatpickr-input' })
-                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i:S' };
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
 
-            fromPicker = flatpickr(fromInput, Object.assign({}, withDefaultTime(config, 0, 0, 0), { onChange: onCustomFromChange }));
-            toPicker = flatpickr(toInput, Object.assign({}, withDefaultTime(config, 23, 59, 59), { onChange: onCustomToChange }));
+            fromPicker = flatpickr(fromInput, Object.assign({}, withDefaultTime(config, 0, 0), { onChange: onCustomFromChange }));
+            toPicker = flatpickr(toInput, Object.assign({}, withDefaultTime(config, 23, 59), { onChange: onCustomChange }));
 
             var priorConfig = typeof flatpickrCulture !== 'undefined'
                 ? flatpickrCulture.createLocalizedDateTimeConfig(root.dataset.datePattern, root.dataset.timePattern, { altInputClass: 'form-control form-control-sm flatpickr-input' })
-                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i:S' };
+                : { enableTime: true, allowInput: true, altInput: true, dateFormat: 'Y-m-d\\TH:i' };
 
             if (priorDateInput) {
-                priorPicker = flatpickr(priorDateInput, Object.assign({}, withDefaultTime(priorConfig, 23, 59, 59), { onChange: applyPrior }));
+                priorPicker = flatpickr(priorDateInput, Object.assign({}, withDefaultTime(priorConfig, 23, 59), { onChange: applyPrior }));
             }
 
             if (afterDateInput) {
-                afterPicker = flatpickr(afterDateInput, Object.assign({}, withDefaultTime(priorConfig, 0, 0, 0), { onChange: applyAfter }));
+                afterPicker = flatpickr(afterDateInput, Object.assign({}, withDefaultTime(priorConfig, 0, 0), { onChange: applyAfter }));
             }
         }
 
@@ -272,14 +252,6 @@
             }
 
             return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), 0, 0);
-        }
-
-        function withUpperBoundSeconds(date) {
-            if (!date) {
-                return null;
-            }
-
-            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), 59, 0);
         }
 
         function describeRange(from, to) {
@@ -362,16 +334,6 @@
             onCustomChange();
         }
 
-        function onCustomToChange() {
-            var date = withUpperBoundSeconds(readDate(toInput, toPicker));
-
-            if (date) {
-                setInputValue(toInput, toPicker, date);
-            }
-
-            onCustomChange();
-        }
-
         function labelForRadio(radio) {
             var wrapping = radio.closest('label');
 
@@ -385,9 +347,9 @@
         }
 
         function applyPrior() {
-            var date = withUpperBoundSeconds(priorPicker && priorPicker.selectedDates.length
+            var date = priorPicker && priorPicker.selectedDates.length
                 ? priorPicker.selectedDates[0]
-                : (priorDateInput && priorDateInput.value ? new Date(priorDateInput.value) : null));
+                : (priorDateInput && priorDateInput.value ? new Date(priorDateInput.value) : null);
 
             if (!date) {
                 return;

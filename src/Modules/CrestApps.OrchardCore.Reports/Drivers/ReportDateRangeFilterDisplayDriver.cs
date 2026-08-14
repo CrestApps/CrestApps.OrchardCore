@@ -54,11 +54,17 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var fromUtc = model.From.HasValue
-            ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(model.From.Value, DateTimeKind.Unspecified))
+        var fromLocal = model.From.HasValue
+            ? DateTime.SpecifyKind(model.From.Value, DateTimeKind.Unspecified)
             : (DateTime?)null;
-        var toUtc = model.To.HasValue
-            ? await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(model.To.Value, DateTimeKind.Unspecified))
+        var toLocal = model.To.HasValue
+            ? NormalizeUpperBound(model.To.Value)
+            : (DateTime?)null;
+        var fromUtc = fromLocal.HasValue
+            ? await _localClock.ConvertToUtcAsync(fromLocal.Value)
+            : (DateTime?)null;
+        var toUtc = toLocal.HasValue
+            ? await _localClock.ConvertToUtcAsync(toLocal.Value)
             : (DateTime?)null;
 
         var range = await NormalizeAsync(fromUtc, toUtc, model.Range);
@@ -90,5 +96,20 @@ public sealed class ReportDateRangeFilterDisplayDriver : DisplayDriver<ReportFil
             ToUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc),
             Key = key,
         };
+    }
+
+    private static DateTime NormalizeUpperBound(DateTime value)
+    {
+        var localValue = DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
+
+        if (localValue.Hour == 23 &&
+            localValue.Minute == 59 &&
+            localValue.Second == 0 &&
+            localValue.Millisecond == 0)
+        {
+            return localValue.AddSeconds(59);
+        }
+
+        return localValue;
     }
 }
