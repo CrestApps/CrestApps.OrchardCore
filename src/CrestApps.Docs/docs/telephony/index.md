@@ -10,10 +10,10 @@ description: Provider-agnostic soft phone, SignalR hub, and telephony provider m
 | **Feature Name** | Telephony |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony` |
 
-The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [DialPad](dialpad)).
+The **Telephony** module adds a provider-agnostic soft phone to Orchard Core. It exposes a SignalR hub that receives call-control requests from the browser and routes them to whichever telephony provider is configured for the tenant. The UI never talks to a provider directly, so the same soft phone works with any provider that implements the telephony abstractions (for example [Dialpad](dialpad)).
 
 In this module, **provider** means the configured **telephony backend adapter** (for example Asterisk,
-DialPad, or another PBX/carrier API integration), not the user's phone company in the business or
+Dialpad, or another PBX/carrier API integration), not the user's phone company in the business or
 billing sense.
 
 `CrestApps.OrchardCore.Telephony` registers the provider-neutral runtime services and the **Settings → Communication → Telephony** configuration screen. Every provider feature depends on Telephony and contributes its settings tab directly, so enabling a provider always makes its configuration available. The floating widget remains optional and is registered only by `CrestApps.OrchardCore.Telephony.SoftPhone`.
@@ -33,7 +33,7 @@ Provider event stream/webhook ──► server projection/reconciliation ──�
 - **`CrestApps.OrchardCore.Telephony.Abstractions`** contains the provider-agnostic contracts: `ITelephonyProvider`, the per-capability operation contracts (`ITelephonyCallControlProvider`, `ITelephonyInboundCallProvider`, `ITelephonyHoldProvider`, `ITelephonyMuteProvider`, `ITelephonyTransferProvider`, `ITelephonyAttendedTransferProvider`, `ITelephonyConferenceProvider`, `ITelephonyDtmfProvider`, `ITelephonyVoicemailProvider`, `ITelephonySoftPhoneCredentialsProvider`) and their `TelephonyCapabilityContracts` map, `ITelephonyCallStateProvider`, `ITelephonyService`, `ITelephonyProviderResolver`, `ITelephonyClient`, `ITelephonyAuthenticationProvider`, `ITelephonyAuthenticationService`, `ITelephonyUserTokenStore`, `ITelephonyInteractionStore`, `ITelephonyInteractionSynchronizationService`, the request/response and interaction models, `TelephonyProviderOptions`, `TelephonySettings`, and `TelephonyPermissions`. A provider module depends only on this package.
 - **`CrestApps.OrchardCore.Telephony`** contains the `TelephonyHub`, the default service and resolver
   implementations, the site settings, and the soft phone widget.
-- A **provider module** (such as DialPad or Asterisk) implements `ITelephonyProvider` and registers itself as a
+- A **provider module** (such as Dialpad or Asterisk) implements `ITelephonyProvider` and registers itself as a
   selectable provider.
 
 If you are building another provider, see [Custom Telephony and Contact Center Providers](custom-providers.md).
@@ -74,7 +74,7 @@ Live agent audio is advertised separately through the optional `ITelephonyAudioP
 - A provider that supports both must expose a provider setting and return the administrator-selected `ConfiguredAudioMode`.
 - Browser audio fails closed unless the provider also names an executable browser media adapter.
 
-The current built-in DialPad and Asterisk Telephony providers explicitly advertise `ExternalDevice`. DialPad call control currently relies on its REST integration and provider-owned clients, while the Asterisk provider currently controls calls through ARI. Asterisk External Media is a server-side Contact Center media seam and is not an embedded browser WebRTC endpoint. Neither provider currently advertises embedded browser audio.
+The current built-in Dialpad and Asterisk Telephony providers explicitly advertise `ExternalDevice`. Dialpad call control currently relies on its REST integration and provider-owned clients, while the Asterisk provider currently controls calls through ARI. Asterisk External Media is a server-side Contact Center media seam and is not an embedded browser WebRTC endpoint. Neither provider currently advertises embedded browser audio.
 
 Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
 `TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange
@@ -198,9 +198,9 @@ The widget's footer is a tab bar that switches the panel between built-in and co
 
 Pressing **Enter** while the number field is focused starts the call. The dialed value is cleared immediately to prevent an accidental repeated Enter press. While the selected call is connected, the field remains visible and disabled with the connected phone number formatted for display. After the selected call is placed on hold, the field is cleared again and the keypad becomes available for a second outbound call. The **Active calls** list shows every provider-authoritative in-progress interaction in compact rows with the phone number and state on one line; selecting a row changes which call the individual hold, resume, mute, transfer, and hang-up controls operate on. The active-call list remains on the Keypad because it is the selection context for those controls, while the Keypad view scrolls within a bounded height instead of increasing the widget size.
 
-Select two or more active-call checkboxes to reveal **Conference selected calls**. Any number of active calls can be selected; provider-specific participant limits are enforced by the executing provider rather than by the shared UI. After a successful merge, every selected row shows **In conference**. Asterisk adds all selected channels to one mixing bridge and clears their prior hold markers, while DialPad merges each additional call into the primary call sequentially. **Disconnect all calls** sends hang-up to every active call, while the regular hang-up button ends only the selected call. Transfer is hidden for a conference until one call row is selected explicitly, preventing an accidental transfer of the conference context. The current provider-neutral contract does not model a separate agent media leg or a leave-conference operation, so ending the selected call must not be described as leaving a conference while the other participants continue.
+Select two or more active-call checkboxes to reveal **Conference selected calls**. Any number of active calls can be selected; provider-specific participant limits are enforced by the executing provider rather than by the shared UI. After a successful merge, every selected row shows **In conference**. Asterisk adds all selected channels to one mixing bridge and clears their prior hold markers, while Dialpad merges each additional call into the primary call sequentially. **Disconnect all calls** sends hang-up to every active call, while the regular hang-up button ends only the selected call. Transfer is hidden for a conference until one call row is selected explicitly, preventing an accidental transfer of the conference context. The current provider-neutral contract does not model a separate agent media leg or a leave-conference operation, so ending the selected call must not be described as leaving a conference while the other participants continue.
 
-Providers can advertise the `Directory` capability and implement `ITelephonyDirectoryProvider`. When supported, choosing **Transfer** opens a provider-backed directory and still permits a manually entered number or extension. Asterisk lists ARI endpoints, while DialPad lists company users and prefers their extension as the transfer destination before falling back to the assigned phone number.
+Providers can advertise the `Directory` capability and implement `ITelephonyDirectoryProvider`. When supported, choosing **Transfer** opens a provider-backed directory and still permits a manually entered number or extension. Asterisk lists ARI endpoints, while Dialpad lists company users and prefers their extension as the transfer destination before falling back to the assigned phone number.
 
 The history is read from the hub's `GetInteractions` method and is backed by the persisted interaction store described below, so completed history survives page reloads independently of the provider. Inbound calls are persisted as soon as they are offered, so the **Recent** tab shows inbound and outbound history instead of only calls placed from the keypad. Active-call restoration no longer trusts an `InProgress` history record or assumes that it is connected: reconnect and page load call `GetActiveCalls`, which validates every active record against `ITelephonyCallStateProvider` before rendering it. Button commands do not trigger browser state changes or short provider-polling loops; provider events remain authoritative, while startup, periodic, provider-reconnect, and page-restoration reconciliation repair missed events and delete confirmed orphaned active records. A provider event received while a page-restoration lookup is in flight takes precedence over that older lookup result, and a terminal event for an earlier call id cannot clear a newer active call. When Contact Center owns the voice interaction, normalized server-side call-session changes upsert that same telephony history and push `CallStateChanged`, so provider-driven disconnects, hold/resume changes, mute/unmute updates, and other server-side lifecycle changes clear or update the live soft-phone state immediately. Provider-side Asterisk ARI events do the same for plain Telephony calls. The widget also keeps the **Keypad** tab's natural height as the shared body height for **Recent** and contributed tabs such as Contact Center **Work**, so switching tabs does not resize the panel unless the user moves it. When a non-keypad tab needs more room than that shared height, it scrolls within the panel instead of clipping its contents.
 
@@ -294,7 +294,7 @@ Providers use one of two authentication scenarios, and the soft phone adapts aut
   administrator (for example an API token). No per-user step is needed and the dialer is shown
   immediately. This is the right model for providers such as Twilio.
 - **Per-user OAuth 2.0** – the provider requires each user to connect their own account (for example
-  DialPad). When the user is not yet connected, the widget shows a **Connect to provider** button
+  Dialpad). When the user is not yet connected, the widget shows a **Connect to provider** button
   that starts the OAuth 2.0 authorization code flow in a popup. After the user grants access, the
   tokens are stored **encrypted on the user's account** and the dialer is shown. Expired tokens are
   refreshed automatically when a refresh token is available.
@@ -359,4 +359,4 @@ To add a new provider:
    `ITelephonyAuthenticationService`. Providers that only use a shared account key do not implement
    this interface.
 
-See the [DialPad](dialpad) and [Asterisk](asterisk) providers for complete examples.
+See the [Dialpad](dialpad) and [Asterisk](asterisk) providers for complete examples.

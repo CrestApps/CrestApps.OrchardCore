@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 namespace CrestApps.OrchardCore.Tests.Architecture;
 
 /// <summary>
-/// Asserts that no MVC controller action in the Contact Center, Telephony, Asterisk, or DialPad
+/// Asserts that no MVC controller action in the Contact Center, Telephony, Asterisk, or Dialpad
 /// modules silently opts out of antiforgery protection while remaining reachable by an unsafe HTTP verb.
 /// </summary>
 /// <remarks>
@@ -26,7 +26,7 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// receive a POST and are therefore out of scope.
 /// </para>
 /// <para>
-/// Provider webhook receivers (DialPad and Asterisk) legitimately accept unauthenticated external
+/// Provider webhook receivers (Dialpad and Asterisk) legitimately accept unauthenticated external
 /// POSTs, but they are implemented as minimal-API endpoints rather than MVC controllers, so they
 /// never surface here. If a future controller genuinely needs to ignore antiforgery, this test
 /// forces that decision to be explicit and reviewed instead of silent.
@@ -39,7 +39,7 @@ public sealed class AdminPostAntiforgeryArchitectureTests
         typeof(CrestApps.OrchardCore.ContactCenter.Startup).Assembly,
         typeof(CrestApps.OrchardCore.Telephony.Startup).Assembly,
         typeof(CrestApps.OrchardCore.Asterisk.Startup).Assembly,
-        typeof(CrestApps.OrchardCore.DialPad.Startup).Assembly,
+        typeof(CrestApps.OrchardCore.Dialpad.Startup).Assembly,
     ];
 
     private static readonly string[] _unsafeMethods =

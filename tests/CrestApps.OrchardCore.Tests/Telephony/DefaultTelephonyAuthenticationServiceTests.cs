@@ -50,7 +50,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         // Arrange
         var service = CreateService(
             new FakeAuthTelephonyProvider { RequiresUserAuthentication = true },
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             new FakeTelephonyUserTokenStore());
 
         // Act
@@ -67,7 +67,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "valid",
             ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1),
@@ -75,7 +75,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
 
         var service = CreateService(
             new FakeAuthTelephonyProvider { RequiresUserAuthentication = true },
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
@@ -93,12 +93,12 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var tokenStore = new FakeTelephonyUserTokenStore();
         var service = CreateService(
             new FakeAuthTelephonyProvider { RequiresUserAuthentication = true },
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
         var result = await service.CompleteAuthorizationAsync("code", "https://site.test/callback", codeVerifier: null, TestContext.Current.CancellationToken);
-        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -112,7 +112,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         // Arrange
         var service = CreateService(
             new FakeAuthTelephonyProvider { RequiresUserAuthentication = true, SupportsProofKeyForCodeExchange = true },
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             new FakeTelephonyUserTokenStore());
 
         // Act
@@ -130,7 +130,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         // Arrange
         var service = CreateService(
             new FakeAuthTelephonyProvider { RequiresUserAuthentication = true, SupportsProofKeyForCodeExchange = false },
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             new FakeTelephonyUserTokenStore());
 
         // Act
@@ -146,7 +146,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "valid",
         }, TestContext.Current.CancellationToken);
@@ -154,12 +154,12 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var provider = new FakeAuthTelephonyProvider { RequiresUserAuthentication = true };
         var service = CreateService(
             provider,
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
         var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
-        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -173,7 +173,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "valid",
         }, TestContext.Current.CancellationToken);
@@ -185,12 +185,12 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         };
         var service = CreateService(
             provider,
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
         var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
-        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
@@ -203,7 +203,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "valid",
         }, TestContext.Current.CancellationToken);
@@ -211,12 +211,12 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var provider = new CallControlOnlyTelephonyProvider();
         var service = CreateService(
             provider,
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
         var result = await service.DisconnectAsync(TestContext.Current.CancellationToken);
-        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
@@ -229,7 +229,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "valid",
         }, TestContext.Current.CancellationToken);
@@ -241,13 +241,13 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         };
         var service = CreateService(
             provider,
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore);
 
         // Act
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => service.DisconnectAsync(TestContext.Current.CancellationToken));
-        var stored = await tokenStore.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(stored);
@@ -258,7 +258,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         // Arrange
         var tokenStore = new FakeTelephonyUserTokenStore();
-        await tokenStore.StoreAsync("DialPad", new TelephonyUserTokens
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
         {
             AccessToken = "expired",
             RefreshToken = "refresh",
@@ -279,7 +279,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var distributedLock = new FakeDistributedLock();
         var service = CreateService(
             provider,
-            new TelephonySettings { DefaultProviderName = "DialPad" },
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
             tokenStore,
             distributedLock);
 
@@ -290,10 +290,10 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         provider.RefreshGate = gate.Task;
 
-        var first = Task.Run(() => service.GetValidTokensAsync("DialPad", CancellationToken.None));
+        var first = Task.Run(() => service.GetValidTokensAsync("Dialpad", CancellationToken.None));
         await provider.RefreshStarted;
 
-        var second = Task.Run(() => service.GetValidTokensAsync("DialPad", CancellationToken.None));
+        var second = Task.Run(() => service.GetValidTokensAsync("Dialpad", CancellationToken.None));
         await distributedLock.WaitForAttemptAsync(2);
         gate.SetResult();
 

@@ -16,7 +16,7 @@ A supported Contact Center tenant enables roughly a dozen features across the ba
 | Recipe | Display name | Enables the feature set of tenant profile |
 | --- | --- | --- |
 | `contact-center-asterisk-ga-core` | **Contact Center — Asterisk (GA-Core)** | `ga-core-asterisk` |
-| `contact-center-dialpad-ga-core` | **Contact Center — DialPad (GA-Core)** | `ga-core-dialpad` |
+| `contact-center-dialpad-ga-core` | **Contact Center — Dialpad (GA-Core)** | `ga-core-dialpad` |
 
 Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration → Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
 

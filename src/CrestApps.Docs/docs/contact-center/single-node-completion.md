@@ -42,7 +42,7 @@ These commitments are validated by adversarial two-tenant tests (identical logic
 | Attended/consult transfer and conference | Not available | Delivered |
 | Multi-node / high-availability media | Not claimed | Gated by the platform's multi-node release program |
 
-The DialPad provider remains an external-device call-control integration for this phase; a DialPad browser-media adapter is a later addition.
+The Dialpad provider remains an external-device call-control integration for this phase; a Dialpad browser-media adapter is a later addition.
 
 ## Phased roadmap
 

@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.DialPad;
+using CrestApps.OrchardCore.Dialpad;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -150,7 +150,7 @@ public sealed class ContactCenterSupportMatrixTests
 
         // Act & Assert
         Assert.Contains(AsteriskConstants.Feature.ContactCenterVoice, profiles["ga-core-asterisk"]);
-        Assert.Contains(DialPadConstants.Feature.ContactCenterVoice, profiles["ga-core-dialpad"]);
+        Assert.Contains(DialpadConstants.Feature.ContactCenterVoice, profiles["ga-core-dialpad"]);
     }
 
     /// <summary>

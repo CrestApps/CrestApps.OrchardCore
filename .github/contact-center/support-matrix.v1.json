@@ -123,8 +123,8 @@
         "CrestApps.OrchardCore.ContactCenter.InboundVoice",
         "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
-        "CrestApps.OrchardCore.DialPad",
-        "CrestApps.OrchardCore.DialPad.ContactCenterVoice"
+        "CrestApps.OrchardCore.Dialpad",
+        "CrestApps.OrchardCore.Dialpad.ContactCenterVoice"
       ]
     }
   ],

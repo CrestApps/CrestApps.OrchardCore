@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Dialpad Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Integrates the Dialpad telephony platform as a provider for the CrestApps Telephony soft phone.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony Dialpad</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ensure this module directly depends on the Telephony module so that when someone installs it,
+      they won't need to manually include the Telephony package. This resolves the feature dependency.
+      The base Dialpad telephony feature depends only on the provider-agnostic Telephony abstractions;
+      the optional Dialpad Contact Center feature additionally implements the Contact Center voice
+      extension contract, which is why this assembly also references ContactCenter.Abstractions below.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

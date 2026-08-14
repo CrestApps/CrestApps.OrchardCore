@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -249,7 +249,7 @@ public sealed class TelephonyProviderCapabilityContractTests
     }
 
     [Theory]
-    [InlineData(typeof(DialPadTelephonyProvider))]
+    [InlineData(typeof(DialpadTelephonyProvider))]
     [InlineData(typeof(AsteriskTelephonyProviderBase))]
     public void ShippedProviders_ImplementTheContractsForEveryCapabilityTheyCanAdvertise(Type providerType)
     {
@@ -297,7 +297,7 @@ public sealed class TelephonyProviderCapabilityContractTests
             return widest;
         }
 
-        // The DialPad capability set is a constant expression, so an uninitialized instance reports it
+        // The Dialpad capability set is a constant expression, so an uninitialized instance reports it
         // faithfully without standing up the provider's dependencies.
         var instance = (ITelephonyProvider)RuntimeHelpers.GetUninitializedObject(providerType);
 

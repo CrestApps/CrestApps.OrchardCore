@@ -12,12 +12,12 @@ public sealed class TelephonyProviderOptionsTests
         var options = new TelephonyProviderOptions();
 
         // Act
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)) { IsEnabled = true });
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)) { IsEnabled = true });
 
         // Assert
-        Assert.True(options.Providers.ContainsKey("DialPad"));
-        Assert.True(options.Providers["DialPad"].IsEnabled);
-        Assert.Equal(typeof(FakeTelephonyProviderA), options.Providers["DialPad"].Type);
+        Assert.True(options.Providers.ContainsKey("Dialpad"));
+        Assert.True(options.Providers["Dialpad"].IsEnabled);
+        Assert.Equal(typeof(FakeTelephonyProviderA), options.Providers["Dialpad"].Type);
     }
 
     [Fact]
@@ -25,15 +25,15 @@ public sealed class TelephonyProviderOptionsTests
     {
         // Arrange
         var options = new TelephonyProviderOptions();
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)) { IsEnabled = true });
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)) { IsEnabled = true });
 
         // Act
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
 
         // Assert
         Assert.Single(options.Providers);
-        Assert.Equal(typeof(FakeTelephonyProviderA), options.Providers["DialPad"].Type);
-        Assert.True(options.Providers["DialPad"].IsEnabled);
+        Assert.Equal(typeof(FakeTelephonyProviderA), options.Providers["Dialpad"].Type);
+        Assert.True(options.Providers["Dialpad"].IsEnabled);
     }
 
     [Fact]
@@ -41,11 +41,11 @@ public sealed class TelephonyProviderOptionsTests
     {
         // Arrange
         var options = new TelephonyProviderOptions();
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() =>
-            options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderB))));
+            options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderB))));
     }
 
     [Fact]
@@ -82,11 +82,11 @@ public sealed class TelephonyProviderOptionsTests
         var options = new TelephonyProviderOptions();
 
         // Act
-        options.TryAddProvider("  DialPad  ", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
+        options.TryAddProvider("  Dialpad  ", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
 
         // Assert
         Assert.Single(options.Providers);
-        Assert.True(options.Providers.ContainsKey("DialPad"));
+        Assert.True(options.Providers.ContainsKey("Dialpad"));
     }
 
     [Fact]
@@ -94,14 +94,14 @@ public sealed class TelephonyProviderOptionsTests
     {
         // Arrange
         var options = new TelephonyProviderOptions();
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
 
         // Act
         options.ReplaceProvider("dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderB)));
 
         // Assert
         Assert.Single(options.Providers);
-        Assert.Equal(typeof(FakeTelephonyProviderB), options.Providers["DialPad"].Type);
+        Assert.Equal(typeof(FakeTelephonyProviderB), options.Providers["Dialpad"].Type);
     }
 
     [Fact]
@@ -109,13 +109,13 @@ public sealed class TelephonyProviderOptionsTests
     {
         // Arrange
         var options = new TelephonyProviderOptions();
-        options.TryAddProvider("DialPad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
+        options.TryAddProvider("Dialpad", new TelephonyProviderTypeOptions(typeof(FakeTelephonyProviderA)));
 
         // Act
         options.RemoveProvider("dialpad");
 
         // Assert
-        Assert.False(options.Providers.ContainsKey("DialPad"));
+        Assert.False(options.Providers.ContainsKey("Dialpad"));
     }
 
     [Fact]

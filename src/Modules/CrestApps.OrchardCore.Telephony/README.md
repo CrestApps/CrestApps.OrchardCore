@@ -1,6 +1,6 @@
 # CrestApps.OrchardCore.Telephony
 
-Provides a **provider-agnostic** call-control layer, a tenant-aware SignalR hub, and an optional floating soft phone for Orchard Core. It defines the abstractions that telephony providers (such as Asterisk and DialPad) implement, so application code never talks to a vendor API directly.
+Provides a **provider-agnostic** call-control layer, a tenant-aware SignalR hub, and an optional floating soft phone for Orchard Core. It defines the abstractions that telephony providers (such as Asterisk and Dialpad) implement, so application code never talks to a vendor API directly.
 
 This module does **not** provide an SMS abstraction. Use the Orchard Core SMS or the CrestApps Omnichannel features for SMS.
 

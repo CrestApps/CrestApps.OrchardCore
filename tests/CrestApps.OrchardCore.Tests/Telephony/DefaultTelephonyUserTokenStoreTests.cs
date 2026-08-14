@@ -25,8 +25,8 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         };
 
         // Act
-        await store.StoreAsync("DialPad", tokens, TestContext.Current.CancellationToken);
-        var retrieved = await store.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        await store.StoreAsync("Dialpad", tokens, TestContext.Current.CancellationToken);
+        var retrieved = await store.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -51,7 +51,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         };
 
         // Act
-        await store.StoreAsync("DialPad", tokens, TestContext.Current.CancellationToken);
+        await store.StoreAsync("Dialpad", tokens, TestContext.Current.CancellationToken);
 
         // Assert - the raw persisted properties must not contain the plaintext tokens.
         var serialized = user.Properties.ToJsonString();
@@ -67,11 +67,11 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         var accessor = new FakeTelephonyUserAccessor(user);
         var store = new DefaultTelephonyUserTokenStore(accessor, new EphemeralDataProtectionProvider());
 
-        await store.StoreAsync("DialPad", new TelephonyUserTokens { AccessToken = "a" }, TestContext.Current.CancellationToken);
+        await store.StoreAsync("Dialpad", new TelephonyUserTokens { AccessToken = "a" }, TestContext.Current.CancellationToken);
 
         // Act
-        await store.RemoveAsync("DialPad", TestContext.Current.CancellationToken);
-        var retrieved = await store.GetAsync("DialPad", TestContext.Current.CancellationToken);
+        await store.RemoveAsync("Dialpad", TestContext.Current.CancellationToken);
+        var retrieved = await store.GetAsync("Dialpad", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(retrieved);

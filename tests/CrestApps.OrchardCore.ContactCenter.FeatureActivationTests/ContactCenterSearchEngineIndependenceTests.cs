@@ -80,7 +80,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.DialPad",
+        "CrestApps.OrchardCore.Dialpad",
     ];
 
     /// <summary>
@@ -92,7 +92,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Abstractions",
         "CrestApps.OrchardCore.ContactCenter.Core",
-        "CrestApps.OrchardCore.DialPad",
+        "CrestApps.OrchardCore.Dialpad",
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Telephony.Abstractions",
         "CrestApps.OrchardCore.Telephony.Core",

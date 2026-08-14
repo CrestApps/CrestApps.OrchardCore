@@ -38,7 +38,7 @@ public sealed class AggregateLifecycleArchitectureTests
         "src/Modules/CrestApps.OrchardCore.ContactCenter",
         "src/Modules/CrestApps.OrchardCore.Telephony",
         "src/Modules/CrestApps.OrchardCore.Asterisk",
-        "src/Modules/CrestApps.OrchardCore.DialPad",
+        "src/Modules/CrestApps.OrchardCore.Dialpad",
     ];
 
     private static readonly Regex _bypassRegex = new(

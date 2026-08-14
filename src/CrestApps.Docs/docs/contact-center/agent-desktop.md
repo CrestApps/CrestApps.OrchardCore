@@ -25,7 +25,7 @@ There are two agent tiers, so enable the one that matches how your agents work:
 
 ## Enabling the surfaces
 
-Enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`) for **My workspace**. It explicitly composes Agents, Real-Time, Voice, the Telephony soft phone, and Omnichannel Management so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [DialPad](../telephony/dialpad.md) for voice work.
+Enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`) for **My workspace**. It explicitly composes Agents, Real-Time, Voice, the Telephony soft phone, and Omnichannel Management so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [Dialpad](../telephony/dialpad.md) for voice work.
 
 The corresponding entries appear independently under **Interaction Center**:
 
@@ -129,7 +129,7 @@ The top bar also shows a live chip per signed-in queue with its current waiting 
 
 When routing selects you for a piece of work, a **ringing offer card** appears with the customer name (or number), the queue, and a countdown showing how long you have to respond. You have two choices:
 
-- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as DialPad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal now revalidate the current provider call state before accept and do not mark the interaction connected until the provider's authoritative event says it is connected. That means you do not get stuck on a call the server already ended while the offer was in flight. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center still answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
+- **Accept** - accepts the reservation, connects the media, and moves the work into your active panel. For providers that ring your device (such as Dialpad's soft phone), your device rings and you answer there; the workspace and the incoming-call modal now revalidate the current provider call state before accept and do not mark the interaction connected until the provider's authoritative event says it is connected. That means you do not get stuck on a call the server already ended while the offer was in flight. For server-side queue delivery on provider-only integrations such as the current Asterisk path, Contact Center still answers the live provider call during the authoritative accept so the connected call stays visible and controllable after the ringing offer is accepted.
 - **Decline** - releases the offer so it is immediately re-offered to the next available agent, and the incoming modal no longer follows that reservation decline with a second raw telephony reject against the same call.
 
 If you do not respond before the countdown ends, the offer is revoked and routed elsewhere.
@@ -147,7 +147,7 @@ Once you accept, the **active interaction** panel shows:
 
 Use the soft phone for hold, mute, transfer, and hang-up. Controls are shown from the provider's advertised Telephony capabilities, and the server repeats the same capability check before invoking the provider. When a call is held, the keypad becomes available for a second call. The soft phone lists every active interaction by phone number and state, lets the agent select the current call, conferences two selected calls without requiring a provider call id, and can disconnect all active calls. The workspace reflects call state in real time.
 
-Consultative transfer remains provider-dependent. Asterisk currently supports blind transfer and two-call conference but rejects warm transfer; DialPad exposes its provider transfer and merge actions when configured. The shared Telephony contract does not yet expose an agent-specific conference participant or leave-conference operation, so the UI does not claim that an agent can leave a conference while keeping all remote participants connected.
+Consultative transfer remains provider-dependent. Asterisk currently supports blind transfer and two-call conference but rejects warm transfer; Dialpad exposes its provider transfer and merge actions when configured. The shared Telephony contract does not yet expose an agent-specific conference participant or leave-conference operation, so the UI does not claim that an agent can leave a conference while keeping all remote participants connected.
 
 The soft phone also keeps the active remote number visible while you are on the call, and the **Recent** tab now includes inbound calls as well as outbound history.
 

@@ -194,8 +194,8 @@
       "activeWorkStatus": "implemented-r3"
     },
     {
-      "featureId": "CrestApps.OrchardCore.DialPad.ContactCenterVoice",
-      "component": "DialPadContactCenterVoiceProvider",
+      "featureId": "CrestApps.OrchardCore.Dialpad.ContactCenterVoice",
+      "component": "DialpadContactCenterVoiceProvider",
       "kind": "provider-adapter",
       "quiesce": "The provider feature closes admission before descriptor mutation; every adapter operation rejects new execution after quiesce.",
       "drain": "Disable waits for admitted adapter calls to release their provider-feature leases.",

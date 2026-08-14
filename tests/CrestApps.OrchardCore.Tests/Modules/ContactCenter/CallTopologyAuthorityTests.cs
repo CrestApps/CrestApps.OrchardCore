@@ -45,7 +45,7 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Asterisk"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.DialPad"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Dialpad"),
         Path.Combine("Targets", "CrestApps.OrchardCore.Cms.Core.Targets"),
         Path.Combine("Startup", "CrestApps.Aspire.AppHost"),
         Path.Combine("Startup", "CrestApps.OrchardCore.Cms.Web"),

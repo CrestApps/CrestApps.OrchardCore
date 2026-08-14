@@ -63,7 +63,7 @@ Install the package into the web/startup project and enable the capabilities you
 }
 ```
 
-A Telephony provider (for example Asterisk or DialPad) and its Contact Center Voice feature must also be enabled for voice execution.
+A Telephony provider (for example Asterisk or Dialpad) and its Contact Center Voice feature must also be enabled for voice execution.
 
 ## Configuration
 

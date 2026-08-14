@@ -1430,7 +1430,7 @@ public sealed class ProviderVoiceEventServiceTests
         var dialPadInteraction = new Interaction
         {
             ItemId = "interaction-dialpad",
-            ProviderName = "DialPad",
+            ProviderName = "Dialpad",
             ProviderInteractionId = "call-dialpad",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedStatus(InteractionStatus.Connected);
@@ -1446,7 +1446,7 @@ public sealed class ProviderVoiceEventServiceTests
         {
             ItemId = "session-dialpad",
             InteractionId = "interaction-dialpad",
-            ProviderName = "DialPad",
+            ProviderName = "Dialpad",
             ProviderCallId = "call-dialpad",
             AnsweredUtc = connectedUtc,
         }.RestorePersistedState(VoiceCallState.Connected);
@@ -1456,14 +1456,14 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(manager => manager.FindByProviderInteractionIdAsync("Asterisk", "call-asterisk", It.IsAny<CancellationToken>()))
             .ReturnsAsync(asteriskInteraction);
         interactionManager
-            .Setup(manager => manager.FindByProviderInteractionIdAsync("DialPad", "call-dialpad", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Dialpad", "call-dialpad", It.IsAny<CancellationToken>()))
             .ReturnsAsync(dialPadInteraction);
         var callSessionManager = new Mock<ICallSessionManager>();
         callSessionManager
             .Setup(manager => manager.FindByProviderCallIdAsync("Asterisk", "call-asterisk", It.IsAny<CancellationToken>()))
             .ReturnsAsync(asteriskSession);
         callSessionManager
-            .Setup(manager => manager.FindByProviderCallIdAsync("DialPad", "call-dialpad", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.FindByProviderCallIdAsync("Dialpad", "call-dialpad", It.IsAny<CancellationToken>()))
             .ReturnsAsync(dialPadSession);
 
         // The event store simulates real database-backed idempotency: a key that was already published is
@@ -1514,7 +1514,7 @@ public sealed class ProviderVoiceEventServiceTests
         }, TestContext.Current.CancellationToken);
         await service.IngestAsync(new ProviderVoiceEvent
         {
-            ProviderName = "DialPad",
+            ProviderName = "Dialpad",
             ProviderCallId = "call-dialpad",
             State = VoiceCallState.Ended,
             IdempotencyKey = "delivery-42",
@@ -1527,7 +1527,7 @@ public sealed class ProviderVoiceEventServiceTests
             value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("Asterisk", "delivery-42"));
         Assert.Contains(
             publishedEvents,
-            value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("DialPad", "delivery-42"));
+            value => value.IdempotencyKey == ContactCenterClaimKeys.BuildProviderEventIdempotencyKey("Dialpad", "delivery-42"));
         Assert.Equal(VoiceCallState.Ended, asteriskSession.State);
         Assert.Equal(VoiceCallState.Ended, dialPadSession.State);
     }

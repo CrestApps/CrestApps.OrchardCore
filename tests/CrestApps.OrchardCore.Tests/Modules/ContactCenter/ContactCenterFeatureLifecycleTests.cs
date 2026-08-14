@@ -49,7 +49,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             "ContactCenterHub",
             "AsteriskContactCenterVoiceProvider",
             "AsteriskContactCenterVoiceMediaProvider",
-            "DialPadContactCenterVoiceProvider",
+            "DialpadContactCenterVoiceProvider",
         };
 
         // Assert
@@ -61,7 +61,7 @@ public sealed class ContactCenterFeatureLifecycleTests
         Assert.Contains(ContactCenterConstants.Feature.Dialer, featureIds);
         Assert.Contains("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", featureIds);
         Assert.Contains("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", featureIds);
-        Assert.Contains("CrestApps.OrchardCore.DialPad.ContactCenterVoice", featureIds);
+        Assert.Contains("CrestApps.OrchardCore.Dialpad.ContactCenterVoice", featureIds);
 
         foreach (var entry in entries)
         {

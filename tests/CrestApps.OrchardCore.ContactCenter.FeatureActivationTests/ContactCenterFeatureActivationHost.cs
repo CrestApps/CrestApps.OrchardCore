@@ -232,7 +232,7 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
                 webhookHandlers,
                 handler => Assert.NotEqual(ContactCenterHandlerReplaySafety.Unspecified, handler.ReplaySafety));
 
-            if (expectedProviderName == "DialPad")
+            if (expectedProviderName == "Dialpad")
             {
                 Assert.Single(webhookHandlers, handler => handler.TechnicalName == "dialpad-call-event");
             }
@@ -458,7 +458,7 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
     {
         return profile.ProviderProfile.StartsWith("asterisk-", StringComparison.Ordinal)
             ? "Asterisk"
-            : "DialPad";
+            : "Dialpad";
     }
 
     private static bool IsCrestAppsFeature(string featureId)

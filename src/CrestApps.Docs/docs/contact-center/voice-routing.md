@@ -23,8 +23,8 @@ Real-time voice depends on both **provider-to-Orchard** and **browser-to-Orchard
 | --- | --- | --- | --- |
 | Browser soft phone ↔ Orchard app | `https` + `wss` | Bidirectional | The soft phone loads over HTTPS and receives live SignalR call-state updates over secure WebSockets. |
 | Browser soft phone ↔ Orchard app fallback | `https` | Bidirectional | SignalR may fall back to SSE or long polling when WebSockets are unavailable, so normal HTTPS traffic must also remain allowed. |
-| DialPad → Orchard webhook | `https` | Inbound to Orchard | DialPad posts signed call events to Orchard webhook endpoints. |
-| Orchard → DialPad REST API | `https` | Outbound from Orchard | Orchard may query DialPad for current call truth or execute provider API operations. |
+| Dialpad → Orchard webhook | `https` | Inbound to Orchard | Dialpad posts signed call events to Orchard webhook endpoints. |
+| Orchard → Dialpad REST API | `https` | Outbound from Orchard | Orchard may query Dialpad for current call truth or execute provider API operations. |
 | Orchard → Asterisk ARI REST API | `http` / `https` | Outbound from Orchard | Orchard uses ARI HTTP(S) for dial, hangup, hold, mute, and per-call state lookup. |
 | Orchard → Asterisk ARI event stream | `ws` / `wss` | Outbound from Orchard | Orchard keeps a live ARI socket open so server-side call changes reach the app immediately. |
 
@@ -79,11 +79,11 @@ Examples:
 
 - Provider-owned webhook path (each provider maps its own route): `POST /api/dialpad/webhook/call`
 - Generic normalized inbound path: `POST /api/contact-center/voice/inbound`
-- DialPad built-in path: `POST /api/dialpad/webhook/call`
+- Dialpad built-in path: `POST /api/dialpad/webhook/call`
 
 The provider never pushes state directly to the browser. It always comes into Orchard first.
 
-The generic provider and built-in DialPad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. The ceiling is measured against the bytes that arrive rather than the length the caller declares, so a chunked delivery that declares no length is refused at the same point, and it is refused as it arrives rather than after the whole body has been held in memory. The ingress permit is taken before the body is buffered, so the number of bodies a tenant holds at once is bounded by the concurrency limit; a caller that sends slowly is stopped by the server's minimum request body data rate rather than by the endpoint. Each tenant also enforces a shared concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Authenticated deliveries must contain a provider-signed UTC event timestamp within the configured maximum age and future clock-skew window. Generic normalized events use `OccurredUtc`; DialPad JWT payloads use `event_timestamp` in epoch milliseconds. Missing, malformed, non-UTC, stale, or excessively future timestamps are rejected with HTTP 400 before state-changing processing.
+The generic provider and built-in Dialpad webhook endpoints reject request bodies larger than 1 MiB with HTTP 413. The ceiling is measured against the bytes that arrive rather than the length the caller declares, so a chunked delivery that declares no length is refused at the same point, and it is refused as it arrives rather than after the whole body has been held in memory. The ingress permit is taken before the body is buffered, so the number of bodies a tenant holds at once is bounded by the concurrency limit; a caller that sends slowly is stopped by the server's minimum request body data rate rather than by the endpoint. Each tenant also enforces a shared concurrency limit and a separate authenticated token-bucket rate per canonical provider; rejected deliveries return HTTP 429 and include `Retry-After` when the rate limiter can calculate one. Unauthenticated deliveries do not consume the authenticated provider budget. Authenticated deliveries must contain a provider-signed UTC event timestamp within the configured maximum age and future clock-skew window. Generic normalized events use `OccurredUtc`; Dialpad JWT payloads use `event_timestamp` in epoch milliseconds. Missing, malformed, non-UTC, stale, or excessively future timestamps are rejected with HTTP 400 before state-changing processing.
 
 After authentication and validation, Orchard normalizes the payload and commits it to a tenant-local YesSql provider webhook inbox before returning HTTP 2xx. The canonical provider name plus provider delivery id forms the replay boundary under a distributed acceptance lock, so a retry resolves to the existing durable message instead of creating a second one. Provider delivery ids longer than 256 characters are rejected before persistence. Processing starts only after that commit and never uses the caller's disconnect token. Successful processing removes the inbox record; transient failures retain it for exponential-backoff retry, one poison message does not block later due messages, and the message is dead-lettered after ten failed attempts. If an optional provider feature is temporarily disabled, its persisted messages remain pending without consuming the retry budget and resume when the handler is available again. The immediate persisted dispatch preserves normal call-state latency, while the tenant background task recovers deliveries interrupted by process failure or deployment restart.
 
@@ -254,10 +254,10 @@ This means the routing/orchestration record exists before live provider events b
 
 `VoiceContactCenterCallRouter.RouteOutboundAsync()` resolves the configured `IContactCenterVoiceProvider`, verifies that it advertises dialer dialing and implements `IContactCenterVoiceCallControlProvider`, and then calls the executable dial contract.
 
-For the current built-in DialPad provider:
+For the current built-in Dialpad provider:
 
 - Contact Center owns the outbound attempt
-- DialPad executes the actual dial through the Telephony provider
+- Dialpad executes the actual dial through the Telephony provider
 - the provider returns a provider call id
 
 If the provider does not return a call id, the attempt is treated as a failure because Contact Center cannot reconcile a call it cannot identify later.
@@ -420,11 +420,11 @@ Because of this, operators **must** block emergency (and any disallowed) codes a
 
 - `InboundVoiceEvent.ToAddress` must be present for generic inbound routing because the router needs the dialed service address to resolve the entry point or queue.
 - If multiple enabled queues have no explicit inbound mapping, the generic fallback queue resolution intentionally does not guess between them.
-- DialPad currently uses the **agent-device-native** delivery model. Contact Center does not bridge media for it; the provider rings the agent's registered device and later tells Contact Center what really happened.
+- Dialpad currently uses the **agent-device-native** delivery model. Contact Center does not bridge media for it; the provider rings the agent's registered device and later tells Contact Center what really happened.
 - Voice capabilities are metadata only. Dialing and agent connection require `IContactCenterVoiceCallControlProvider`; provider-owned queue placement, transfer, conference, recording, and monitoring each have a separate executable contract. A capability flag without its matching contract is rejected.
 - Contact Center–orchestrated external transfers resolve only from a tenant-scoped approved-destination catalog. Callers pass an opaque catalog entry identifier (never a raw phone number); the resolver requires the external-transfer permission, denies missing or disabled entries, and re-validates the stored E.164 address with emergency and premium ranges always rejected. Operators curate the catalog in the **External transfer destinations** section of the **Settings → Contact Center** screen, and because it is stored as Orchard Core site settings it is isolated per tenant. **Important:** this catalog governs only the orchestrated transfer path (`TransferDestinationResolver`), which is not yet wired to an agent-facing surface in this release, so the catalog does not currently constrain any transfer an agent can actually initiate. The agent-facing **Telephony soft-phone transfer field passes its destination to the provider unfiltered** and does not resolve through the catalog, so it is the only live transfer path today and the emergency/premium denial above does not apply to it (see the emergency-calling warning).
-- Bidirectional media is exposed only by a separately registered `IContactCenterVoiceMediaProvider` whose technical name matches a registered base voice provider. Asterisk registers that contract only with its ARI External Media feature; DialPad does not register one because its public integration does not expose equivalent raw live-media injection.
-- DialPad webhook subscriptions are currently created and monitored in the DialPad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
+- Bidirectional media is exposed only by a separately registered `IContactCenterVoiceMediaProvider` whose technical name matches a registered base voice provider. Asterisk registers that contract only with its ARI External Media feature; Dialpad does not register one because its public integration does not expose equivalent raw live-media injection.
+- Dialpad webhook subscriptions are currently created and monitored in the Dialpad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
 - Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
 - Reconciliation currently repairs **known local provider-backed interactions**. It does not yet bootstrap a completely unknown live provider call that never got a local interaction before the restart window.
 
@@ -463,7 +463,7 @@ The narrowing direction is a declared, lossy projection: four distinct terminal 
 | `AnsweringMachine` | A machine, voicemail greeting, or fax tone answered instead of a person. |
 | `Unknown` | The provider ended the call without reporting any cause. Recorded rather than presented as a normal clearing. |
 
-Asterisk reports the release reason as a Q.850 cause code on its hangup events, which is normalized into that vocabulary; when only the standard cause text is present it is used instead. Answer detection takes precedence over the release cause, because a call released normally after a machine picked up is still a machine answer. DialPad publishes no release cause of its own, so its cause is derived from the call-state token it already reports, plus its answer classification.
+Asterisk reports the release reason as a Q.850 cause code on its hangup events, which is normalized into that vocabulary; when only the standard cause text is present it is used instead. Answer detection takes precedence over the release cause, because a call released normally after a machine picked up is still a machine answer. Dialpad publishes no release cause of its own, so its cause is derived from the call-state token it already reports, plus its answer classification.
 
 Q.850 has no distinct cause for an abandoned call — a caller who hangs up while the far end is still alerting releases the channel with the same normal cause as a completed conversation. That distinction therefore belongs to the state machine, which is the only component that knows whether the call was ever answered: a normal release with no answer is recorded as `Canceled`, and a cause that reached it as `Canceled` on an answered call is corrected back to `NormalClearing`.
 

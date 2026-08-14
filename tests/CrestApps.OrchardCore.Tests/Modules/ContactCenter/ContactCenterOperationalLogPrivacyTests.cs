@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
 /// Proves the centralized operational-log redaction contract now enforced through
-/// <c>Microsoft.Extensions.Compliance.Redaction</c>: no Contact Center, Telephony, Asterisk, DialPad, or
+/// <c>Microsoft.Extensions.Compliance.Redaction</c>: no Contact Center, Telephony, Asterisk, Dialpad, or
 /// Omnichannel.Sms path emits a raw E.164/customer address or a stable personal identifier, every sensitive value is
 /// wrapped in <c>SanitizeLogValue()</c> or an erasing redactor, control-character
 /// log-forging protection continues to work, and exceptions are handed to the logger as the exception parameter instead
@@ -114,7 +114,7 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         // Assert
         Assert.True(
             violations.Count == 0,
-            $"Every sensitive value logged in the Contact Center, Telephony, Asterisk, DialPad, and Omnichannel.Sms trees must be wrapped in SanitizeLogValue() or an erasing Redactor.Redact(...) call. Unredacted arguments:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+            $"Every sensitive value logged in the Contact Center, Telephony, Asterisk, Dialpad, and Omnichannel.Sms trees must be wrapped in SanitizeLogValue() or an erasing Redactor.Redact(...) call. Unredacted arguments:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.ContactCenter"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Telephony"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Asterisk"),
-            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.DialPad"),
+            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Dialpad"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
         ];
 

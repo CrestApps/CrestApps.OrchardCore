@@ -162,7 +162,7 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
 
     [Theory]
     [InlineData("Asterisk", "1720000000.42")]
-    [InlineData("DialPad", "1720000000.42")]
+    [InlineData("Dialpad", "1720000000.42")]
     [InlineData("Asterisk", "webhook-delivery-9f2c")]
     public void EventIdempotencyKey_IsStable(string providerName, string rawKey)
     {
@@ -184,7 +184,7 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
     {
         // Act
         var asterisk = VoiceIngressKeys.BuildEventIdempotencyKey("Asterisk", "shared-raw-id");
-        var dialPad = VoiceIngressKeys.BuildEventIdempotencyKey("DialPad", "shared-raw-id");
+        var dialPad = VoiceIngressKeys.BuildEventIdempotencyKey("Dialpad", "shared-raw-id");
 
         // Assert
         Assert.NotEqual(asterisk, dialPad);
@@ -200,7 +200,7 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
         // Act
         var actual = VoiceIngressKeys.BuildIngestionLockKey("Asterisk", "call-1");
         var otherCall = VoiceIngressKeys.BuildIngestionLockKey("Asterisk", "call-2");
-        var otherProvider = VoiceIngressKeys.BuildIngestionLockKey("DialPad", "call-1");
+        var otherProvider = VoiceIngressKeys.BuildIngestionLockKey("Dialpad", "call-1");
 
         // Assert
         Assert.Equal(expected, actual);

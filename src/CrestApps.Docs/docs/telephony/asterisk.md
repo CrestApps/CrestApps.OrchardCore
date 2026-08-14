@@ -336,7 +336,7 @@ Four suites enforce this:
 - `AsteriskAriContractProvenanceTests` recomputes every recorded hash, requires the vendored release to match the release parsed out of `src/Startup/CrestApps.Aspire.AppHost/Asterisk/Dockerfile`, and requires exactly one vendored release directory to exist. An Asterisk version bump therefore breaks the build until the declarations are refreshed.
 - `AsteriskAriEventContractTests` scans `AsteriskRealtimeVoiceEventMapper` for the event types it special-cases and requires `contract.json` and the recorded events to cover exactly that set, requires every declared property path to resolve against the vendored declarations, requires every recorded payload to contain only fields those declarations permit, requires each tolerated fallback to stay absent from the corresponding model, and replays every recorded event through the production mapper.
 - `AsteriskAriRestContractTests` constructs the real `AsteriskAriClient` over the recorded responses, exercises every method `IAsteriskAriClient` publishes, and requires every request the client issues to match an operation the vendored declarations declare, with only query parameters that release accepts.
-- `DialPadWebhookContractTests` covers the other provider; see [DialPad](dialpad.md).
+- `DialpadWebhookContractTests` covers the other provider; see [Dialpad](dialpad.md).
 
 ### Refreshing the vendored declarations
 

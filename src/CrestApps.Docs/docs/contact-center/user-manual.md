@@ -105,7 +105,7 @@ The reason sets your presence to the state the administrator mapped it to (for e
 1. When routing selects you, a **ringing offer card** appears showing the customer (name or number), the source **queue**, and a **countdown**.
 2. Click **Accept** before the countdown ends.
 3. The reservation is accepted, the media connects, and the work moves into your **active interaction** panel.
-   - On providers that ring your device (for example DialPad), your device rings and you answer there.
+   - On providers that ring your device (for example Dialpad), your device rings and you answer there.
    - On server-side delivery (for example the bundled Asterisk path), the call is connected during accept and stays controllable from the soft phone.
 4. If you do nothing before the countdown ends, the offer is revoked and re-routed to another agent.
 
@@ -168,7 +168,7 @@ If the provider does not advertise Hold, the button is hidden.
 3. Confirm the transfer.
 
 :::caution Provider differences
-Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **DialPad** exposes its own transfer and merge actions when configured. Only the actions the active provider supports are shown.
+Transfer support is provider-dependent. The bundled **Asterisk** provider supports **blind transfer** and a **two-call conference** but rejects warm (consultative) transfer. **Dialpad** exposes its own transfer and merge actions when configured. Only the actions the active provider supports are shown.
 :::
 
 :::note Screencast
@@ -448,5 +448,5 @@ Embed snippet (replace `FILE`):
 | Review productivity with reports | `contact-center-manager-reports.mp4` | Supervisor |
 
 :::caution Recording the operational (live-call) demos
-The configuration demos (create queue, dialer profile, load inventory, live dashboard layout, presence, sign-in) can be captured against any tenant with the Contact Center features enabled. The **live-call** demos (accept from queue, hold/transfer/conference, monitor, whisper, barge, recording pause) require a working voice provider — the bundled **Asterisk Contact Center Voice** provider with real browser audio, or **DialPad** — and at least one real inbound/outbound call in flight. Capture those against a provisioned voice environment as described in [Voice Routing](voice-routing.md) and [Asterisk](../telephony/asterisk.md).
+The configuration demos (create queue, dialer profile, load inventory, live dashboard layout, presence, sign-in) can be captured against any tenant with the Contact Center features enabled. The **live-call** demos (accept from queue, hold/transfer/conference, monitor, whisper, barge, recording pause) require a working voice provider — the bundled **Asterisk Contact Center Voice** provider with real browser audio, or **Dialpad** — and at least one real inbound/outbound call in flight. Capture those against a provisioned voice environment as described in [Voice Routing](voice-routing.md) and [Asterisk](../telephony/asterisk.md).
 :::
