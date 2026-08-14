@@ -21,5 +21,5 @@ public interface IActivityQueueManager : ICatalogManager<ActivityQueue>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled queues.</returns>
-    Task<IReadOnlyCollection<ActivityQueue>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ActivityQueue>> GetEnabledAsync(CancellationToken cancellationToken = default);
 }

@@ -28,7 +28,7 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<QueueItem>> ListWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<QueueItem>> GetWaitingAsync(string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 

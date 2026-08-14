@@ -12,14 +12,14 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 
 ## Contact Center module (active, multi-phase project)
 
-The **Contact Center** module set is a large, multi-phase orchestration layer built between the CRM (Omnichannel) and Telephony modules. The planning scaffolding (the multi-phase plan documents and their release-tracking ledgers) has been retired now that the work has landed; the short retained record of what shipped and what remains as an operator step is [`.github/contact-center/PRODUCTION-READINESS.md`](contact-center/PRODUCTION-READINESS.md). Consult it for the shipped scope, the MVP boundary, and any outstanding deployment-acceptance steps before doing Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`).
+The **Contact Center** module set is a large, multi-phase orchestration layer built between the CRM (Omnichannel) and Telephony modules. The planning scaffolding (the multi-phase plan documents, their release-tracking ledgers, and the machine-readable governance ledgers that used to live under `.github/contact-center/`) has been retired now that the work has landed. Treat the shipped code and its tests as the source of truth for scope and boundaries before doing Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`).
 
 Key rules for this module set:
 
 - Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item; `Interaction` is communication history for one attempt and never owns workflow or disposition.
 - **Never** write competitor product names in code, comments, identifiers, or public docs. Adopt only generic, industry-standard terminology.
 - Group related capabilities into separate, feature-gated Orchard modules/features, the way commercial platforms separate licensed capabilities.
-- The runtime/architecture-contract ledgers under `.github/contact-center/` (`support-matrix.v1.json`, `feature-dependency-violations.v1.json`, `feature-lifecycle-contracts.v1.json`) are consumed by ordinary tests and must stay in sync with the code they describe.
+- The shipped deployment topologies live in code as `ContactCenterTopologyProfiles`; the tenant/provider profiles and feature-set expectations live in the Contact Center tests. Keep these in sync with the modules they describe.
 
 ## Working Effectively
 

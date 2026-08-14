@@ -32,7 +32,7 @@ public sealed class ContactCenterSkillStore : DocumentCatalog<ContactCenterSkill
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterSkill>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterSkill>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var skills = await Session.Query<ContactCenterSkill, ContactCenterSkillIndex>(
             index => index.Enabled,

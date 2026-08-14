@@ -19,7 +19,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], []);
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(availability);
@@ -139,7 +139,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], [session]);
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(availability);
@@ -154,7 +154,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], [session]);
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(availability);
@@ -170,7 +170,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], [session], new Dictionary<string, int> { ["a1"] = 1 });
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         var result = Assert.Single(availability);
@@ -189,7 +189,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], [session], new Dictionary<string, int> { ["a1"] = 1 });
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(availability);
@@ -205,7 +205,7 @@ public sealed class AgentAvailabilityServiceTests
         var service = CreateService([agent], [session]);
 
         // Act
-        var availability = await service.ListForQueueAsync("q1", TestContext.Current.CancellationToken);
+        var availability = await service.GetForQueueAsync("q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(availability);
@@ -218,7 +218,7 @@ public sealed class AgentAvailabilityServiceTests
     {
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(manager => manager.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(agents);
         agentManager
             .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -226,7 +226,7 @@ public sealed class AgentAvailabilityServiceTests
 
         var sessionManager = new Mock<IAgentSessionManager>();
         sessionManager
-            .Setup(manager => manager.ListByUserIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetByUserIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sessions);
         sessionManager
             .Setup(manager => manager.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

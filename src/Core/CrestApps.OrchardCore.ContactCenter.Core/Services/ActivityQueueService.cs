@@ -189,7 +189,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             return 0;
         }
 
-        var waiting = await _queueItemManager.ListWaitingAsync(queue.ItemId, cancellationToken);
+        var waiting = await _queueItemManager.GetWaitingAsync(queue.ItemId, cancellationToken);
 
         if (waiting.Count == 0)
         {

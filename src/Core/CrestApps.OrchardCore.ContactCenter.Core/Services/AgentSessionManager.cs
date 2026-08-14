@@ -41,9 +41,9 @@ public sealed class AgentSessionManager : CatalogManager<AgentSession>, IAgentSe
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentSession>> ListStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentSession>> GetStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default)
     {
-        var sessions = await _store.ListStaleAsync(heartbeatCutoffUtc, cancellationToken);
+        var sessions = await _store.GetStaleAsync(heartbeatCutoffUtc, cancellationToken);
 
         foreach (var session in sessions)
         {
@@ -54,11 +54,11 @@ public sealed class AgentSessionManager : CatalogManager<AgentSession>, IAgentSe
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentSession>> ListByUserIdsAsync(
+    public async Task<IReadOnlyCollection<AgentSession>> GetByUserIdsAsync(
         IReadOnlyCollection<string> userIds,
         CancellationToken cancellationToken = default)
     {
-        var sessions = await _store.ListByUserIdsAsync(userIds, cancellationToken);
+        var sessions = await _store.GetByUserIdsAsync(userIds, cancellationToken);
 
         foreach (var session in sessions)
         {

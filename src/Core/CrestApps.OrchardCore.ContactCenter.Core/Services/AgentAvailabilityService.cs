@@ -85,13 +85,13 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentAvailability>> ListForQueueAsync(
+    public async Task<IReadOnlyCollection<AgentAvailability>> GetForQueueAsync(
         string queueId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        var agents = await _agentManager.ListAvailableForQueueAsync(queueId, cancellationToken);
+        var agents = await _agentManager.GetAvailableForQueueAsync(queueId, cancellationToken);
 
         if (agents.Count == 0)
         {
@@ -101,7 +101,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         var agentsByUserId = agents
             .Where(agent => !string.IsNullOrWhiteSpace(agent.UserId))
             .ToDictionary(agent => agent.UserId, StringComparer.Ordinal);
-        var sessions = await _sessionManager.ListByUserIdsAsync(agentsByUserId.Keys.ToArray(), cancellationToken);
+        var sessions = await _sessionManager.GetByUserIdsAsync(agentsByUserId.Keys.ToArray(), cancellationToken);
         var activeCounts = await _interactionManager.CountActiveByAgentIdsAsync(
             agents.Select(agent => agent.ItemId).ToArray(),
             cancellationToken);

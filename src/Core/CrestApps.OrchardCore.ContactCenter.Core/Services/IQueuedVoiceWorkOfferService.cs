@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Re-checks an available agent's signed-in queues for already-waiting inbound voice work.

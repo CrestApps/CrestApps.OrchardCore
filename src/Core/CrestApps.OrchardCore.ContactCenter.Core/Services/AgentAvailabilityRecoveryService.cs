@@ -47,14 +47,14 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     /// <inheritdoc/>
     public async Task<int> RecoverAsync(CancellationToken cancellationToken = default)
     {
-        var agents = await _agentManager.ListByPresenceAsync(AgentPresenceStatus.WrapUp, cancellationToken);
+        var agents = await _agentManager.GetByPresenceAsync(AgentPresenceStatus.WrapUp, cancellationToken);
         var recovered = 0;
 
         foreach (var agent in agents)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var interactions = await _interactionManager.ListPendingWrapUpsByAgentAsync(agent.ItemId, cancellationToken);
+            var interactions = await _interactionManager.GetPendingWrapUpsByAgentAsync(agent.ItemId, cancellationToken);
 
             if (interactions.Any(interaction =>
                 interaction.WrapUpStartedUtc.HasValue &&

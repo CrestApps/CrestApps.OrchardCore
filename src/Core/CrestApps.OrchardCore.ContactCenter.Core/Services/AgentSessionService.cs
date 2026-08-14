@@ -282,7 +282,7 @@ public sealed class AgentSessionService : IAgentSessionService
     public async Task<int> ExpireStaleAsync(CancellationToken cancellationToken = default)
     {
         var cutoff = _clock.UtcNow.AddSeconds(-StaleThresholdSeconds);
-        var stale = await _sessionManager.ListStaleAsync(cutoff, cancellationToken);
+        var stale = await _sessionManager.GetStaleAsync(cutoff, cancellationToken);
         var count = 0;
 
         foreach (var candidate in stale)

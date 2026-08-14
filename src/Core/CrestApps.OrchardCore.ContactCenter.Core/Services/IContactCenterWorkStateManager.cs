@@ -22,7 +22,7 @@ public interface IContactCenterWorkStateManager : ICatalogManager<ContactCenterW
     /// <param name="activityItemIds">The CRM activity identifiers.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The work state documents that exist for the requested activities.</returns>
-    Task<IReadOnlyCollection<ContactCenterWorkState>> ListByActivityIdsAsync(
+    Task<IReadOnlyCollection<ContactCenterWorkState>> GetByActivityIdsAsync(
         IEnumerable<string> activityItemIds,
         CancellationToken cancellationToken = default);
 }

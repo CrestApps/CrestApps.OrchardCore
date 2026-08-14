@@ -276,7 +276,7 @@ public sealed class ContactCenterSecurePauseTests
         // Assert
         Assert.Equal(0, resumed);
         interactionManager.Verify(
-            m => m.ListPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            m => m.GetPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -288,7 +288,7 @@ public sealed class ContactCenterSecurePauseTests
         var expired = new Interaction { ItemId = "int1", AgentId = "agent1", RecordingState = RecordingState.Paused };
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(m => m.ListPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([expired]);
         var recordingService = new Mock<IContactCenterRecordingService>();
         recordingService
@@ -513,7 +513,7 @@ public sealed class ContactCenterSecurePauseTests
         DateTime? capturedCutoff = null;
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(m => m.ListPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Callback<DateTime, int, CancellationToken>((cutoff, _, _) => capturedCutoff = cutoff)
             .ReturnsAsync([]);
         var recordingService = new Mock<IContactCenterRecordingService>(MockBehavior.Strict);
@@ -637,7 +637,7 @@ public sealed class ContactCenterSecurePauseTests
         // Assert
         Assert.Equal(0, resumed);
         interactionManager.Verify(
-            m => m.ListPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            m => m.GetPausedRecordingsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

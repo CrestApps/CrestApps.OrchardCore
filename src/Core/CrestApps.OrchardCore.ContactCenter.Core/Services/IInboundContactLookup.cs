@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Resolves Omnichannel contact content items by a phone number. Used by the inbound voice flow to

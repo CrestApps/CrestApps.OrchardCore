@@ -23,7 +23,7 @@ public interface IAgentProfileManager : ICatalogManager<AgentProfile>
     /// <param name="queueId">The queue identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The available agents for the queue.</returns>
-    Task<IReadOnlyCollection<AgentProfile>> ListAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<AgentProfile>> GetAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists agent profiles in the specified presence state.
@@ -31,7 +31,7 @@ public interface IAgentProfileManager : ICatalogManager<AgentProfile>
     /// <param name="presenceStatus">The presence state to match.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching agent profiles.</returns>
-    Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+    Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
         AgentPresenceStatus presenceStatus,
         CancellationToken cancellationToken = default);
 }

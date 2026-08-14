@@ -24,7 +24,7 @@ public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, Call
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<CallbackRequest>> GetDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var callbacks = await Session.Query<CallbackRequest, CallbackRequestIndex>(

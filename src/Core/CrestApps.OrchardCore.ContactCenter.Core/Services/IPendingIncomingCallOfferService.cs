@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Resolves the current ringing inbound offer for an agent so the soft-phone modal can be restored after

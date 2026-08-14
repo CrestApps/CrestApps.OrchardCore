@@ -23,7 +23,7 @@ public interface ISecureCaptureSessionManager : ICatalogManager<SecureCaptureSes
     /// <param name="maxCount">The maximum number of captures to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The expired collecting captures bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<SecureCaptureSession>> ListExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<SecureCaptureSession>> GetExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the active, still-collecting capture for an interaction, so a second capture is not started while
@@ -41,5 +41,5 @@ public interface ISecureCaptureSessionManager : ICatalogManager<SecureCaptureSes
     /// <param name="maxCount">The maximum number of captures to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The settled captures awaiting a recording resume, bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default);
 }

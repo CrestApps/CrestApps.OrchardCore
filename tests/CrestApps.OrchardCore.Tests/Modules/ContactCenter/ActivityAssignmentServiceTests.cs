@@ -40,7 +40,7 @@ public sealed class ActivityAssignmentServiceTests
 
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var service = CreateService(queueItemManager, agentManager, new Mock<IActivityReservationService>());
@@ -70,7 +70,7 @@ public sealed class ActivityAssignmentServiceTests
         };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([disconnectedAgent]);
 
         var queueManager = new Mock<IActivityQueueManager>();
@@ -90,7 +90,7 @@ public sealed class ActivityAssignmentServiceTests
 
         var availabilityService = new Mock<IAgentAvailabilityService>();
         availabilityService
-            .Setup(service => service.ListForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var service = CreateService(
             queueItemManager,
@@ -124,7 +124,7 @@ public sealed class ActivityAssignmentServiceTests
         var busyAgent = new AgentProfile { ItemId = "a2", PresenceChangedUtc = new DateTime(2026, 1, 2) };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([busyAgent, idleAgent]);
 
         var queueManager = new Mock<IActivityQueueManager>();
@@ -173,7 +173,7 @@ public sealed class ActivityAssignmentServiceTests
 
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([missingSkillAgent, skilledAgent]);
 
         var queueManager = new Mock<IActivityQueueManager>();
@@ -246,7 +246,7 @@ public sealed class ActivityAssignmentServiceTests
         var agent = new AgentProfile { ItemId = "a1" };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(m => m.ListAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([agent]);
 
         var queueManager = new Mock<IActivityQueueManager>();
@@ -310,10 +310,10 @@ public sealed class ActivityAssignmentServiceTests
         {
             availabilityService = new Mock<IAgentAvailabilityService>();
             availabilityService
-                .Setup(service => service.ListForQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Setup(service => service.GetForQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(async (string queueId, CancellationToken cancellationToken) =>
                 {
-                    var agents = await agentManager.Object.ListAvailableForQueueAsync(queueId, cancellationToken);
+                    var agents = await agentManager.Object.GetAvailableForQueueAsync(queueId, cancellationToken);
 
                     return agents.Select(agent => new AgentAvailability { Agent = agent }).ToArray();
                 });

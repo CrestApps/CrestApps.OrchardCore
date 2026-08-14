@@ -25,7 +25,7 @@ public interface IAgentAvailabilityService
     /// <param name="queueId">The queue identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The canonical availability projections for eligible agents.</returns>
-    Task<IReadOnlyCollection<AgentAvailability>> ListForQueueAsync(
+    Task<IReadOnlyCollection<AgentAvailability>> GetForQueueAsync(
         string queueId,
         CancellationToken cancellationToken = default);
 }

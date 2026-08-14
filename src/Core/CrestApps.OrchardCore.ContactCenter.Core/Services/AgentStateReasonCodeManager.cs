@@ -40,9 +40,9 @@ public sealed class AgentStateReasonCodeManager : CatalogManager<AgentStateReaso
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentStateReasonCode>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentStateReasonCode>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
-        var reasonCodes = await _store.ListEnabledAsync(cancellationToken);
+        var reasonCodes = await _store.GetEnabledAsync(cancellationToken);
 
         foreach (var reasonCode in reasonCodes)
         {

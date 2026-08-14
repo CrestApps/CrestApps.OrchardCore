@@ -66,7 +66,7 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
         // The wrap-up check inspects the activity behind every interaction the agent recently finished. One
         // batched read is the budget; the number of reads must not follow the number of interactions.
         context.ActivityManager.Verify(
-            manager => manager.ListByIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
+            manager => manager.GetByIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         context.ActivityManager.Verify(
@@ -88,7 +88,7 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
 
         // Assert
         context.InteractionManager.Verify(
-            manager => manager.ListRecentByAgentAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            manager => manager.GetRecentByAgentAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -194,13 +194,13 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                 .ToArray();
 
             InteractionManager
-                .Setup(manager => manager.ListRecentByAgentAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Setup(manager => manager.GetRecentByAgentAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(recent);
 
             // Every activity is already completed, so no interaction qualifies as pending wrap-up. That keeps
             // the poll on the path where the whole batch has to be inspected, which is the worst case.
             ActivityManager
-                .Setup(manager => manager.ListByIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .Setup(manager => manager.GetByIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((IReadOnlyCollection<string> ids, CancellationToken _) => [.. ids.Select(id => new OmnichannelActivity
                 {
                     ItemId = id,

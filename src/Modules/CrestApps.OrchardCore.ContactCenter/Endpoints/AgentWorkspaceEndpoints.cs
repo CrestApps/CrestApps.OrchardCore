@@ -133,7 +133,7 @@ internal static class AgentWorkspaceEndpoints
 
         // Read once and share. The active interaction and the history panel are built from the same recent
         // interactions, so reading them per panel would run the same query twice on every poll.
-        var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
+        var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
         model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
@@ -445,7 +445,7 @@ internal static class AgentWorkspaceEndpoints
             return true;
         }
 
-        var recentInteractions = await interactionManager.ListRecentByAgentAsync(profile.ItemId, RecentHistoryCount, cancellationToken);
+        var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, cancellationToken);
         var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, cancellationToken);
 
         return string.Equals(wrapUpInteraction?.ActivityItemId, activityId, StringComparison.Ordinal);
@@ -475,7 +475,7 @@ internal static class AgentWorkspaceEndpoints
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var activities = await activityManager.ListByIdsAsync(activityIds, cancellationToken);
+        var activities = await activityManager.GetByIdsAsync(activityIds, cancellationToken);
         var activitiesById = activities.ToDictionary(activity => activity.ItemId, StringComparer.Ordinal);
 
         foreach (var interaction in candidates)

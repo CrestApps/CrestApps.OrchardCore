@@ -27,7 +27,7 @@ public interface IProviderWebhookInboxStore : ICatalog<ProviderWebhookInboxMessa
     /// <param name="maxCount">The maximum number of messages to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due inbox messages.</returns>
-    Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListDueAsync(
+    Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> GetDueAsync(
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default);
@@ -56,7 +56,7 @@ public interface IProviderWebhookInboxStore : ICatalog<ProviderWebhookInboxMessa
     /// <param name="maxCount">The maximum number of tombstones to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The processed tombstones eligible for deletion.</returns>
-    Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(
+    Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(
         DateTime processedBeforeUtc,
         int maxCount,
         CancellationToken cancellationToken = default);

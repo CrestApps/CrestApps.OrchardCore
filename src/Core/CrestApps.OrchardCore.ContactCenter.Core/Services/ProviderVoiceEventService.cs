@@ -204,7 +204,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             !string.IsNullOrEmpty(legacyIdempotencyKey) &&
             !string.Equals(legacyIdempotencyKey, providerEvent.IdempotencyKey, StringComparison.Ordinal))
         {
-            var interactionEvents = await _eventStore.ListByInteractionAsync(interaction.ItemId, cancellationToken);
+            var interactionEvents = await _eventStore.GetByInteractionAsync(interaction.ItemId, cancellationToken);
             duplicateEvent = interactionEvents?.Any(interactionEvent =>
                 string.Equals(interactionEvent.IdempotencyKey, legacyIdempotencyKey, StringComparison.Ordinal)) == true;
         }

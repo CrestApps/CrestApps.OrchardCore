@@ -1378,6 +1378,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Completed = 2,
         DeadLettered = 3,
     }
+    public sealed class PendingIncomingCallOffer
+    {
+        public PendingIncomingCallOffer() { }
+        public CrestApps.OrchardCore.Telephony.Models.TelephonyCall Call { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.IncomingCallContext Context { get; set; }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+    }
     public sealed class ProviderAnswerCommandRequest
     {
         public ProviderAnswerCommandRequest() { }
@@ -1903,7 +1911,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ActivityQueueManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityQueueService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService
     {
@@ -1916,15 +1924,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ActivityQueueStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityReservationManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager
     {
         public ActivityReservationManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityReservationService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationReclaimer, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService
     {
@@ -1958,9 +1966,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public ActivityReservationStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityRoutingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService
     {
@@ -1976,7 +1984,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public AgentAvailabilityService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionManager sessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> options, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> GetAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> ListForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentEntitlementDeniedException : System.Exception
     {
@@ -2007,16 +2015,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public AgentProfileManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentProfileStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile, CrestApps.OrchardCore.ContactCenter.Core.Indexes.AgentProfileIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileStore
     {
         public AgentProfileStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentRecordingControlService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentRecordingControlService
     {
@@ -2028,8 +2036,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public AgentSessionManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentSessionService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionService
     {
@@ -2047,20 +2055,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public AgentSessionStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentStateReasonCodeManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentStateReasonCodeManager
     {
         public AgentStateReasonCodeManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentStateReasonCodeStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentStateReasonCodeStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode, CrestApps.OrchardCore.ContactCenter.Core.Indexes.AgentStateReasonCodeIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentStateReasonCodeStore
     {
         public AgentStateReasonCodeStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
@@ -2082,13 +2090,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public BusinessHoursCalendarManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class BusinessHoursCalendarStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar, CrestApps.OrchardCore.ContactCenter.Core.Indexes.BusinessHoursCalendarIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarStore
     {
         public BusinessHoursCalendarStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallControlAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService
     {
@@ -2132,12 +2140,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class CallbackRequestManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestManager
     {
         public CallbackRequestManager(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> logger) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallbackRequestStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest, CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallbackRequestIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackRequestStore
     {
         public CallbackRequestStore(YesSql.ISession session) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallbackService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallbackService
     {
@@ -2208,13 +2216,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ContactCenterEntryPointManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterEntryPointStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterEntryPointIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEntryPointStore
     {
         public ContactCenterEntryPointStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterEventDeduplicationService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventDeduplicationService
     {
@@ -2236,9 +2244,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public const int MaxPendingContributionsPerRead = 10000;
         public ContactCenterMetricDeltaStore(YesSql.ISession session) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterMetricRollupService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricRollupService
     {
@@ -2250,8 +2258,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public ContactCenterMetricStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric> FindAsync(string dateKey, string eventType, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> ListAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterMetricsProjectionMaintenanceService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricsProjectionMaintenanceService
     {
@@ -2294,7 +2301,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.OutboxMessageStatus status, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterProcessedEventStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterProcessedEventIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProcessedEventStore
     {
@@ -2350,13 +2357,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ContactCenterSkillManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterSkillStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterSkillStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ContactCenterSkillIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterSkillStore
     {
         public ContactCenterSkillStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class ContactCenterTopologyEvaluator
     {
@@ -2406,7 +2413,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ContactCenterWorkStateManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> ListByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class ContactCenterWorkStateProjector
     {
@@ -2425,7 +2432,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public ContactCenterWorkStateStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> ListByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DefaultBusinessHoursService : CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService
     {
@@ -2491,13 +2498,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public DialerProfileManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile> FindByCampaignAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerProfileStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile, CrestApps.OrchardCore.ContactCenter.Core.Indexes.DialerProfileIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileStore
     {
         public DialerProfileStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile> FindByCampaignAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerService
     {
@@ -2542,7 +2549,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IActivityQueueManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityQueueService
     {
@@ -2553,14 +2560,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IActivityQueueStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityReservationManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityReservationReclaimer
     {
@@ -2578,9 +2585,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IActivityReservationStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> ListActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> ListExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityRoutingService
     {
@@ -2598,7 +2605,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IAgentAvailabilityService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> GetAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> ListForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentPresenceManager
     {
@@ -2614,14 +2621,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IAgentProfileManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentProfileStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> ListByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>> GetByPresenceAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentRecordingControlService
     {
@@ -2631,8 +2638,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IAgentSessionManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentSessionService
     {
@@ -2645,18 +2652,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IAgentSessionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> ListStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentStateReasonCodeManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentStateReasonCodeStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentWorkStateHealingService
     {
@@ -2666,12 +2673,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IBusinessHoursCalendarManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IBusinessHoursCalendarStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IBusinessHoursService
     {
@@ -2699,11 +2706,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface ICallbackRequestManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICallbackRequestStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> ListDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICallbackService
     {
@@ -2740,12 +2747,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterEntryPointManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterEntryPointStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterEventDeduplicationService
     {
@@ -2763,9 +2770,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IContactCenterMetricDeltaStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetricDelta>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterMetricRollupService
     {
@@ -2774,8 +2781,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterMetricStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric> FindAsync(string dateKey, string eventType, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> ListAllAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> ListByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEventMetric>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterMetricsProjectionMaintenanceService
     {
@@ -2809,7 +2815,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.OutboxMessageStatus status, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterOutboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterProcessedEventStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProcessedEvent> { }
     public interface IContactCenterProjectionCheckpointStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProjectionCheckpoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProjectionCheckpoint>
@@ -2852,12 +2858,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterSkillManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterSkillStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterTransferService
     {
@@ -2871,7 +2877,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterWorkStateManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> ListByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterWorkStateService
     {
@@ -2881,7 +2887,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterWorkStateStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> ListByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerAbandonmentPolicyService
     {
@@ -2906,12 +2912,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IDialerProfileManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile> FindByCampaignAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerProfileStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile> FindByCampaignAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> ListEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerService
     {
@@ -2931,6 +2937,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterEntryPoint> FindByDialedNumberAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.EntryPointRoutingPlan> ResolveAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IInboundContactLookup
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> FindContactItemIdsAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInboundVoiceCallProcessor
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> RouteInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IInboundVoiceService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> HandleInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
@@ -2939,10 +2953,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IInteractionEventStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>
     {
         System.Threading.Tasks.Task<bool> ExistsByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInteractionEventUpcastService
     {
@@ -2963,12 +2977,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInteractionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>
@@ -2980,13 +2994,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IPendingIncomingCallOfferService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.PendingIncomingCallOffer> GetForUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IProviderCallStateSynchronizationService
     {
@@ -3001,8 +3019,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IProviderCommandManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IProviderCommandProcessor
     {
@@ -3035,8 +3053,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IProviderCommandStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IProviderCommandTypeExecutor
     {
@@ -3060,8 +3078,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage> FindByDeliveryAsync(string providerName, string deliveryId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueueItemManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>
     {
@@ -3071,7 +3089,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> ListWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueueItemStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>
     {
@@ -3082,7 +3100,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> ListWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IQueuedVoiceWorkOfferService
+    {
+        System.Threading.Tasks.Task<int> OfferForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> OfferForUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IRecordingAccessGovernanceService
     {
@@ -3106,15 +3129,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISecureCaptureSessionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISecurePauseAutoResumeService
     {
@@ -3135,6 +3158,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> RouteInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> RouteOutboundAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterDialRequest request, string providerName = null, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IVoiceQueueOfferService
+    {
+        System.Threading.Tasks.Task<string> OfferNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public sealed class InboundVoiceEventSink : CrestApps.OrchardCore.ContactCenter.IInboundVoiceEventSink
     {
         public InboundVoiceEventSink(CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceContactCenterCallRouter voiceCallRouter) { }
@@ -3149,10 +3176,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public InteractionEventStore(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcastService upcastService) { }
         public System.Threading.Tasks.Task<bool> ExistsByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> ListOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent>> GetOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
         protected override System.Threading.Tasks.ValueTask LoadingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent record) { }
     }
     public sealed class InteractionEventUpcastException : System.Exception
@@ -3170,12 +3197,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class InteractionQueries
@@ -3194,12 +3221,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> ListRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class LeastBusyRoutingStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy
@@ -3269,8 +3296,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ProviderCommandManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ProviderCommandProcessor : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandProcessor
     {
@@ -3308,8 +3335,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public ProviderCommandStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> ListReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ProviderCommandTransitionException : System.InvalidOperationException
     {
@@ -3362,8 +3389,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage> FindByDeliveryAsync(string providerName, string deliveryId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> ListDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ProviderWebhookIngressLimiter : CrestApps.OrchardCore.ContactCenter.IProviderWebhookIngressLimiter, System.IDisposable
     {
@@ -3382,7 +3409,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> ListWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class QueueItemPrioritizer
     {
@@ -3405,7 +3432,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> ListWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class RecordingAccessGovernanceService : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingAccessGovernanceService
     {
@@ -3466,8 +3493,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public SecureCaptureSessionManager(CrestApps.OrchardCore.ContactCenter.Core.Services.ISecureCaptureSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SecureCaptureSessionStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession, CrestApps.OrchardCore.ContactCenter.Core.Indexes.SecureCaptureSessionIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>, CrestApps.OrchardCore.ContactCenter.Core.Services.ISecureCaptureSessionStore
     {
@@ -3475,8 +3502,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SecurePauseAutoResumeService : CrestApps.OrchardCore.ContactCenter.Core.Services.ISecurePauseAutoResumeService
     {

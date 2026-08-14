@@ -43,7 +43,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<InteractionEvent>> ListByInteractionAsync(string interactionId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<InteractionEvent>> GetByInteractionAsync(string interactionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(interactionId);
 
@@ -70,7 +70,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<InteractionEvent>> ListOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<InteractionEvent>> GetOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? 100 : maxCount;
 
@@ -85,7 +85,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<InteractionEvent>> ListByAggregateTypeAsync(
+    public async Task<IReadOnlyList<InteractionEvent>> GetByAggregateTypeAsync(
         string aggregateType,
         IEnumerable<string> eventTypes,
         DateTime occurredThroughUtc,
@@ -115,7 +115,7 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<InteractionEvent>> ListOrderedPageAsync(
+    public async Task<IReadOnlyList<InteractionEvent>> GetOrderedPageAsync(
         int skip,
         int take,
         CancellationToken cancellationToken = default)

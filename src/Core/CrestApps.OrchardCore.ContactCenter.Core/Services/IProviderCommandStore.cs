@@ -23,7 +23,7 @@ public interface IProviderCommandStore : ICatalog<ProviderCommand>
     /// <param name="maxCount">The maximum number of commands to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The commands whose next attempt time has elapsed.</returns>
-    Task<IReadOnlyCollection<ProviderCommand>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ProviderCommand>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the claimed or sent commands whose lease has expired and can be reclaimed.
@@ -32,5 +32,5 @@ public interface IProviderCommandStore : ICatalog<ProviderCommand>
     /// <param name="maxCount">The maximum number of commands to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The commands whose lease has expired.</returns>
-    Task<IReadOnlyCollection<ProviderCommand>> ListReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ProviderCommand>> GetReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
 }

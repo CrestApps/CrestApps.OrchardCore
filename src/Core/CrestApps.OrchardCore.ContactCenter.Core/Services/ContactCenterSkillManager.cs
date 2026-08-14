@@ -44,11 +44,11 @@ public sealed class ContactCenterSkillManager : CatalogManager<ContactCenterSkil
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterSkill>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterSkill>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         return await _cache.GetEnabledAsync(async token =>
         {
-            var skills = await _store.ListEnabledAsync(token);
+            var skills = await _store.GetEnabledAsync(token);
 
             foreach (var skill in skills)
             {

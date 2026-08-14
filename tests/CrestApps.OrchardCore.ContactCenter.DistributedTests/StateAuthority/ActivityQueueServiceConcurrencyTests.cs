@@ -194,7 +194,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
     {
         await using var session = harness.Store.CreateSession();
 
-        return await new QueueItemStore(session).ListWaitingAsync(QueueId, TestContext.Current.CancellationToken);
+        return await new QueueItemStore(session).GetWaitingAsync(QueueId, TestContext.Current.CancellationToken);
     }
 
     private static IActivityQueueManager CreateQueueManager()

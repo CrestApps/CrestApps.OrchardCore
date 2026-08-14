@@ -191,7 +191,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(
+    public async Task<IReadOnlyList<TelephonyInteraction>> GetActiveByUserAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
@@ -211,7 +211,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
         var interactions = await _session
@@ -224,7 +224,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(
+    public async Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(
         string providerName,
         int maxCount,
         CancellationToken cancellationToken = default)

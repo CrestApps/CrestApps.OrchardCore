@@ -4,12 +4,18 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.SignalR;
 
-internal sealed class TestProviderListener(
-    IHubContext<DistributedTestHub, IDistributedTestClient> hubContext,
-    ShellSettings shellSettings)
+internal sealed class TestProviderListener
 {
-    private readonly IHubContext<DistributedTestHub, IDistributedTestClient> _hubContext = hubContext;
-    private readonly string _tenantName = shellSettings.Name;
+    private readonly IHubContext<DistributedTestHub, IDistributedTestClient> _hubContext;
+    private readonly string _tenantName;
+
+    public TestProviderListener(
+        IHubContext<DistributedTestHub, IDistributedTestClient> hubContext,
+        ShellSettings shellSettings)
+    {
+        _hubContext = hubContext;
+        _tenantName = shellSettings.Name;
+    }
 
     public Task PublishAsync(string userId, string eventId)
     {

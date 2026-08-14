@@ -542,7 +542,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 
     private async Task<ActivityQueue> ResolveQueueAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
     {
-        var queues = await _queueManager.ListEnabledAsync(cancellationToken);
+        var queues = await _queueManager.GetEnabledAsync(cancellationToken);
 
         if (endpoint is not null)
         {

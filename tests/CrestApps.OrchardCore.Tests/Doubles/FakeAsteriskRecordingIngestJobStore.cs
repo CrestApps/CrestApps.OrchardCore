@@ -34,7 +34,7 @@ internal sealed class FakeAsteriskRecordingIngestJobStore : IAsteriskRecordingIn
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<AsteriskRecordingIngestJob>> ListDueAsync(
+    public Task<IReadOnlyList<AsteriskRecordingIngestJob>> GetDueAsync(
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default)

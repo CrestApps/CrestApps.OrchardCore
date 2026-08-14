@@ -123,7 +123,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
 
             // Act
             await using var session = store.CreateSession();
-            var stale = await new AgentSessionStore(session).ListStaleAsync(_cutoffUtc, cancellationToken);
+            var stale = await new AgentSessionStore(session).GetStaleAsync(_cutoffUtc, cancellationToken);
 
             // Assert
             // More sessions are stale than the bound allows, so a read that returns exactly the bound is the
@@ -138,7 +138,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
             var returnedUserIds = stale.Select(session => session.UserId).ToHashSet(StringComparer.Ordinal);
 
             await using var allSessionsSession = store.CreateSession();
-            var everyStale = await new AgentSessionStore(allSessionsSession).ListByUserIdsAsync(
+            var everyStale = await new AgentSessionStore(allSessionsSession).GetByUserIdsAsync(
                 _staleUserIds,
                 cancellationToken);
             var heldOverOldest = everyStale
@@ -233,7 +233,7 @@ public sealed class AgentSessionQueryPlanBudgetTests
 
         await using (var readSession = store.CreateSession())
         {
-            await new AgentSessionStore(readSession).ListStaleAsync(_cutoffUtc, cancellationToken);
+            await new AgentSessionStore(readSession).GetStaleAsync(_cutoffUtc, cancellationToken);
         }
 
         // The statement under budget is the one that chooses which sessions are stale, not the bounded fetch of

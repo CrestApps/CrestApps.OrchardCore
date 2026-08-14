@@ -277,7 +277,7 @@ public sealed class AgentSessionServiceTests
         // Arrange
         var stale = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
         var sessionManager = new Mock<IAgentSessionManager>();
-        sessionManager.Setup(m => m.ListStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
+        sessionManager.Setup(m => m.GetStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
         sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stale);
 
         var agentManager = new Mock<IAgentProfileManager>();
@@ -303,7 +303,7 @@ public sealed class AgentSessionServiceTests
         // Arrange
         var stale = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
         var sessionManager = new Mock<IAgentSessionManager>();
-        sessionManager.Setup(m => m.ListStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
+        sessionManager.Setup(m => m.GetStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
         sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stale);
 
         var revoker = new Mock<ISoftPhoneCredentialRevoker>();
@@ -331,7 +331,7 @@ public sealed class AgentSessionServiceTests
         var staleCandidate = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
         var refreshed = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now };
         var sessionManager = new Mock<IAgentSessionManager>();
-        sessionManager.Setup(m => m.ListStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([staleCandidate]);
+        sessionManager.Setup(m => m.GetStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([staleCandidate]);
         sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(refreshed);
 
         var presenceManager = new Mock<IAgentPresenceManager>();

@@ -4,11 +4,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// A deployment topology an operator may declare, and the infrastructure that topology requires.
 /// </summary>
 /// <remarks>
-/// This is the shipped, code-side mirror of the <c>topologies</c> array in
-/// <c>.github/contact-center/support-matrix.v1.json</c>. The governance document is not deployed with the
-/// product, so the running application cannot read it; without a shipped copy the support contract would be a
-/// claim no deployment could check. A contract test asserts the two are identical, so the copy cannot drift
-/// into a second, more permissive definition of what "production" means.
+/// This is the shipped, code-side definition of the deployment topologies the product recognizes. The
+/// running application relies on it to decide whether a deployment satisfies its declared topology.
 /// </remarks>
 public sealed class ContactCenterTopologyProfile
 {

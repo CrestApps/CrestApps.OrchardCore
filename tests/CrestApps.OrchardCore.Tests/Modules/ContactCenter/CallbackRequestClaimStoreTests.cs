@@ -38,7 +38,7 @@ public sealed class CallbackRequestClaimStoreTests
             var callbackStore = new CallbackRequestStore(querySession);
 
             // Act
-            var due = await callbackStore.ListDueAsync(_now, maxCount: 10, TestContext.Current.CancellationToken);
+            var due = await callbackStore.GetDueAsync(_now, maxCount: 10, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(2, due.Count);
@@ -75,7 +75,7 @@ public sealed class CallbackRequestClaimStoreTests
             var callbackStore = new CallbackRequestStore(querySession);
 
             // Act
-            var due = await callbackStore.ListDueAsync(_now, maxCount: 2, TestContext.Current.CancellationToken);
+            var due = await callbackStore.GetDueAsync(_now, maxCount: 2, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(2, due.Count);

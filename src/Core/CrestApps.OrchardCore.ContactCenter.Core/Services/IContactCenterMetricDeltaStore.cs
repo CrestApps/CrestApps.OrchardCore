@@ -17,7 +17,7 @@ public interface IContactCenterMetricDeltaStore : ICatalog<ContactCenterEventMet
     /// <param name="maxCount">The maximum number of contributions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The batch of contributions.</returns>
-    Task<IReadOnlyList<ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the contributions whose day falls within the inclusive range. A reader has to add these to the
@@ -27,7 +27,7 @@ public interface IContactCenterMetricDeltaStore : ICatalog<ContactCenterEventMet
     /// <param name="toUtc">The inclusive upper UTC date.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The contributions in the range.</returns>
-    Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> ListByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> GetByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the contributions positioned after the supplied document identifier, in document order, so a
@@ -44,5 +44,5 @@ public interface IContactCenterMetricDeltaStore : ICatalog<ContactCenterEventMet
     /// <param name="count">The maximum number of contributions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The contributions after the supplied position.</returns>
-    Task<IReadOnlyList<ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default);
 }

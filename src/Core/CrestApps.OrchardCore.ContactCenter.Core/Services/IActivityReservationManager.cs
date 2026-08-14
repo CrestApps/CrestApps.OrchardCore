@@ -20,7 +20,7 @@ public interface IActivityReservationManager : ICatalogManager<ActivityReservati
     /// <param name="maxResults">The maximum number of expired reservations to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A page of expired pending reservations together with the cursor for the next page.</returns>
-    Task<ExpiredReservationPage> ListExpiredAsync(
+    Task<ExpiredReservationPage> GetExpiredAsync(
         DateTime utcNow,
         DateTime? afterExpiresUtc,
         long afterDocumentId,
@@ -41,7 +41,7 @@ public interface IActivityReservationManager : ICatalogManager<ActivityReservati
     /// <param name="agentId">The agent identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The pending and accepted reservations for the agent.</returns>
-    Task<IReadOnlyCollection<ActivityReservation>> ListActiveByAgentAsync(
+    Task<IReadOnlyCollection<ActivityReservation>> GetActiveByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default);
 
@@ -51,5 +51,5 @@ public interface IActivityReservationManager : ICatalogManager<ActivityReservati
     /// <param name="activityItemId">The activity identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The pending and accepted reservations for the activity.</returns>
-    Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ActivityReservation>> GetActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default);
 }

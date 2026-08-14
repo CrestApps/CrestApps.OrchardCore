@@ -43,7 +43,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
             .ReturnsAsync(new AgentProfile { ItemId = "a1", PresenceStatus = AgentPresenceStatus.Available });
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(manager => manager.ListPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
         var service = CreateService(agent, interaction, presenceManager, interactionManager);
 
@@ -96,7 +96,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
             .ReturnsAsync(new AgentProfile { ItemId = "a1", PresenceStatus = AgentPresenceStatus.Available });
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(manager => manager.ListPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);
         var service = CreateService(agent, null, presenceManager, interactionManager);
 
@@ -120,11 +120,11 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         var interaction = CreateInteraction(_now.AddMinutes(-16));
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(manager => manager.ListByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => agent.PresenceStatus == AgentPresenceStatus.WrapUp ? [agent] : []);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(manager => manager.ListPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => interaction.WrapUpCompletedUtc.HasValue ? [] : [interaction]);
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
@@ -172,11 +172,11 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(manager => manager.ListByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
-            .Setup(manager => manager.ListPendingWrapUpsByAgentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetPendingWrapUpsByAgentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
@@ -213,14 +213,14 @@ public sealed class AgentAvailabilityRecoveryServiceTests
     {
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
-            .Setup(manager => manager.ListByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetByPresenceAsync(AgentPresenceStatus.WrapUp, It.IsAny<CancellationToken>()))
             .ReturnsAsync([agent]);
 
         if (interactionManager is null)
         {
             interactionManager = new Mock<IInteractionManager>();
             interactionManager
-                .Setup(manager => manager.ListPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
+                .Setup(manager => manager.GetPendingWrapUpsByAgentAsync("a1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(interaction is null ? [] : [interaction]);
         }
 

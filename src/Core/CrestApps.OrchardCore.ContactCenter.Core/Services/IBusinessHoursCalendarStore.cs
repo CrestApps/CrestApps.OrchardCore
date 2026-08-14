@@ -21,5 +21,5 @@ public interface IBusinessHoursCalendarStore : ICatalog<BusinessHoursCalendar>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled calendars.</returns>
-    Task<IReadOnlyCollection<BusinessHoursCalendar>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<BusinessHoursCalendar>> GetEnabledAsync(CancellationToken cancellationToken = default);
 }

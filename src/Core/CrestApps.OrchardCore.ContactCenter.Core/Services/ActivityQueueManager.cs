@@ -44,11 +44,11 @@ public sealed class ActivityQueueManager : CatalogManager<ActivityQueue>, IActiv
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityQueue>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ActivityQueue>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         return await _cache.GetEnabledAsync(async token =>
         {
-            var queues = await _store.ListEnabledAsync(token);
+            var queues = await _store.GetEnabledAsync(token);
 
             foreach (var queue in queues)
             {

@@ -13,7 +13,7 @@ public interface IDialerProfileManager : ICatalogManager<DialerProfile>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled dialer profiles.</returns>
-    Task<IReadOnlyCollection<DialerProfile>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<DialerProfile>> GetEnabledAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the dialer profile that targets the specified campaign.

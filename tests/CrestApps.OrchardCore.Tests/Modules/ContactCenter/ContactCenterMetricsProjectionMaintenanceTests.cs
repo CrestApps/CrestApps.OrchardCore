@@ -238,7 +238,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
                 Assert.Null(staged);
 
-                var stagedPending = await new ContactCenterMetricDeltaStore(actSession).ListContributionsAfterAsync(
+                var stagedPending = await new ContactCenterMetricDeltaStore(actSession).GetContributionsAfterAsync(
                     0,
                     100,
                     TestContext.Current.CancellationToken);
@@ -257,7 +257,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
                 Assert.Null(total);
 
-                var pending = await new ContactCenterMetricDeltaStore(assertSession).ListContributionsAfterAsync(
+                var pending = await new ContactCenterMetricDeltaStore(assertSession).GetContributionsAfterAsync(
                     0,
                     100,
                     TestContext.Current.CancellationToken);
@@ -330,7 +330,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 Assert.NotNull(total);
                 Assert.Equal(2, total.Count);
 
-                var pending = await new ContactCenterMetricDeltaStore(assertSession).ListContributionsAfterAsync(
+                var pending = await new ContactCenterMetricDeltaStore(assertSession).GetContributionsAfterAsync(
                     0,
                     100,
                     TestContext.Current.CancellationToken);
@@ -482,7 +482,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
                 while (true)
                 {
-                    var page = await deltaStore.ListContributionsAfterAsync(afterDocumentId, 2, TestContext.Current.CancellationToken);
+                    var page = await deltaStore.GetContributionsAfterAsync(afterDocumentId, 2, TestContext.Current.CancellationToken);
 
                     if (page.Count == 0)
                     {

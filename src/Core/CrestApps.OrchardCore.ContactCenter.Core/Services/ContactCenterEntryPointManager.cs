@@ -44,11 +44,11 @@ public sealed class ContactCenterEntryPointManager : CatalogManager<ContactCente
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterEntryPoint>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterEntryPoint>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         return await _cache.GetEnabledAsync(async token =>
         {
-            var entryPoints = await _store.ListEnabledAsync(token);
+            var entryPoints = await _store.GetEnabledAsync(token);
 
             foreach (var entryPoint in entryPoints)
             {

@@ -79,7 +79,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         try
         {
             await reservationService.ExpireDueAsync(runToken);
-            queues = await queueManager.ListEnabledAsync(runToken);
+            queues = await queueManager.GetEnabledAsync(runToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

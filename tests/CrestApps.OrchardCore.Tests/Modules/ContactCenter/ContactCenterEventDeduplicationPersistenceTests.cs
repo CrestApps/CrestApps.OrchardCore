@@ -59,7 +59,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
                         collection: ContactCenterStorage.CollectionName)
                     .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
                 var contributions = await new ContactCenterMetricDeltaStore(verificationSession)
-                    .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                    .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
                 Assert.Null(marker);
                 Assert.Empty(contributions);
@@ -86,7 +86,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
 
             await using var committedSession = store.CreateSession();
             var committed = await new ContactCenterMetricDeltaStore(committedSession)
-                .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
             var contribution = Assert.Single(committed);
 

@@ -3,8 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
-internal sealed class TestContactCenterScopeExecutor(IServiceProvider serviceProvider) : IContactCenterScopeExecutor
+internal sealed class TestContactCenterScopeExecutor : IContactCenterScopeExecutor
 {
+    private readonly IServiceProvider _serviceProvider;
+
+    public TestContactCenterScopeExecutor(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
     public bool ScheduleAfterCommitResult { get; set; }
 
     public Func<Task> ScheduledOperation { get; private set; }
@@ -12,7 +19,7 @@ internal sealed class TestContactCenterScopeExecutor(IServiceProvider servicePro
     public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {
-        return operation(serviceProvider.GetRequiredService<TContext>());
+        return operation(_serviceProvider.GetRequiredService<TContext>());
     }
 
     public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
@@ -23,7 +30,7 @@ internal sealed class TestContactCenterScopeExecutor(IServiceProvider servicePro
             return false;
         }
 
-        ScheduledOperation = () => operation(serviceProvider.GetRequiredService<TContext>());
+        ScheduledOperation = () => operation(_serviceProvider.GetRequiredService<TContext>());
 
         return true;
     }

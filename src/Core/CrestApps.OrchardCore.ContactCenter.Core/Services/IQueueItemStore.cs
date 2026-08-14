@@ -14,7 +14,7 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     /// <param name="queueId">The queue identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The waiting items ordered for routing.</returns>
-    Task<IReadOnlyCollection<QueueItem>> ListWaitingAsync(string queueId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<QueueItem>> GetWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the active queue item for the specified activity.

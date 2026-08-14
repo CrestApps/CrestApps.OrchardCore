@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// mirrors how the Voice feature owns the provider-ingress check: a check must never be registered by a feature
 /// whose dependency closure cannot construct it.
 /// </remarks>
-[RequireFeatures("OrchardCore.Redis")]
+[RequireFeatures("OrchardCore.Redis", "OrchardCore.HealthChecks")]
 public sealed class ContactCenterRedisHealthCheckStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

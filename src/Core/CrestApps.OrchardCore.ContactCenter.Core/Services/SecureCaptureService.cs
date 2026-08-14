@@ -336,7 +336,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     public async Task<int> ExpireDueAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? ExpiryBatchLimit : Math.Min(maxCount, ExpiryBatchLimit);
-        var sessions = await _sessionManager.ListExpiredAsync(_clock.UtcNow, take, cancellationToken);
+        var sessions = await _sessionManager.GetExpiredAsync(_clock.UtcNow, take, cancellationToken);
 
         var expired = 0;
 
@@ -377,7 +377,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     public async Task<int> RecoverRecordingResumesAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? ExpiryBatchLimit : Math.Min(maxCount, ExpiryBatchLimit);
-        var sessions = await _sessionManager.ListPendingRecordingResumeAsync(take, cancellationToken);
+        var sessions = await _sessionManager.GetPendingRecordingResumeAsync(take, cancellationToken);
 
         var resumed = 0;
 

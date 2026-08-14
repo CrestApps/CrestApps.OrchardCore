@@ -48,7 +48,7 @@ public sealed class ReportManager : IReportManager
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IReport> ListReports()
+    public IReadOnlyList<IReport> GetReports()
     {
         return _reports;
     }

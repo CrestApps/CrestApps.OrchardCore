@@ -98,7 +98,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
         services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
-        services.AddSingleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>());
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
 

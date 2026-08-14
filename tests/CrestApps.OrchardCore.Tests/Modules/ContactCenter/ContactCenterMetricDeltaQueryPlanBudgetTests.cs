@@ -36,7 +36,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
     {
         // Arrange & Act
         var (tableName, plan) = await MeasureAsync(
-            (deltaStore, cancellationToken) => deltaStore.ListBatchAsync(500, cancellationToken));
+            (deltaStore, cancellationToken) => deltaStore.GetBatchAsync(500, cancellationToken));
 
         // Assert
         var rendered = string.Join(Environment.NewLine, plan);
@@ -75,7 +75,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
 
         // Act
         var (tableName, plan) = await MeasureAsync(
-            (deltaStore, cancellationToken) => deltaStore.ListByDateRangeAsync(from, to, cancellationToken));
+            (deltaStore, cancellationToken) => deltaStore.GetByDateRangeAsync(from, to, cancellationToken));
 
         // Assert
         var rendered = string.Join(Environment.NewLine, plan);
@@ -97,7 +97,7 @@ public sealed class ContactCenterMetricDeltaQueryPlanBudgetTests
     {
         // Arrange & Act
         var (tableName, plan) = await MeasureAsync(
-            (deltaStore, cancellationToken) => deltaStore.ListContributionsAfterAsync(0, 500, cancellationToken));
+            (deltaStore, cancellationToken) => deltaStore.GetContributionsAfterAsync(0, 500, cancellationToken));
 
         // Assert
         var rendered = string.Join(Environment.NewLine, plan);

@@ -33,7 +33,7 @@ public sealed class QueueItemManagerTests
         // Assert
         Assert.Same(expected, actual);
         store.Verify(s => s.FindNextWaitingAsync("queue-1", It.IsAny<CancellationToken>()), Times.Once);
-        store.Verify(s => s.ListWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        store.Verify(s => s.GetWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class QueueItemManagerTests
 
         var store = new Mock<IQueueItemStore>();
         store
-            .Setup(s => s.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetWaitingAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([newerHigherPriority, agedLowPriority]);
 
         var manager = CreateManager(store);
@@ -75,7 +75,7 @@ public sealed class QueueItemManagerTests
 
         // Assert
         Assert.Same(agedLowPriority, actual);
-        store.Verify(s => s.ListWaitingAsync("queue-1", It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(s => s.GetWaitingAsync("queue-1", It.IsAny<CancellationToken>()), Times.Once);
         store.Verify(s => s.FindNextWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

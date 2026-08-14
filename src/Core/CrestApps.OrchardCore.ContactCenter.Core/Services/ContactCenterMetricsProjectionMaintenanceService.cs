@@ -65,7 +65,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
         // exact, and the difference matters to an operator reading the number immediately afterwards.
         var pending = await ReadPendingContributionsAsync(cancellationToken);
 
-        var stored = await _metricStore.ListAllAsync(cancellationToken);
+        var stored = await _metricStore.GetAllAsync(cancellationToken);
         var remaining = stored.ToDictionary(metric => (metric.DateKey, metric.EventType));
 
         var changes = 0;
@@ -120,7 +120,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
     {
         var recomputed = await RecomputeAsync(cancellationToken);
 
-        var stored = await _metricStore.ListAllAsync(cancellationToken);
+        var stored = await _metricStore.GetAllAsync(cancellationToken);
         var storedByKey = stored.ToDictionary(metric => (metric.DateKey, metric.EventType), metric => metric.Count);
 
         // A contribution that has not been folded yet is part of the projection, so it is added to the stored
@@ -175,7 +175,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
 
         while (true)
         {
-            var page = await _deltaStore.ListContributionsAfterAsync(afterDocumentId, PageSize, cancellationToken);
+            var page = await _deltaStore.GetContributionsAfterAsync(afterDocumentId, PageSize, cancellationToken);
 
             if (page.Count == 0)
             {
@@ -209,7 +209,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
 
         while (true)
         {
-            var page = await _eventStore.ListOrderedPageAsync(skip, PageSize, cancellationToken);
+            var page = await _eventStore.GetOrderedPageAsync(skip, PageSize, cancellationToken);
 
             if (page.Count == 0)
             {

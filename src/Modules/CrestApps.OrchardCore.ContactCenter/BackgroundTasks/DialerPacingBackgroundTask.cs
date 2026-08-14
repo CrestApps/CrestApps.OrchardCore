@@ -64,7 +64,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
         try
         {
-            profiles = await dialerManager.ListEnabledAsync(runToken);
+            profiles = await dialerManager.GetEnabledAsync(runToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -44,11 +44,11 @@ public sealed class BusinessHoursCalendarManager : CatalogManager<BusinessHoursC
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<BusinessHoursCalendar>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<BusinessHoursCalendar>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         return await _cache.GetEnabledAsync(async token =>
         {
-            var calendars = await _store.ListEnabledAsync(token);
+            var calendars = await _store.GetEnabledAsync(token);
 
             foreach (var calendar in calendars)
             {

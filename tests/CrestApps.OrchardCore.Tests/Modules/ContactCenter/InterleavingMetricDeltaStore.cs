@@ -47,9 +47,9 @@ internal sealed class InterleavingMetricDeltaStore : IContactCenterMetricDeltaSt
     public int ContributionPagesRead { get; private set; }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, CancellationToken cancellationToken = default)
     {
-        var batch = await _inner.ListBatchAsync(maxCount, cancellationToken);
+        var batch = await _inner.GetBatchAsync(maxCount, cancellationToken);
 
         if (_afterBatchRead is not null && batch.Count > 0 && Interleaved == 0)
         {
@@ -61,13 +61,13 @@ internal sealed class InterleavingMetricDeltaStore : IContactCenterMetricDeltaSt
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> ListByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
-        => _inner.ListByDateRangeAsync(fromUtc, toUtc, cancellationToken);
+    public Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> GetByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+        => _inner.GetByDateRangeAsync(fromUtc, toUtc, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default)
     {
-        var page = await _inner.ListContributionsAfterAsync(afterDocumentId, count, cancellationToken);
+        var page = await _inner.GetContributionsAfterAsync(afterDocumentId, count, cancellationToken);
 
         if (page.Count > 0)
         {

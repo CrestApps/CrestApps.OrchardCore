@@ -21,7 +21,7 @@ public sealed class DialerPacingBackgroundTaskTests
         var profile2 = new DialerProfile { Name = "profile-2" };
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([profile1, profile2]);
         var dialerService = new Mock<IDialerService>();
         var clock = new Mock<IClock>();
@@ -60,7 +60,7 @@ public sealed class DialerPacingBackgroundTaskTests
 
         // Assert
         dialerManager.Verify(
-            manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()),
+            manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()),
             Times.Never);
         dialerService.Verify(
             service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<CancellationToken>()),
@@ -82,7 +82,7 @@ public sealed class DialerPacingBackgroundTaskTests
         var profile2 = new DialerProfile { Name = "profile-2" };
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([profile1, profile2]);
         var dialerService = new Mock<IDialerService>();
         dialerService
@@ -114,7 +114,7 @@ public sealed class DialerPacingBackgroundTaskTests
         var profile = new DialerProfile { Name = "profile-1" };
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([profile]);
         var dialerService = new Mock<IDialerService>();
         dialerService

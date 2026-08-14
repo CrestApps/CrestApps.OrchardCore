@@ -160,7 +160,7 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "e1", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
-        outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
         outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
@@ -208,7 +208,7 @@ public sealed class ContactCenterOutboxTests
             .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => pending);
         outboxStore
-            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => [pending]);
         outboxStore
             .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -288,7 +288,7 @@ public sealed class ContactCenterOutboxTests
         var reloadedCheckpoint = Clone(persistedCheckpoint);
         Assert.NotSame(pending, persistedCheckpoint);
         outboxStore
-            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => [reloadedCheckpoint]);
         outboxStore
             .Setup(store => store.FindByIdAsync(persistedCheckpoint.ItemId, It.IsAny<CancellationToken>()))
@@ -350,7 +350,7 @@ public sealed class ContactCenterOutboxTests
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore
-            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([legacyCheckpoint]);
         outboxStore
             .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
@@ -400,7 +400,7 @@ public sealed class ContactCenterOutboxTests
         var interactionEvent = new InteractionEvent { ItemId = "e1" };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore
-            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([message]);
         outboxStore
             .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
@@ -447,7 +447,7 @@ public sealed class ContactCenterOutboxTests
         var secondEvent = new InteractionEvent { ItemId = "e2" };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
         outboxStore
-            .Setup(store => store.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([firstMessage, secondMessage]);
         outboxStore
             .Setup(store => store.FindByIdAsync("m1", It.IsAny<CancellationToken>()))
@@ -501,7 +501,7 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "e1", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
-        outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
         outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
@@ -538,7 +538,7 @@ public sealed class ContactCenterOutboxTests
         };
 
         var outboxStore = new Mock<IContactCenterOutboxStore>();
-        outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
         outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();
@@ -565,7 +565,7 @@ public sealed class ContactCenterOutboxTests
         // Arrange
         var message = new ContactCenterOutboxMessage { ItemId = "m1", EventId = "missing", Status = OutboxMessageStatus.Pending, AttemptCount = 1 };
         var outboxStore = new Mock<IContactCenterOutboxStore>();
-        outboxStore.Setup(s => s.ListDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
+        outboxStore.Setup(s => s.GetDueAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([message]);
         outboxStore.Setup(s => s.FindByIdAsync("m1", It.IsAny<CancellationToken>())).ReturnsAsync(message);
 
         var eventStore = new Mock<IInteractionEventStore>();

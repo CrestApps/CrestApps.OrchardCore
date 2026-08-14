@@ -32,7 +32,7 @@ public sealed class AgentStateReasonCodeStore : DocumentCatalog<AgentStateReason
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentStateReasonCode>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentStateReasonCode>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var reasonCodes = await Session.Query<AgentStateReasonCode, AgentStateReasonCodeIndex>(
             index => index.Enabled,

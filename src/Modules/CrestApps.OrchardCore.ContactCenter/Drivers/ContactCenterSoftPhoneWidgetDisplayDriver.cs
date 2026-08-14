@@ -80,13 +80,13 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         var allowedQueueIds = new HashSet<string>(profile?.AllowedQueueIds ?? [], StringComparer.OrdinalIgnoreCase);
         var allowedCampaignIds = new HashSet<string>(profile?.AllowedCampaignIds ?? [], StringComparer.OrdinalIgnoreCase);
         var selectedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile?.CampaignIds, profile?.AllowedCampaignIds);
-        var queues = await _queueManager.ListEnabledAsync();
+        var queues = await _queueManager.GetEnabledAsync();
         var entitledQueues = queues.Where(queue => allowedQueueIds.Contains(queue.ItemId)).ToList();
         var campaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds);
         var entitledCampaignOptions = campaignOptions.Where(option => allowedCampaignIds.Contains(option.Value)).ToList();
         var reasonCodes = _reasonCodeManager is null
             ? []
-            : await _reasonCodeManager.ListEnabledAsync();
+            : await _reasonCodeManager.GetEnabledAsync();
 
         _resourceManager.RegisterResource("stylesheet", "bootstrap-select").AtHead();
         _resourceManager.RegisterResource("script", "contact-center-realtime").AtFoot();

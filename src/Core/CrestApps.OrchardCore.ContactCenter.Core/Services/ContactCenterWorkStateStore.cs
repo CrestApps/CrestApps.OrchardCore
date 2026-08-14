@@ -36,7 +36,7 @@ public sealed class ContactCenterWorkStateStore : DocumentCatalog<ContactCenterW
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterWorkState>> ListByActivityIdsAsync(
+    public async Task<IReadOnlyCollection<ContactCenterWorkState>> GetByActivityIdsAsync(
         IEnumerable<string> activityItemIds,
         CancellationToken cancellationToken = default)
     {

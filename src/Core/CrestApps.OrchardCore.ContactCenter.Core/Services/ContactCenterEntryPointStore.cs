@@ -32,7 +32,7 @@ public sealed class ContactCenterEntryPointStore : DocumentCatalog<ContactCenter
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterEntryPoint>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterEntryPoint>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var entryPoints = await Session.Query<ContactCenterEntryPoint, ContactCenterEntryPointIndex>(
             index => index.Enabled,

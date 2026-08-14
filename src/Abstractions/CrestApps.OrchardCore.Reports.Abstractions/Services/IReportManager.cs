@@ -9,7 +9,7 @@ public interface IReportManager
     /// Lists every registered report, ordered by category and display name.
     /// </summary>
     /// <returns>The registered reports.</returns>
-    IReadOnlyList<IReport> ListReports();
+    IReadOnlyList<IReport> GetReports();
 
     /// <summary>
     /// Finds a registered report by its technical name.

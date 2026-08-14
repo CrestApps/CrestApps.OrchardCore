@@ -58,7 +58,7 @@ public sealed class SecureCaptureStartup : StartupBase
         services.AddScoped<IContactCenterRetentionPolicy, SecureCaptureSessionRetentionPolicy>();
         services.AddDataMigration<SecureCaptureSessionIndexMigrations>();
         services.AddIndexProvider<SecureCaptureSessionIndexProvider>();
-        services.AddSingleton<IBackgroundTask, SecureCaptureExpiryBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecureCaptureExpiryBackgroundTask>());
         services.AddSiteDisplayDriver<SecureCaptureSettingsDisplayDriver>();
     }
 

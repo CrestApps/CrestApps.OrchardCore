@@ -11,7 +11,7 @@ A contact centre that can only be configured by hand cannot be promoted. Contact
 
 ## One-step feature enablement recipes
 
-A supported Contact Center tenant enables roughly a dozen features across the base module, the voice stack, and a provider adapter, and getting that set — and its order — right by hand is the bulk of first-run toil. The base module ships two harvestable recipes, one per certified provider profile, that enable exactly the feature set of the matching support-matrix tenant profile in a single step:
+A supported Contact Center tenant enables roughly a dozen features across the base module, the voice stack, and a provider adapter, and getting that set — and its order — right by hand is the bulk of first-run toil. The base module ships two harvestable recipes, one per certified provider profile, that enable exactly the feature set of the matching certified tenant profile in a single step:
 
 | Recipe | Display name | Enables the feature set of tenant profile |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ A supported Contact Center tenant enables roughly a dozen features across the ba
 
 Enable **Recipes** (`OrchardCore.Recipes`), then run the recipe for your provider from **Configuration → Recipes**. Orchard Core resolves feature dependencies, so the listed features and anything they depend on are enabled together. Each recipe enables the base orchestration and administration menu, availability, queues, routing, voice with the browser soft phone, the agent desktop, real-time updates, preview/manual dialing, and the provider's Contact Center voice adapter. Each capability includes the screens needed to configure its queues, agents, entry points, or dialer profiles after the recipe runs.
 
-The feature list in each recipe is the coherent, certified combination for its tenant profile — a build test asserts each recipe enables exactly its profile's features from `support-matrix.v1.json`, so a recipe cannot drift from the support matrix and cannot ship an unlisted (unsupported) combination. There is deliberately no "inbound-only" or "outbound-only" recipe: the certified profiles bundle inbound voice with preview and manual dialing, and a partial split would be an unlisted feature combination. The recipes enable features only; they carry no queues, skills, entry points, or dialer profiles, because that configuration references environment-specific resources (a configured provider, its channel endpoints, and campaigns). Configure your provider and then define or import that configuration with the steps below.
+The feature list in each recipe is the coherent, certified combination for its tenant profile — a build test asserts each recipe enables exactly its profile's certified feature set, so a recipe cannot drift from the supported combination and cannot ship an unlisted (unsupported) combination. There is deliberately no "inbound-only" or "outbound-only" recipe: the certified profiles bundle inbound voice with preview and manual dialing, and a partial split would be an unlisted feature combination. The recipes enable features only; they carry no queues, skills, entry points, or dialer profiles, because that configuration references environment-specific resources (a configured provider, its channel endpoints, and campaigns). Configure your provider and then define or import that configuration with the steps below.
 
 ## What travels between environments
 

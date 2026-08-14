@@ -178,7 +178,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        var availability = await _availabilityService.ListForQueueAsync(queueId, cancellationToken);
+        var availability = await _availabilityService.GetForQueueAsync(queueId, cancellationToken);
         var agents = availability.Select(entry => entry.Agent).ToArray();
 
         if (_logger.IsEnabled(LogLevel.Information))

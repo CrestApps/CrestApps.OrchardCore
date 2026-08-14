@@ -21,5 +21,5 @@ public interface IContactCenterSkillManager : ICatalogManager<ContactCenterSkill
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled skills.</returns>
-    Task<IReadOnlyCollection<ContactCenterSkill>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ContactCenterSkill>> GetEnabledAsync(CancellationToken cancellationToken = default);
 }

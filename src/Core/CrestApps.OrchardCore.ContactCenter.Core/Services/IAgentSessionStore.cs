@@ -24,7 +24,7 @@ public interface IAgentSessionStore : ICatalog<AgentSession>
     /// <param name="heartbeatCutoffUtc">The UTC time before which a heartbeat is considered stale.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The stale online sessions.</returns>
-    Task<IReadOnlyCollection<AgentSession>> ListStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<AgentSession>> GetStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists sessions for the specified users.
@@ -32,7 +32,7 @@ public interface IAgentSessionStore : ICatalog<AgentSession>
     /// <param name="userIds">The Orchard user identifiers.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching agent sessions.</returns>
-    Task<IReadOnlyCollection<AgentSession>> ListByUserIdsAsync(
+    Task<IReadOnlyCollection<AgentSession>> GetByUserIdsAsync(
         IReadOnlyCollection<string> userIds,
         CancellationToken cancellationToken = default);
 }

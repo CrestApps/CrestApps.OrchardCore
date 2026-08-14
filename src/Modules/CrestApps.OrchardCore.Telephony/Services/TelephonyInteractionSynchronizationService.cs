@@ -96,7 +96,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
-        var interactions = await _interactionStore.ListActiveByUserAsync(userId, cancellationToken);
+        var interactions = await _interactionStore.GetActiveByUserAsync(userId, cancellationToken);
         var calls = new List<TelephonyCall>(interactions.Count);
 
         foreach (var interaction in interactions)
@@ -160,8 +160,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         await using var acquiredLock = locker;
 
         var interactions = string.IsNullOrEmpty(providerName)
-            ? await _interactionStore.ListActiveAsync(MaxReconciliationBatchSize, cancellationToken)
-            : await _interactionStore.ListActiveAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
+            ? await _interactionStore.GetActiveAsync(MaxReconciliationBatchSize, cancellationToken)
+            : await _interactionStore.GetActiveAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
         var changed = 0;
 
         foreach (var interaction in interactions)

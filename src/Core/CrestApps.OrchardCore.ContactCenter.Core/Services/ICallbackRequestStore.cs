@@ -15,5 +15,5 @@ public interface ICallbackRequestStore : ICatalog<CallbackRequest>
     /// <param name="maxCount">The maximum number of callbacks to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due callbacks ordered by their scheduled time and bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<CallbackRequest>> ListDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<CallbackRequest>> GetDueAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default);
 }

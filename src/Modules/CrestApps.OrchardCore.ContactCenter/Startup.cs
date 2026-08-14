@@ -133,7 +133,6 @@ public sealed class Startup : StartupBase
 
         services.AddSingleton<ContactCenterTopologyState>();
         services.AddScoped<IModularTenantEvents, ContactCenterTopologyValidator>();
-        services.AddContactCenterHealthChecks();
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))
@@ -232,9 +231,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CallSessionIndexProvider>()
             .AddDataMigration<CallSessionIndexMigrations>();
 
-        services.AddSingleton<IBackgroundTask, OutboxDispatchBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OutboxDispatchBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>());
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
 

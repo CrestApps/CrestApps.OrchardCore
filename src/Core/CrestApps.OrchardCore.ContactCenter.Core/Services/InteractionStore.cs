@@ -181,7 +181,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveByAgentIdsAsync(
         IReadOnlyCollection<string> agentIds,
         CancellationToken cancellationToken = default)
     {
@@ -213,7 +213,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetPendingWrapUpsByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)
     {
@@ -229,7 +229,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> GetRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
@@ -242,7 +242,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultReconciliationBatchSize : maxCount;
 
@@ -256,7 +256,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(
         string providerName,
         int maxCount,
         CancellationToken cancellationToken = default)
@@ -276,7 +276,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetPausedRecordingsOlderThanAsync(
         DateTime pausedBeforeUtc,
         int maxCount,
         CancellationToken cancellationToken = default)

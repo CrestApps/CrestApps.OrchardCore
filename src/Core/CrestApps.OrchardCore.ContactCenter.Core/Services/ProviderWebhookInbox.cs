@@ -381,7 +381,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         await PurgeExpiredTombstonesAsync(cancellationToken);
 
-        var due = await _store.ListDueAsync(_clock.UtcNow, MaxBatchSize, cancellationToken);
+        var due = await _store.GetDueAsync(_clock.UtcNow, MaxBatchSize, cancellationToken);
         var completed = 0;
 
         foreach (var message in due)
@@ -434,7 +434,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         // while never letting the duplicate-detection horizon be shortened below what the inbox guarantees.
         var retentionDays = Math.Max(TombstoneRetentionDays, _retentionOptions.WebhookInboxMessageRetentionDays);
         var cutoff = _clock.UtcNow.Subtract(TimeSpan.FromDays(retentionDays));
-        var tombstones = await _store.ListProcessedBeforeAsync(
+        var tombstones = await _store.GetProcessedBeforeAsync(
             cutoff,
             MaxTombstoneCleanupBatchSize,
             cancellationToken);

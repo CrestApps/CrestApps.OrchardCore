@@ -90,7 +90,7 @@ public sealed class CallStateMachineHarness
             .ReturnsAsync((string key, CancellationToken _) =>
                 !string.IsNullOrEmpty(key) && _events.ContainsKey(key));
         eventStore
-            .Setup(store => store.ListByInteractionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetByInteractionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string interactionId, CancellationToken _) =>
                 (IReadOnlyList<InteractionEvent>)_eventLog.FindAll(value => string.Equals(value.InteractionId, interactionId, StringComparison.Ordinal)));
         eventStore

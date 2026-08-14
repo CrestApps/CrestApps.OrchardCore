@@ -35,7 +35,7 @@ public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutb
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterOutboxMessage>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterOutboxMessage>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? 100 : maxCount;
 

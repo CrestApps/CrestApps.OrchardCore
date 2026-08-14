@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -57,8 +58,8 @@ public sealed class AvailabilityStartup : StartupBase
             .AddIndexProvider<AgentSessionIndexProvider>()
             .AddDataMigration<AgentSessionIndexMigrations>();
 
-        services.AddSingleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>());
 
         services.ConfigureOptions<ContactCenterAgentSignOutCookieConfiguration>();
     }

@@ -27,9 +27,9 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<QueueItem>> ListWaitingAsync(string queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<QueueItem>> GetWaitingAsync(string queueId, CancellationToken cancellationToken = default)
     {
-        var items = await _store.ListWaitingAsync(queueId, cancellationToken);
+        var items = await _store.GetWaitingAsync(queueId, cancellationToken);
 
         foreach (var item in items)
         {
@@ -63,7 +63,7 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
             // how long it has waited, so the winner cannot be expressed as a fixed stored order and every
             // candidate must be scored in memory. Aging is opt-in per queue, so this fuller scan is confined
             // to queues that have explicitly requested it.
-            var waiting = await _store.ListWaitingAsync(queue.ItemId, cancellationToken);
+            var waiting = await _store.GetWaitingAsync(queue.ItemId, cancellationToken);
             item = QueueItemPrioritizer.SelectNext(waiting, queue, utcNow);
         }
 

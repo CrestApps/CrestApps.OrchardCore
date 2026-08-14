@@ -198,7 +198,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         var secondInteraction = CreateInteraction("call-2");
         var store = new Mock<ITelephonyInteractionStore>();
         store
-            .Setup(value => value.ListActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
+            .Setup(value => value.GetActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([firstInteraction, secondInteraction]);
         var (hubContext, _) = CreateHubContext();
         var service = CreateService(
@@ -254,7 +254,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         var interaction = CreateInteraction();
         var store = new Mock<ITelephonyInteractionStore>();
         store
-            .Setup(value => value.ListActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(value => value.GetActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
         store.SetupRetryingUpdates(interaction);
         var (hubContext, client) = CreateHubContext();
@@ -305,7 +305,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         var interaction = CreateInteraction();
         var store = new Mock<ITelephonyInteractionStore>();
         store
-            .Setup(value => value.ListActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(value => value.GetActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))

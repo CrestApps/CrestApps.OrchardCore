@@ -112,7 +112,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task<IList<SelectListItem>> GetSkillOptionsAsync(IEnumerable<string> selectedSkills)
     {
         var selected = CreateSelectedSet(selectedSkills, StringComparer.OrdinalIgnoreCase);
-        var skills = await _skillManager.ListEnabledAsync();
+        var skills = await _skillManager.GetEnabledAsync();
 
         var options = skills
             .OrderBy(skill => skill.Name, StringComparer.CurrentCultureIgnoreCase)

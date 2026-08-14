@@ -44,7 +44,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
 
         for (var batch = 0; batch < MaxBatchesPerRun; batch++)
         {
-            var deltas = await _deltaStore.ListBatchAsync(BatchSize, cancellationToken);
+            var deltas = await _deltaStore.GetBatchAsync(BatchSize, cancellationToken);
 
             if (deltas.Count == 0)
             {

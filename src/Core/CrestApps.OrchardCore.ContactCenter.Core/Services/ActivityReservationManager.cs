@@ -27,14 +27,14 @@ public sealed class ActivityReservationManager : CatalogManager<ActivityReservat
     }
 
     /// <inheritdoc/>
-    public async Task<ExpiredReservationPage> ListExpiredAsync(
+    public async Task<ExpiredReservationPage> GetExpiredAsync(
         DateTime utcNow,
         DateTime? afterExpiresUtc,
         long afterDocumentId,
         int maxResults,
         CancellationToken cancellationToken = default)
     {
-        var page = await _store.ListExpiredAsync(utcNow, afterExpiresUtc, afterDocumentId, maxResults, cancellationToken);
+        var page = await _store.GetExpiredAsync(utcNow, afterExpiresUtc, afterDocumentId, maxResults, cancellationToken);
 
         foreach (var reservation in page.Reservations)
         {
@@ -58,11 +58,11 @@ public sealed class ActivityReservationManager : CatalogManager<ActivityReservat
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByAgentAsync(
+    public async Task<IReadOnlyCollection<ActivityReservation>> GetActiveByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)
     {
-        var reservations = await _store.ListActiveByAgentAsync(agentId, cancellationToken);
+        var reservations = await _store.GetActiveByAgentAsync(agentId, cancellationToken);
 
         foreach (var reservation in reservations)
         {
@@ -73,9 +73,9 @@ public sealed class ActivityReservationManager : CatalogManager<ActivityReservat
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ActivityReservation>> GetActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
     {
-        var reservations = await _store.ListActiveByActivityAsync(activityItemId, cancellationToken);
+        var reservations = await _store.GetActiveByActivityAsync(activityItemId, cancellationToken);
 
         foreach (var reservation in reservations)
         {

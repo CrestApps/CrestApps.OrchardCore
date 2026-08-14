@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -57,7 +58,7 @@ public sealed class DialerStartup : StartupBase
             .AddIndexProvider<CallbackRequestIndexProvider>()
             .AddDataMigration<CallbackRequestIndexMigrations>();
 
-        services.AddSingleton<IBackgroundTask, CallbackDispatchBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, CallbackDispatchBackgroundTask>());
 
         services.Configure<ActivityBatchSourceOptions>(options =>
         {

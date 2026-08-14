@@ -60,7 +60,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
 
         var cutoffUtc = _clock.UtcNow.AddSeconds(-maxSecurePauseSeconds);
 
-        var expired = await _interactionManager.ListPausedRecordingsOlderThanAsync(cutoffUtc, MaxResumeBatchSize, cancellationToken);
+        var expired = await _interactionManager.GetPausedRecordingsOlderThanAsync(cutoffUtc, MaxResumeBatchSize, cancellationToken);
 
         if (expired.Count == 0)
         {

@@ -527,10 +527,10 @@ public sealed class ProviderCommandProcessorTests
         var harness = CreateHarness(ProviderCommandStatus.Sent, supportsReconciliation: true);
         harness.Command.LeaseExpiresUtc = _now.AddMinutes(-1);
         harness.Manager
-            .Setup(manager => manager.ListReclaimableAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetReclaimableAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([harness.Command]);
         harness.Manager
-            .Setup(manager => manager.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         harness.StateService
             .Setup(service => service.EscalateExpiredLeaseAsync("command-1", It.IsAny<CancellationToken>()))
@@ -571,13 +571,13 @@ public sealed class ProviderCommandProcessorTests
             LeaseExpiresUtc = _now.AddMinutes(-1),
         };
         harness.Manager
-            .Setup(value => value.ListReclaimableAsync(
+            .Setup(value => value.GetReclaimableAsync(
                 _now,
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([harness.Command, second]);
         harness.Manager
-            .Setup(value => value.ListDueAsync(
+            .Setup(value => value.GetDueAsync(
                 _now,
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -691,10 +691,10 @@ public sealed class ProviderCommandProcessorTests
         // Arrange
         var harness = CreateHarness();
         harness.Manager
-            .Setup(manager => manager.ListReclaimableAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetReclaimableAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         harness.Manager
-            .Setup(manager => manager.ListDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetDueAsync(_now, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([harness.Command]);
         harness.Executor
             .Setup(exec => exec.ExecuteAsync(

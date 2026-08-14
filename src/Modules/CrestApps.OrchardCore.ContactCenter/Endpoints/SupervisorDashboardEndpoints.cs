@@ -66,7 +66,7 @@ internal static class SupervisorDashboardEndpoints
         };
 
         var agents = await ListAgentsAsync(agentManager, httpContext.RequestAborted);
-        var queues = await queueManager.ListEnabledAsync(httpContext.RequestAborted);
+        var queues = await queueManager.GetEnabledAsync(httpContext.RequestAborted);
         var monitoringService = monitoringServices.FirstOrDefault();
         var supervisorId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var authorizedQueueIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -247,7 +247,7 @@ internal static class SupervisorDashboardEndpoints
             return activeInteractionsByAgent;
         }
 
-        var interactions = await interactionManager.ListActiveByAgentIdsAsync(agentIds, cancellationToken);
+        var interactions = await interactionManager.GetActiveByAgentIdsAsync(agentIds, cancellationToken);
 
         foreach (var interaction in interactions)
         {

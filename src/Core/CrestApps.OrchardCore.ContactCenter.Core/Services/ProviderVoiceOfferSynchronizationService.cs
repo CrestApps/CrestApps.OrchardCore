@@ -88,7 +88,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         // Cancel every lingering reservation bound to this activity. Reject/re-offer cycles can accumulate
         // multiple accepted reservations for the same activity, and leaving them behind keeps an agent's
         // ActiveReservationId pointing at dead work, which blocks all future offers.
-        var reservations = await _reservationManager.ListActiveByActivityAsync(interaction.ActivityItemId, cancellationToken);
+        var reservations = await _reservationManager.GetActiveByActivityAsync(interaction.ActivityItemId, cancellationToken);
         var providerReportedAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
         var wasAnsweredByAgent = providerReportedAnswered &&
             (queueItem?.Status == QueueItemStatus.Assigned ||

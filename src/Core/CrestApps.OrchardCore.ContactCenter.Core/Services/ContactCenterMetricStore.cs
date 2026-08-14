@@ -35,20 +35,10 @@ public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEven
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterEventMetric>> ListByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterEventMetric>> GetByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         var metrics = await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
             index => index.Date >= fromUtc && index.Date <= toUtc,
-            collection: ContactCenterStorage.CollectionName)
-            .ListAsync(cancellationToken);
-
-        return metrics.ToArray();
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterEventMetric>> ListAllAsync(CancellationToken cancellationToken = default)
-    {
-        var metrics = await Session.Query<ContactCenterEventMetric, ContactCenterEventMetricIndex>(
             collection: ContactCenterStorage.CollectionName)
             .ListAsync(cancellationToken);
 

@@ -40,9 +40,9 @@ public sealed class ProviderCommandManager : CatalogManager<ProviderCommand>, IP
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderCommand>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ProviderCommand>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
-        var commands = await _store.ListDueAsync(nowUtc, maxCount, cancellationToken);
+        var commands = await _store.GetDueAsync(nowUtc, maxCount, cancellationToken);
 
         foreach (var command in commands)
         {
@@ -53,9 +53,9 @@ public sealed class ProviderCommandManager : CatalogManager<ProviderCommand>, IP
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderCommand>> ListReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ProviderCommand>> GetReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
-        var commands = await _store.ListReclaimableAsync(nowUtc, maxCount, cancellationToken);
+        var commands = await _store.GetReclaimableAsync(nowUtc, maxCount, cancellationToken);
 
         foreach (var command in commands)
         {

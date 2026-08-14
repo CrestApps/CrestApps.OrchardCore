@@ -68,7 +68,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
 
-        services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>());
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();

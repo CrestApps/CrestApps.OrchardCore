@@ -192,7 +192,7 @@ public sealed class MessageClaimFencingPersistenceTests
             // Act
             await using var readSession = store.CreateSession();
             var due = await new ContactCenterOutboxStore(readSession)
-                .ListDueAsync(_now, 10, TestContext.Current.CancellationToken);
+                .GetDueAsync(_now, 10, TestContext.Current.CancellationToken);
 
             // Assert
             var redelivered = Assert.Single(due);

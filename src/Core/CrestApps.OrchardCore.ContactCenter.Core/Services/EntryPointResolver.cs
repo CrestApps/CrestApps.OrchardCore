@@ -31,7 +31,7 @@ public sealed class EntryPointResolver : IEntryPointResolver
             return null;
         }
 
-        var entryPoints = await _entryPointManager.ListEnabledAsync(cancellationToken);
+        var entryPoints = await _entryPointManager.GetEnabledAsync(cancellationToken);
 
         return entryPoints.FirstOrDefault(entryPoint => entryPoint.DialedNumbers is not null &&
             entryPoint.DialedNumbers.Any(number => string.Equals(number?.Trim(), dialedNumber, StringComparison.OrdinalIgnoreCase)));

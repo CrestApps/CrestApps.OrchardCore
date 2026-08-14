@@ -1102,7 +1102,7 @@ public sealed class ActivitiesController : Controller
 
         if (applyToAllMatching)
         {
-            activities = (await _omnichannelActivityManager.ListBulkManageableAsync(filter)).ToList();
+            activities = (await _omnichannelActivityManager.GetBulkManageableAsync(filter)).ToList();
         }
         else
         {

@@ -5,7 +5,7 @@ title: Contact Center production support
 description: Finite production support matrix, initial capacity tier, and prohibited Contact Center deployment combinations.
 ---
 
-The Contact Center commercial release remains blocked until remediation phases R0 through R8 and their release evidence pass. The versioned machine-readable contract is `.github/contact-center/support-matrix.v1.json`; unlisted combinations are unsupported.
+The Contact Center commercial release remains blocked until remediation phases R0 through R8 and their release evidence pass. The supported combinations are defined by the shipped topology profiles (`ContactCenterTopologyProfiles`) and the GA-Core tenant profiles described below; unlisted combinations are unsupported.
 
 Step-by-step responses for dependency and node failures, the supported deployment strategies, and the [Voice listener handover and rollback](runbooks.md#voice-listener-handover-and-rollback) procedure are in the [Failure runbooks](runbooks.md).
 
@@ -18,11 +18,11 @@ The first release targets two provider-specific tenant profiles. A tenant select
 | `ga-core-asterisk` | Asterisk | Inbound voice plus Manual and Preview dialing |
 | `ga-core-dialpad` | Dialpad | Inbound voice, Manual and Preview dialing, and call transfer |
 
-The feature identifiers in the matrix describe the implemented R2 feature graph. The `CrestApps.OrchardCore.ContactCenter.FeatureActivationTests` project creates fresh Orchard tenants from the Blank recipe for both profiles, enables only the profile seeds plus their declared dependency closure, runs migrations, resolves key services and background tasks, disables and re-enables the idle provider adapter, and verifies Asterisk and Dialpad tenants can coexist without provider leakage. Commercial readiness remains blocked on later remediation and certification phases.
+The feature identifiers describe the implemented R2 feature graph. The `CrestApps.OrchardCore.ContactCenter.FeatureActivationTests` project creates fresh Orchard tenants from the Blank recipe for both profiles, enables only the profile seeds plus their declared dependency closure, runs migrations, resolves key services and background tasks, disables and re-enables the idle provider adapter, and verifies Asterisk and Dialpad tenants can coexist without provider leakage. Commercial readiness remains blocked on later remediation and certification phases.
 
 ## Feature lifecycle contract
 
-Feature-owned background tasks, SignalR hubs, provider listeners, provider adapters, media providers, and shell singletons have a versioned lifecycle contract in `.github/contact-center/feature-lifecycle-contracts.v1.json`. Before Orchard disables a feature, Contact Center invokes every matching lifecycle participant in two phases: quiesce all participants first, then drain. Orchard logs non-fatal feature-event exceptions and continues descriptor mutation, so a drain timeout is a bounded best-effort signal rather than a veto. Admission remains closed during teardown, and durable ownership/fencing protects work that outlives the bounded drain.
+Feature-owned background tasks, SignalR hubs, provider listeners, provider adapters, media providers, and shell singletons have a lifecycle contract enforced in code and covered by the Contact Center feature-lifecycle tests. Before Orchard disables a feature, Contact Center invokes every matching lifecycle participant in two phases: quiesce all participants first, then drain. Orchard logs non-fatal feature-event exceptions and continues descriptor mutation, so a drain timeout is a bounded best-effort signal rather than a veto. Admission remains closed during teardown, and durable ownership/fencing protects work that outlives the bounded drain.
 
 The disable path is deliberately asymmetric. A re-enabled feature rebuilds the tenant shell, so feature work admission defaults open on the fresh singletons — there is no activation-time reconcile that could block the tenant from starting. The Voice provider-truth reconciliation is performed by the scheduled `ProviderCallStateReconciliationBackgroundTask` under the work-admission gate, entirely decoupled from shell activation, so an unsupported deployment topology never triggers provider or database work at shell activation. Third-party voice providers that need post-restart recovery follow the same pattern: register an `IBackgroundTask` that gates on `IContactCenterFeatureWorkManager` rather than doing recovery work during activation.
 
@@ -35,12 +35,12 @@ Configure the tenant drain timeout under `CrestApps_ContactCenter:FeatureLifecyc
 - PostgreSQL 16.x is the only initial production database target.
 - SQLite is for local development, demonstrations, and tests only.
 - The supported production topology is `single-node-distributed`: one region, exactly one application node, a shared relational database, the `CrestApps.OrchardCore.SignalR.Redis` feature, and the `OrchardCore.Redis.Lock` feature. The node count is one, but the distributed contract is mandatory rather than optional, because a single node already meets the distributed failure modes: a rolling restart overlaps two instances, and an Orchard shell reload tears down and rebuilds the shell in-process on every feature toggle.
-- Multi-node operation is **not** production-supported in this release. Two to four nodes remain the architectural direction and the code path is backplane- and lock-agnostic, but multi-node capacity certification has not been earned, so `single-region-multi-node` is declared non-production in the matrix. Scaling out later is configuration and certification, not a rewrite.
+- Multi-node operation is **not** production-supported in this release. Two to four nodes remain the architectural direction and the code path is backplane- and lock-agnostic, but multi-node capacity certification has not been earned, so `single-region-multi-node` is declared non-production. Scaling out later is configuration and certification, not a rewrite.
 - Production without the backplane or Redis distributed locking, and multi-region active-active operation, are unsupported.
 
 ### The declared topology is enforced at startup
 
-The support matrix above is not advisory. Each tenant declares the topology it intends to run, and the tenant refuses to admit Contact Center work unless the running deployment actually satisfies that declaration:
+The supported topology above is not advisory. Each tenant declares the topology it intends to run, and the tenant refuses to admit Contact Center work unless the running deployment actually satisfies that declaration:
 
 ```json
 {
@@ -60,7 +60,7 @@ The support matrix above is not advisory. Each tenant declares the topology it i
 
 A tenant that does not satisfy its declared topology logs a critical message naming each unmet requirement, refuses every Contact Center work admission, and reports **unready** on the tenant readiness probe. Validation runs once per shell activation, because every input to the verdict — declared profile, database provider, enabled features, resolved lock — can only change by rebuilding the shell. Until the verdict is recorded the tenant is treated as inadmissible; starting admissible and tightening afterwards would open a window in which an unverified deployment accepts work, and that window is exactly when a shell reload is in progress.
 
-The topology profiles the product enforces are a shipped mirror of the governance matrix in `.github/contact-center/support-matrix.v1.json`, which is not deployed with the product. A contract test asserts the two are identical, so the running application cannot enforce a second, more permissive definition of what "production" means.
+The topology profiles the product enforces are defined in code as `ContactCenterTopologyProfiles`, so the running application enforces exactly one definition of what "production" means.
 
 Queue and reservation correctness does not depend on Redis lock exclusivity. YesSql document versions provide compare-and-set updates, and portable unique claim keys enforce active queue-item and reservation ownership in the relational database. Upgrade migrations reject missing identifiers or duplicate legacy active claims with explicit repair guidance instead of failing later with an opaque unique-index error. SQLite regression tests force overlapping lock holders and synchronized stale reads and retain exactly one reservation; production certification still requires the planned database matrix to repeat the invariant on PostgreSQL and any subsequently supported database.
 
@@ -765,7 +765,7 @@ If you ever run more than one node (not certified for production in this release
 - Production on a single application node without Redis distributed locking and a Redis SignalR backplane.
 - Production on more than one application node, until multi-node capacity certification is earned.
 - Elasticsearch in routing, assignment, provider ingest, or another correctness path.
-- Any feature, provider, database, or topology combination not listed in the versioned matrix.
+- Any feature, provider, database, or topology combination not listed as a supported combination.
 
 Unsupported controls are hidden and rejected server-side. Supervisor engagement modes are returned to the dashboard only when the active provider advertises the mode and implements the executable monitoring contract; recording and Contact Center transfer likewise fail closed without their executable contracts. Provider failure or an unknown outcome never writes successful recording, monitoring, or transfer state. Telephony soft-phone commands also repeat capability enforcement on the server. Enabling an implementation that has not passed the profile's release gates does not make that capability supported.
 

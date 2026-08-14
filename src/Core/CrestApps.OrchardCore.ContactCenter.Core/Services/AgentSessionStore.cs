@@ -49,7 +49,7 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentSession>> ListStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentSession>> GetStaleAsync(DateTime heartbeatCutoffUtc, CancellationToken cancellationToken = default)
     {
         // Read the index alone rather than the documents, and order the read explicitly. A YesSql document
         // query always groups by document identity, and no ordering over the index columns can satisfy that
@@ -85,11 +85,11 @@ public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessi
             return [];
         }
 
-        return await ListByUserIdsAsync(userIds, cancellationToken);
+        return await GetByUserIdsAsync(userIds, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentSession>> ListByUserIdsAsync(
+    public async Task<IReadOnlyCollection<AgentSession>> GetByUserIdsAsync(
         IReadOnlyCollection<string> userIds,
         CancellationToken cancellationToken = default)
     {

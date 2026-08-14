@@ -111,7 +111,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
 
         var now = _clock.UtcNow;
         var candidateIds = new HashSet<string>(StringComparer.Ordinal);
-        var reclaimable = await _commandManager.ListReclaimableAsync(
+        var reclaimable = await _commandManager.GetReclaimableAsync(
             now,
             MaxRecoveryBatchSize,
             cancellationToken);
@@ -153,7 +153,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             });
         }
 
-        var dueCommands = await _commandManager.ListDueAsync(
+        var dueCommands = await _commandManager.GetDueAsync(
             now,
             MaxRecoveryBatchSize,
             cancellationToken);

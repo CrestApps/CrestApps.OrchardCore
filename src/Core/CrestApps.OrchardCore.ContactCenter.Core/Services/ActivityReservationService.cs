@@ -402,7 +402,7 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
 
         await using var acquiredAgentLock = agentLocker;
 
-        var activeAgentReservations = await _reservationManager.ListActiveByAgentAsync(
+        var activeAgentReservations = await _reservationManager.GetActiveByAgentAsync(
             reservation.AgentId,
             cancellationToken);
         var hasNewerAgentWork = activeAgentReservations.Any(candidate =>
@@ -539,7 +539,7 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
                 break;
             }
 
-            var page = await _reservationManager.ListExpiredAsync(now, afterExpiresUtc, afterDocumentId, pageSize, cancellationToken);
+            var page = await _reservationManager.GetExpiredAsync(now, afterExpiresUtc, afterDocumentId, pageSize, cancellationToken);
 
             foreach (var candidate in page.Reservations)
             {

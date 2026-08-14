@@ -56,7 +56,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
             await using (var beforeSession = store.CreateSession())
             {
                 var pending = await new ContactCenterMetricDeltaStore(beforeSession)
-                    .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                    .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
                 // Every writer appended its own row rather than meeting the others on one.
                 Assert.Equal(writers, pending.Count);
@@ -176,7 +176,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
                 // instead of by read row would have removed it here, and its event would have been counted by
                 // nobody.
                 var pending = await new ContactCenterMetricDeltaStore(verificationSession)
-                    .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                    .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
                 Assert.Equal(interleaved, pending.Count);
 
@@ -206,7 +206,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
                 Assert.Equal(3 + 1, total.Count);
 
                 var pending = await new ContactCenterMetricDeltaStore(finalSession)
-                    .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                    .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
                 Assert.Empty(pending);
             }
@@ -282,7 +282,7 @@ public sealed class ContactCenterMetricRollupPersistenceTests
             Assert.Equal(backlog / 2, rejected.Count);
 
             var pending = await new ContactCenterMetricDeltaStore(verificationSession)
-                .ListByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
+                .GetByDateRangeAsync(_now.Date, _now.Date, TestContext.Current.CancellationToken);
 
             Assert.Empty(pending);
         }

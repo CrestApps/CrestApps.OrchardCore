@@ -26,7 +26,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ContactCenterEventMetricDelta>> ListBatchAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? 500 : maxCount;
 
@@ -43,7 +43,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> ListByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ContactCenterEventMetricDelta>> GetByDateRangeAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         // Bounded on purpose. This runs on the request path, and the cap is the same volume one roller run
         // drains, so a backlog large enough to be truncated here is already a backlog the reader cannot report
@@ -58,7 +58,7 @@ public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCente
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ContactCenterMetricContribution>> ListContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, CancellationToken cancellationToken = default)
     {
         // Read from the index rather than through the documents. Everything the caller needs is already on the
         // index, and an index query carries no grouping by document identity, so the ordering this walk depends

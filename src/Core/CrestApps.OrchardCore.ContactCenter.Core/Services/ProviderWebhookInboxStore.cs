@@ -39,7 +39,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListDueAsync(
+    public async Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> GetDueAsync(
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default)
@@ -76,7 +76,7 @@ public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookI
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> ListProcessedBeforeAsync(
+    public async Task<IReadOnlyCollection<ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(
         DateTime processedBeforeUtc,
         int maxCount,
         CancellationToken cancellationToken = default)

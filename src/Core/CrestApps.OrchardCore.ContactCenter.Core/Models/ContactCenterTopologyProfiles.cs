@@ -6,10 +6,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// The deployment topologies this release recognizes.
 /// </summary>
 /// <remarks>
-/// Kept in lockstep with <c>.github/contact-center/support-matrix.v1.json</c> by a contract test. Adding a
-/// topology here without adding it there — or vice versa — fails the build, because a topology the product
-/// accepts but the support contract does not publish is an unsupported deployment the product treats as
-/// supported.
+/// These are the deployment topologies this release recognizes and the single production topology it
+/// certifies. Adding a topology here changes what the product accepts as a supported deployment.
 /// </remarks>
 public static class ContactCenterTopologyProfiles
 {

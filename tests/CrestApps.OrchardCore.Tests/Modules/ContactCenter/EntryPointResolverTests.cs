@@ -71,7 +71,7 @@ public sealed class EntryPointResolverTests
         };
 
         var manager = new Mock<IContactCenterEntryPointManager>();
-        manager.Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([entryPoint]);
+        manager.Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([entryPoint]);
 
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours.Setup(b => b.IsOpenAsync("cal1", It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -92,7 +92,7 @@ public sealed class EntryPointResolverTests
     {
         // Arrange
         var manager = new Mock<IContactCenterEntryPointManager>();
-        manager.Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        manager.Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         var resolver = new EntryPointResolver(manager.Object, new Mock<IBusinessHoursService>().Object);
 

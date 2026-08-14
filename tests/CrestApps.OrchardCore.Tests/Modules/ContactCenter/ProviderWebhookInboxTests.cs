@@ -283,13 +283,13 @@ public sealed class ProviderWebhookInboxTests
         // retention window would change nothing and the operator setting would be silently inert.
         var store = new Mock<IProviderWebhookInboxStore>();
         store
-            .Setup(service => service.ListProcessedBeforeAsync(
+            .Setup(service => service.GetProcessedBeforeAsync(
                 It.IsAny<DateTime>(),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         store
-            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var session = new Mock<ISession>();
         var inbox = CreateInbox(
@@ -306,7 +306,7 @@ public sealed class ProviderWebhookInboxTests
 
         // Assert
         store.Verify(
-            service => service.ListProcessedBeforeAsync(
+            service => service.GetProcessedBeforeAsync(
                 _now.AddDays(-30),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()),
@@ -322,13 +322,13 @@ public sealed class ProviderWebhookInboxTests
         // trade an unbounded table for a guarantee that is already bounded at seven days.
         var store = new Mock<IProviderWebhookInboxStore>();
         store
-            .Setup(service => service.ListProcessedBeforeAsync(
+            .Setup(service => service.GetProcessedBeforeAsync(
                 It.IsAny<DateTime>(),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         store
-            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         var session = new Mock<ISession>();
         var inbox = CreateInbox(
@@ -345,7 +345,7 @@ public sealed class ProviderWebhookInboxTests
 
         // Assert
         store.Verify(
-            service => service.ListProcessedBeforeAsync(
+            service => service.GetProcessedBeforeAsync(
                 _now.AddDays(-ProviderWebhookInbox.TombstoneRetentionDays),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()),
@@ -360,13 +360,13 @@ public sealed class ProviderWebhookInboxTests
         var second = CreateMessage("message-2");
         var store = new Mock<IProviderWebhookInboxStore>();
         store
-            .Setup(service => service.ListProcessedBeforeAsync(
+            .Setup(service => service.GetProcessedBeforeAsync(
                 _now.AddDays(-7),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         store
-            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);
         store
             .Setup(service => service.FindByIdAsync(first.ItemId, It.IsAny<CancellationToken>()))
@@ -445,13 +445,13 @@ public sealed class ProviderWebhookInboxTests
         var second = CreateMessage("message-2");
         var store = new Mock<IProviderWebhookInboxStore>();
         store
-            .Setup(service => service.ListProcessedBeforeAsync(
+            .Setup(service => service.GetProcessedBeforeAsync(
                 _now.AddDays(-7),
                 ProviderWebhookInbox.MaxTombstoneCleanupBatchSize,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         store
-            .Setup(service => service.ListDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetDueAsync(_now, ProviderWebhookInbox.MaxBatchSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync([first, second]);
         store
             .Setup(service => service.FindByIdAsync(first.ItemId, It.IsAny<CancellationToken>()))

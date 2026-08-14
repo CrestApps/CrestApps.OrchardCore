@@ -87,7 +87,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="agentIds">The agent profile identifiers.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The active interactions for the requested agents.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+    Task<IReadOnlyCollection<Interaction>> GetActiveByAgentIdsAsync(
         IReadOnlyCollection<string> agentIds,
         CancellationToken cancellationToken = default);
 
@@ -97,7 +97,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="agentId">The agent profile identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The pending wrap-up interactions, newest first.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+    Task<IReadOnlyCollection<Interaction>> GetPendingWrapUpsByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default);
 
@@ -108,7 +108,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="take">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent's most recent interactions.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<Interaction>> GetRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists active interactions that still carry a provider call identifier and therefore can be
@@ -117,7 +117,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The oldest active provider-backed interactions bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists active interactions for the specified provider that still carry a provider call identifier,
@@ -127,7 +127,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The oldest active provider-backed interactions bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists interactions whose recording has been paused since at or before the specified cutoff, oldest pause
@@ -137,7 +137,7 @@ public interface IInteractionStore : ICatalog<Interaction>
     /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The oldest paused-recording interactions bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+    Task<IReadOnlyCollection<Interaction>> GetPausedRecordingsOlderThanAsync(
         DateTime pausedBeforeUtc,
         int maxCount,
         CancellationToken cancellationToken = default);

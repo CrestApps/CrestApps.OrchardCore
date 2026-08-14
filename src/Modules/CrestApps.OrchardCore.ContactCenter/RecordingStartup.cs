@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
@@ -28,7 +29,7 @@ public sealed class RecordingStartup : StartupBase
         services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
         services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionHandler>();
         services.AddScoped<IRecordingErasureGuard, RecordingErasureGuard>();
-        services.AddSingleton<IBackgroundTask, SecurePauseAutoResumeBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecurePauseAutoResumeBackgroundTask>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -426,7 +426,7 @@ public sealed class VoiceEventFanOutIntegrationTests
                 .ReturnsAsync((string key, CancellationToken _) =>
                     !string.IsNullOrEmpty(key) && DeduplicationRecords.Contains(key, StringComparer.Ordinal));
             eventStore
-                .Setup(store => store.ListByInteractionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Setup(store => store.GetByInteractionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((IReadOnlyList<InteractionEvent>)[]);
             eventStore
                 .Setup(store => store.CreateAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))

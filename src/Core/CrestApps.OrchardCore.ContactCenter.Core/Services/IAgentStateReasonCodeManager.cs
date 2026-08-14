@@ -21,5 +21,5 @@ public interface IAgentStateReasonCodeManager : ICatalogManager<AgentStateReason
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled reason codes.</returns>
-    Task<IReadOnlyCollection<AgentStateReasonCode>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<AgentStateReasonCode>> GetEnabledAsync(CancellationToken cancellationToken = default);
 }

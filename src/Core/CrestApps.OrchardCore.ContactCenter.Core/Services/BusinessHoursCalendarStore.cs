@@ -32,7 +32,7 @@ public sealed class BusinessHoursCalendarStore : DocumentCatalog<BusinessHoursCa
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<BusinessHoursCalendar>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<BusinessHoursCalendar>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var calendars = await Session.Query<BusinessHoursCalendar, BusinessHoursCalendarIndex>(
             index => index.Enabled,

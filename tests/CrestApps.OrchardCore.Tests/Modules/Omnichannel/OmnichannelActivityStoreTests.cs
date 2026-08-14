@@ -63,7 +63,7 @@ public sealed class OmnichannelActivityStoreTests
             var activityStore = CreateActivityStore(querySession, store, connectionString);
 
             // Act
-            var activities = await activityStore.ListBulkManageableAsync(
+            var activities = await activityStore.GetBulkManageableAsync(
                 new BulkManageActivityFilter(),
                 TestContext.Current.CancellationToken);
             var rawStatus = await ReadRawStatusAsync(

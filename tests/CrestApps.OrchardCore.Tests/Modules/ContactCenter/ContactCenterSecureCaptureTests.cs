@@ -438,7 +438,7 @@ public sealed class ContactCenterSecureCaptureTests
         var settled = harness.CollectingSession([SecureCaptureField.CreditCardNumber], engagedPause: true);
         settled.State = SecureCaptureState.Completed;
         harness.SessionManager
-            .Setup(m => m.ListExpiredAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetExpiredAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([collecting, settled]);
         harness.RecordingService
             .Setup(r => r.ResumeAsync("int1", It.IsAny<CancellationToken>()))
@@ -534,7 +534,7 @@ public sealed class ContactCenterSecureCaptureTests
         pending.State = SecureCaptureState.Completed;
         pending.RecordingResumed = false;
         harness.SessionManager
-            .Setup(m => m.ListPendingRecordingResumeAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetPendingRecordingResumeAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([pending]);
         harness.RecordingService
             .Setup(r => r.ResumeAsync("int1", It.IsAny<CancellationToken>()))

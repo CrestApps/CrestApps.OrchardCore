@@ -59,7 +59,7 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
     public async Task<int> ProcessDueAsync(CancellationToken cancellationToken = default)
     {
         var nowUtc = _clock.UtcNow;
-        var dueJobs = await _jobStore.ListDueAsync(nowUtc, AsteriskAriConstants.RecordingIngestBatchSize, cancellationToken);
+        var dueJobs = await _jobStore.GetDueAsync(nowUtc, AsteriskAriConstants.RecordingIngestBatchSize, cancellationToken);
         var ingested = 0;
 
         foreach (var job in dueJobs)

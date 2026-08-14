@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Reserves the next eligible agent for a queue and offers the queued inbound voice call to that agent.

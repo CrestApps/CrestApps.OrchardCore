@@ -13,6 +13,32 @@ public sealed class ContactCenterSetupRecipeTests
         ["contact-center-dialpad-ga-core.recipe.json"] = "ga-core-dialpad",
     };
 
+    private static readonly Dictionary<string, string[]> _tenantProfileFeatures = new(StringComparer.Ordinal)
+    {
+        ["ga-core-asterisk"] =
+        [
+            "CrestApps.OrchardCore.ContactCenter",
+            "CrestApps.OrchardCore.ContactCenter.Agents",
+            "CrestApps.OrchardCore.ContactCenter.Queues",
+            "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+            "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+            "CrestApps.OrchardCore.ContactCenter.Dialer",
+            "CrestApps.OrchardCore.Asterisk",
+            "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
+        ],
+        ["ga-core-dialpad"] =
+        [
+            "CrestApps.OrchardCore.ContactCenter",
+            "CrestApps.OrchardCore.ContactCenter.Agents",
+            "CrestApps.OrchardCore.ContactCenter.Queues",
+            "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+            "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+            "CrestApps.OrchardCore.ContactCenter.Dialer",
+            "CrestApps.OrchardCore.Dialpad",
+            "CrestApps.OrchardCore.Dialpad.ContactCenterVoice",
+        ],
+    };
+
     private static readonly HashSet<string> _knownStepNames = new(StringComparer.Ordinal)
     {
         FeatureStepName,
@@ -97,16 +123,8 @@ public sealed class ContactCenterSetupRecipeTests
     [Fact]
     public void EverySupportedTenantProfile_HasAMatchingSetupRecipe()
     {
-        // Arrange
-        var matrix = LoadMatrix();
-        var tenantProfileIds = matrix["tenantProfiles"]?.AsArray()
-            .Select(profile => profile?["id"]?.GetValue<string>())
-            .ToHashSet(StringComparer.Ordinal);
-
         // Assert
-        Assert.NotNull(tenantProfileIds);
-
-        foreach (var tenantProfileId in tenantProfileIds)
+        foreach (var tenantProfileId in _tenantProfileFeatures.Keys)
         {
             Assert.Contains(tenantProfileId, _recipeToTenantProfile.Values);
         }
@@ -114,16 +132,9 @@ public sealed class ContactCenterSetupRecipeTests
 
     private static HashSet<string> LoadTenantProfileFeatures(string tenantProfileId)
     {
-        var matrix = LoadMatrix();
-        var profile = matrix["tenantProfiles"]?.AsArray()
-            .SingleOrDefault(candidate => string.Equals(candidate?["id"]?.GetValue<string>(), tenantProfileId, StringComparison.Ordinal));
-
-        var features = profile?["features"]?.AsArray()
-            .Select(feature => feature?.GetValue<string>())
-            .ToHashSet(StringComparer.Ordinal);
-
-        return features ??
-            throw new InvalidOperationException($"The tenant profile '{tenantProfileId}' was not found in the support matrix.");
+        return _tenantProfileFeatures.TryGetValue(tenantProfileId, out var features)
+            ? new HashSet<string>(features, StringComparer.Ordinal)
+            : throw new InvalidOperationException($"The tenant profile '{tenantProfileId}' is not a known supported tenant profile.");
     }
 
     private static JsonObject LoadRecipe(string recipeFileName)
@@ -139,19 +150,6 @@ public sealed class ContactCenterSetupRecipeTests
 
         return JsonNode.Parse(File.ReadAllText(recipePath))?.AsObject() ??
             throw new InvalidOperationException($"The recipe '{recipeFileName}' is invalid.");
-    }
-
-    private static JsonObject LoadMatrix()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var matrixPath = Path.Combine(
-            repositoryRoot,
-            ".github",
-            "contact-center",
-            "support-matrix.v1.json");
-
-        return JsonNode.Parse(File.ReadAllText(matrixPath))?.AsObject() ??
-            throw new InvalidOperationException("The Contact Center support matrix is invalid.");
     }
 
     private static string FindRepositoryRoot()

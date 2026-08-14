@@ -50,7 +50,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             var sessionStore = new AgentSessionStore(querySession);
 
             // Act
-            var sessions = await sessionStore.ListByUserIdsAsync(userIds, TestContext.Current.CancellationToken);
+            var sessions = await sessionStore.GetByUserIdsAsync(userIds, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(userIds.Length, sessions.Count);
@@ -108,7 +108,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             var activeCounts = await interactionStore.CountActiveByAgentIdsAsync(
                 agentIds,
                 TestContext.Current.CancellationToken);
-            var pendingWrapUps = await interactionStore.ListPendingWrapUpsByAgentAsync(
+            var pendingWrapUps = await interactionStore.GetPendingWrapUpsByAgentAsync(
                 agentIds[0],
                 TestContext.Current.CancellationToken);
 
@@ -180,7 +180,7 @@ public sealed class AvailabilityStoreSharedDatabaseTests
             var interactionStore = new InteractionStore(querySession);
 
             // Act
-            var active = await interactionStore.ListActiveByAgentIdsAsync(
+            var active = await interactionStore.GetActiveByAgentIdsAsync(
                 agentIds,
                 TestContext.Current.CancellationToken);
 

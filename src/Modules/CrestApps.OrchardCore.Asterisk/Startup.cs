@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -129,7 +130,7 @@ public sealed class Startup : StartupBase
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
 
-        services.AddSingleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>());
 
         services
             .AddSingleton<IAsteriskAriApplicationOwnershipRegistry, AsteriskAriApplicationOwnershipRegistry>()
@@ -175,8 +176,8 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
         services.AddDataMigration<AsteriskChannelTenantBindingMigrations>();
         services.AddIndexProvider<AsteriskRecordingIngestJobIndexProvider>();
         services.AddDataMigration<AsteriskRecordingIngestJobMigrations>();
-        services.AddSingleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>());
     }
 }
 

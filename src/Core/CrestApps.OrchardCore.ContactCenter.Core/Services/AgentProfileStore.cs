@@ -36,7 +36,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentProfile>> ListAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentProfile>> GetAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
@@ -50,7 +50,7 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+    public async Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
         AgentPresenceStatus presenceStatus,
         CancellationToken cancellationToken = default)
     {

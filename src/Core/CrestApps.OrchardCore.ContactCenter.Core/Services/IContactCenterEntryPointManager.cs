@@ -21,5 +21,5 @@ public interface IContactCenterEntryPointManager : ICatalogManager<ContactCenter
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The enabled entry points.</returns>
-    Task<IReadOnlyCollection<ContactCenterEntryPoint>> ListEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ContactCenterEntryPoint>> GetEnabledAsync(CancellationToken cancellationToken = default);
 }

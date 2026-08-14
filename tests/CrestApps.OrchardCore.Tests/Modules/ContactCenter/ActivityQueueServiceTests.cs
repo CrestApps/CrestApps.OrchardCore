@@ -121,7 +121,7 @@ public sealed class ActivityQueueServiceTests
 
         // Assert
         Assert.Equal(0, moved);
-        queueItemManager.Verify(m => m.ListWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        queueItemManager.Verify(m => m.GetWaitingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class ActivityQueueServiceTests
         var fresh = new QueueItem { ItemId = "i2", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-10) }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var queueItemManager = new Mock<IQueueItemManager>();
-        queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([overdue, fresh]);
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([overdue, fresh]);
 
         var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
         var queue = new ActivityQueue { ItemId = "q1", OverflowQueueId = "q2", OverflowAfterSeconds = 30 };
@@ -163,7 +163,7 @@ public sealed class ActivityQueueServiceTests
             OverflowHistory = ["q1"],
         }.RestorePersistedStatus(QueueItemStatus.Waiting);
         var queueItemManager = new Mock<IQueueItemManager>();
-        queueItemManager.Setup(m => m.ListWaitingAsync("q2", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+        queueItemManager.Setup(m => m.GetWaitingAsync("q2", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
         var service = CreateService(
             queueItemManager,
             new Mock<IActivityQueueManager>(),
@@ -194,7 +194,7 @@ public sealed class ActivityQueueServiceTests
             OverflowHistory = ["q2"],
         }.RestorePersistedStatus(QueueItemStatus.Waiting);
         var queueItemManager = new Mock<IQueueItemManager>();
-        queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
         var service = CreateService(
             queueItemManager,
             new Mock<IActivityQueueManager>(),
@@ -221,7 +221,7 @@ public sealed class ActivityQueueServiceTests
         var item2 = new QueueItem { ItemId = "i2", QueueId = "q1", EnqueuedUtc = _now.AddSeconds(-5) }.RestorePersistedStatus(QueueItemStatus.Waiting);
 
         var queueItemManager = new Mock<IQueueItemManager>();
-        queueItemManager.Setup(m => m.ListWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item1, item2]);
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item1, item2]);
 
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours.Setup(b => b.IsOpenAsync("cal", It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);

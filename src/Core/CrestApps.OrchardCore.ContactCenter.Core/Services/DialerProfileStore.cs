@@ -21,7 +21,7 @@ public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerPr
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<DialerProfile>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<DialerProfile>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var profiles = await Session.Query<DialerProfile, DialerProfileIndex>(
             index => index.Enabled,

@@ -63,7 +63,7 @@ public sealed class AsteriskRecordingIngestJobStore : IAsteriskRecordingIngestJo
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<AsteriskRecordingIngestJob>> ListDueAsync(
+    public async Task<IReadOnlyList<AsteriskRecordingIngestJob>> GetDueAsync(
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default)

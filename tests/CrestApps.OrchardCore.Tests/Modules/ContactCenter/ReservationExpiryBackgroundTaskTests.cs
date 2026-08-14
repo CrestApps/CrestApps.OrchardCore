@@ -33,7 +33,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var queueService = new Mock<IActivityQueueService>();
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
@@ -105,7 +105,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var queueService = new Mock<IActivityQueueService>();
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
@@ -154,7 +154,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var queueService = new Mock<IActivityQueueService>();
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
@@ -207,7 +207,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var queueService = new Mock<IActivityQueueService>();
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
@@ -355,7 +355,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ReturnsAsync(0);
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue1, queue2]);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager
@@ -411,7 +411,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
         var queueManager = new Mock<IActivityQueueManager>();
         queueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([queue]);
         var queueItemManager = new Mock<IQueueItemManager>();
         var interactionManager = new Mock<IInteractionManager>();

@@ -37,7 +37,7 @@ public sealed class AgentSessionStateAuthorityTests
             $"Expected a unique-claim or concurrency failure but received {failure.GetType().Name}.");
 
         await using var querySession = harness.Store.CreateSession();
-        var online = await new AgentSessionStore(querySession).ListByUserIdsAsync(["user-1"], TestContext.Current.CancellationToken);
+        var online = await new AgentSessionStore(querySession).GetByUserIdsAsync(["user-1"], TestContext.Current.CancellationToken);
         Assert.Single(online, session => session.IsOnline);
     }
 

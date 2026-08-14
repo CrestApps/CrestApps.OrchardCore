@@ -143,7 +143,7 @@ public sealed class InboundVoiceServiceTests
             .ReturnsAsync(activity);
 
         harness.QueueManager
-            .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([new ActivityQueue { ItemId = "q1", Enabled = true, InboundChannelEndpointId = "ep1" }]);
 
         var interaction = new Interaction { ItemId = "int1" };
@@ -244,7 +244,7 @@ public sealed class InboundVoiceServiceTests
             .ReturnsAsync(activity);
 
         harness.QueueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new ActivityQueue
@@ -389,7 +389,7 @@ public sealed class InboundVoiceServiceTests
             .ReturnsAsync(activity);
 
         harness.QueueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         harness.InteractionManager
@@ -472,7 +472,7 @@ public sealed class InboundVoiceServiceTests
             .ReturnsAsync(activity);
 
         harness.QueueManager
-            .Setup(manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         harness.InteractionManager
@@ -527,7 +527,7 @@ public sealed class InboundVoiceServiceTests
             .ReturnsAsync(interaction);
 
         harness.QueueManager
-            .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var service = harness.CreateService();
@@ -670,7 +670,7 @@ public sealed class InboundVoiceServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         harness.QueueManager.Verify(
-            manager => manager.ListEnabledAsync(It.IsAny<CancellationToken>()),
+            manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()),
             Times.Never);
         harness.QueueService.Verify(
             queueService => queueService.EnqueueAsync(
@@ -829,7 +829,7 @@ public sealed class InboundVoiceServiceTests
         harness.SetupNoContext();
 
         harness.QueueManager
-            .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([new ActivityQueue { ItemId = "q1", Enabled = true }]);
 
         harness.QueueService
@@ -929,7 +929,7 @@ public sealed class InboundVoiceServiceTests
             .Returns(new ValueTask<OmnichannelChannelEndpoint>(new OmnichannelChannelEndpoint { ItemId = "ep1", Channel = "Phone", Value = "+15553334444" }));
 
         harness.QueueManager
-            .Setup(m => m.ListEnabledAsync(It.IsAny<CancellationToken>()))
+            .Setup(m => m.GetEnabledAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new ActivityQueue { ItemId = "q-generic", Enabled = true },

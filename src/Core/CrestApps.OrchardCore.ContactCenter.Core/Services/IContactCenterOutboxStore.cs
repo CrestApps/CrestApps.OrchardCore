@@ -23,7 +23,7 @@ public interface IContactCenterOutboxStore : ICatalog<ContactCenterOutboxMessage
     /// <param name="maxCount">The maximum number of messages to return in one batch.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due outbox messages.</returns>
-    Task<IReadOnlyCollection<ContactCenterOutboxMessage>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ContactCenterOutboxMessage>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Counts the messages currently in the supplied dispatch state.

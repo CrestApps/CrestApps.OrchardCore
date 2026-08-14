@@ -1,35 +1,50 @@
-using System.Text.Json;
-
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
 public sealed class ContactCenterSupportMatrix
 {
-    private static readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     public required ContactCenterTenantProfile[] TenantProfiles { get; init; }
 
-    public static async Task<ContactCenterSupportMatrix> LoadAsync()
+    public static Task<ContactCenterSupportMatrix> LoadAsync()
     {
-        var path = Path.Combine(GetRepositoryRoot(), ".github", "contact-center", "support-matrix.v1.json");
-        await using var stream = File.OpenRead(path);
-        var matrix = await JsonSerializer.DeserializeAsync<ContactCenterSupportMatrix>(stream, _serializerOptions);
-
-        return matrix ?? throw new InvalidOperationException($"Unable to load the Contact Center support matrix from '{path}'.");
-    }
-
-    private static string GetRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        var matrix = new ContactCenterSupportMatrix
         {
-            directory = directory.Parent;
-        }
+            TenantProfiles =
+            [
+                new ContactCenterTenantProfile
+                {
+                    Id = "ga-core-asterisk",
+                    ProviderProfile = "asterisk-ga-core",
+                    Features =
+                    [
+                        "CrestApps.OrchardCore.ContactCenter",
+                        "CrestApps.OrchardCore.ContactCenter.Agents",
+                        "CrestApps.OrchardCore.ContactCenter.Queues",
+                        "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+                        "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+                        "CrestApps.OrchardCore.ContactCenter.Dialer",
+                        "CrestApps.OrchardCore.Asterisk",
+                        "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
+                    ],
+                },
+                new ContactCenterTenantProfile
+                {
+                    Id = "ga-core-dialpad",
+                    ProviderProfile = "dialpad-ga-core",
+                    Features =
+                    [
+                        "CrestApps.OrchardCore.ContactCenter",
+                        "CrestApps.OrchardCore.ContactCenter.Agents",
+                        "CrestApps.OrchardCore.ContactCenter.Queues",
+                        "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+                        "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+                        "CrestApps.OrchardCore.ContactCenter.Dialer",
+                        "CrestApps.OrchardCore.Dialpad",
+                        "CrestApps.OrchardCore.Dialpad.ContactCenterVoice",
+                    ],
+                },
+            ],
+        };
 
-        return directory?.FullName
-            ?? throw new InvalidOperationException("Unable to locate the repository root.");
+        return Task.FromResult(matrix);
     }
 }

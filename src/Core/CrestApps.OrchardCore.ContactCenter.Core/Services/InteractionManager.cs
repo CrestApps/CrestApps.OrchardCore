@@ -125,11 +125,11 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveByAgentIdsAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveByAgentIdsAsync(
         IReadOnlyCollection<string> agentIds,
         CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListActiveByAgentIdsAsync(agentIds, cancellationToken);
+        var interactions = await _store.GetActiveByAgentIdsAsync(agentIds, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -140,11 +140,11 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListPendingWrapUpsByAgentAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetPendingWrapUpsByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListPendingWrapUpsByAgentAsync(agentId, cancellationToken);
+        var interactions = await _store.GetPendingWrapUpsByAgentAsync(agentId, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -155,9 +155,9 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> GetRecentByAgentAsync(string agentId, int take, CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListRecentByAgentAsync(agentId, take, cancellationToken);
+        var interactions = await _store.GetRecentByAgentAsync(agentId, take, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -168,9 +168,9 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListActiveWithProviderCallIdAsync(maxCount, cancellationToken);
+        var interactions = await _store.GetActiveWithProviderCallIdAsync(maxCount, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -181,12 +181,12 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListActiveWithProviderCallIdAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetActiveWithProviderCallIdAsync(
         string providerName,
         int maxCount,
         CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListActiveWithProviderCallIdAsync(providerName, maxCount, cancellationToken);
+        var interactions = await _store.GetActiveWithProviderCallIdAsync(providerName, maxCount, cancellationToken);
 
         foreach (var interaction in interactions)
         {
@@ -197,12 +197,12 @@ public sealed class InteractionManager : CatalogManager<Interaction>, IInteracti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<Interaction>> ListPausedRecordingsOlderThanAsync(
+    public async Task<IReadOnlyCollection<Interaction>> GetPausedRecordingsOlderThanAsync(
         DateTime pausedBeforeUtc,
         int maxCount,
         CancellationToken cancellationToken = default)
     {
-        var interactions = await _store.ListPausedRecordingsOlderThanAsync(pausedBeforeUtc, maxCount, cancellationToken);
+        var interactions = await _store.GetPausedRecordingsOlderThanAsync(pausedBeforeUtc, maxCount, cancellationToken);
 
         foreach (var interaction in interactions)
         {

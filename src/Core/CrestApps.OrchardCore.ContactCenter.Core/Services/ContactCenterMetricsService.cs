@@ -64,7 +64,7 @@ public sealed class ContactCenterMetricsService : IContactCenterMetricsService
         var fromUtc = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = toDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
-        var metrics = await _store.ListByDateRangeAsync(fromUtc, toUtc, cancellationToken);
+        var metrics = await _store.GetByDateRangeAsync(fromUtc, toUtc, cancellationToken);
 
         var summary = metrics
             .GroupBy(metric => metric.EventType, StringComparer.Ordinal)
@@ -73,7 +73,7 @@ public sealed class ContactCenterMetricsService : IContactCenterMetricsService
         // Contributions that have not been folded yet are still real events, so a reader adds them to the
         // totals. Without this a summary read a moment after the traffic it describes would report a number
         // that is behind by however much the roller has not caught up on.
-        var pending = await _deltaStore.ListByDateRangeAsync(fromUtc, toUtc, cancellationToken);
+        var pending = await _deltaStore.GetByDateRangeAsync(fromUtc, toUtc, cancellationToken);
 
         foreach (var group in pending.GroupBy(delta => delta.EventType, StringComparer.Ordinal))
         {

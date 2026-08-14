@@ -81,7 +81,7 @@ public sealed class CallbackService : ICallbackService
     public async Task<int> PromoteDueAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var due = await _callbackManager.ListDueAsync(now, MaxBatchSize, cancellationToken);
+        var due = await _callbackManager.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var count = 0;
 
         foreach (var callback in due)

@@ -69,7 +69,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         // The event log is read through the store rather than queried directly, because a payload written by an
         // earlier release deserializes into today's type without complaint and the store is where the stored
         // schema version is brought to the one this release understands.
-        var events = (await _eventStore.ListByAggregateTypeAsync(
+        var events = (await _eventStore.GetByAggregateTypeAsync(
             nameof(AgentProfile),
             [
                 ContactCenterConstants.Events.AgentSignedIn,

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
@@ -33,6 +34,6 @@ public sealed class RoutingStartup : StartupBase
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
-        services.AddSingleton<IBackgroundTask, ReservationExpiryBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
     }
 }

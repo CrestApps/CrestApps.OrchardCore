@@ -9,7 +9,7 @@ public interface IReportExportManager
     /// Lists every registered export format.
     /// </summary>
     /// <returns>The registered export formats.</returns>
-    IReadOnlyList<IReportExportFormat> ListFormats();
+    IReadOnlyList<IReportExportFormat> GetFormats();
 
     /// <summary>
     /// Finds an export format by its technical name.

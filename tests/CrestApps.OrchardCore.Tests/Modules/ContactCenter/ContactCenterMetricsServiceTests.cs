@@ -59,7 +59,7 @@ public sealed class ContactCenterMetricsServiceTests
     {
         // Arrange
         var store = new Mock<IContactCenterMetricStore>();
-        store.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        store.Setup(s => s.GetByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new ContactCenterEventMetric { EventType = "CallEnded", Count = 3 },
@@ -68,7 +68,7 @@ public sealed class ContactCenterMetricsServiceTests
             ]);
 
         var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
-        deltaStore.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        deltaStore.Setup(s => s.GetByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var service = CreateService(store, deltaStore);
@@ -88,14 +88,14 @@ public sealed class ContactCenterMetricsServiceTests
         // A contribution that the roller has not reached is still a real event, so a summary that omitted it
         // would report a number behind the traffic it claims to describe.
         var store = new Mock<IContactCenterMetricStore>();
-        store.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        store.Setup(s => s.GetByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new ContactCenterEventMetric { EventType = "CallEnded", Count = 3 },
             ]);
 
         var deltaStore = new Mock<IContactCenterMetricDeltaStore>();
-        deltaStore.Setup(s => s.ListByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        deltaStore.Setup(s => s.GetByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new ContactCenterEventMetricDelta { EventType = "CallEnded", Count = 1 },

@@ -32,7 +32,7 @@ public sealed class ActivityQueueStore : DocumentCatalog<ActivityQueue, Activity
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityQueue>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ActivityQueue>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
         var queues = await Session.Query<ActivityQueue, ActivityQueueIndex>(
             index => index.Enabled,

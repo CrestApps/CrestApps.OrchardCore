@@ -184,8 +184,8 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         await using var acquiredLock = locker;
 
         var interactions = string.IsNullOrEmpty(providerName)
-            ? await _interactionManager.ListActiveWithProviderCallIdAsync(MaxReconciliationBatchSize, cancellationToken)
-            : await _interactionManager.ListActiveWithProviderCallIdAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
+            ? await _interactionManager.GetActiveWithProviderCallIdAsync(MaxReconciliationBatchSize, cancellationToken)
+            : await _interactionManager.GetActiveWithProviderCallIdAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
         var refreshed = 0;
 
         foreach (var interaction in interactions)

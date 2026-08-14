@@ -40,11 +40,11 @@ public sealed class ContactCenterWorkStateManager : CatalogManager<ContactCenter
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ContactCenterWorkState>> ListByActivityIdsAsync(
+    public async Task<IReadOnlyCollection<ContactCenterWorkState>> GetByActivityIdsAsync(
         IEnumerable<string> activityItemIds,
         CancellationToken cancellationToken = default)
     {
-        var states = await _store.ListByActivityIdsAsync(activityItemIds, cancellationToken);
+        var states = await _store.GetByActivityIdsAsync(activityItemIds, cancellationToken);
 
         foreach (var state in states)
         {

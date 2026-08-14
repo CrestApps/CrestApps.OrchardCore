@@ -156,7 +156,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         var now = _clock.UtcNow;
-        var due = await _outboxStore.ListDueAsync(now, MaxBatchSize, cancellationToken);
+        var due = await _outboxStore.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var redelivered = 0;
 
         foreach (var message in due)

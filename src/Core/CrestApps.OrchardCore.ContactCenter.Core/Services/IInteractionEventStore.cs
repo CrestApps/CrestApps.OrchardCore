@@ -14,7 +14,7 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     /// <param name="interactionId">The interaction identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The ordered list of events for the interaction.</returns>
-    Task<IReadOnlyList<InteractionEvent>> ListByInteractionAsync(string interactionId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<InteractionEvent>> GetByInteractionAsync(string interactionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines whether an event with the specified idempotency key has already been recorded.
@@ -31,7 +31,7 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     /// <param name="maxCount">The maximum number of events to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The batch of expired events.</returns>
-    Task<IReadOnlyList<InteractionEvent>> ListOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<InteractionEvent>> GetOlderThanAsync(DateTime cutoffUtc, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the events of the supplied types recorded against the supplied aggregate type up to and including
@@ -44,7 +44,7 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     /// <param name="occurredThroughUtc">The inclusive UTC upper bound on occurrence time.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching events, oldest first.</returns>
-    Task<IReadOnlyList<InteractionEvent>> ListByAggregateTypeAsync(
+    Task<IReadOnlyList<InteractionEvent>> GetByAggregateTypeAsync(
         string aggregateType,
         IEnumerable<string> eventTypes,
         DateTime occurredThroughUtc,
@@ -59,5 +59,5 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
     /// <param name="take">The maximum number of events to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The requested page of events, oldest first.</returns>
-    Task<IReadOnlyList<InteractionEvent>> ListOrderedPageAsync(int skip, int take, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<InteractionEvent>> GetOrderedPageAsync(int skip, int take, CancellationToken cancellationToken = default);
 }

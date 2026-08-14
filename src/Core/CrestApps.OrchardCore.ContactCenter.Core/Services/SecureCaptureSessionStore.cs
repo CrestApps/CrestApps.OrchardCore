@@ -41,7 +41,7 @@ public sealed class SecureCaptureSessionStore : DocumentCatalog<SecureCaptureSes
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SecureCaptureSession>> ListExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<SecureCaptureSession>> GetExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var sessions = await Session.Query<SecureCaptureSession, SecureCaptureSessionIndex>(
@@ -69,7 +69,7 @@ public sealed class SecureCaptureSessionStore : DocumentCatalog<SecureCaptureSes
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var sessions = await Session.Query<SecureCaptureSession, SecureCaptureSessionIndex>(

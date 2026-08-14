@@ -502,17 +502,17 @@ public sealed class TelephonyHubAuthorizationTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<TelephonyInteraction>(null);
 
-        public Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(
+        public Task<IReadOnlyList<TelephonyInteraction>> GetActiveByUserAsync(
             string userId,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<TelephonyInteraction>>([]);
 
-        public Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(
+        public Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(
             int maxCount,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<TelephonyInteraction>>([]);
 
-        public Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(
+        public Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(
             string providerName,
             int maxCount,
             CancellationToken cancellationToken = default)

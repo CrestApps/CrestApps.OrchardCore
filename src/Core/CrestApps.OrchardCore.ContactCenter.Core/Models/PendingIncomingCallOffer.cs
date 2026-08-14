@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Models;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
 /// Represents the current ringing inbound offer that should be restored into the soft phone after a

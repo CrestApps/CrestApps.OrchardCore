@@ -416,7 +416,7 @@ public sealed class ProviderCommandStateServiceTests
 
             await using var verificationSession = store.CreateSession();
             var due = await new ProviderCommandStore(verificationSession)
-                .ListDueAsync(_now.AddHours(1), 10, TestContext.Current.CancellationToken);
+                .GetDueAsync(_now.AddHours(1), 10, TestContext.Current.CancellationToken);
             Assert.Empty(due);
         });
     }
@@ -841,7 +841,7 @@ public sealed class ProviderCommandStateServiceTests
             // Assert
             await using var verificationSession = store.CreateSession();
             var due = await new ProviderCommandStore(verificationSession)
-                .ListDueAsync(now, 10, TestContext.Current.CancellationToken);
+                .GetDueAsync(now, 10, TestContext.Current.CancellationToken);
             var recovered = Assert.Single(due);
             Assert.Equal("command-1", recovered.CommandId);
             Assert.Equal(ProviderCommandStatus.Compensating, recovered.Status);

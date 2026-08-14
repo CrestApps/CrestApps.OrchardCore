@@ -40,9 +40,9 @@ public sealed class SecureCaptureSessionManager : CatalogManager<SecureCaptureSe
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SecureCaptureSession>> ListExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<SecureCaptureSession>> GetExpiredAsync(DateTime utcNow, int maxCount, CancellationToken cancellationToken = default)
     {
-        var sessions = await _store.ListExpiredAsync(utcNow, maxCount, cancellationToken);
+        var sessions = await _store.GetExpiredAsync(utcNow, maxCount, cancellationToken);
 
         foreach (var session in sessions)
         {
@@ -66,9 +66,9 @@ public sealed class SecureCaptureSessionManager : CatalogManager<SecureCaptureSe
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SecureCaptureSession>> ListPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, CancellationToken cancellationToken = default)
     {
-        var sessions = await _store.ListPendingRecordingResumeAsync(maxCount, cancellationToken);
+        var sessions = await _store.GetPendingRecordingResumeAsync(maxCount, cancellationToken);
 
         foreach (var session in sessions)
         {

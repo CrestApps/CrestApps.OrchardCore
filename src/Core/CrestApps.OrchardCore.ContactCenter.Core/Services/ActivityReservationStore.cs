@@ -25,7 +25,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     }
 
     /// <inheritdoc/>
-    public async Task<ExpiredReservationPage> ListExpiredAsync(
+    public async Task<ExpiredReservationPage> GetExpiredAsync(
         DateTime utcNow,
         DateTime? afterExpiresUtc,
         long afterDocumentId,
@@ -101,7 +101,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByAgentAsync(
+    public async Task<IReadOnlyCollection<ActivityReservation>> GetActiveByAgentAsync(
         string agentId,
         CancellationToken cancellationToken = default)
     {
@@ -117,7 +117,7 @@ public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservati
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ActivityReservation>> ListActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ActivityReservation>> GetActiveByActivityAsync(string activityItemId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
 

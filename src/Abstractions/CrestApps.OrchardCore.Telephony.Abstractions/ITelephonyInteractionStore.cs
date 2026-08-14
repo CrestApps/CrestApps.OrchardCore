@@ -103,7 +103,7 @@ public interface ITelephonyInteractionStore
     /// <param name="userId">The user identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The user's active interactions, newest first.</returns>
-    Task<IReadOnlyList<TelephonyInteraction>> ListActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TelephonyInteraction>> GetActiveByUserAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists in-progress interactions that can be reconciled against their providers, oldest first and bounded for reconciliation sweeps.
@@ -111,7 +111,7 @@ public interface ITelephonyInteractionStore
     /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The oldest active interactions bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists in-progress interactions for the specified provider, oldest first and bounded for reconciliation sweeps.
@@ -120,7 +120,7 @@ public interface ITelephonyInteractionStore
     /// <param name="maxCount">The maximum number of interactions to return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The oldest active interactions for the provider bounded by <paramref name="maxCount"/>.</returns>
-    Task<IReadOnlyList<TelephonyInteraction>> ListActiveAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TelephonyInteraction>> GetActiveAsync(string providerName, int maxCount, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the most recent interactions for the given user, newest first.

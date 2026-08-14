@@ -43,7 +43,7 @@ public sealed class ReportManagerTests
         Assert.NotNull(manager.FindByName("individual"));
         Assert.NotNull(manager.FindByName("from-provider-a"));
         Assert.NotNull(manager.FindByName("from-provider-b"));
-        Assert.Equal(3, manager.ListReports().Count);
+        Assert.Equal(3, manager.GetReports().Count);
     }
 
     [Fact]

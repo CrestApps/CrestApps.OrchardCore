@@ -62,7 +62,7 @@ public sealed class AgentWorkspaceController : Controller
             return Forbid();
         }
 
-        var reasonCodes = await _reasonCodeManager.ListEnabledAsync();
+        var reasonCodes = await _reasonCodeManager.GetEnabledAsync();
         var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
 
         var recordingSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterRecordingSettings>();

@@ -51,7 +51,7 @@ public sealed class AgentQueueMembershipStoreTests
             var agentStore = new AgentProfileStore(querySession);
 
             // Act
-            var available = await agentStore.ListAvailableForQueueAsync(
+            var available = await agentStore.GetAvailableForQueueAsync(
                 TargetQueueId,
                 TestContext.Current.CancellationToken);
 
@@ -84,7 +84,7 @@ public sealed class AgentQueueMembershipStoreTests
             var agentStore = new AgentProfileStore(querySession);
 
             // Act
-            var available = await agentStore.ListAvailableForQueueAsync(
+            var available = await agentStore.GetAvailableForQueueAsync(
                 "queue-sales",
                 TestContext.Current.CancellationToken);
 

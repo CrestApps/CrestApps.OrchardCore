@@ -118,9 +118,9 @@ public sealed class ActivityReservationSharedDatabaseTests
             var reservationStore = new ActivityReservationStore(session);
 
             // Act
-            var firstPage = await reservationStore.ListExpiredAsync(_now, afterExpiresUtc: null, afterDocumentId: 0, maxResults: 2, TestContext.Current.CancellationToken);
-            var secondPage = await reservationStore.ListExpiredAsync(_now, firstPage.NextAfterExpiresUtc, firstPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
-            var thirdPage = await reservationStore.ListExpiredAsync(_now, secondPage.NextAfterExpiresUtc, secondPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
+            var firstPage = await reservationStore.GetExpiredAsync(_now, afterExpiresUtc: null, afterDocumentId: 0, maxResults: 2, TestContext.Current.CancellationToken);
+            var secondPage = await reservationStore.GetExpiredAsync(_now, firstPage.NextAfterExpiresUtc, firstPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
+            var thirdPage = await reservationStore.GetExpiredAsync(_now, secondPage.NextAfterExpiresUtc, secondPage.NextAfterDocumentId, maxResults: 2, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(["reservation-00", "reservation-01"], firstPage.Reservations.Select(reservation => reservation.ItemId));

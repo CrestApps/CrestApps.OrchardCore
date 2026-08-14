@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -62,7 +63,6 @@ public sealed class VoiceStartup : StartupBase
                 "'CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' cannot be set without also supplying 'AudioVerificationEvidenceReference', which must point at the retained base-voice acceptance evidence.")
             .ValidateOnStart();
 
-        services.AddContactCenterVoiceHealthChecks();
         services.AddScoped<IModularTenantEvents, BaseVoiceVerificationStartupCheck>();
 
         services
@@ -113,10 +113,10 @@ public sealed class VoiceStartup : StartupBase
             .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
             .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
 
-        services.AddSingleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>());
 
-        services.AddSingleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

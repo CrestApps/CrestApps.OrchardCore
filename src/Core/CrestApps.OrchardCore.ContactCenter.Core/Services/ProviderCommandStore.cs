@@ -41,7 +41,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderCommand>> ListDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ProviderCommand>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var commands = await Session.Query<ProviderCommand, ProviderCommandIndex>(
@@ -58,7 +58,7 @@ public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, Prov
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<ProviderCommand>> ListReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<ProviderCommand>> GetReclaimableAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? DefaultBatchSize : maxCount;
         var commands = await Session.Query<ProviderCommand, ProviderCommandIndex>(

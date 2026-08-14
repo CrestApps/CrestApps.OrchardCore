@@ -27,9 +27,9 @@ public sealed class DialerProfileManager : CatalogManager<DialerProfile>, IDiale
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<DialerProfile>> ListEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<DialerProfile>> GetEnabledAsync(CancellationToken cancellationToken = default)
     {
-        var profiles = await _store.ListEnabledAsync(cancellationToken);
+        var profiles = await _store.GetEnabledAsync(cancellationToken);
 
         foreach (var profile in profiles)
         {

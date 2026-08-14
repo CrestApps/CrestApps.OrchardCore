@@ -41,9 +41,9 @@ public sealed class AgentProfileManager : CatalogManager<AgentProfile>, IAgentPr
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentProfile>> ListAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<AgentProfile>> GetAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
     {
-        var profiles = await _store.ListAvailableForQueueAsync(queueId, cancellationToken);
+        var profiles = await _store.GetAvailableForQueueAsync(queueId, cancellationToken);
 
         foreach (var profile in profiles)
         {
@@ -54,11 +54,11 @@ public sealed class AgentProfileManager : CatalogManager<AgentProfile>, IAgentPr
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<AgentProfile>> ListByPresenceAsync(
+    public async Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
         AgentPresenceStatus presenceStatus,
         CancellationToken cancellationToken = default)
     {
-        var profiles = await _store.ListByPresenceAsync(presenceStatus, cancellationToken);
+        var profiles = await _store.GetByPresenceAsync(presenceStatus, cancellationToken);
 
         foreach (var profile in profiles)
         {

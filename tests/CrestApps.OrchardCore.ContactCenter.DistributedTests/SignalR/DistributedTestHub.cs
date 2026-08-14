@@ -4,9 +4,14 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.SignalR;
 
-internal sealed class DistributedTestHub(ShellSettings shellSettings) : Hub<IDistributedTestClient>
+internal sealed class DistributedTestHub : Hub<IDistributedTestClient>
 {
-    private readonly string _tenantName = shellSettings.Name;
+    private readonly string _tenantName;
+
+    public DistributedTestHub(ShellSettings shellSettings)
+    {
+        _tenantName = shellSettings.Name;
+    }
 
     public override async Task OnConnectedAsync()
     {

@@ -32,7 +32,7 @@ public interface IAsteriskRecordingIngestJobStore
     /// <param name="maxCount">The maximum number of jobs to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The due pending jobs, ordered by their next attempt time.</returns>
-    Task<IReadOnlyList<AsteriskRecordingIngestJob>> ListDueAsync(
+    Task<IReadOnlyList<AsteriskRecordingIngestJob>> GetDueAsync(
         DateTime nowUtc,
         int maxCount,
         CancellationToken cancellationToken = default);

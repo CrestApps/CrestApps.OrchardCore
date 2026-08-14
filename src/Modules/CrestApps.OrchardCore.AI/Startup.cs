@@ -255,8 +255,9 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
-            .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+            .AddDataMigration<AIChatSessionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 

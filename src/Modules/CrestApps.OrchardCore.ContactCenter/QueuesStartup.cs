@@ -66,7 +66,5 @@ public sealed class QueuesStartup : StartupBase
             .AddDataMigration<QueueItemIndexMigrations>()
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
-
-        services.AddContactCenterQueuesHealthChecks();
     }
 }

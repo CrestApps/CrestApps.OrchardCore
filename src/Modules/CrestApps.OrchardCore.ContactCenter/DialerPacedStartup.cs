@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -38,7 +39,7 @@ public sealed class DialerPacedStartup : StartupBase
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
-        services.AddSingleton<IBackgroundTask, DialerPacingBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerPacingBackgroundTask>());
 
         services.Configure<ActivityBatchSourceOptions>(options =>
         {

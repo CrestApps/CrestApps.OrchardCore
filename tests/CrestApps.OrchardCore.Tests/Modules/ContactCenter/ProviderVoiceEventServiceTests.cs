@@ -1377,7 +1377,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         eventStore
-            .Setup(store => store.ListByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new InteractionEvent
@@ -1848,7 +1848,7 @@ public sealed class ProviderVoiceEventServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         eventStore
-            .Setup(store => store.ListByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
@@ -2065,7 +2065,7 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         eventStore
-            .Setup(store => store.ListByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .Setup(store => store.GetByInteractionAsync("interaction-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
