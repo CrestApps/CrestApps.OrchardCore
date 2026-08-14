@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Writes CRM activity fields on behalf of Contact Center routing without enlisting the write in the routing
-/// transaction, so a losing compare-and-set race against a concurrent CRM edit can never fail a routing
+/// transaction, so a losing race against a concurrent CRM edit can never fail a routing
 /// transition.
 /// </summary>
 public interface IContactCenterActivityWriter

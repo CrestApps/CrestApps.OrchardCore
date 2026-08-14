@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Coordinates the live connection lifecycle of agent sessions: registering and removing SignalR
+/// Coordinates the live connection lifecycle of agent sessions: registering and removing client
 /// connections, recording heartbeats, building reconnect snapshots, and expiring sessions whose client
 /// has gone away so routing stops targeting a dead connection.
 /// </summary>

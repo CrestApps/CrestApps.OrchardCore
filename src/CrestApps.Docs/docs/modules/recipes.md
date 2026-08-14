@@ -76,6 +76,18 @@ For `AIDataSource`, the schema also derives the `Source` enum from the currently
 
 More broadly, the exported recipe-step schemas now attach descriptions to the known properties across the built-in CrestApps recipe steps so human authors and AI tools can discover what each property is for directly from the schema surface.
 
+## Contact Center and Omnichannel schemas
+
+The feature also exports dedicated schemas for the Contact Center and Omnichannel configuration steps, each gated on the feature that provides the step so tooling only suggests steps the tenant can actually import:
+
+- **Contact Center queues** (`CrestApps.OrchardCore.ContactCenter.Queues`): `ContactCenterSkill`, `ContactCenterQueueGroup`, `ContactCenterBusinessHoursCalendar`, `ContactCenterQueue`, and `ContactCenterAgentEntitlement`.
+- **Contact Center agents** (`CrestApps.OrchardCore.ContactCenter.Agents`): `AgentStateReasonCode`.
+- **Contact Center inbound voice** (`CrestApps.OrchardCore.ContactCenter.InboundVoice`): `ContactCenterEntryPoint`.
+- **Contact Center dialer** (`CrestApps.OrchardCore.ContactCenter.Dialer`): `ContactCenterDialerProfile`.
+- **Omnichannel activities** (`CrestApps.OrchardCore.Omnichannel.Activities`): `OmnichannelCampaignGroup`, `OmnichannelCampaign`, `OmnichannelChannelEndpoint`, `OmnichannelDisposition`, and `OmnichannelSubjectAction`.
+
+The Contact Center workflows feature (`CrestApps.OrchardCore.ContactCenter.Workflows`) additionally contributes workflow-activity schemas for the `ContactCenterEvent` event and the `EnqueueActivityTask`, `ScheduleCallbackTask`, `SetAgentPresenceTask`, `StartCallRecordingTask`, and `StopCallRecordingTask` tasks, so the `WorkflowType` step can describe their properties and outcomes.
+
 ## Creating a Recipe Step
 
 To define a recipe step, implement the `IRecipeStep` interface and register your implementation as a service.

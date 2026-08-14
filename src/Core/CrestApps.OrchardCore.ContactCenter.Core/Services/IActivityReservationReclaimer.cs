@@ -2,10 +2,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Reclaims due reservations on a latency-sensitive path without draining the whole expiry backlog and without
-/// blocking on lock contention beyond a short, bounded wait. This is a narrow, additive capability separate from
-/// <see cref="IActivityReservationService"/> so a consumer that only needs opportunistic reclamation (such as
-/// offering work to an agent) depends on it alone, and so the reservation lifecycle contract other modules
-/// implement stays unchanged.
+/// waiting on reservations another worker is already transitioning beyond a short, bounded time. This is a narrow,
+/// additive capability separate from <see cref="IActivityReservationService"/> so a consumer that only needs
+/// opportunistic reclamation (such as offering work to an agent) depends on it alone, and so the reservation
+/// lifecycle contract other modules implement stays unchanged.
 /// </summary>
 public interface IActivityReservationReclaimer
 {

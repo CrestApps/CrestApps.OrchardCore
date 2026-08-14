@@ -1890,3 +1890,89 @@ public sealed class TimeZonesRecipeStartup : StartupBase
         services.AddScoped<IRecipeStep, TimeZoneMapsRecipeStep>();
     }
 }
+
+/// <summary>
+/// Registers recipe step schemas for the Contact Center queues feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.ContactCenter.Queues")]
+public sealed class ContactCenterQueuesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, ContactCenterSkillRecipeStep>();
+        services.AddScoped<IRecipeStep, ContactCenterQueueGroupRecipeStep>();
+        services.AddScoped<IRecipeStep, ContactCenterBusinessHoursCalendarRecipeStep>();
+        services.AddScoped<IRecipeStep, ContactCenterQueueRecipeStep>();
+        services.AddScoped<IRecipeStep, ContactCenterAgentEntitlementRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Contact Center agents feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.ContactCenter.Agents")]
+public sealed class ContactCenterAgentsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AgentStateReasonCodeRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Contact Center inbound voice feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.ContactCenter.InboundVoice")]
+public sealed class ContactCenterInboundVoiceRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, ContactCenterEntryPointRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Contact Center dialer feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.ContactCenter.Dialer")]
+public sealed class ContactCenterDialerRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, ContactCenterDialerProfileRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Omnichannel activities feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Omnichannel.Activities")]
+public sealed class OmnichannelActivitiesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OmnichannelCampaignGroupRecipeStep>();
+        services.AddScoped<IRecipeStep, OmnichannelCampaignRecipeStep>();
+        services.AddScoped<IRecipeStep, OmnichannelChannelEndpointRecipeStep>();
+        services.AddScoped<IRecipeStep, OmnichannelDispositionRecipeStep>();
+        services.AddScoped<IRecipeStep, OmnichannelSubjectActionRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers workflow activity schemas for the Contact Center workflows feature.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter.Workflows")]
+public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<ContactCenterEventSchema>()
+            .AddWorkflowActivitySchema<EnqueueActivityTaskSchema>()
+            .AddWorkflowActivitySchema<ScheduleCallbackTaskSchema>()
+            .AddWorkflowActivitySchema<SetAgentPresenceTaskSchema>()
+            .AddWorkflowActivitySchema<StartCallRecordingTaskSchema>()
+            .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>();
+    }
+}
