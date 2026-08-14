@@ -1,31 +1,31 @@
-using CrestApps.OrchardCore.DialPad.Models;
+using CrestApps.OrchardCore.Dialpad.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.DialPad.ViewModels;
+namespace CrestApps.OrchardCore.Dialpad.ViewModels;
 
 /// <summary>
-/// View model for editing the DialPad provider settings.
+/// View model for editing the Dialpad provider settings.
 /// </summary>
-public class DialPadSettingsViewModel
+public class DialpadSettingsViewModel
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the DialPad provider is enabled.
+    /// Gets or sets a value indicating whether the Dialpad provider is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad environment (production or sandbox) used for the REST API and OAuth
+    /// Gets or sets the Dialpad environment (production or sandbox) used for the REST API and OAuth
     /// endpoints.
     /// </summary>
-    public DialPadEnvironment Environment { get; set; }
+    public DialpadEnvironment Environment { get; set; }
 
     /// <summary>
-    /// Gets or sets the selected DialPad authentication type.
+    /// Gets or sets the selected Dialpad authentication type.
     /// </summary>
-    public DialPadAuthenticationType AuthenticationType { get; set; }
+    public DialpadAuthenticationType AuthenticationType { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad API key used when API key authentication is selected.
+    /// Gets or sets the Dialpad API key used when API key authentication is selected.
     /// </summary>
     public string ApiToken { get; set; }
 
@@ -50,12 +50,12 @@ public class DialPadSettingsViewModel
     public string OutboundCallerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the DialPad user that places outbound calls.
+    /// Gets or sets the identifier of the Dialpad user that places outbound calls.
     /// </summary>
     public string UserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the DialPad webhook signing secret used to validate inbound call-event webhooks.
+    /// Gets or sets the Dialpad webhook signing secret used to validate inbound call-event webhooks.
     /// </summary>
     public string WebhookSigningSecret { get; set; }
 

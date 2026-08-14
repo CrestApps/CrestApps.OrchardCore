@@ -51,7 +51,7 @@ public static class TelephonyConstants
     public static class AuthenticationSchemes
     {
         /// <summary>
-        /// The OAuth 2.0 authorization code scheme, used by providers such as DialPad.
+        /// The OAuth 2.0 authorization code scheme, used by providers such as Dialpad.
         /// </summary>
         public const string OAuth2 = "oauth2";
     }

@@ -1,7 +1,7 @@
 using System.Net;
-using CrestApps.OrchardCore.DialPad;
-using CrestApps.OrchardCore.DialPad.Models;
-using CrestApps.OrchardCore.DialPad.Services;
+using CrestApps.OrchardCore.Dialpad;
+using CrestApps.OrchardCore.Dialpad.Models;
+using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -11,13 +11,13 @@ using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
-public sealed class DialPadTelephonyProviderTests
+public sealed class DialpadTelephonyProviderTests
 {
     private const string PlainToken = "secret-token";
     private const string BaseUrl = "https://example.test/api/";
 
     [Fact]
-    public async Task DialAsync_WhenConfigured_PostsToDialPadApiWithBearerToken()
+    public async Task DialAsync_WhenConfigured_PostsToDialpadApiWithBearerToken()
     {
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\": 12345}");
@@ -122,21 +122,21 @@ public sealed class DialPadTelephonyProviderTests
     {
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"id\": 1}");
-        var settings = new DialPadSettings
+        var settings = new DialpadSettings
         {
             IsEnabled = true,
-            AuthenticationType = DialPadAuthenticationType.NotConfigured,
+            AuthenticationType = DialpadAuthenticationType.NotConfigured,
             ApiBaseUrl = BaseUrl,
         };
 
-        var provider = new DialPadTelephonyProvider(
+        var provider = new DialpadTelephonyProvider(
             SiteServiceFactory.Create(settings),
             new EphemeralDataProtectionProvider(),
             new StubHttpClientFactory(handler),
             Mock.Of<ITelephonyAuthenticationService>(),
             new StubClock(),
-            NullLogger<DialPadTelephonyProvider>.Instance,
-            new PassThroughStringLocalizer<DialPadTelephonyProvider>());
+            NullLogger<DialpadTelephonyProvider>.Instance,
+            new PassThroughStringLocalizer<DialpadTelephonyProvider>());
 
         // Act
         var result = await provider.DialAsync(new DialRequest { To = "+15551234567" }, TestContext.Current.CancellationToken);
@@ -246,12 +246,12 @@ public sealed class DialPadTelephonyProviderTests
 
         // Assert
         Assert.NotNull(credentials);
-        Assert.Equal(DialPadConstants.ProviderTechnicalName, credentials.ProviderName);
+        Assert.Equal(DialpadConstants.ProviderTechnicalName, credentials.ProviderName);
         Assert.Null(handler.LastRequest);
     }
 
     [Fact]
-    public async Task GetDirectoryAsync_WhenConfigured_MapsDialPadUsers()
+    public async Task GetDirectoryAsync_WhenConfigured_MapsDialpadUsers()
     {
         // Arrange
         var handler = new StubHttpMessageHandler(
@@ -285,15 +285,15 @@ public sealed class DialPadTelephonyProviderTests
         Assert.Equal($"{BaseUrl}users", handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
-    private static DialPadTelephonyProvider CreateProvider(StubHttpMessageHandler handler, out IDataProtectionProvider dataProtectionProvider, bool isEnabled)
+    private static DialpadTelephonyProvider CreateProvider(StubHttpMessageHandler handler, out IDataProtectionProvider dataProtectionProvider, bool isEnabled)
     {
         dataProtectionProvider = new EphemeralDataProtectionProvider();
 
         var protectedToken = dataProtectionProvider
-            .CreateProtector(DialPadConstants.ProtectorName)
+            .CreateProtector(DialpadConstants.ProtectorName)
             .Protect(PlainToken);
 
-        var settings = new DialPadSettings
+        var settings = new DialpadSettings
         {
             IsEnabled = isEnabled,
             ApiToken = protectedToken,
@@ -302,14 +302,14 @@ public sealed class DialPadTelephonyProviderTests
             UserId = "user-1",
         };
 
-        return new DialPadTelephonyProvider(
+        return new DialpadTelephonyProvider(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
             new StubHttpClientFactory(handler),
             Mock.Of<ITelephonyAuthenticationService>(),
             new StubClock(),
-            NullLogger<DialPadTelephonyProvider>.Instance,
-            new PassThroughStringLocalizer<DialPadTelephonyProvider>());
+            NullLogger<DialpadTelephonyProvider>.Instance,
+            new PassThroughStringLocalizer<DialpadTelephonyProvider>());
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public sealed class DialPadTelephonyProviderTests
     {
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
-        var provider = CreateOAuthProvider(handler, DialPadEnvironment.Sandbox);
+        var provider = CreateOAuthProvider(handler, DialpadEnvironment.Sandbox);
 
         // Act
         var url = await provider.GetAuthorizationUrlAsync(
@@ -418,7 +418,7 @@ public sealed class DialPadTelephonyProviderTests
     {
         // Arrange
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"access_token\":\"at\",\"token_type\":\"Bearer\"}");
-        var provider = CreateOAuthProvider(handler, DialPadEnvironment.Sandbox);
+        var provider = CreateOAuthProvider(handler, DialpadEnvironment.Sandbox);
 
         // Act
         await provider.ExchangeCodeAsync(
@@ -471,25 +471,25 @@ public sealed class DialPadTelephonyProviderTests
         // Arrange
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
         var protectedSecret = dataProtectionProvider
-            .CreateProtector(DialPadConstants.OAuthProtectorName)
+            .CreateProtector(DialpadConstants.OAuthProtectorName)
             .Protect("client-secret");
 
-        var settings = new DialPadSettings
+        var settings = new DialpadSettings
         {
             IsEnabled = true,
-            AuthenticationType = DialPadAuthenticationType.ApiKey,
+            AuthenticationType = DialpadAuthenticationType.ApiKey,
             ClientId = "client-id",
             ClientSecret = protectedSecret,
         };
 
-        var provider = new DialPadTelephonyProvider(
+        var provider = new DialpadTelephonyProvider(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
             new StubHttpClientFactory(new StubHttpMessageHandler(HttpStatusCode.OK)),
             Mock.Of<ITelephonyAuthenticationService>(),
             new StubClock(),
-            NullLogger<DialPadTelephonyProvider>.Instance,
-            new PassThroughStringLocalizer<DialPadTelephonyProvider>());
+            NullLogger<DialpadTelephonyProvider>.Instance,
+            new PassThroughStringLocalizer<DialpadTelephonyProvider>());
 
         // Act
         var requiresUserAuthentication = provider.RequiresUserAuthentication;
@@ -502,42 +502,42 @@ public sealed class DialPadTelephonyProviderTests
     public void UseOAuth_Setter_PreservesLegacySettingsCompatibility()
     {
         // Arrange
-        var settings = new DialPadSettings();
+        var settings = new DialpadSettings();
 
         // Act
         settings.UseOAuth = true;
 
         // Assert
-        Assert.Equal(DialPadAuthenticationType.OAuth2, settings.AuthenticationType);
+        Assert.Equal(DialpadAuthenticationType.OAuth2, settings.AuthenticationType);
         Assert.True(settings.UseOAuth);
     }
 
-    private static DialPadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialPadEnvironment environment = DialPadEnvironment.Production)
+    private static DialpadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialpadEnvironment environment = DialpadEnvironment.Production)
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
 
         var protectedSecret = dataProtectionProvider
-            .CreateProtector(DialPadConstants.OAuthProtectorName)
+            .CreateProtector(DialpadConstants.OAuthProtectorName)
             .Protect("client-secret");
 
-        var settings = new DialPadSettings
+        var settings = new DialpadSettings
         {
             IsEnabled = true,
             Environment = environment,
-            AuthenticationType = DialPadAuthenticationType.OAuth2,
+            AuthenticationType = DialpadAuthenticationType.OAuth2,
             ClientId = "client-id",
             ClientSecret = protectedSecret,
             Scopes = "calls",
             ApiBaseUrl = BaseUrl,
         };
 
-        return new DialPadTelephonyProvider(
+        return new DialpadTelephonyProvider(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
             new StubHttpClientFactory(handler),
             Mock.Of<ITelephonyAuthenticationService>(),
             new StubClock(),
-            NullLogger<DialPadTelephonyProvider>.Instance,
-            new PassThroughStringLocalizer<DialPadTelephonyProvider>());
+            NullLogger<DialpadTelephonyProvider>.Instance,
+            new PassThroughStringLocalizer<DialpadTelephonyProvider>());
     }
 }

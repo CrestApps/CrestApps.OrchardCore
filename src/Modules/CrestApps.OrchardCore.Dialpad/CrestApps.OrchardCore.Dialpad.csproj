@@ -3,13 +3,13 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore DialPad Module</Title>
+    <Title>CrestApps OrchardCore Dialpad Module</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Integrates the DialPad telephony platform as a provider for the CrestApps Telephony soft phone.
+      Integrates the Dialpad telephony platform as a provider for the CrestApps Telephony soft phone.
     </Description>
-    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony DialPad</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony Dialpad</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,7 +33,7 @@
     <!--
       Ensure this module directly depends on the Telephony module so that when someone installs it,
       they won't need to manually include the Telephony package. This resolves the feature dependency
-      while the DialPad code itself depends only on the provider-agnostic Telephony abstractions.
+      while the Dialpad code itself depends only on the provider-agnostic Telephony abstractions.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
   </ItemGroup>
