@@ -74,7 +74,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
-    <Project Path="src/Modules/CrestApps.OrchardCore.DialPad/CrestApps.OrchardCore.DialPad.csproj" DisplayName="CrestApps.OrchardCore.Dialpad" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj" DisplayName="CrestApps.OrchardCore.Dialpad" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DncRegistry.Azure/CrestApps.OrchardCore.DncRegistry.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.DncRegistry/CrestApps.OrchardCore.DncRegistry.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Ollama/CrestApps.OrchardCore.Ollama.csproj" />
