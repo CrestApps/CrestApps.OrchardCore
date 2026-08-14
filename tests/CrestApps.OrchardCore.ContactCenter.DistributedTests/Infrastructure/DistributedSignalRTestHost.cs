@@ -49,7 +49,7 @@ internal sealed class DistributedSignalRTestHost : IAsyncDisposable
             throw new InvalidOperationException("The transport harness does not resolve Orchard's Redis service."));
         builder.Services.AddSingleton<TestProviderListener>();
 
-        new OrchardCore.SignalR.Redis.Startup().ConfigureServices(builder.Services);
+        new global::OrchardCore.SignalR.Redis.Startup().ConfigureServices(builder.Services);
 
         var app = builder.Build();
         app.Urls.Add("http://127.0.0.1:0");
