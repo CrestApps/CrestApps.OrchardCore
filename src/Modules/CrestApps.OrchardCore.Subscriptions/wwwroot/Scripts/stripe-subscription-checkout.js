@@ -76,6 +76,11 @@ var stripeSubscriptionCheckout = function () {
       return;
     }
     config.payButtonElement.addEventListener('click', function (event) {
+      // Only handle the click when this processor is the selected payment method. Otherwise let the
+      // other method's handler (or the default submit) run.
+      if (config.payButtonElement.getAttribute('data-method-name') !== config.processorKey) {
+        return;
+      }
       event.preventDefault();
       startCheckout(config);
     });

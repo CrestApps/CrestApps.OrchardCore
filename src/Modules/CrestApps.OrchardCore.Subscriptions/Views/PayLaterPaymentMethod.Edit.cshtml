@@ -23,17 +23,28 @@
                 body: JSON.stringify({
                     sessionId: '@(Model.Value.Flow.Session.SessionId)'
                 }),
-            }).then((response) => response.json())
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error('Request failed with status ' + response.status);
+                }
+                return response.json();
+            })
                 .then(data => {
                     const form = document.getElementById('subscription-form');
 
-                    if (data.status == 'completed') {
+                    if (data && data.status == 'completed') {
                         form.requestSubmit();
                     } else {
                         enablePayButtonButton(payButtonElement, true);
 
                         alert('@T["Unexpected error. Please try again."]');
                     }
+                })
+                .catch(() => {
+                    // Always re-enable the button on failure; otherwise it stays stuck on "Processing...".
+                    enablePayButtonButton(payButtonElement, true);
+
+                    alert('@T["Unexpected error. Please try again."]');
                 });
         });
 

@@ -7,7 +7,8 @@ stripePaymentProcessing = function () {
   const initialize = options => {
     const defaultOptions = {
       processorKey: 'Stripe',
-      cardElement: '#card-element'
+      cardElement: '#card-element',
+      genericErrorMessage: 'An unexpected error occurred while processing your payment. Please try again.'
     };
     const config = {
       ...defaultOptions,
@@ -16,12 +17,26 @@ stripePaymentProcessing = function () {
     document.addEventListener('DOMContentLoaded', () => {
       const errorElement = document.getElementById('card-errors');
       const showError = message => {
+        if (!errorElement) {
+          return;
+        }
         errorElement.textContent = message;
         errorElement.classList.remove('d-none');
       };
       const clearError = () => {
+        if (!errorElement) {
+          return;
+        }
         errorElement.textContent = '';
         errorElement.classList.add('d-none');
+      };
+
+      // Central failure handler. Every error path must funnel through here so the pay button is
+      // always re-enabled; otherwise the button stays stuck on "Processing..." and the customer
+      // can never retry.
+      const fail = message => {
+        showError(message || config.genericErrorMessage);
+        config.enablePayButtonButton(true);
       };
       const getFilteredStyleObject = element => {
         if (!element) {
@@ -69,102 +84,113 @@ stripePaymentProcessing = function () {
           showError(config.invalidNameErrorMessage);
           return;
         }
+        clearError();
         config.enablePayButtonButton(false);
-        stripe.createPaymentMethod({
+        processPayment().catch(error => {
+          fail(error && error.message ? error.message : config.genericErrorMessage);
+        });
+      });
+      const processPayment = async () => {
+        const paymentMethodResult = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
           billing_details: {
-            name: config.nameOnBankCardElement.value || ''
-          }
-        }).then(function (result) {
-          if (result.error) {
-            showError(result.error.message);
-          } else {
-            fetch(config.stepIntentEndpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                paymentMethodId: result.paymentMethod.id,
-                sessionId: config.sessionId
-              })
-            }).then(response => response.json()).then(async data => {
-              if (data.error) {
-                showError(data.error);
-              } else {
-                const setupResult = await stripe.confirmCardSetup(data.clientSecret);
-                if (setupResult.error) {
-                  showError(setupResult.error.message);
-                } else {
-                  const paymentMethodId = setupResult.setupIntent.payment_method;
-                  if (data.processInitialPayment) {
-                    const paymentResponse = await fetch(config.paymentIntentEndpoint, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({
-                        customerId: data.customerId,
-                        paymentMethodId: paymentMethodId,
-                        sessionId: config.sessionId
-                      })
-                    });
-                    const paymentData = await paymentResponse.json();
-                    if (paymentData.error) {
-                      showError(paymentData.error);
-                    } else {
-                      const paymentResult = await stripe.confirmCardPayment(paymentData.clientSecret);
-                      if (paymentResult.error) {
-                        showError(paymentResult.error.message);
-                      } else {
-                        // Handle successful payment and schedule the subscriptions
-                        await createSubscriptions(data.customerId, paymentMethodId);
-                      }
-                    }
-                  } else {
-                    // Skip initial payment and schedule the subscriptions
-                    await createSubscriptions(data.customerId, paymentMethodId);
-                  }
-                }
-              }
-            });
+            name: config.nameOnBankCardElement ? config.nameOnBankCardElement.value || '' : ''
           }
         });
-      });
-      const createSubscriptions = async (customerId, paymentMethodId) => {
-        try {
-          const response = await fetch(config.subscriptionEndpoint, {
+        if (paymentMethodResult.error) {
+          fail(paymentMethodResult.error.message);
+          return;
+        }
+        const setupResponse = await fetch(config.stepIntentEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            paymentMethodId: paymentMethodResult.paymentMethod.id,
+            sessionId: config.sessionId
+          })
+        });
+        if (!setupResponse.ok) {
+          fail(config.genericErrorMessage);
+          return;
+        }
+        const data = await setupResponse.json();
+        if (data.error) {
+          fail(data.error);
+          return;
+        }
+        const setupResult = await stripe.confirmCardSetup(data.clientSecret);
+        if (setupResult.error) {
+          fail(setupResult.error.message);
+          return;
+        }
+        const paymentMethodId = setupResult.setupIntent.payment_method;
+        if (data.processInitialPayment) {
+          const paymentResponse = await fetch(config.paymentIntentEndpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              customerId: customerId,
+              customerId: data.customerId,
               paymentMethodId: paymentMethodId,
               sessionId: config.sessionId
             })
           });
-          const subscriptionDataArray = await response.json();
-          if (subscriptionDataArray.error) {
-            showError(subscriptionDataArray.error);
+          if (!paymentResponse.ok) {
+            fail(config.genericErrorMessage);
             return;
           }
-          for (const subscriptionData of subscriptionDataArray) {
-            if (subscriptionData.status === 'requires_action') {
-              const result = await stripe.confirmCardPayment(subscriptionData.clientSecret);
-              if (result.error) {
-                showError(result.error.message);
-                return;
-              }
+          const paymentData = await paymentResponse.json();
+          if (paymentData.error) {
+            fail(paymentData.error);
+            return;
+          }
+          const paymentResult = await stripe.confirmCardPayment(paymentData.clientSecret);
+          if (paymentResult.error) {
+            fail(paymentResult.error.message);
+            return;
+          }
+        }
+        await createSubscriptions(data.customerId, paymentMethodId);
+      };
+      const createSubscriptions = async (customerId, paymentMethodId) => {
+        const response = await fetch(config.subscriptionEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            customerId: customerId,
+            paymentMethodId: paymentMethodId,
+            sessionId: config.sessionId
+          })
+        });
+        if (!response.ok) {
+          fail(config.genericErrorMessage);
+          return;
+        }
+        const subscriptionDataArray = await response.json();
+        if (subscriptionDataArray.error) {
+          fail(subscriptionDataArray.error);
+          return;
+        }
+        for (const subscriptionData of subscriptionDataArray) {
+          if (subscriptionData.status === 'requires_action') {
+            const result = await stripe.confirmCardPayment(subscriptionData.clientSecret);
+            if (result.error) {
+              fail(result.error.message);
+              return;
             }
           }
-
-          // Dispatch the form submit event after all subscriptions are processed
-          config.formElement.submit();
-        } catch (error) {
-          showError(error.message);
         }
+
+        // Dispatch the form submit event after all subscriptions are processed. The button
+        // intentionally remains in its processing state here because the page is about to
+        // navigate to the confirmation step.
+        config.formElement.submit();
       };
     });
   };
