@@ -28,7 +28,7 @@ The A2A Client feature allows your Orchard Core application to connect to extern
    - **Authentication**: Select the appropriate authentication method for the remote host.
 4. Save the connection.
 
-Each connection represents a single A2A host that may expose multiple agents through its agent card.
+Each connection represents a single A2A host that may expose multiple agents through its agent card. A2A 1.0-style cards advertise protocol endpoints through `supportedInterfaces`; older cards that still expose a top-level URL are handled by the shared A2A client support.
 
 ### Authentication Types
 
@@ -81,7 +81,7 @@ Once connections are created, you can assign them to specific AI profiles, templ
 
 When an AI profile has agent connections configured:
 
-1. **Discovery**: The system fetches the agent card from each connected A2A host (cached for 15 minutes).
+1. **Discovery**: The system fetches the agent card from each connected A2A host (cached for 15 minutes) and reads each agent endpoint from the card's supported interfaces.
 2. **Tool Registration**: Each agent skill from the agent card is registered as an AI tool available to the model.
 3. **Invocation**: When the AI model decides to use a remote agent, the `A2AAgentProxyTool` sends the message to the remote agent via the A2A protocol.
 4. **Response**: The remote agent's response is returned to the AI model as tool output.

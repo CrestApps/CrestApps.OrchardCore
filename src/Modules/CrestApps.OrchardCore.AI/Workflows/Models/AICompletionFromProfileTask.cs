@@ -91,7 +91,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Drew Blank"], S["Failed"]);
+        return Outcome(S["Done"], S["Drew Blank"], S["Failed"]);
     }
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
@@ -100,7 +100,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         if (profile is null)
         {
-            return Outcomes("Failed");
+            return Outcome("Failed");
         }
 
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default,
@@ -113,7 +113,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         {
             _logger.LogWarning("The generated prompt from the template is empty.");
 
-            return Outcomes("Failed");
+            return Outcome("Failed");
         }
 
         try
@@ -129,7 +129,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
             if (string.IsNullOrEmpty(bestChoice?.Text))
             {
-                return Outcomes("Drew Blank");
+                return Outcome("Drew Blank");
             }
 
             var value = new AIResponseMessage
@@ -139,13 +139,13 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
             workflowContext.Output[ResultPropertyName ?? "ChatResponse"] = value;
 
-            return Outcomes("Done");
+            return Outcome("Done");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while completing the AI task.");
 
-            return Outcomes("Failed");
+            return Outcome("Failed");
         }
     }
 }

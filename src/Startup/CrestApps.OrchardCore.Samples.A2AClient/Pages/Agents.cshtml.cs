@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using A2A;
-using CrestApps.OrchardCore.Samples.A2AClient.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SampleA2AClientFactory = CrestApps.OrchardCore.Samples.A2AClient.Services.A2AClientFactory;
 
 namespace CrestApps.OrchardCore.Samples.A2AClient.Pages;
 
@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Samples.A2AClient.Pages;
 /// </summary>
 public sealed class AgentsModel : PageModel
 {
-    private readonly A2AClientFactory _clientFactory;
+    private readonly SampleA2AClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -20,7 +20,7 @@ public sealed class AgentsModel : PageModel
     /// <param name="clientFactory">The client factory.</param>
     /// <param name="logger">The logger.</param>
     public AgentsModel(
-        A2AClientFactory clientFactory,
+        SampleA2AClientFactory clientFactory,
         ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
@@ -76,12 +76,12 @@ public sealed class AgentsModel : PageModel
         {
             var client = _clientFactory.Create(agentUrl);
 
-            var agentMessage = new AgentMessage
+            var agentMessage = new Message
             {
-                Role = MessageRole.User,
+                Role = Role.User,
                 MessageId = Guid.NewGuid().ToString(),
                 ContextId = Guid.NewGuid().ToString(),
-                Parts = [new TextPart { Text = message }],
+                Parts = [Part.FromText(message)],
             };
 
             if (!string.IsNullOrWhiteSpace(agentName))
@@ -92,17 +92,17 @@ public sealed class AgentsModel : PageModel
                 };
             }
 
-            var sendParams = new MessageSendParams
+            var sendRequest = new SendMessageRequest
             {
                 Message = agentMessage,
             };
 
             if (stream)
             {
-                return new StreamingA2AResult(client, sendParams, _logger);
+                return new StreamingA2AResult(client, sendRequest, _logger);
             }
 
-            var response = await client.SendMessageAsync(sendParams, cancellationToken);
+            var response = await client.SendMessageAsync(sendRequest, cancellationToken);
 
             var responseText = ExtractTextFromResponse(response);
 
@@ -141,47 +141,63 @@ public sealed class AgentsModel : PageModel
         }
     }
 
-    private static string ExtractTextFromResponse(A2AResponse response)
+    private static string ExtractTextFromResponse(SendMessageResponse response)
     {
-        if (response is AgentMessage message)
+        if (response.Message is not null)
         {
-            var texts = message.Parts?.OfType<TextPart>().Select(p => p.Text);
-
-            if (texts?.Any() == true)
-            {
-                return string.Join(string.Empty, texts);
-            }
+            return ExtractTextFromParts(response.Message.Parts);
         }
-        else if (response is AgentTask task)
+
+        if (response.Task is not null)
         {
-            if (task.Artifacts?.Count > 0)
-            {
-                var artifactTexts = task.Artifacts
-                    .SelectMany(a => a.Parts?.OfType<TextPart>() ?? [])
-                    .Select(p => p.Text);
-
-                var combined = string.Join(string.Empty, artifactTexts);
-
-                if (!string.IsNullOrEmpty(combined))
-                {
-                    return combined;
-                }
-            }
-
-            if (task.Status.Message?.Parts is not null)
-            {
-                var statusTexts = task.Status.Message.Parts.OfType<TextPart>().Select(p => p.Text);
-
-                var combined = string.Join(string.Empty, statusTexts);
-
-                if (!string.IsNullOrEmpty(combined))
-                {
-                    return combined;
-                }
-            }
+            return ExtractTextFromTask(response.Task);
         }
 
         return null;
+    }
+
+    private static string ExtractTextFromParts(IEnumerable<Part> parts)
+    {
+        var texts = parts
+            ?.Select(p => p.Text)
+            .Where(text => !string.IsNullOrEmpty(text));
+
+        if (texts?.Any() == true)
+        {
+            return string.Join(string.Empty, texts);
+        }
+
+        return null;
+    }
+
+    private static string ExtractTextFromTask(AgentTask task)
+    {
+        if (task.Artifacts?.Count > 0)
+        {
+            var artifactTexts = task.Artifacts
+                .SelectMany(a => a.Parts ?? [])
+                .Select(p => p.Text)
+                .Where(text => !string.IsNullOrEmpty(text));
+
+            var combined = string.Join(string.Empty, artifactTexts);
+
+            if (!string.IsNullOrEmpty(combined))
+            {
+                return combined;
+            }
+        }
+
+        if (task.Status.Message?.Parts is not null)
+        {
+            return ExtractTextFromParts(task.Status.Message.Parts);
+        }
+
+        return null;
+    }
+
+    private static bool IsFinal(TaskState state)
+    {
+        return state is TaskState.Completed or TaskState.Failed or TaskState.Canceled or TaskState.Rejected or TaskState.AuthRequired;
     }
 
     private async Task LoadAgentCardsAsync(CancellationToken cancellationToken)
@@ -208,22 +224,22 @@ public sealed class AgentsModel : PageModel
     private sealed class StreamingA2AResult : IActionResult
     {
         private readonly A2A.A2AClient _client;
-        private readonly MessageSendParams _sendParams;
+        private readonly SendMessageRequest _sendRequest;
         private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamingA2AResult"/> class.
         /// </summary>
         /// <param name="client">The client.</param>
-        /// <param name="sendParams">The send params.</param>
+        /// <param name="sendRequest">The send request.</param>
         /// <param name="logger">The logger.</param>
         public StreamingA2AResult(
             A2A.A2AClient client,
-            MessageSendParams sendParams,
+            SendMessageRequest sendRequest,
             ILogger logger)
         {
             _client = client;
-            _sendParams = sendParams;
+            _sendRequest = sendRequest;
             _logger = logger;
         }
 
@@ -242,28 +258,31 @@ public sealed class AgentsModel : PageModel
 
             try
             {
-                await foreach (var sseItem in _client.SendMessageStreamingAsync(_sendParams, cancellationToken))
+                await foreach (var streamResponse in _client.SendStreamingMessageAsync(_sendRequest, cancellationToken))
                 {
-                    var a2aEvent = sseItem.Data;
                     string chunk = null;
 
-                    if (a2aEvent is TaskArtifactUpdateEvent artifactUpdate)
+                    if (streamResponse.ArtifactUpdate is not null)
                     {
-                        chunk = string.Join(string.Empty,
-                        artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
+                        chunk = ExtractTextFromParts(streamResponse.ArtifactUpdate.Artifact?.Parts);
                     }
-                    else if (a2aEvent is TaskStatusUpdateEvent statusUpdate)
+                    else if (streamResponse.Message is not null)
                     {
-                        if (statusUpdate.Final)
-                        {
-                            // If the task failed, send the error message.
+                        chunk = ExtractTextFromParts(streamResponse.Message.Parts);
+                    }
+                    else if (streamResponse.Task is not null)
+                    {
+                        chunk = ExtractTextFromTask(streamResponse.Task);
+                    }
+                    else if (streamResponse.StatusUpdate is not null)
+                    {
+                        var statusUpdate = streamResponse.StatusUpdate;
 
-                            if (statusUpdate.Status.State == TaskState.Failed)
+                        if (IsFinal(statusUpdate.Status.State))
+                        {
+                            if (statusUpdate.Status.State is TaskState.Failed or TaskState.Canceled or TaskState.Rejected or TaskState.AuthRequired)
                             {
-                                var errorText = statusUpdate.Status.Message?.Parts
-                                ?.OfType<TextPart>()
-                                    .Select(p => p.Text)
-                                    .FirstOrDefault() ?? "Agent task failed.";
+                                var errorText = ExtractTextFromParts(statusUpdate.Status.Message?.Parts) ?? "Agent task failed.";
 
                                 await httpResponse.WriteAsync($"data: [ERROR]{errorText}\n\n", cancellationToken);
                                 await httpResponse.Body.FlushAsync(cancellationToken);
