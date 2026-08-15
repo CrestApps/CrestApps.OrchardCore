@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      pages_artifact_name: ${{ steps.pages-artifact.outputs.name }}
     defaults:
       run:
         working-directory: src/CrestApps.Docs
@@ -46,9 +48,14 @@ jobs:
           test -f build/index.html
           test -f build/CNAME
 
+      - name: Set Pages artifact name
+        id: pages-artifact
+        run: echo "name=github-pages-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
+          name: ${{ steps.pages-artifact.outputs.name }}
           path: src/CrestApps.Docs/build
 
   deploy:
@@ -61,3 +68,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: ${{ needs.build.outputs.pages_artifact_name }}
