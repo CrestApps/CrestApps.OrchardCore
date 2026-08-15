@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Subscriptions
+@using CrestApps.OrchardCore.Subscriptions.Extensions
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionSummaryAdminViewModel
+
+@{
+    var (statusClass, statusText) = Model.Status switch
+    {
+        SubscriptionSessionStatus.Completed => ("text-bg-success", T["Active"]),
+        SubscriptionSessionStatus.Pending => ("text-bg-warning", T["Pending"]),
+        SubscriptionSessionStatus.Suspended => ("text-bg-secondary", T["Suspended"]),
+        SubscriptionSessionStatus.Canceled => ("text-bg-danger", T["Canceled"]),
+        _ => ("text-bg-light", T[Model.Status.ToString()]),
+    };
+}
+
+<span class="badge @statusClass">@statusText</span>
+
+@if (Model.RecurringAmount.HasValue && Model.DurationType.HasValue)
+{
+    <span class="badge text-bg-primary" title="@T["Recurring price"]">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i> @T.GetAmount(Model.DurationType.Value, Model.BillingDuration, Model.RecurringAmount.Value)
+    </span>
+}
+
+@if (Model.InitialAmount.HasValue && Model.InitialAmount.Value > 0)
+{
+    <span class="badge text-bg-info" title="@T["One-time setup fee"]">
+        <i class="fa-solid fa-receipt" aria-hidden="true"></i> @T["Setup {0}", Model.InitialAmount.Value.ToString("C")]
+    </span>
+}

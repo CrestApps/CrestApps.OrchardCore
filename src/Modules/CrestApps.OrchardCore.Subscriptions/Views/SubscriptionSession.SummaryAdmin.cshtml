@@ -25,25 +25,24 @@
                 </div>
             </div>
 
-            <div class="summary d-flex flex-column flex-md-row">
-                <div class="contentitem me-2">
-                    @subscription
+            <div class="summary d-flex flex-column w-100">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    @if (Model.Header != null)
+                    {
+                        <div class="header">
+                            @await DisplayAsync(Model.Header)
+                        </div>
+                    }
+                    @if (Model.Tags != null)
+                    {
+                        <div class="tags d-flex flex-wrap align-items-center gap-1">
+                            @await DisplayAsync(Model.Tags)
+                        </div>
+                    }
                 </div>
-                @if (Model.Header != null)
-                {
-                    <div class="header me-1">
-                        @await DisplayAsync(Model.Header)
-                    </div>
-                }
-                @if (Model.Tags != null)
-                {
-                    <div class="tags me-1">
-                        @await DisplayAsync(Model.Tags)
-                    </div>
-                }
                 @if (Model.Meta != null)
                 {
-                    <div class="metadata me-1">
+                    <div class="metadata mt-1">
                         @await DisplayAsync(Model.Meta)
                     </div>
                 }

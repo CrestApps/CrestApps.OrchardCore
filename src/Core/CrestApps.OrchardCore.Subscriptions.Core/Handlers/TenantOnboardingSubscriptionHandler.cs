@@ -53,8 +53,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
     public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
-        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
-            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out _) ||
+            !context.SubscriptionContentItem.TryGet<ProductPart>(out _))
         {
             return Task.CompletedTask;
         }
@@ -72,35 +72,6 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             CollectData = true,
             Order = 100,
         };
-
-        var plans = new List<BillingItem>()
-        {
-            new()
-            {
-                Id = context.Session.ContentItemVersionId,
-                Description = context.SubscriptionContentItem.DisplayText,
-                BillingAmount = productPart.Price,
-                Subscription = new SubscriptionPlan()
-                {
-                    SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
-                    BillingDuration = subscriptionPart.BillingDuration,
-                    DurationType = subscriptionPart.DurationType,
-                    BillingCycleLimit = subscriptionPart.BillingCycleLimit,
-                },
-            },
-        };
-
-        if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
-        {
-            plans.Add(new BillingItem()
-            {
-                Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
-                Description = subscriptionPart.InitialAmountDescription,
-                BillingAmount = subscriptionPart.InitialAmount.Value,
-            });
-        }
-
-        step.BillingItems = plans.ToArray();
 
         step.Data.TryAdd("RecipeName", tenantOnboardingPart.RecipeName);
         step.Data.TryAdd("FeatureProfile", tenantOnboardingPart.FeatureProfile);

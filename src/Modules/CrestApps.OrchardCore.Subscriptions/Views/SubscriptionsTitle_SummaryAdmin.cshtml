@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionSummaryAdminViewModel
+
+<a asp-action="Edit" asp-controller="Admin" asp-route-id="@Model.SessionId" asp-route-area="CrestApps.OrchardCore.Subscriptions" asp-route-returnUrl="@FullRequestPath" class="fw-semibold text-decoration-none">
+    @Model.CustomerName
+</a>
+
+@if (!string.IsNullOrEmpty(Model.PlanTitle))
+{
+    <div class="text-muted small">
+        <i class="fa-solid fa-box-open" aria-hidden="true"></i> @Model.PlanTitle
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.CustomerEmail))
+{
+    <div class="text-muted small">
+        <i class="fa-solid fa-envelope" aria-hidden="true"></i> @Model.CustomerEmail
+    </div>
+}

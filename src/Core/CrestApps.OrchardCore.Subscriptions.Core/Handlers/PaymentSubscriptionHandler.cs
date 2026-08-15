@@ -1,9 +1,11 @@
+using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 using YesSql.Services;
@@ -46,9 +48,53 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             Key = SubscriptionConstants.StepKey.Payment,
             Order = int.MaxValue,
             CollectData = false,
+
+            // The subscription plan billing (recurring price + optional one-time setup fee) is
+            // authoritative and always attached to the payment step, so it is charged exactly once
+            // regardless of how many data-collection steps (content, tenant onboarding, ...) the flow
+            // contains. Other handlers may still add their own billing items to their own steps.
+            BillingItems = BuildPlanBillingItems(context),
         });
 
         return Task.CompletedTask;
+    }
+
+    private static BillingItem[] BuildPlanBillingItems(SubscriptionFlowActivatingContext context)
+    {
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
+        {
+            return null;
+        }
+
+        var billingItems = new List<BillingItem>()
+        {
+            new()
+            {
+                Id = context.Session.ContentItemVersionId,
+                Description = context.SubscriptionContentItem.DisplayText,
+                BillingAmount = productPart.Price,
+                Subscription = new SubscriptionPlan()
+                {
+                    SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
+                    BillingDuration = subscriptionPart.BillingDuration,
+                    DurationType = subscriptionPart.DurationType,
+                    BillingCycleLimit = subscriptionPart.BillingCycleLimit,
+                },
+            },
+        };
+
+        if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
+        {
+            billingItems.Add(new BillingItem()
+            {
+                Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
+                Description = subscriptionPart.InitialAmountDescription,
+                BillingAmount = subscriptionPart.InitialAmount.Value,
+            });
+        }
+
+        return billingItems.ToArray();
     }
 
     public override async Task ActivatedAsync(SubscriptionFlowActivatedContext context)

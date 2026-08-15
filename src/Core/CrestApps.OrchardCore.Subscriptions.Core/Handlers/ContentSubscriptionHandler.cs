@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -33,8 +32,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
     public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
-        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
-            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out _))
         {
             return;
         }
@@ -77,37 +75,6 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 // to allow other handler to inject steps in between if needed.
                 Order = (i + 1) * 10,
             };
-
-            var billingItems = new List<BillingItem>()
-            {
-                new()
-                {
-                    Id = context.Session.ContentItemVersionId,
-                    Description = context.SubscriptionContentItem.DisplayText,
-                    BillingAmount = productPart.Price,
-                    Subscription = new()
-                    {
-                        SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
-                        BillingDuration = subscriptionPart.BillingDuration,
-                        DurationType = subscriptionPart.DurationType,
-                        BillingCycleLimit = subscriptionPart.BillingCycleLimit,
-                    },
-                },
-            };
-
-            if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
-            {
-                var initialSetupItem = new BillingItem()
-                {
-                    Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
-                    BillingAmount = subscriptionPart.InitialAmount.Value,
-                    Description = subscriptionPart.InitialAmountDescription,
-                };
-
-                billingItems.Add(initialSetupItem);
-            }
-
-            step.BillingItems = billingItems.ToArray();
 
             step.Data.TryAdd("ContentType", contentType);
 

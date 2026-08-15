@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -38,6 +39,92 @@ public class PaymentSubscriptionHandlerTests
         Assert.Equal(10.00, invoice.FirstSubscriptionPaymentAmount);
         Assert.Equal(29.99, invoice.DueNow);
         Assert.Equal(29.99, invoice.GrandTotal);
+        Assert.Equal(2, invoice.LineItems.Length);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_WithProductAndSubscriptionParts_AddsPaymentStepWithPlanBilling()
+    {
+        var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
+
+        var contentItem = CreatePlanContentItem(price: 9.99, initialAmount: 50, initialDescription: "setup");
+
+        var session = new SubscriptionSession
+        {
+            SessionId = Guid.NewGuid().ToString(),
+            Status = SubscriptionSessionStatus.Pending,
+            ContentItemVersionId = "plan-version-1",
+        };
+
+        await handler.ActivatingAsync(new SubscriptionFlowActivatingContext(session, contentItem));
+
+        var paymentStep = Assert.Single(session.Steps, s => s.Key == SubscriptionConstants.StepKey.Payment);
+
+        Assert.NotNull(paymentStep.BillingItems);
+        Assert.Equal(2, paymentStep.BillingItems.Length);
+
+        var recurring = Assert.Single(paymentStep.BillingItems, b => b.Subscription != null);
+        Assert.Equal(9.99, recurring.BillingAmount);
+        Assert.Equal("plan-version-1", recurring.Id);
+
+        var setupFee = Assert.Single(paymentStep.BillingItems, b => b.Subscription == null);
+        Assert.Equal(50, setupFee.BillingAmount);
+        Assert.Equal("setup", setupFee.Description);
+        Assert.Equal("plan-version-1" + SubscriptionConstants.InitialFeeIdPrefix, setupFee.Id);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_WithoutProductPart_AddsPaymentStepWithoutBilling()
+    {
+        var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
+
+        // A subscription content item that does not expose a price produces no plan billing.
+        var contentItem = new ContentItem { ContentType = "Plan" };
+        contentItem.Weld(new SubscriptionPart { BillingDuration = 1, DurationType = DurationType.Month });
+
+        var session = new SubscriptionSession
+        {
+            SessionId = Guid.NewGuid().ToString(),
+            Status = SubscriptionSessionStatus.Pending,
+            ContentItemVersionId = "plan-version-2",
+        };
+
+        await handler.ActivatingAsync(new SubscriptionFlowActivatingContext(session, contentItem));
+
+        var paymentStep = Assert.Single(session.Steps, s => s.Key == SubscriptionConstants.StepKey.Payment);
+
+        Assert.Null(paymentStep.BillingItems);
+    }
+
+    [Fact]
+    public async Task ActivatingThenActivated_PlainPlan_ProducesInvoiceForRecurringAndSetupFee()
+    {
+        // Reproduces a plain subscription plan (ProductPart + SubscriptionPart only, no associated
+        // content types and no tenant onboarding). The invoice must charge the recurring price plus
+        // the one-time setup fee rather than resolving to a $0.00 invoice.
+        var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
+
+        var contentItem = CreatePlanContentItem(price: 9.99, initialAmount: 50, initialDescription: "setup");
+        contentItem.DisplayText = "Plan A 9.99/month + 50 setup fee";
+
+        var session = new SubscriptionSession
+        {
+            SessionId = Guid.NewGuid().ToString(),
+            Status = SubscriptionSessionStatus.Pending,
+            ContentItemVersionId = "plan-version-3",
+        };
+
+        await handler.ActivatingAsync(new SubscriptionFlowActivatingContext(session, contentItem));
+
+        var flow = new SubscriptionFlow(session, contentItem);
+
+        await handler.ActivatedAsync(new SubscriptionFlowActivatedContext(flow));
+
+        Assert.True(session.TryGet<Invoice>(out var invoice));
+        Assert.Equal(50, invoice.InitialPaymentAmount);
+        Assert.Equal(9.99, invoice.FirstSubscriptionPaymentAmount);
+        Assert.Equal(59.99, invoice.DueNow);
+        Assert.Equal(59.99, invoice.GrandTotal);
         Assert.Equal(2, invoice.LineItems.Length);
     }
 
@@ -237,6 +324,22 @@ public class PaymentSubscriptionHandlerTests
             new NullSubscriptionTaxService(),
             NullLogger<PaymentSubscriptionHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
+    }
+
+    private static ContentItem CreatePlanContentItem(double price, double? initialAmount, string initialDescription)
+    {
+        var contentItem = new ContentItem { ContentType = "Plan" };
+
+        contentItem.Weld(new ProductPart { Price = price });
+        contentItem.Weld(new SubscriptionPart
+        {
+            BillingDuration = 1,
+            DurationType = DurationType.Month,
+            InitialAmount = initialAmount,
+            InitialAmountDescription = initialDescription,
+        });
+
+        return contentItem;
     }
 
     private static SubscriptionSession CreateSession(params SubscriptionFlowStep[] steps)
