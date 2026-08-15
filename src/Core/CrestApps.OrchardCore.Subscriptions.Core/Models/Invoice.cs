@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.Taxation.Models;
 using Json;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -12,6 +13,24 @@ public class Invoice
     public double? FirstSubscriptionPaymentAmount { get; set; }
 
     public double DueNow { get; set; }
+
+    /// <summary>
+    /// The tax charged on the amount due now, determined by the taxation framework. This is
+    /// <c>0</c> when the Taxation feature is disabled.
+    /// </summary>
+    public double TaxAmount { get; set; }
+
+    /// <summary>
+    /// The detailed tax lines that explain <see cref="TaxAmount"/>. Never collapse multiple tax
+    /// lines into a single number; each jurisdiction/tax is preserved here.
+    /// </summary>
+    public IList<TaxLine> TaxLines { get; set; }
+
+    /// <summary>
+    /// The immutable tax determination captured for the amount due now. This snapshot is persisted
+    /// with the transaction so historical tax is never recalculated with current rules.
+    /// </summary>
+    public TaxSnapshot TaxSnapshot { get; set; }
 
     public double GrandTotal { get; set; }
 

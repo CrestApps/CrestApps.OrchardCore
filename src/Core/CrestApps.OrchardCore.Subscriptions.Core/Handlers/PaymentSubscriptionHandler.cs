@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -18,6 +19,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
     private readonly ISiteService _siteService;
+    private readonly ISubscriptionTaxService _subscriptionTaxService;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -25,11 +27,13 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     public PaymentSubscriptionHandler(
         SubscriptionPaymentSession subscriptionPaymentSession,
         ISiteService siteService,
+        ISubscriptionTaxService subscriptionTaxService,
         ILogger<PaymentSubscriptionHandler> logger,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
         _subscriptionPaymentSession = subscriptionPaymentSession;
         _siteService = siteService;
+        _subscriptionTaxService = subscriptionTaxService;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -114,8 +118,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
         invoice.DueNow = Math.Round(invoice.DueNow, decimals, MidpointRounding.AwayFromZero);
 
-        // TODO, add tax.
-        invoice.GrandTotal = Math.Round(invoice.DueNow, decimals, MidpointRounding.AwayFromZero);
+        // Taxation is the authoritative source of tax. When the Taxation feature is disabled this is a
+        // no-op that sets GrandTotal to DueNow; otherwise it determines tax, records the tax lines, and
+        // captures an immutable snapshot on the invoice before setting the GrandTotal.
+        await _subscriptionTaxService.ApplyTaxAsync(invoice, context.Flow);
 
         context.Flow.Session.Put(invoice);
     }
@@ -194,6 +200,11 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                         Currency = initialPaymentInfo.Currency,
                         GatewayId = initialPaymentInfo.GatewayId,
                         GatewayMode = initialPaymentInfo.GatewayMode,
+
+                        // Persist the checkout tax determination with the transaction so it can be
+                        // audited and reproduced without recalculating with current rules.
+                        TaxAmount = invoice.TaxAmount,
+                        TaxSnapshot = invoice.TaxSnapshot,
                     });
                 }
 

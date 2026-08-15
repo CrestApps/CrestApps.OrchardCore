@@ -16,10 +16,12 @@ using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
+using CrestApps.OrchardCore.Taxation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -69,6 +71,12 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
+
+        // Taxation is optional. The no-op tax service keeps subscriptions working when the Taxation
+        // feature is disabled; the taxation-aware implementation is registered by the TaxationStartup
+        // below only when the Taxation feature is enabled.
+        services.TryAddScoped<ISubscriptionTaxProfileProvider, DefaultSubscriptionTaxProfileProvider>();
+        services.TryAddScoped<ISubscriptionTaxService, NullSubscriptionTaxService>();
 
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
 
@@ -261,5 +269,17 @@ public sealed class ReCaptchaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, ReCaptchaSubscriptionFlowDisplayDriver>();
+    }
+}
+
+[RequireFeatures(TaxationConstants.Feature.Taxation)]
+public sealed class TaxationStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Replace the no-op tax service with the taxation-aware implementation. This runs only when the
+        // Taxation feature is enabled, keeping the runtime dependency on taxation optional.
+        services.RemoveAll<ISubscriptionTaxService>();
+        services.AddScoped<ISubscriptionTaxService, SubscriptionTaxService>();
     }
 }
