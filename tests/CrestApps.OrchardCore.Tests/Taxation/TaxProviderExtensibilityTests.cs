@@ -28,7 +28,7 @@ public sealed class TaxProviderExtensibilityTests
             CalculationMethod = FlatTenTaxCalculationMethod.MethodName,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(250m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(250m), TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal(10m, line.TaxAmount);
@@ -52,7 +52,7 @@ public sealed class TaxProviderExtensibilityTests
             Rate = 0.10m,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal("EXTERNAL", line.TaxCode);

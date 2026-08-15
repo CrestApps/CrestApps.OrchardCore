@@ -29,7 +29,7 @@ public sealed class TaxSnapshotTests
         await TaxTestData.AddRuleAsync(harness, rule);
 
         var snapshotFactory = harness.GetService<ITaxSnapshotFactory>();
-        var originalResult = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var originalResult = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
         var snapshot = snapshotFactory.Create(TaxTestData.Context(100m), originalResult);
 
         Assert.Equal(10m, snapshot.TaxAmount);
@@ -38,9 +38,9 @@ public sealed class TaxSnapshotTests
         // The merchant later raises the rate and publishes a new rule version.
         rule.Rate = 0.20m;
         rule.Version = 2;
-        await harness.Rules.UpdateAsync(rule);
+        await harness.Rules.UpdateAsync(rule, TestContext.Current.CancellationToken);
 
-        var recalculated = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var recalculated = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Equal(20m, recalculated.TaxAmount);
 
@@ -64,7 +64,7 @@ public sealed class TaxSnapshotTests
         });
 
         var snapshotFactory = harness.GetService<ITaxSnapshotFactory>();
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
         var snapshot = snapshotFactory.Create(TaxTestData.Context(100m), result);
 
         result.Lines[0].TaxAmount = 999m;
@@ -91,12 +91,12 @@ public sealed class TaxSnapshotTests
         await TaxTestData.AddRuleAsync(harness, rule);
 
         var snapshotFactory = harness.GetService<ITaxSnapshotFactory>();
-        var sale = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var sale = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
         var snapshot = snapshotFactory.Create(TaxTestData.Context(100m), sale);
 
         // The rate changes before the refund is issued.
         rule.Rate = 0.25m;
-        await harness.Rules.UpdateAsync(rule);
+        await harness.Rules.UpdateAsync(rule, TestContext.Current.CancellationToken);
 
         // A refund reverses the original snapshot, not today's rate.
         var refundTax = -snapshot.TaxAmount;

@@ -44,7 +44,7 @@ public sealed class ContentItemTaxableItemProviderTests
         var harness = CreateHarness();
         var resolver = harness.GetService<ITaxableItemResolver>();
 
-        var item = await resolver.ResolveAsync(CreateTelevision(500m));
+        var item = await resolver.ResolveAsync(CreateTelevision(500m), TestContext.Current.CancellationToken);
 
         Assert.NotNull(item);
         Assert.Equal("tv-1", item.Id);
@@ -69,7 +69,7 @@ public sealed class ContentItemTaxableItemProviderTests
         });
 
         var resolver = harness.GetService<ITaxableItemResolver>();
-        var item = await resolver.ResolveAsync(CreateTelevision(500m));
+        var item = await resolver.ResolveAsync(CreateTelevision(500m), TestContext.Current.CancellationToken);
 
         var context = new TaxCalculationContext
         {
@@ -79,7 +79,7 @@ public sealed class ContentItemTaxableItemProviderTests
             Items = [item],
         };
 
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal(37.5m, line.TaxAmount);
@@ -98,7 +98,7 @@ public sealed class ContentItemTaxableItemProviderTests
             ContentItemId = "article-1",
         };
 
-        var item = await resolver.ResolveAsync(contentItem);
+        var item = await resolver.ResolveAsync(contentItem, TestContext.Current.CancellationToken);
 
         Assert.Null(item);
     }

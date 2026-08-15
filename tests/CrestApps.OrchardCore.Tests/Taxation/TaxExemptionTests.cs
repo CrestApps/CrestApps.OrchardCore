@@ -31,7 +31,7 @@ public sealed class TaxExemptionTests
         await SeedTaxedRuleAsync(harness, jurisdictionId);
 
         var context = TaxTestData.Context(100m, customer: new CustomerTaxProfile { IsTaxExempt = true }, categoryCode: "Electronics");
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
@@ -50,10 +50,10 @@ public sealed class TaxExemptionTests
             Status = ExemptionStatus.Active,
         };
 
-        await harness.Exemptions.CreateAsync(certificate);
+        await harness.Exemptions.CreateAsync(certificate, TestContext.Current.CancellationToken);
 
         var customer = new CustomerTaxProfile { ExemptionCertificateIds = [certificate.ItemId] };
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
@@ -73,10 +73,10 @@ public sealed class TaxExemptionTests
             ExpirationUtc = TaxTestData.TransactionDate.AddDays(-1),
         };
 
-        await harness.Exemptions.CreateAsync(certificate);
+        await harness.Exemptions.CreateAsync(certificate, TestContext.Current.CancellationToken);
 
         var customer = new CustomerTaxProfile { ExemptionCertificateIds = [certificate.ItemId] };
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"), TestContext.Current.CancellationToken);
 
         Assert.Single(result.Lines);
     }
@@ -96,10 +96,10 @@ public sealed class TaxExemptionTests
             JurisdictionIds = ["some-other-jurisdiction"],
         };
 
-        await harness.Exemptions.CreateAsync(certificate);
+        await harness.Exemptions.CreateAsync(certificate, TestContext.Current.CancellationToken);
 
         var customer = new CustomerTaxProfile { ExemptionCertificateIds = [certificate.ItemId] };
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"), TestContext.Current.CancellationToken);
 
         Assert.Single(result.Lines);
     }
@@ -119,10 +119,10 @@ public sealed class TaxExemptionTests
             ClassificationCodes = ["Food"],
         };
 
-        await harness.Exemptions.CreateAsync(certificate);
+        await harness.Exemptions.CreateAsync(certificate, TestContext.Current.CancellationToken);
 
         var customer = new CustomerTaxProfile { ExemptionCertificateIds = [certificate.ItemId] };
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"), TestContext.Current.CancellationToken);
 
         Assert.Single(result.Lines);
     }

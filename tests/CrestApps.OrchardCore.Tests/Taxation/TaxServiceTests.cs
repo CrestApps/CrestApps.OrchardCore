@@ -15,7 +15,7 @@ public sealed class TaxServiceTests
     {
         var harness = CreateHarness();
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
         Assert.Equal(0m, result.TaxAmount);
@@ -39,7 +39,7 @@ public sealed class TaxServiceTests
             Rate = 0.075m,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(200m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(200m), TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal(15m, line.TaxAmount);
@@ -68,7 +68,7 @@ public sealed class TaxServiceTests
         var context = TaxTestData.Context(120m);
         context.DefaultPriceType = TaxPriceType.Inclusive;
 
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal(20m, line.TaxAmount);
@@ -101,7 +101,7 @@ public sealed class TaxServiceTests
             Rate = 0.025m,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.Lines.Count);
         Assert.Equal(8.5m, result.TaxAmount);
@@ -135,7 +135,7 @@ public sealed class TaxServiceTests
         });
 
         var context = TaxTestData.Context(100m, destination: new TaxAddress { Country = "CA", Region = "QC" });
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var gst = result.Lines.Single(line => line.TaxType == TaxTypeNames.Gst);
         var qst = result.Lines.Single(line => line.TaxType == TaxTypeNames.Qst);
@@ -160,7 +160,7 @@ public sealed class TaxServiceTests
             EffectiveToUtc = TaxTestData.TransactionDate.AddDays(-1),
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
@@ -180,7 +180,7 @@ public sealed class TaxServiceTests
             EffectiveFromUtc = TaxTestData.TransactionDate.AddDays(1),
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
@@ -203,8 +203,8 @@ public sealed class TaxServiceTests
         var electronics = TaxTestData.Context(100m, categoryCode: "Electronics");
         var alcohol = TaxTestData.Context(100m, categoryCode: "Alcohol");
 
-        Assert.Empty((await harness.TaxService.CalculateAsync(electronics)).Lines);
-        Assert.Single((await harness.TaxService.CalculateAsync(alcohol)).Lines);
+        Assert.Empty((await harness.TaxService.CalculateAsync(electronics, TestContext.Current.CancellationToken)).Lines);
+        Assert.Single((await harness.TaxService.CalculateAsync(alcohol, TestContext.Current.CancellationToken)).Lines);
     }
 
     [Fact]
@@ -225,8 +225,8 @@ public sealed class TaxServiceTests
         var b2c = TaxTestData.Context(100m, customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2C });
         var b2b = TaxTestData.Context(100m, customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2B });
 
-        Assert.Empty((await harness.TaxService.CalculateAsync(b2c)).Lines);
-        Assert.Single((await harness.TaxService.CalculateAsync(b2b)).Lines);
+        Assert.Empty((await harness.TaxService.CalculateAsync(b2c, TestContext.Current.CancellationToken)).Lines);
+        Assert.Single((await harness.TaxService.CalculateAsync(b2b, TestContext.Current.CancellationToken)).Lines);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class TaxServiceTests
             Rate = 0.0625m,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
         Assert.Equal(californiaId, line.JurisdictionId);
@@ -274,7 +274,7 @@ public sealed class TaxServiceTests
             FixedAmount = 3m,
         });
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Equal(3m, result.TaxAmount);
         Assert.Equal(103m, result.TotalAmount);
@@ -297,7 +297,7 @@ public sealed class TaxServiceTests
         var context = TaxTestData.Context(100m);
         ((TaxableItem)context.Items[0]).DiscountAmount = 20m;
 
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         // (100 - 20) * 0.10 = 8
         Assert.Equal(8m, result.TaxAmount);

@@ -42,7 +42,7 @@ public sealed class TaxRoundingTests
         var context = TaxTestData.Context(10.10m);
         context.RoundingLevel = TaxRoundingLevel.Line;
 
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         // Each line: round(10.10 * 0.0825) = round(0.83325) = 0.83; total = 1.66.
         Assert.All(result.Lines, line => Assert.Equal(0.83m, line.TaxAmount));
@@ -58,7 +58,7 @@ public sealed class TaxRoundingTests
         var context = TaxTestData.Context(10.10m);
         context.RoundingLevel = TaxRoundingLevel.Transaction;
 
-        var result = await harness.TaxService.CalculateAsync(context);
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         // Unrounded total: 2 * 0.83325 = 1.6665; rounded to 1.67.
         Assert.Equal(1.67m, result.TaxAmount);

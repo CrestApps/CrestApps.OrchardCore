@@ -29,7 +29,7 @@ public sealed class TaxNexusTests
         var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "California", "US", "CA");
         await SeedRuleAsync(harness, jurisdictionId);
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Single(result.Lines);
     }
@@ -47,9 +47,9 @@ public sealed class TaxNexusTests
             JurisdictionId = jurisdictionId,
             TaxType = TaxTypeNames.SalesTax,
             IsActive = true,
-        });
+        }, TestContext.Current.CancellationToken);
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Single(result.Lines);
     }
@@ -67,9 +67,9 @@ public sealed class TaxNexusTests
             JurisdictionId = "texas-jurisdiction",
             TaxType = TaxTypeNames.SalesTax,
             IsActive = true,
-        });
+        }, TestContext.Current.CancellationToken);
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
@@ -87,9 +87,9 @@ public sealed class TaxNexusTests
             JurisdictionId = jurisdictionId,
             TaxType = TaxTypeNames.SalesTax,
             IsActive = false,
-        });
+        }, TestContext.Current.CancellationToken);
 
-        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m));
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Lines);
     }
