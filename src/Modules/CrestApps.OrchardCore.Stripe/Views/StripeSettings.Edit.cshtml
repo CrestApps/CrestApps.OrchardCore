@@ -27,61 +27,77 @@
     @T["In the <code>Sample endpoint</code> look for the <code>endpoint_secret</code> value. The webhooks secret is the value that starts with <code>whsec_</code> copy the value excluding the quotes."]
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
-        <label class="form-check-label" asp-for="IsLive">@T["Enable Production"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="IsLive">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
+            <label class="form-check-label" asp-for="IsLive">@T["Enable Production"]</label>
+        </div>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="CheckoutMode" class="form-label">@T["Checkout Mode"]</label>
-    <select asp-for="CheckoutMode" class="form-select" asp-items="Html.GetEnumSelectList<StripeCheckoutMode>()"></select>
-    <span class="hint">
-        @T["Choose how customers pay. <strong>Payment Elements</strong> collects card details on your site (the original integration). <strong>Hosted Checkout</strong> redirects customers to a secure Stripe-hosted page, which Stripe recommends and which minimizes your PCI scope."]
-    </span>
+<div class="ocat-wrapper" asp-validation-class-for="CheckoutMode">
+    <label asp-for="CheckoutMode" class="ocat-label">@T["Checkout Mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="CheckoutMode" class="form-select" asp-items="Html.GetEnumSelectList<StripeCheckoutMode>()"></select>
+        <span class="hint">
+            @T["Choose how customers pay. <strong>Payment Elements</strong> collects card details on your site (the original integration). <strong>Hosted Checkout</strong> redirects customers to a secure Stripe-hosted page, which Stripe recommends and which minimizes your PCI scope."]
+        </span>
+    </div>
 </div>
 
 <div class="live-stripe-settings@(Model.IsLive ? string.Empty : " d-none")">
 
-    <div class="mb-3" asp-validation-class-for="LivePublishableKey">
-        <label asp-for="LivePublishableKey" class="form-label">@T["Production Publishable Key"]</label>
-        <input asp-for="LivePublishableKey" class="form-control" type="text" />
-        <span asp-validation-for="LivePublishableKey"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="LivePublishableKey">
+        <label asp-for="LivePublishableKey" class="ocat-label">@T["Production Publishable Key"]</label>
+        <div class="ocat-end">
+            <input asp-for="LivePublishableKey" class="form-control" type="text" />
+            <span asp-validation-for="LivePublishableKey"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="LivePrivateSecret">
-        <label asp-for="LivePrivateSecret" class="form-label">@T["Production Secret Key"]</label>
-        <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="LivePrivateSecret"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="LivePrivateSecret">
+        <label asp-for="LivePrivateSecret" class="ocat-label">@T["Production Secret Key"]</label>
+        <div class="ocat-end">
+            <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <span asp-validation-for="LivePrivateSecret"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="LiveWebhookSecret">
-        <label asp-for="LiveWebhookSecret" class="form-label">@T["Production Webhooks Secret"]</label>
-        <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="LiveWebhookSecret"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="LiveWebhookSecret">
+        <label asp-for="LiveWebhookSecret" class="ocat-label">@T["Production Webhooks Secret"]</label>
+        <div class="ocat-end">
+            <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <span asp-validation-for="LiveWebhookSecret"></span>
+        </div>
     </div>
 
 </div>
 
 <div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)">
 
-    <div class="mb-3" asp-validation-class-for="TestPublishableKey">
-        <label asp-for="TestPublishableKey" class="form-label">@T["Test Publishable Key"]</label>
-        <input asp-for="TestPublishableKey" class="form-control" type="text" />
-        <span asp-validation-for="TestPublishableKey"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="TestPublishableKey">
+        <label asp-for="TestPublishableKey" class="ocat-label">@T["Test Publishable Key"]</label>
+        <div class="ocat-end">
+            <input asp-for="TestPublishableKey" class="form-control" type="text" />
+            <span asp-validation-for="TestPublishableKey"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="TestPrivateSecret">
-        <label asp-for="TestPrivateSecret" class="form-label">@T["Test Secret Key"]</label>
-        <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="TestPrivateSecret"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="TestPrivateSecret">
+        <label asp-for="TestPrivateSecret" class="ocat-label">@T["Test Secret Key"]</label>
+        <div class="ocat-end">
+            <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <span asp-validation-for="TestPrivateSecret"></span>
+        </div>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="TestWebhookSecret">
-        <label asp-for="TestWebhookSecret" class="form-label">@T["Test Webhooks Secret"]</label>
-        <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="TestWebhookSecret"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="TestWebhookSecret">
+        <label asp-for="TestWebhookSecret" class="ocat-label">@T["Test Webhooks Secret"]</label>
+        <div class="ocat-end">
+            <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <span asp-validation-for="TestWebhookSecret"></span>
+        </div>
     </div>
 
 </div>

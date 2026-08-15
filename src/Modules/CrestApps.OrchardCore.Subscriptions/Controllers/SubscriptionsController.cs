@@ -18,6 +18,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
@@ -112,6 +113,7 @@ public sealed class SubscriptionsController : Controller
     /// <returns></returns>
     [HttpPost("Subscription/Signup/{contentItemId?}")]
     [ActionName(nameof(Signup))]
+    [RateLimitGroup(SubscriptionConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> SignupPOST(ServicePlanSubscriptionViewModel model)
     {
         if (string.IsNullOrWhiteSpace(model.ContentItemId))
@@ -239,6 +241,7 @@ public sealed class SubscriptionsController : Controller
     }
 
     [Route("Subscription/Step/{sessionId}", Name = "SubscriptionSignupStep")]
+    [RateLimitGroup(SubscriptionConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> Display(string sessionId, string step)
     {
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);

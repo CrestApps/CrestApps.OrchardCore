@@ -29,6 +29,7 @@
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Users" />
     <PackageReference Include="OrchardCore.ReCaptcha.Core" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
   </ItemGroup>
 
   <ItemGroup>

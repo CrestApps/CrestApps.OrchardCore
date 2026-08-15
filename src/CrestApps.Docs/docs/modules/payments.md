@@ -75,6 +75,27 @@ Stripe delivers events to `POST /stripe/webhook`. Set the endpoint's signing sec
 - Handler writes and the processed-event marker are committed together **inside** the lock, so a crash or a concurrent delivery cannot reopen the double-processing window.
 - When a handler throws, pending changes are discarded and the endpoint returns `500` so Stripe retries; a lock contention returns `409`.
 
+### Local development
+
+To exercise the webhook pipeline on your machine, forward Stripe events to your local server with the [Stripe CLI](https://docs.stripe.com/stripe-cli):
+
+1. Enable and configure the **Stripe** feature as described under [The Stripe provider](#the-stripe-provider).
+2. Install the Stripe CLI — see [Get started with the Stripe CLI](https://docs.stripe.com/stripe-cli#install).
+3. Authenticate the CLI with your Stripe account:
+
+   ```sh
+   stripe login
+   ```
+
+   This opens a browser window to authorize the CLI.
+4. Forward webhook events to your local endpoint, replacing `your-port` with the port your site runs on (for example `5000`):
+
+   ```sh
+   stripe listen --forward-to https://localhost:your-port/stripe/webhook
+   ```
+
+The CLI prints a temporary webhook signing secret; set it as the matching *WebhookSecret* in the Stripe settings so the endpoint can verify the forwarded events.
+
 ## Payment resiliency
 
 The Stripe integration and the [Subscriptions](subscriptions) endpoints that drive it were hardened for multi-instance, production use:

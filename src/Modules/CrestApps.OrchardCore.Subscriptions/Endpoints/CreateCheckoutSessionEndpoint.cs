@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 using OrchardCore.Mvc.Core.Utilities;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
@@ -22,7 +23,8 @@ public static class CreateCheckoutSessionEndpoint
         builder.MapPost("subscriptions/stripe/create-checkout-session", HandleAsync)
             .AllowAnonymous()
             .WithName(SubscriptionConstants.RouteName.CreateCheckoutSessionEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RateLimitGroupAttribute(SubscriptionConstants.RateLimitGroups.Payment));
 
         return builder;
     }

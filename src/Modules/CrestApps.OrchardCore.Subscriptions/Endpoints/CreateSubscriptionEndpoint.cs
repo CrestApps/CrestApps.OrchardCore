@@ -13,17 +13,18 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
-public static class CreateSubscriptionEndpoint
-{
+public static class CreateSubscriptionEndpoint{
     public static IEndpointRouteBuilder AddCreateStripeSubscriptionEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/stripe/create-subscription", HandleAsync)
             .AllowAnonymous()
             .WithName(SubscriptionConstants.RouteName.CreateSubscriptionEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RateLimitGroupAttribute(SubscriptionConstants.RateLimitGroups.Payment));
 
         return builder;
     }

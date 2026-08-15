@@ -2,8 +2,10 @@
 
 @model ProductPartSettingsViewModel
 
-<div class="mb-3">
-    <label asp-for="Type" class="form-label">@T["Product Type"]</label>
-    <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
-    <span asp-validation-for="Type" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="Type">
+    <label asp-for="Type" class="ocat-label">@T["Product Type"]</label>
+    <div class="ocat-end">
+        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
+        <span asp-validation-for="Type"></span>
+    </div>
 </div>

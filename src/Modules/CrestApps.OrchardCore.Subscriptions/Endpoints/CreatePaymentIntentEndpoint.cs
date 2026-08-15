@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
@@ -19,7 +20,8 @@ public static class CreatePaymentIntentEndpoint
         builder.MapPost("subscriptions/stripe/create-payment-intent", HandleAsync)
             .AllowAnonymous()
             .WithName(SubscriptionConstants.RouteName.CreatePaymentIntentEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RateLimitGroupAttribute(SubscriptionConstants.RateLimitGroups.Payment));
 
         return builder;
     }

@@ -2,29 +2,42 @@
 
 @model TaxationPartViewModel
 
-<div class="mb-3 form-check">
-    <input type="checkbox" asp-for="Taxable" class="form-check-input" />
-    <label asp-for="Taxable" class="form-check-label">@T["Taxable"]</label>
-    <span class="hint">@T["When enabled, this item participates in tax calculation."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Taxable">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="Taxable" class="form-check-input" />
+            <label asp-for="Taxable" class="form-check-label">@T["Taxable"]</label>
+            <span class="hint dashed">@T["When enabled, this item participates in tax calculation."]</span>
+        </div>
+    </div>
 </div>
 
 @if (Model.AllowClassificationOverride)
 {
-    <div class="mb-3">
-        <label asp-for="TaxCategoryCode" class="form-label">@T["Tax category"]</label>
-        <input type="text" asp-for="TaxCategoryCode" class="form-control" />
-        <span class="hint">@T["The tax category code, for example Electronics."]</span>
+    <div class="ocat-wrapper" asp-validation-class-for="TaxCategoryCode">
+        <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category"]</label>
+        <div class="ocat-end">
+            <input type="text" asp-for="TaxCategoryCode" class="form-control" />
+            <span asp-validation-for="TaxCategoryCode"></span>
+            <span class="hint">@T["The tax category code, for example Electronics."]</span>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="TaxClassificationCode" class="form-label">@T["Tax classification"]</label>
-        <input type="text" asp-for="TaxClassificationCode" class="form-control" />
-        <span class="hint">@T["The tax classification code that refines the category, for example Television."]</span>
+    <div class="ocat-wrapper" asp-validation-class-for="TaxClassificationCode">
+        <label asp-for="TaxClassificationCode" class="ocat-label">@T["Tax classification"]</label>
+        <div class="ocat-end">
+            <input type="text" asp-for="TaxClassificationCode" class="form-control" />
+            <span asp-validation-for="TaxClassificationCode"></span>
+            <span class="hint">@T["The tax classification code that refines the category, for example Television."]</span>
+        </div>
     </div>
 }
 
-<div class="mb-3">
-    <label asp-for="ExternalTaxCode" class="form-label">@T["External tax code"]</label>
-    <input type="text" asp-for="ExternalTaxCode" class="form-control" />
-    <span class="hint">@T["An optional external or provider-specific tax code."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="ExternalTaxCode">
+    <label asp-for="ExternalTaxCode" class="ocat-label">@T["External tax code"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="ExternalTaxCode" class="form-control" />
+        <span asp-validation-for="ExternalTaxCode"></span>
+        <span class="hint">@T["An optional external or provider-specific tax code."]</span>
+    </div>
 </div>

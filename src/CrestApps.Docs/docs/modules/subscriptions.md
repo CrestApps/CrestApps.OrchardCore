@@ -57,6 +57,15 @@ Each step is a display driver against the `SubscriptionFlow`, and the server tra
 
 The **Payment** step renders the payment methods advertised in `PaymentMethodOptions`. Enabling **Subscriptions - Stripe** adds the *Stripe* method (with a real processor), and **Subscriptions - Pay Later** adds a *Pay Later* method (no processor). The site owner picks the default under the subscription settings; developers add more options (for example PayPal) by registering a payment method and a checkout display driver — see [Adding another payment provider](payments#adding-another-payment-provider).
 
+### Stripe checkout modes
+
+When the **Subscriptions - Stripe** feature is enabled, Stripe contributes two ways to collect payment, selectable from the Stripe settings page under **Checkout Mode** (see [The Stripe provider](payments#the-stripe-provider)):
+
+- **Payment Elements (on-site)** — collects card data on your own site. Supports products that mix multiple billing intervals and up-front one-time fees.
+- **Hosted Checkout (redirect)** — redirects the customer to a Stripe-hosted [Checkout Session](https://docs.stripe.com/payments/checkout), minimizing your PCI scope.
+
+Hosted Checkout redirects the browser to Stripe and, on return, the `Subscription/CheckoutReturn` action retrieves the session from Stripe, confirms it is complete and paid, records the Stripe subscription against the local session, and finalizes the flow through the **same completion pipeline** used by Payment Elements. Because a single Checkout Session maps to a single Stripe subscription, Hosted Checkout only supports products that have a **single billing interval** and **no separate up-front one-time fee**. A product that does not meet these constraints automatically falls back to the Payment Elements experience, so switching modes never changes how a completed subscription is recorded.
+
 ## Subscriber dashboard
 
 Subscribers get a self-service **dashboard** (`SubscriberDashboard`) where they can review their subscriptions and related information. Recorded payments are indexed (`SubscriptionTransactionIndex`) so a subscriber's transaction history is available for display.
@@ -94,6 +103,17 @@ Subscriptions inherits the hardening built into the [Payments](payments#payment-
 :::tip Multi-instance deployments
 Enable the **Redis** features so distributed locks and cached checkout state are shared across every node. See the [Orchard Core Redis documentation](https://docs.orchardcore.net/en/latest/reference/modules/Redis/).
 :::
+
+### Rate limiting the checkout
+
+Beyond the always-on throttle above, the sensitive front-end routes advertise **rate-limit groups** so administrators can attach their own policies through the optional Orchard Core [Rate Limiting](https://docs.orchardcore.net/en/latest/reference/modules/RateLimits/) feature. The metadata is inert until that feature is enabled and a matching policy is created, so it is always safe to have declared.
+
+| Group name | Routes it covers |
+| --- | --- |
+| `subscription-checkout` | The signup form submission and every checkout flow step. |
+| `subscription-payment` | The anonymous payment endpoints (payment/setup intents, checkout session, subscription creation, and pay-later confirmation). |
+
+To enable it, turn on the **Rate Limiting** feature, then under **Configuration → Rate Limiting** create a policy targeting the `subscription-checkout` and/or `subscription-payment` group. Requests exceeding the configured limit receive an HTTP `429`.
 
 ## Taxation
 

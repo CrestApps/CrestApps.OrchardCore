@@ -2,15 +2,16 @@
 
 @model SubscriptionPartSettings
 
-<div class="mb-3" asp-validation-class-for="ContentTypes">
-    <label asp-for="ContentTypes" class="form-label">@T["Content Types"]</label>
-    <span class="hint dashed">@T["Optionally, select content items to create during the subscription process."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="ContentTypes">
+    <label asp-for="ContentTypes" class="ocat-label">@T["Content Types"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("SelectContentTypes", new
+            {
+                selectedContentTypes = Model.ContentTypes,
+                htmlName = Html.NameFor(m => m.ContentTypes),
+            })
 
-    @await Component.InvokeAsync("SelectContentTypes", new
-        {
-            selectedContentTypes = Model.ContentTypes,
-            htmlName = Html.NameFor(m => m.ContentTypes),
-        })
-
-    <span asp-validation-for="ContentTypes" class="text-danger"></span>
+        <span asp-validation-for="ContentTypes"></span>
+        <span class="hint">@T["Optionally, select content items to create during the subscription process."]</span>
+    </div>
 </div>

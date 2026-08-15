@@ -2,38 +2,50 @@
 
 @model SubscriptionPartViewModel
 
-<div class="mb-3">
-    <label asp-for="InitialAmount" class="form-label">@T["Initial Amount"]</label>
-    <input type="number" min="0" step="0.01" asp-for="InitialAmount" class="form-control" />
-    <span asp-validation-for="InitialAmount" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="InitialAmount">
+    <label asp-for="InitialAmount" class="ocat-label">@T["Initial Amount"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="0.01" asp-for="InitialAmount" class="form-control" />
+        <span asp-validation-for="InitialAmount"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="InitialAmountDescription" class="form-label">@T["Initial Amount Description"]</label>
-    <input type="text" asp-for="InitialAmountDescription" class="form-control" />
-    <span asp-validation-for="InitialAmountDescription" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="InitialAmountDescription">
+    <label asp-for="InitialAmountDescription" class="ocat-label">@T["Initial Amount Description"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="InitialAmountDescription" class="form-control" />
+        <span asp-validation-for="InitialAmountDescription"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="BillingDuration" class="form-label">@T["Billing Duration"]</label>
-    <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
-    <span asp-validation-for="BillingDuration" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="BillingDuration">
+    <label asp-for="BillingDuration" class="ocat-label">@T["Billing Duration"]</label>
+    <div class="ocat-end">
+        <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
+        <span asp-validation-for="BillingDuration"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="DurationType" class="form-label">@T["Duration Type"]</label>
-    <select asp-for="DurationType" asp-items="Model.DurationTypes" class="form-select"></select>
-    <span asp-validation-for="DurationType" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="DurationType">
+    <label asp-for="DurationType" class="ocat-label">@T["Duration Type"]</label>
+    <div class="ocat-end">
+        <select asp-for="DurationType" asp-items="Model.DurationTypes" class="form-select"></select>
+        <span asp-validation-for="DurationType"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="BillingCycleLimit" class="form-label">@T["Billing Cycle Limit"]</label>
-    <input type="number" min="0" step="1" asp-for="BillingCycleLimit" class="form-control" />
-    <span asp-validation-for="BillingCycleLimit" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="BillingCycleLimit">
+    <label asp-for="BillingCycleLimit" class="ocat-label">@T["Billing Cycle Limit"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="1" asp-for="BillingCycleLimit" class="form-control" />
+        <span asp-validation-for="BillingCycleLimit"></span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="SubscriptionDayDelay" class="form-label">@T["Subscription Day Delay"]</label>
-    <input type="number" min="0" step="1" asp-for="SubscriptionDayDelay" class="form-control" />
-    <span asp-validation-for="SubscriptionDayDelay" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="SubscriptionDayDelay">
+    <label asp-for="SubscriptionDayDelay" class="ocat-label">@T["Subscription Day Delay"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="1" asp-for="SubscriptionDayDelay" class="form-control" />
+        <span asp-validation-for="SubscriptionDayDelay"></span>
+    </div>
 </div>

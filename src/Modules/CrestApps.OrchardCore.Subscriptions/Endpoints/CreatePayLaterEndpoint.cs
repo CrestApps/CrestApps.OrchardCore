@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
@@ -21,7 +22,8 @@ public static class CreatePayLaterEndpoint
         builder.MapPost("subscriptions/pay-later/process", HandleAsync)
             .AllowAnonymous()
             .WithName(SubscriptionConstants.RouteName.CreatePayLaterEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RateLimitGroupAttribute(SubscriptionConstants.RateLimitGroups.Payment));
 
         return builder;
     }

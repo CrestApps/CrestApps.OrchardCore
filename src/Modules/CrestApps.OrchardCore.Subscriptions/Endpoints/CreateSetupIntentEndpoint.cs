@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 using OrchardCore.Json;
+using OrchardCore.RateLimits;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -26,7 +27,8 @@ public static class CreateSetupIntentEndpoint
         builder.MapPost("subscriptions/stripe/create-setup-intent", HandleAsync)
             .AllowAnonymous()
             .WithName(SubscriptionConstants.RouteName.CreateSetupIntentEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new RateLimitGroupAttribute(SubscriptionConstants.RateLimitGroups.Payment));
 
         return builder;
     }

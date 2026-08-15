@@ -2,8 +2,10 @@
 
 @model ProductPartViewModel
 
-<div class="mb-3">
-    <label asp-for="Price" class="form-label">@T["Price"]</label>
-    <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
-    <span asp-validation-for="Price" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="Price">
+    <label asp-for="Price" class="ocat-label">@T["Price"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
+        <span asp-validation-for="Price"></span>
+    </div>
 </div>

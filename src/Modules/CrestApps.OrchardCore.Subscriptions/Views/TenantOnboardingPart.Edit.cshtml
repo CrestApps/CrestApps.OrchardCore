@@ -2,8 +2,10 @@
 
 @model TenantOnboardingViewModel
 
-<div class="mb-3">
-    <label asp-for="RecipeName" class="form-label">@T["Recipe"]</label>
-    <select asp-for="RecipeName" asp-items="Model.Recipes" class="form-select"></select>
-    <span asp-validation-for="RecipeName" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="RecipeName">
+    <label asp-for="RecipeName" class="ocat-label">@T["Recipe"]</label>
+    <div class="ocat-end">
+        <select asp-for="RecipeName" asp-items="Model.Recipes" class="form-select"></select>
+        <span asp-validation-for="RecipeName"></span>
+    </div>
 </div>
