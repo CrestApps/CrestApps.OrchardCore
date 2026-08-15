@@ -5,9 +5,11 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -35,15 +37,14 @@ public static class CreatePayLaterEndpoint
         SubscriptionPaymentSession subscriptionPaymentSession,
         IPaymentAttemptLimiter paymentAttemptLimiter,
         IHttpContextAccessor httpContextAccessor,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        ILoggerFactory loggerFactory)
     {
+        var logger = loggerFactory.CreateLogger(typeof(CreatePayLaterEndpoint).FullName);
+
         if (string.IsNullOrEmpty(model?.SessionId))
         {
-            return TypedResults.BadRequest(new
-            {
-                ErrorMessage = "Invalid request data",
-                ErrorCode = 1,
-            });
+            return Error("Invalid request data.", errorCode: 1, statusCode: StatusCodes.Status400BadRequest);
         }
 
         if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContextAccessor.HttpContext, "pay-later", model.SessionId))
@@ -55,14 +56,46 @@ public static class CreatePayLaterEndpoint
 
         if (session == null)
         {
-            return TypedResults.NotFound();
+            logger.LogWarning("Pay Later was requested for session '{SessionId}' but no matching pending session was found for the current user.", model.SessionId);
+
+            return Error("The subscription session could not be found or has expired. Please start the sign up again.", errorCode: 2, statusCode: StatusCodes.Status404NotFound);
         }
 
         if (!session.TryGet<Invoice>(out var invoice))
         {
-            return TypedResults.NotFound();
+            logger.LogError("Pay Later was requested for session '{SessionId}' but the session has no invoice attached.", model.SessionId);
+
+            return Error("The subscription is missing billing information. Please start the sign up again.", errorCode: 3, statusCode: StatusCodes.Status404NotFound);
         }
 
+        try
+        {
+            await ProcessAsync(model.SessionId, session, invoice, clock, subscriptionPaymentSession, subscriptionSessionStore, hostEnvironment);
+        }
+        catch (Exception ex)
+        {
+            // Surface a meaningful, non-technical reason to the checkout script instead of a bare 500,
+            // which the UI can only render as a generic "Unexpected error".
+            logger.LogError(ex, "An error occurred while recording the Pay Later commitment for session '{SessionId}'.", model.SessionId);
+
+            return Error("We could not record your Pay Later commitment. This subscription plan may be misconfigured. Please contact the site administrator.", errorCode: 4, statusCode: StatusCodes.Status500InternalServerError);
+        }
+
+        return TypedResults.Ok(new
+        {
+            status = "completed",
+        });
+    }
+
+    internal static async Task ProcessAsync(
+        string sessionId,
+        SubscriptionSession session,
+        Invoice invoice,
+        IClock clock,
+        SubscriptionPaymentSession subscriptionPaymentSession,
+        ISubscriptionSessionStore subscriptionSessionStore,
+        IHostEnvironment hostEnvironment)
+    {
         // Reflect the deployment environment instead of always reporting 'Live', which would mislabel
         // test transactions. Pay Later has no external gateway, so a non-production deployment records
         // its offline commitments as test data.
@@ -86,7 +119,7 @@ public static class CreatePayLaterEndpoint
 
         session.Put(collection);
 
-        await subscriptionPaymentSession.SetAsync(model.SessionId, new InitialPaymentMetadata()
+        await subscriptionPaymentSession.SetAsync(sessionId, new InitialPaymentMetadata()
         {
             TransactionId = IdGenerator.GenerateId(),
             Amount = invoice.InitialPaymentAmount ?? 0,
@@ -134,15 +167,22 @@ public static class CreatePayLaterEndpoint
             });
         }
 
-        await subscriptionPaymentSession.SetAsync(model.SessionId, metadata);
+        await subscriptionPaymentSession.SetAsync(sessionId, metadata);
 
         session.Put(subscriptionPaymentMetadata);
 
         await subscriptionSessionStore.SaveAsync(session);
-
-        return TypedResults.Ok(new
-        {
-            status = "completed",
-        });
     }
+
+    private static JsonHttpResult<PayLaterErrorResponse> Error(string message, int errorCode, int statusCode)
+    {
+        // The checkout scripts always read the response body as JSON. Expose both the 'error' and
+        // 'ErrorMessage' shapes used across the different payment views so the real reason is shown
+        // to the user instead of a generic "Unexpected error".
+        return TypedResults.Json(
+            new PayLaterErrorResponse(message, message, errorCode),
+            statusCode: statusCode);
+    }
+
+    private sealed record PayLaterErrorResponse(string error, string ErrorMessage, int ErrorCode);
 }

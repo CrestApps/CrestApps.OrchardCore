@@ -23,23 +23,31 @@
                 body: JSON.stringify({
                     sessionId: '@(Model.Value.Flow.Session.SessionId)'
                 }),
-            }).then((response) => {
-                if (!response.ok) {
-                    throw new Error('Request failed with status ' + response.status);
+            }).then(async (response) => {
+                // Always try to read the JSON body, even on error responses, so the real reason
+                // returned by the server can be shown instead of a generic message.
+                let data = null;
+
+                try {
+                    data = await response.json();
+                } catch {
+                    data = null;
                 }
-                return response.json();
+
+                if (!response.ok || !data || data.status !== 'completed') {
+                    enablePayButtonButton(payButtonElement, true);
+
+                    const message = (data && (data.ErrorMessage || data.errorMessage || data.error))
+                        || '@T["Unexpected error. Please try again."]';
+
+                    alert(message);
+
+                    return;
+                }
+
+                const form = document.getElementById('subscription-form');
+                form.requestSubmit();
             })
-                .then(data => {
-                    const form = document.getElementById('subscription-form');
-
-                    if (data && data.status == 'completed') {
-                        form.requestSubmit();
-                    } else {
-                        enablePayButtonButton(payButtonElement, true);
-
-                        alert('@T["Unexpected error. Please try again."]');
-                    }
-                })
                 .catch(() => {
                     // Always re-enable the button on failure; otherwise it stays stuck on "Processing...".
                     enablePayButtonButton(payButtonElement, true);

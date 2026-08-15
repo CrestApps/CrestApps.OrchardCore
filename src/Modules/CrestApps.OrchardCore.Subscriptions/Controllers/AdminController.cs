@@ -119,7 +119,7 @@ public sealed class AdminController : Controller
     [Admin("manage-subscriptions/{id}")]
     public async Task<IActionResult> Edit(string id)
     {
-        var subscription = await _session.Query<SubscriptionSession, SubscriptionIndex>(i => i.SessionId == id).FirstOrDefaultAsync();
+        var subscription = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>(i => i.SessionId == id).FirstOrDefaultAsync();
 
         if (subscription == null)
         {

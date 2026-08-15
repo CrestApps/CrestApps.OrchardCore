@@ -44,9 +44,7 @@ public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<Subscriptio
             Shape("SubscriptionsMeta_SummaryAdmin", new SubscriptionViewModel(subscription))
                 .Location("SummaryAdmin", "Meta:20"),
             Shape("SubscriptionsActions_SummaryAdmin", new SubscriptionViewModel(subscription))
-                .Location("SummaryAdmin", "Actions:5"),
-            Shape("SubscriptionsButtonActions_SummaryAdmin", new SubscriptionViewModel(subscription))
-                .Location("SummaryAdmin", "ActionsMenu:10")
+                .Location("SummaryAdmin", "Actions:5")
         );
     }
 
