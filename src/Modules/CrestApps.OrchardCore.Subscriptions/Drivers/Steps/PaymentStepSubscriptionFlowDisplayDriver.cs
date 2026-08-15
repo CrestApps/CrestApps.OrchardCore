@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -14,9 +15,14 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
 {
     private readonly PaymentMethodOptions _paymentMethodOptions;
 
-    public PaymentStepSubscriptionFlowDisplayDriver(IOptions<PaymentMethodOptions> paymentMethodOptions)
+    internal readonly IStringLocalizer S;
+
+    public PaymentStepSubscriptionFlowDisplayDriver(
+        IOptions<PaymentMethodOptions> paymentMethodOptions,
+        IStringLocalizer<PaymentStepSubscriptionFlowDisplayDriver> stringLocalizer)
     {
         _paymentMethodOptions = paymentMethodOptions.Value;
+        S = stringLocalizer;
     }
 
     protected override string StepKey
@@ -47,4 +53,34 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
             }).Location("Content:after")
         );
     }
+
+    protected override async Task<IDisplayResult> UpdateStepAsync(SubscriptionFlow flow, UpdateEditorContext context)
+    {
+        // A subscription must never be allowed to complete when money is owed but there is no way to
+        // collect it. If no payment feature (Stripe, Pay Later, ...) is enabled there are no registered
+        // payment methods, so the client-side flow can never record a payment. Without this guard the
+        // flow would submit, the completion handler would wait for a payment that never arrives, and the
+        // customer would eventually see a generic failure. Fail fast with an actionable message instead.
+        var invoice = flow.Session.GetOrCreate<Invoice>();
+
+        if (RequiresUnavailablePaymentProvider(invoice, _paymentMethodOptions))
+        {
+            context.Updater.ModelState.AddModelError(
+                nameof(PaymentMethodsViewModel.PaymentMethod),
+                S["This subscription requires a payment, but no payment provider is enabled. Enable a payment feature (such as Stripe or Pay Later), or contact the site administrator."]);
+        }
+
+        return await EditStepAsync(flow, context);
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when the invoice needs money collected now but there is no
+    /// registered payment method to collect it (i.e. no payment feature is enabled). Completing a flow
+    /// in this state can never succeed, so callers must block it.
+    /// </summary>
+    internal static bool RequiresUnavailablePaymentProvider(Invoice invoice, PaymentMethodOptions options)
+        => PaymentIsRequired(invoice) && options.PaymentMethods.Count == 0;
+
+    internal static bool PaymentIsRequired(Invoice invoice)
+        => invoice.InitialPaymentAmount is > 0d || invoice.FirstSubscriptionPaymentAmount is > 0d;
 }

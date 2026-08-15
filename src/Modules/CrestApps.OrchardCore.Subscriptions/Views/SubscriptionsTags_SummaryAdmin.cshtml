@@ -1,32 +1,35 @@
 @using CrestApps.OrchardCore.Subscriptions
 @using CrestApps.OrchardCore.Subscriptions.Extensions
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using OrchardCore.DisplayManagement.Views
 
-@model SubscriptionSummaryAdminViewModel
+@model ShapeViewModel<SubscriptionSummaryAdminViewModel>
 
 @{
-    var (statusClass, statusText) = Model.Status switch
+    var summary = Model.Value;
+
+    var (statusClass, statusText) = summary.Status switch
     {
         SubscriptionSessionStatus.Completed => ("text-bg-success", T["Active"]),
         SubscriptionSessionStatus.Pending => ("text-bg-warning", T["Pending"]),
         SubscriptionSessionStatus.Suspended => ("text-bg-secondary", T["Suspended"]),
         SubscriptionSessionStatus.Canceled => ("text-bg-danger", T["Canceled"]),
-        _ => ("text-bg-light", T[Model.Status.ToString()]),
+        _ => ("text-bg-light", T[summary.Status.ToString()]),
     };
 }
 
 <span class="badge @statusClass">@statusText</span>
 
-@if (Model.RecurringAmount.HasValue && Model.DurationType.HasValue)
+@if (summary.RecurringAmount.HasValue && summary.DurationType.HasValue)
 {
     <span class="badge text-bg-primary" title="@T["Recurring price"]">
-        <i class="fa-solid fa-rotate" aria-hidden="true"></i> @T.GetAmount(Model.DurationType.Value, Model.BillingDuration, Model.RecurringAmount.Value)
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i> @T.GetAmount(summary.DurationType.Value, summary.BillingDuration, summary.RecurringAmount.Value)
     </span>
 }
 
-@if (Model.InitialAmount.HasValue && Model.InitialAmount.Value > 0)
+@if (summary.InitialAmount.HasValue && summary.InitialAmount.Value > 0)
 {
     <span class="badge text-bg-info" title="@T["One-time setup fee"]">
-        <i class="fa-solid fa-receipt" aria-hidden="true"></i> @T["Setup {0}", Model.InitialAmount.Value.ToString("C")]
+        <i class="fa-solid fa-receipt" aria-hidden="true"></i> @T["Setup {0}", summary.InitialAmount.Value.ToString("C")]
     </span>
 }

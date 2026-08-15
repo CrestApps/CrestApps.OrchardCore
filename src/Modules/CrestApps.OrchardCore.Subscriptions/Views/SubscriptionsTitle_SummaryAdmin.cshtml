@@ -1,21 +1,26 @@
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using OrchardCore.DisplayManagement.Views
 
-@model SubscriptionSummaryAdminViewModel
+@model ShapeViewModel<SubscriptionSummaryAdminViewModel>
 
-<a asp-action="Edit" asp-controller="Admin" asp-route-id="@Model.SessionId" asp-route-area="CrestApps.OrchardCore.Subscriptions" asp-route-returnUrl="@FullRequestPath" class="fw-semibold text-decoration-none">
-    @Model.CustomerName
+@{
+    var summary = Model.Value;
+}
+
+<a asp-action="Edit" asp-controller="Admin" asp-route-id="@summary.SessionId" asp-route-area="CrestApps.OrchardCore.Subscriptions" asp-route-returnUrl="@FullRequestPath" class="fw-semibold text-decoration-none">
+    @summary.CustomerName
 </a>
 
-@if (!string.IsNullOrEmpty(Model.PlanTitle))
+@if (!string.IsNullOrEmpty(summary.PlanTitle))
 {
     <div class="text-muted small">
-        <i class="fa-solid fa-box-open" aria-hidden="true"></i> @Model.PlanTitle
+        <i class="fa-solid fa-box-open" aria-hidden="true"></i> @summary.PlanTitle
     </div>
 }
 
-@if (!string.IsNullOrEmpty(Model.CustomerEmail))
+@if (!string.IsNullOrEmpty(summary.CustomerEmail))
 {
     <div class="text-muted small">
-        <i class="fa-solid fa-envelope" aria-hidden="true"></i> @Model.CustomerEmail
+        <i class="fa-solid fa-envelope" aria-hidden="true"></i> @summary.CustomerEmail
     </div>
 }
