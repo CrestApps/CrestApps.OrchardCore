@@ -219,7 +219,10 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         if (failureErrors != null)
         {
-            _logger.LogError("Unable to auto setup a new subscribed tenant '{TenantName}'. Errors: {Errors}", tenantName, string.Join(';', failureErrors));
+            if (_logger.IsEnabled(LogLevel.Error))
+            {
+                _logger.LogError("Unable to auto setup a new subscribed tenant '{TenantName}'. Errors: {Errors}", tenantName, string.Join(';', failureErrors));
+            }
 
             await TriggerTenantSetupEventAsync(workflowManager, SubscribedTenantFailedSetupEvent.EventName, tenantName, failureErrors);
         }
