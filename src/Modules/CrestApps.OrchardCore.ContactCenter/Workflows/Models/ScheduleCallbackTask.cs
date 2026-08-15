@@ -99,7 +99,11 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Failed"]);
+        return
+        [
+            new Outcome(S["Done"]),
+            new Outcome(S["Failed"]),
+        ];
     }
 
     /// <inheritdoc/>
@@ -111,7 +115,7 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
         {
             _logger.LogWarning("The Schedule Callback task resolved an empty destination.");
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
 
         var callback = new CallbackRequest
@@ -131,13 +135,13 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
         {
             await _callbackService.ScheduleAsync(callback);
 
-            return Outcomes("Done");
+            return WorkflowOutcomeResults.From("Done");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while scheduling a callback to '{Destination}'.", destination);
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
     }
 

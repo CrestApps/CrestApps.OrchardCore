@@ -86,7 +86,11 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Failed"]);
+        return
+        [
+            new Outcome(S["Done"]),
+            new Outcome(S["Failed"]),
+        ];
     }
 
     /// <inheritdoc/>
@@ -99,7 +103,7 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
         {
             _logger.LogWarning("The Enqueue Activity task resolved an empty activity or queue identifier.");
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
 
         try
@@ -110,7 +114,7 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
             {
                 _logger.LogWarning("The Enqueue Activity task could not find a queue with identifier '{QueueId}'.", queueId);
 
-                return Outcomes("Failed");
+                return WorkflowOutcomeResults.From("Failed");
             }
 
             var activity = await _activityManager.FindByIdAsync(activityItemId);
@@ -119,18 +123,20 @@ public sealed class EnqueueActivityTask : TaskActivity<EnqueueActivityTask>
             {
                 _logger.LogWarning("The Enqueue Activity task could not find a CRM activity with identifier '{ActivityItemId}'.", activityItemId.SanitizeLogValue());
 
-                return Outcomes("Failed");
+                return WorkflowOutcomeResults.From("Failed");
             }
 
             var item = await _queueService.EnqueueAsync(activityItemId, queueId, Priority);
 
-            return item is null ? Outcomes("Failed") : Outcomes("Done");
+            return item is null
+                ? WorkflowOutcomeResults.From("Failed")
+                : WorkflowOutcomeResults.From("Done");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while enqueuing activity '{ActivityItemId}' into queue '{QueueId}'.", activityItemId.SanitizeLogValue(), queueId.SanitizeLogValue());
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
     }
 }

@@ -77,7 +77,11 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Failed"]);
+        return
+        [
+            new Outcome(S["Done"]),
+            new Outcome(S["Failed"]),
+        ];
     }
 
     /// <inheritdoc/>
@@ -87,7 +91,7 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
         {
             _logger.LogWarning("The Set Agent Presence task rejected the reservation- or work-lifecycle-owned status '{Status}'. These states are applied by the contact center runtime and cannot be set by automation.", Status);
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
 
         var userId = (await _expressionEvaluator.EvaluateAsync(new WorkflowExpression<string>(UserId), workflowContext, null))?.Trim();
@@ -96,7 +100,7 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
         {
             _logger.LogWarning("The Set Agent Presence task resolved an empty user identifier.");
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
 
         var reason = (await _expressionEvaluator.EvaluateAsync(new WorkflowExpression<string>(Reason), workflowContext, null))?.Trim();
@@ -105,13 +109,15 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
         {
             var profile = await _presenceManager.SetPresenceAsync(userId, Status, reason);
 
-            return profile is null ? Outcomes("Failed") : Outcomes("Done");
+            return profile is null
+                ? WorkflowOutcomeResults.From("Failed")
+                : WorkflowOutcomeResults.From("Done");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while setting agent presence for user '{UserId}'.", userId.SanitizeLogValue());
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
     }
 }

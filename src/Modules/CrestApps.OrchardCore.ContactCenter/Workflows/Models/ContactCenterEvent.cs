@@ -45,10 +45,10 @@ public sealed class ContactCenterEvent : EventActivity
         WorkflowExecutionContext workflowContext,
         ActivityContext activityContext)
     {
-        return new ValueTask<IEnumerable<Outcome>>(
+        return ValueTask.FromResult<IEnumerable<Outcome>>(
         [
-            Outcome(S["Matched"]),
-            Outcome(S["Ignored"]),
+            new Outcome(S["Matched"]),
+            new Outcome(S["Ignored"]),
         ]);
     }
 
@@ -72,15 +72,15 @@ public sealed class ContactCenterEvent : EventActivity
     {
         if (string.IsNullOrEmpty(EventType))
         {
-            return Outcomes("Matched");
+            return WorkflowOutcomeResults.From("Matched");
         }
 
         if (workflowContext.Input.TryGetValue("EventType", out var value) &&
             string.Equals(value?.ToString(), EventType, StringComparison.OrdinalIgnoreCase))
         {
-            return Outcomes("Matched");
+            return WorkflowOutcomeResults.From("Matched");
         }
 
-        return Outcomes("Ignored");
+        return WorkflowOutcomeResults.From("Ignored");
     }
 }

@@ -58,7 +58,12 @@ public sealed class StartCallRecordingTask : TaskActivity<StartCallRecordingTask
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        return Outcomes(S["Done"], S["Indeterminate"], S["Failed"]);
+        return
+        [
+            new Outcome(S["Done"]),
+            new Outcome(S["Indeterminate"]),
+            new Outcome(S["Failed"]),
+        ];
     }
 
     /// <inheritdoc/>
@@ -70,7 +75,7 @@ public sealed class StartCallRecordingTask : TaskActivity<StartCallRecordingTask
         {
             _logger.LogWarning("The Start Call Recording task resolved an empty interaction identifier.");
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
 
         try
@@ -79,16 +84,18 @@ public sealed class StartCallRecordingTask : TaskActivity<StartCallRecordingTask
 
             if (result.Succeeded)
             {
-                return Outcomes("Done");
+                return WorkflowOutcomeResults.From("Done");
             }
 
-            return result.OutcomeUnknown ? Outcomes("Indeterminate") : Outcomes("Failed");
+            return result.OutcomeUnknown
+                ? WorkflowOutcomeResults.From("Indeterminate")
+                : WorkflowOutcomeResults.From("Failed");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while starting recording for interaction '{InteractionId}'.", interactionId.SanitizeLogValue());
 
-            return Outcomes("Failed");
+            return WorkflowOutcomeResults.From("Failed");
         }
     }
 }
