@@ -71,7 +71,7 @@ jobs:
 
       - name: Checkout target branch
         if: steps.resolve.outputs.should_evaluate == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
 
       - name: Checkout release source
         if: steps.resolve.outputs.should_evaluate == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.resolve.outputs.source_ref }}
           path: release-source
@@ -87,7 +87,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.resolve.outputs.should_evaluate == 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
