@@ -73,6 +73,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
 
         services.AddScoped<SubscriptionPaymentSession>();
+        services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
         services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
         services.Configure<SubscriptionPaymentSessionOptions>(options =>
         {

@@ -31,6 +31,8 @@ public static class CreatePayLaterEndpoint
         IClock clock,
         ISubscriptionSessionStore subscriptionSessionStore,
         SubscriptionPaymentSession subscriptionPaymentSession,
+        IPaymentAttemptLimiter paymentAttemptLimiter,
+        IHttpContextAccessor httpContextAccessor,
         IHostEnvironment hostEnvironment)
     {
         if (string.IsNullOrEmpty(model?.SessionId))
@@ -40,6 +42,11 @@ public static class CreatePayLaterEndpoint
                 ErrorMessage = "Invalid request data",
                 ErrorCode = 1,
             });
+        }
+
+        if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContextAccessor.HttpContext, "pay-later", model.SessionId))
+        {
+            return PaymentEndpointThrottle.TooManyRequests();
         }
 
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);

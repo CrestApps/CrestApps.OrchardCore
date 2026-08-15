@@ -34,6 +34,7 @@ public static class CreateCheckoutSessionEndpoint
         ISubscriptionSessionStore subscriptionSessionStore,
         IStripeCheckoutService stripeCheckoutService,
         IStripePriceService stripePriceService,
+        IPaymentAttemptLimiter paymentAttemptLimiter,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -44,6 +45,11 @@ public static class CreateCheckoutSessionEndpoint
         if (model == null || string.IsNullOrWhiteSpace(model.SessionId))
         {
             return TypedResults.BadRequest(new { ErrorMessage = "Invalid request data", ErrorCode = 1 });
+        }
+
+        if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContext, "checkout-session", model.SessionId))
+        {
+            return PaymentEndpointThrottle.TooManyRequests();
         }
 
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);

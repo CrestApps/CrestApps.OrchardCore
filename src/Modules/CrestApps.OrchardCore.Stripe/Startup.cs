@@ -58,9 +58,6 @@ public class Startup : StartupBase
     public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddCreateSetupIntentEndpoint()
-            .AddCreatePaymentIntentEndpoint()
-            .AddCreateSubscriptionEndpoint()
             .AddWebhookEndpoint<Startup>();
     }
 }

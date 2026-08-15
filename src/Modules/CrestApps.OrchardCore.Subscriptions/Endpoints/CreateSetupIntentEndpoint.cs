@@ -36,6 +36,7 @@ public static class CreateSetupIntentEndpoint
         IOptions<StripeOptions> stripeOptions,
         ISubscriptionSessionStore subscriptionSessionStore,
         IHttpContextAccessor httpContextAccessor,
+        IPaymentAttemptLimiter paymentAttemptLimiter,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
@@ -54,6 +55,11 @@ public static class CreateSetupIntentEndpoint
                 ErrorMessage = "Invalid request data",
                 ErrorCode = 1,
             });
+        }
+
+        if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContextAccessor.HttpContext, "setup-intent", model.SessionId))
+        {
+            return PaymentEndpointThrottle.TooManyRequests();
         }
 
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);

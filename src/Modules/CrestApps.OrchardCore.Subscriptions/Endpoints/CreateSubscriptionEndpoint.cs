@@ -35,6 +35,8 @@ public static class CreateSubscriptionEndpoint
         IStripeSubscriptionService stripeSubscriptionService,
         IStripePaymentMethodService stripePaymentMethodService,
         IStripePriceService stripePriceService,
+        IPaymentAttemptLimiter paymentAttemptLimiter,
+        IHttpContextAccessor httpContextAccessor,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -49,6 +51,11 @@ public static class CreateSubscriptionEndpoint
                 ErrorMessage = "Invalid request data",
                 ErrorCode = 1,
             });
+        }
+
+        if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContextAccessor.HttpContext, "subscription", model.SessionId))
+        {
+            return PaymentEndpointThrottle.TooManyRequests();
         }
 
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);

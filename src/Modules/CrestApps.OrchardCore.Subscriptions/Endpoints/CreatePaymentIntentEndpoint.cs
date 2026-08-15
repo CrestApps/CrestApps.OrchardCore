@@ -28,6 +28,8 @@ public static class CreatePaymentIntentEndpoint
         [FromBody] CreateSessionPaymentIntent model,
         ISubscriptionSessionStore subscriptionSessionStore,
         IStripePaymentIntentService stripePaymentService,
+        IPaymentAttemptLimiter paymentAttemptLimiter,
+        IHttpContextAccessor httpContextAccessor,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -42,6 +44,11 @@ public static class CreatePaymentIntentEndpoint
                 ErrorMessage = "Invalid request data",
                 ErrorCode = 1,
             });
+        }
+
+        if (!await PaymentEndpointThrottle.AllowAsync(paymentAttemptLimiter, httpContextAccessor.HttpContext, "payment-intent", model.SessionId))
+        {
+            return PaymentEndpointThrottle.TooManyRequests();
         }
 
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
