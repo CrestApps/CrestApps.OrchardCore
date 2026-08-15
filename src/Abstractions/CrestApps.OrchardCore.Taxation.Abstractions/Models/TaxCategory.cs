@@ -36,8 +36,23 @@ public sealed class TaxCategory : CatalogItem, INameAwareModel, IModifiedUtcAwar
     /// </summary>
     public IDictionary<string, string> ExternalCodes { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Gets or sets the UTC date the category was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the user that authored the category.
+    /// </summary>
+    public string Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user that owns the category.
+    /// </summary>
+    public string OwnerId { get; set; }
 
     /// <inheritdoc />
     public TaxCategory Clone()
@@ -50,7 +65,10 @@ public sealed class TaxCategory : CatalogItem, INameAwareModel, IModifiedUtcAwar
             ParentCode = ParentCode,
             Description = Description,
             ExternalCodes = new Dictionary<string, string>(ExternalCodes, StringComparer.OrdinalIgnoreCase),
+            CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
+            Author = Author,
+            OwnerId = OwnerId,
         };
     }
 }

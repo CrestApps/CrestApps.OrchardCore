@@ -339,6 +339,7 @@ The main extension points are:
 | `ITaxCalculationMethod` | A calculation strategy resolvable by name. |
 | `ITaxSourcingStrategy` | Where the tax is sourced from. |
 | `ITaxRuleProvider` | Supplies applicable rules for a query. |
+| `ITaxClassificationProvider` | Supplies an *inherited* classification (category / classification / external code) for a content item that does not carry its own — for example from a taxonomy term. |
 | `ITaxJurisdictionResolver` | Maps an address to jurisdictions. |
 | `ITaxExemptionResolver` | Determines customer exemptions. |
 | `IMerchantTaxRegistrationProvider` | Determines merchant nexus. |
@@ -349,6 +350,109 @@ The main extension points are:
 | `ITaxDeterminationProvider` | Short-circuits the engine with an external determination. |
 
 An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services (for example `CrestApps.OrchardCore.Taxation.Avalara` or `CrestApps.OrchardCore.Taxation.Stripe`) can be layered on top of the same abstractions.
+
+## Per-category taxation with taxonomies
+
+A common question is *"how do I apply a different tax code to a whole category of products — for example an excise tax on all Tobacco items?"*
+
+You do **not** put multiple codes on each item. An item carries a single **tax category code** (plus an optional classification code); the *multiplicity* of applied taxes comes from multiple **rules** matching that one category in a jurisdiction. A rule with no `CategoryCode` matches every category (a general sales tax), and it naturally **stacks** with a `CategoryCode = "Tobacco"` excise rule so a pack of cigarettes is taxed by both.
+
+To manage the category assignment per group of products rather than item-by-item, enable the **`OrchardCore.Taxonomies`** feature and let items **inherit** their classification from the taxonomy term they belong to:
+
+1. Create a taxonomy (for example *Product Categories*) with terms such as *Electronics*, *Tobacco*, *Alcohol*.
+2. Attach the **Taxation** part to the **term** content type, and set the **Tax category** (and optional classification) on each term — e.g. the *Tobacco* term gets category `Tobacco`.
+3. Attach a **Taxonomy** field to your product type and tag each product with its term(s).
+
+Now any product tagged *Tobacco* is taxed as `Tobacco` without setting a code on the product itself. The resolution precedence is:
+
+1. The item's **own** `TaxationPart` category (an explicit code on the item always wins).
+2. The classification supplied by the registered `ITaxClassificationProvider`s, consulted in ascending `Order`; the first provider that returns a non-empty category wins (the built-in provider reads the tagged taxonomy term's `TaxationPart`).
+3. The type default configured in the TaxationPart settings.
+
+Only the category is inherited when the item omits it; a classification code set explicitly on the item is preserved. Write your own `ITaxClassificationProvider` to source inherited codes from any other place (an ERP, a parent content item, etc.).
+
+### Worked example — an excise tax on Tobacco
+
+Suppose a US store sells electronics and tobacco. California charges 7.5% sales tax on everything **and** an extra 30% excise tax on tobacco.
+
+1. **Categories** — create `ELEC` (Electronics) and `TOBACCO` (Tobacco).
+2. **Taxonomy** — create a *Product Categories* taxonomy whose **term** content type has the **Taxation** part attached. On the *Tobacco* term set **Tax category = Tobacco**; on the *Electronics* term set **Tax category = Electronics**.
+3. **Products** — add a **Taxonomy** field to the *Product* type and tag each product with its category term. You do **not** set a tax code on the product itself.
+4. **Jurisdiction** — create *California* (`US` / `CA`, level *State*).
+5. **Rules** in California:
+   - a general rule with **no category** at 7.5% (applies to every product), and
+   - a tobacco rule with **category `TOBACCO`** at 30%.
+
+A television tagged *Electronics* inherits category `ELEC`, matches only the general rule → 7.5%. A pack of cigarettes tagged *Tobacco* inherits category `TOBACCO`, matches **both** rules → 7.5% + 30% stacked. No per-item tax codes were entered.
+
+The whole setup is reproducible as a recipe — the taxonomy term simply carries a `TaxationPart` value:
+
+```json
+{
+  "steps": [
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentType": "ProductCategory",
+          "DisplayText": "Tobacco",
+          "TaxationPart": { "Taxable": true, "TaxCategoryCode": "TOBACCO" }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Common scenarios
+
+| You want to… | Do this |
+|---|---|
+| Apply one tax to everything | Create a jurisdiction and a single rule with **no category code**. Every taxable item matches it. |
+| Tax a single product differently | Set the **Tax category** directly on that item's **Taxation** part. An explicit item code always overrides inheritance. |
+| Give every item of a type a default code | Set the **default tax category** in the content type's **TaxationPart settings**. It applies when the item and its taxonomy term leave the code empty. |
+| Tax a whole category/group differently | Enable **`OrchardCore.Taxonomies`**, attach the **Taxation** part to the term type, set the code on the term, and tag products with the term. See [Per-category taxation with taxonomies](#per-category-taxation-with-taxonomies). |
+| Stack an extra tax (excise, environmental fee) on some items | Keep the general rule (no category) and add a second rule scoped to that category. Both match and stack. |
+| Exempt a customer or region | Implement an `ITaxExemptionResolver`; see [Extending the framework](#extending-the-framework). |
+| Delegate to Avalara / Stripe Tax | Register an `ITaxDeterminationProvider` that short-circuits the engine. |
+| Move a catalog between environments | Export the categories, jurisdictions, and rules as a [recipe or deployment plan](#recipes-and-deployment). |
+
+## Recipes and deployment
+
+The three catalog entities — **Tax categories**, **Tax jurisdictions**, and **Tax rules** — can be imported and exported as code.
+
+**Recipe steps** (names `TaxCategory`, `TaxJurisdiction`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`) are never imported; an entry is matched by its `ItemId` and updated in place, or created when new:
+
+```json
+{
+  "steps": [
+    {
+      "name": "TaxCategory",
+      "TaxCategories": [
+        { "ItemId": "electronics", "Name": "Electronics", "Code": "ELEC" },
+        { "ItemId": "tobacco", "Name": "Tobacco", "Code": "TOBACCO" }
+      ]
+    },
+    {
+      "name": "TaxJurisdiction",
+      "TaxJurisdictions": [
+        { "ItemId": "us-ca", "Name": "California", "CountryCode": "US", "RegionCode": "CA", "Level": "State" }
+      ]
+    },
+    {
+      "name": "TaxRule",
+      "TaxRules": [
+        { "ItemId": "ca-sales", "Name": "CA sales tax", "JurisdictionId": "us-ca", "CalculationMethod": "Percentage", "Rate": 0.075 },
+        { "ItemId": "ca-tobacco", "Name": "CA tobacco excise", "JurisdictionId": "us-ca", "CategoryCode": "TOBACCO", "CalculationMethod": "Percentage", "Rate": 0.30 }
+      ]
+    }
+  ]
+}
+```
+
+When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for each of these steps (and for the `TaxationPart` and its settings), giving editor validation and IntelliSense while authoring recipes.
+
+**Deployment steps** with the same three names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
 ## Determinism
 

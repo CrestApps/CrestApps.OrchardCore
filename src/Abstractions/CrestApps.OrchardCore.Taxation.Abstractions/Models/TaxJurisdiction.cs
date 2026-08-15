@@ -67,6 +67,21 @@ public sealed class TaxJurisdiction : CatalogItem, INameAwareModel, IModifiedUtc
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC date the jurisdiction was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the user that authored the jurisdiction.
+    /// </summary>
+    public string Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user that owns the jurisdiction.
+    /// </summary>
+    public string OwnerId { get; set; }
+
     /// <inheritdoc />
     public TaxJurisdiction Clone()
     {
@@ -84,7 +99,10 @@ public sealed class TaxJurisdiction : CatalogItem, INameAwareModel, IModifiedUtc
             ParentId = ParentId,
             EffectiveFromUtc = EffectiveFromUtc,
             EffectiveToUtc = EffectiveToUtc,
+            CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
+            Author = Author,
+            OwnerId = OwnerId,
         };
     }
 }

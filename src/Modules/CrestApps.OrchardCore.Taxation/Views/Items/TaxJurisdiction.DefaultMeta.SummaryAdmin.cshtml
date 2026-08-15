@@ -1,9 +1,18 @@
 @model ShapeViewModel<TaxJurisdiction>
 
-@if (Model.Value.ModifiedUtc.HasValue)
+@{
+    var modifiedAt = Model.Value.ModifiedUtc ?? (Model.Value.CreatedUtc == default ? (DateTime?)null : Model.Value.CreatedUtc);
+}
+
+@if (modifiedAt.HasValue)
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.ModifiedUtc.Value, Format: "g"))">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt.Value, Format: "g"))">
         <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
-        @await DisplayAsync(await New.Timespan(Utc: Model.Value.ModifiedUtc.Value))
+        @await DisplayAsync(await New.Timespan(Utc: modifiedAt.Value))
     </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Author))
+{
+    <user-display-name user-name="@(Model.Value.Author)" display-type="SummaryAdmin" cache-id="user-display-name-author" />
 }
