@@ -21,4 +21,14 @@ public sealed class NullSubscriptionTaxService : ISubscriptionTaxService
 
         return Task.CompletedTask;
     }
+
+    public Task ApplyRecurringTaxAsync(PaymentInfo payment, ISubscriptionFlowSession session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(payment);
+
+        payment.TaxAmount = 0;
+        payment.TaxSnapshot = null;
+
+        return Task.CompletedTask;
+    }
 }

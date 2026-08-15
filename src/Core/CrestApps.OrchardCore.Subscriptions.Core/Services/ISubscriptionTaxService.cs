@@ -20,4 +20,15 @@ public interface ISubscriptionTaxService
     /// <param name="flow">The subscription flow that describes the transaction.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task ApplyTaxAsync(Invoice invoice, SubscriptionFlow flow, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines the tax for a single recurring billing cycle and records it on the supplied
+    /// <paramref name="payment"/> (<see cref="PaymentInfo.TaxAmount"/> and an immutable
+    /// <see cref="PaymentInfo.TaxSnapshot"/>). The tax is recalculated with the rules effective now so
+    /// each cycle carries its own snapshot; previous payments are never altered.
+    /// </summary>
+    /// <param name="payment">The recurring payment to record tax on.</param>
+    /// <param name="session">The persisted subscription session that holds the checkout invoice.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task ApplyRecurringTaxAsync(PaymentInfo payment, ISubscriptionFlowSession session, CancellationToken cancellationToken = default);
 }

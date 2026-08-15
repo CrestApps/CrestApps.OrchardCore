@@ -3,7 +3,14 @@ using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
+using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
+using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Moq;
 using OrchardCore.Entities;
 
@@ -36,7 +43,8 @@ public class SubscriptionPaymentHandlerWebhookTests
         var handler = new SubscriptionPaymentHandler(
             paymentSession,
             stripeService.Object,
-            sessionStore.Object);
+            sessionStore.Object,
+            new NullSubscriptionTaxService());
 
         var context = CreateContext(session.SessionId, subscriptionId: "sub_1", transactionId: "in_1", amount: 30.00);
 
@@ -88,7 +96,8 @@ public class SubscriptionPaymentHandlerWebhookTests
         var handler = new SubscriptionPaymentHandler(
             paymentSession,
             stripeService.Object,
-            sessionStore.Object);
+            sessionStore.Object,
+            new NullSubscriptionTaxService());
 
         var context = new PaymentSucceededContext
         {
@@ -121,6 +130,73 @@ public class SubscriptionPaymentHandlerWebhookTests
             Times.Never);
     }
 
+    // Recurring cycle payments must record the tax redetermined for that cycle when taxation is enabled.
+    [Fact]
+    public async Task PaymentSucceeded_SubscriptionCycle_WithTaxation_RecordsTaxSnapshot()
+    {
+        var paymentSession = PaymentTestHelpers.CreatePaymentSession();
+
+        var session = new SubscriptionSession
+        {
+            SessionId = "session-cycle-tax-1",
+            Status = SubscriptionSessionStatus.Completed,
+        };
+
+        var sessionStore = new Mock<ISubscriptionSessionStore>();
+        sessionStore.Setup(s => s.GetAsync(session.SessionId)).ReturnsAsync(session);
+
+        var stripeService = new Mock<IStripePaymentIntentService>();
+
+        var harness = new TaxTestHarness(new TestClock(TaxTestData.TransactionDate));
+        var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "California", "US", "CA");
+        await TaxTestData.AddRuleAsync(harness, new TaxRule
+        {
+            Name = "CA Sales Tax",
+            TaxType = TaxTypeNames.SalesTax,
+            TaxName = "CA Sales Tax",
+            TaxCode = "US-CA-SALES",
+            JurisdictionId = jurisdictionId,
+            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Rate = 0.08m,
+        });
+
+        var taxService = new SubscriptionTaxService(
+            harness.TaxService,
+            harness.GetService<ITaxSnapshotFactory>(),
+            new FixedSubscriptionTaxProfileProvider(new SubscriptionTaxProfile { Destination = TaxTestData.California() }),
+            harness.Clock);
+
+        var handler = new SubscriptionPaymentHandler(
+            paymentSession,
+            stripeService.Object,
+            sessionStore.Object,
+            taxService);
+
+        var context = new PaymentSucceededContext
+        {
+            Reason = PaymentReason.SubscriptionCycle,
+            TransactionId = "in_renew_tax_1",
+            AmountPaid = 108.00,
+            Currency = Currency,
+            GatewayId = "stripe",
+            Subscription = new SubscriptionPaymentInfo
+            {
+                SubscriptionId = "sub_1",
+            },
+        };
+        context.Data["sessionId"] = session.SessionId;
+
+        await handler.PaymentSucceededAsync(context);
+
+        Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
+        var payment = metadata.Payments["in_renew_tax_1"];
+
+        // The $108 charge is treated as tax-inclusive at 8%, so $8 is the embedded tax.
+        Assert.Equal(8.00, payment.TaxAmount, 2);
+        Assert.NotNull(payment.TaxSnapshot);
+        Assert.Equal(8m, payment.TaxSnapshot.TaxAmount);
+    }
+
     // Unrelated one-off payment reasons must be ignored so they do not pollute subscription history.
     [Fact]
     public async Task PaymentSucceeded_ManualReason_IsIgnored()
@@ -133,7 +209,8 @@ public class SubscriptionPaymentHandlerWebhookTests
         var handler = new SubscriptionPaymentHandler(
             paymentSession,
             stripeService.Object,
-            sessionStore.Object);
+            sessionStore.Object,
+            new NullSubscriptionTaxService());
 
         var context = new PaymentSucceededContext
         {

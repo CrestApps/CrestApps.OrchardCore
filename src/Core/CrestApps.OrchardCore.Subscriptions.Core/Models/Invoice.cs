@@ -32,6 +32,18 @@ public class Invoice
     /// </summary>
     public TaxSnapshot TaxSnapshot { get; set; }
 
+    /// <summary>
+    /// The tax category code resolved at checkout. Persisted so recurring billing cycles can reuse the
+    /// same classification when redetermining tax with current rules.
+    /// </summary>
+    public string TaxCategoryCode { get; set; }
+
+    /// <summary>
+    /// The tax classification code resolved at checkout. Persisted so recurring billing cycles can reuse
+    /// the same classification when redetermining tax with current rules.
+    /// </summary>
+    public string TaxClassificationCode { get; set; }
+
     public double GrandTotal { get; set; }
 
     public int? BillingCycles { get; set; }

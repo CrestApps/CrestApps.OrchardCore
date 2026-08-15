@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Handlers;
@@ -12,16 +13,19 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
     private readonly SubscriptionPaymentSession _paymentSession;
     private readonly IStripePaymentIntentService _stripePaymentService;
     private readonly ISubscriptionSessionStore _subscriptionSessionStore;
+    private readonly ISubscriptionTaxService _subscriptionTaxService;
 
     public SubscriptionPaymentHandler(
         SubscriptionPaymentSession paymentSession,
         IStripePaymentIntentService stripePaymentService,
-        ISubscriptionSessionStore subscriptionSessionStore
+        ISubscriptionSessionStore subscriptionSessionStore,
+        ISubscriptionTaxService subscriptionTaxService
         )
     {
         _paymentSession = paymentSession;
         _stripePaymentService = stripePaymentService;
         _subscriptionSessionStore = subscriptionSessionStore;
+        _subscriptionTaxService = subscriptionTaxService;
     }
 
     public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
@@ -82,19 +86,33 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         else
         {
             // Save additional (renewal/update) payments. Provider webhooks are delivered at-least-once,
-            // so keep this idempotent by keying on the transaction id and ignoring repeat deliveries.
+            // so keep this idempotent by keying on the transaction id. Skip repeat deliveries before
+            // doing any tax work so a duplicate never recomputes or overwrites an existing snapshot.
+            if (session.TryGet<PaymentsMetadata>(out var existing) &&
+                existing.Payments is not null &&
+                existing.Payments.ContainsKey(context.TransactionId))
+            {
+                return;
+            }
+
+            var payment = new PaymentInfo()
+            {
+                TransactionId = context.TransactionId,
+                Amount = context.AmountPaid,
+                Currency = context.Currency,
+                SubscriptionId = subscriptionId,
+                GatewayId = context.GatewayId,
+                GatewayMode = context.GatewayMode,
+                Status = PaymentStatus.Succeeded,
+            };
+
+            // Redetermine tax for this billing cycle with the rules effective now and capture an
+            // immutable snapshot on this payment. Prior payments keep their own historical snapshots.
+            await _subscriptionTaxService.ApplyRecurringTaxAsync(payment, session);
+
             session.Alter<PaymentsMetadata>(metadata =>
             {
-                metadata.Payments.TryAdd(context.TransactionId, new PaymentInfo()
-                {
-                    TransactionId = context.TransactionId,
-                    Amount = context.AmountPaid,
-                    Currency = context.Currency,
-                    SubscriptionId = subscriptionId,
-                    GatewayId = context.GatewayId,
-                    GatewayMode = context.GatewayMode,
-                    Status = PaymentStatus.Succeeded,
-                });
+                metadata.Payments.TryAdd(context.TransactionId, payment);
             });
 
             await _subscriptionSessionStore.SaveAsync(session);

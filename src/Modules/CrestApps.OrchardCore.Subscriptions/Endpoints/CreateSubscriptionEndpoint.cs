@@ -188,6 +188,7 @@ public static class CreateSubscriptionEndpoint
                     {
                         LastFour = cardInfo.Card.LastFour,
                         Brand = cardInfo.Card.Brand,
+                        Country = cardInfo.Card.Country,
                         ExpirationMonth = cardInfo.Card.ExpirationMonth,
                         ExpirationYear = cardInfo.Card.ExpirationYear,
                         Fingerprint = cardInfo.Card.Fingerprint,

@@ -47,8 +47,9 @@ public static class SubscriptionTaxContextFactory
     }
 
     /// <summary>
-    /// Creates a context for a single recurring billing charge. The amount reflects the current billing
-    /// event so that the tax is redetermined with the rules effective at billing time.
+    /// Creates a context for a single recurring billing charge from a known subscription line. The
+    /// amount reflects the current billing event so that the tax is redetermined with the rules
+    /// effective at billing time.
     /// </summary>
     public static TaxCalculationContext CreateForRecurringCharge(
         InvoiceLineItem lineItem,
@@ -69,6 +70,48 @@ public static class SubscriptionTaxContextFactory
             Destination = profile.Destination,
             Customer = profile.Customer,
             DefaultPriceType = profile.PriceType,
+        };
+    }
+
+    /// <summary>
+    /// Creates a context for a recurring billing cycle from the amount the payment provider actually
+    /// charged. The charged amount is authoritative and treated as tax-inclusive, so the taxation
+    /// framework extracts the tax portion using the rules effective now (never over-charging or claiming
+    /// uncollected tax). Each cycle therefore captures its own snapshot at the current rate while the
+    /// destination and classification come from the current <paramref name="profile"/>.
+    /// </summary>
+    public static TaxCalculationContext CreateForRecurringCharge(
+        decimal chargedAmount,
+        string currency,
+        SubscriptionTaxProfile profile,
+        DateTime transactionDateUtc)
+    {
+        profile ??= new SubscriptionTaxProfile();
+
+        var item = new TaxableItem
+        {
+            Id = "recurring-charge",
+            Kind = TaxableItemKind.Service,
+            Quantity = 1m,
+            UnitPrice = chargedAmount,
+            Currency = currency,
+            TaxCategoryCode = profile.DefaultTaxCategoryCode,
+            TaxClassificationCode = profile.DefaultTaxClassificationCode,
+
+            // The amount charged already includes any applicable tax, so extract the portion rather
+            // than adding tax on top of an amount the customer was already billed.
+            PriceIncludesTax = true,
+        };
+
+        return new TaxCalculationContext
+        {
+            Items = [item],
+            Currency = currency,
+            TransactionDateUtc = transactionDateUtc,
+            Origin = profile.Origin,
+            Destination = profile.Destination,
+            Customer = profile.Customer,
+            DefaultPriceType = TaxPriceType.Inclusive,
         };
     }
 

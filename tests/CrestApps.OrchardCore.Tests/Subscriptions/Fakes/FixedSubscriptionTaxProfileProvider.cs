@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 
@@ -19,5 +20,8 @@ public sealed class FixedSubscriptionTaxProfileProvider : ISubscriptionTaxProfil
     }
 
     public Task<SubscriptionTaxProfile> GetProfileAsync(SubscriptionFlow flow, CancellationToken cancellationToken = default)
+        => Task.FromResult(_profile);
+
+    public Task<SubscriptionTaxProfile> GetProfileAsync(ISubscriptionFlowSession session, CancellationToken cancellationToken = default)
         => Task.FromResult(_profile);
 }

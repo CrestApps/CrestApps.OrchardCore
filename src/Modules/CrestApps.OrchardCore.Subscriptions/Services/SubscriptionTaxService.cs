@@ -44,6 +44,10 @@ public sealed class SubscriptionTaxService : ISubscriptionTaxService
 
         var profile = await _profileProvider.GetProfileAsync(flow, cancellationToken);
 
+        // Persist the resolved classification so recurring cycles reuse it when redetermining tax.
+        invoice.TaxCategoryCode = profile.DefaultTaxCategoryCode;
+        invoice.TaxClassificationCode = profile.DefaultTaxClassificationCode;
+
         var context = SubscriptionTaxContextFactory.Create(invoice, profile, _clock.UtcNow);
 
         if (context.Items.Count == 0)
@@ -69,6 +73,36 @@ public sealed class SubscriptionTaxService : ISubscriptionTaxService
         invoice.TaxLines = result.Lines;
         invoice.TaxSnapshot = _snapshotFactory.Create(context, result);
         invoice.GrandTotal = Math.Round(invoice.DueNow + (double)addedTax, decimals, MidpointRounding.AwayFromZero);
+    }
+
+    public async Task ApplyRecurringTaxAsync(PaymentInfo payment, ISubscriptionFlowSession session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(payment);
+        ArgumentNullException.ThrowIfNull(session);
+
+        var profile = await _profileProvider.GetProfileAsync(session, cancellationToken);
+
+        // The amount the provider charged for this cycle is authoritative. It is redetermined with the
+        // rules effective now and captured as an immutable snapshot on this payment; prior payments keep
+        // their own historical snapshots. The charged amount is treated as tax-inclusive so tax is never
+        // claimed beyond what the customer was actually billed.
+        var context = SubscriptionTaxContextFactory.CreateForRecurringCharge(
+            (decimal)payment.Amount,
+            payment.Currency,
+            profile,
+            _clock.UtcNow);
+
+        if (context.Items.Count == 0)
+        {
+            return;
+        }
+
+        var result = await _taxService.CalculateAsync(context, cancellationToken);
+
+        var decimals = GetCurrencyDecimals(payment.Currency);
+
+        payment.TaxAmount = (double)decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
+        payment.TaxSnapshot = _snapshotFactory.Create(context, result);
     }
 
     private static int GetCurrencyDecimals(string currency)

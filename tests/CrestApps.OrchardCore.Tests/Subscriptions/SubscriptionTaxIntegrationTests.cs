@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
@@ -242,5 +243,76 @@ public sealed class SubscriptionTaxIntegrationTests
 
         // Billing #1 retains its original 8% snapshot.
         Assert.Equal(8m, firstSnapshot.TaxAmount);
+    }
+
+    [Fact]
+    public async Task ApplyRecurringTax_FromSession_RedeterminesTaxAndSnapshotsPerCycle()
+    {
+        var harness = CreateHarness();
+        await SeedCaliforniaPercentageRuleAsync(harness, 0.08m);
+
+        var session = new SubscriptionSession();
+        var service = CreateService(harness, new SubscriptionTaxProfile { Destination = TaxTestData.California() });
+
+        // The provider-charged amount is authoritative and treated as tax-inclusive: at 8% the $108
+        // charge yields $8 of embedded tax on a $100 net.
+        var payment = new PaymentInfo { Currency = "USD", Amount = 108d };
+        await service.ApplyRecurringTaxAsync(payment, session, TestContext.Current.CancellationToken);
+
+        Assert.Equal(8d, payment.TaxAmount);
+        Assert.NotNull(payment.TaxSnapshot);
+        Assert.Equal(8m, payment.TaxSnapshot.TaxAmount);
+
+        // A later cycle after the rate changes gets a fresh snapshot; the earlier one is untouched.
+        var rule = Assert.Single(await harness.Rules.GetAllAsync(TestContext.Current.CancellationToken));
+        rule.Rate = 0.09m;
+        await harness.Rules.UpdateAsync(rule, TestContext.Current.CancellationToken);
+
+        var firstSnapshot = payment.TaxSnapshot;
+        var secondPayment = new PaymentInfo { Currency = "USD", Amount = 109d };
+        await service.ApplyRecurringTaxAsync(secondPayment, session, TestContext.Current.CancellationToken);
+
+        Assert.Equal(9d, secondPayment.TaxAmount);
+        Assert.Equal(8m, firstSnapshot.TaxAmount);
+    }
+
+    [Fact]
+    public async Task DefaultProfileProvider_Session_ReadsClassificationFromInvoiceAndDestinationFromCard()
+    {
+        var session = new SubscriptionSession();
+        session.Put(new Invoice
+        {
+            Currency = "USD",
+            TaxCategoryCode = "DIGITAL",
+            TaxClassificationCode = "SAAS",
+        });
+        session.Put(new SubscriptionInfo
+        {
+            PaymentMethod = new PaymentMethodInfo
+            {
+                Card = new PaymentCardInfo { Country = "US" },
+            },
+        });
+
+        var profile = await new DefaultSubscriptionTaxProfileProvider()
+            .GetProfileAsync(session, TestContext.Current.CancellationToken);
+
+        Assert.Equal("DIGITAL", profile.DefaultTaxCategoryCode);
+        Assert.Equal("SAAS", profile.DefaultTaxClassificationCode);
+        Assert.Equal("US", profile.Destination?.Country);
+    }
+
+    [Fact]
+    public async Task ApplyRecurringTax_WhenTaxationDisabled_RecordsNoTax()
+    {
+        var session = new SubscriptionSession();
+        var payment = new PaymentInfo { Currency = "USD", Amount = 100d };
+
+        var service = new NullSubscriptionTaxService();
+
+        await service.ApplyRecurringTaxAsync(payment, session, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0d, payment.TaxAmount);
+        Assert.Null(payment.TaxSnapshot);
     }
 }
