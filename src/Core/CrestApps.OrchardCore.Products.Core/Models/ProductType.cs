@@ -5,5 +5,5 @@ public enum ProductType
     Undefined,
     Good,
     Service,
-    Planet,
+    Digital,
 }

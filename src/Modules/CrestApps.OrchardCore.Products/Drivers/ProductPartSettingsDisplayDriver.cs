@@ -31,7 +31,7 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
                 new SelectListItem(S["Undefined"], nameof(ProductType.Undefined)),
                 new SelectListItem(S["Good"], nameof(ProductType.Good)),
                 new SelectListItem(S["Service"], nameof(ProductType.Service)),
-                new SelectListItem(S["Planet"], nameof(ProductType.Planet)),
+                new SelectListItem(S["Digital"], nameof(ProductType.Digital)),
             ];
         }).Location("Content");
     }

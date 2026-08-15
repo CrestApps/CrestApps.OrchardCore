@@ -23,11 +23,10 @@ public sealed class StripeProductService : IStripeProductService
             Id = model.Id,
             Name = model.Title,
             Description = model.Description,
-            // Valid values 'good', 'service', or 'planet'
+            // Valid values 'good' or 'service'. Digital products are billed as services in Stripe.
             Type = model.Type switch
             {
                 ProductType.Good => "good",
-                ProductType.Planet => "planet",
                 _ => "service",
             },
         };
