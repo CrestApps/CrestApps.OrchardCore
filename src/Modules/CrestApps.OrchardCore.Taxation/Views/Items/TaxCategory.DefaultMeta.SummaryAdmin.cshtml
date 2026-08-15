@@ -1,0 +1,9 @@
+@model ShapeViewModel<TaxCategory>
+
+@if (Model.Value.ModifiedUtc.HasValue)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.ModifiedUtc.Value, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        @await DisplayAsync(await New.Timespan(Utc: Model.Value.ModifiedUtc.Value))
+    </span>
+}
