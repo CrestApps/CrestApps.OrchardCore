@@ -82,7 +82,7 @@ public static class StripeCheckoutRequestFactory
         return new CreateCheckoutSessionRequest
         {
             Mode = "subscription",
-            UiMode = "hosted",
+            UiMode = "hosted_page",
             CustomerId = customerId,
             CustomerEmail = customerEmail,
             ClientReferenceId = sessionId,

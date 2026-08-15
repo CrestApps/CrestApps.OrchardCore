@@ -91,10 +91,18 @@ To exercise the webhook pipeline on your machine, forward Stripe events to your 
 4. Forward webhook events to your local endpoint, replacing `your-port` with the port your site runs on (for example `5000`):
 
    ```sh
-   stripe listen --forward-to https://localhost:your-port/stripe/webhook
+   stripe listen --forward-to https://localhost:your-port/stripe/webhook --skip-verify
    ```
 
-The CLI prints a temporary webhook signing secret; set it as the matching *WebhookSecret* in the Stripe settings so the endpoint can verify the forwarded events.
+   `--skip-verify` is required when forwarding to an HTTPS address that uses the ASP.NET Core development certificate; alternatively, forward to the plain HTTP endpoint (`http://localhost:your-port/stripe/webhook`) and omit the flag.
+5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhooks Secret** field under **Settings → Stripe**, with **Enable Production** left off.
+6. Trigger a sample event to confirm the pipeline end to end:
+
+   ```sh
+   stripe trigger payment_intent.succeeded
+   ```
+
+   The `stripe listen` window should report a `200` response from `/stripe/webhook` for the forwarded event.
 
 ## Payment resiliency
 

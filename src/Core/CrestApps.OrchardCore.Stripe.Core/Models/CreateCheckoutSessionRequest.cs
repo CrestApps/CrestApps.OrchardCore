@@ -21,7 +21,7 @@ public sealed class CreateCheckoutSessionRequest : StripeWriteRequest
 
     /// <summary>
     /// The absolute URL Stripe redirects the customer to after a successful hosted checkout.
-    /// Required when <see cref="UiMode"/> is <c>hosted</c>.
+    /// Required when <see cref="UiMode"/> is <c>hosted_page</c>.
     /// </summary>
     public string SuccessUrl { get; set; }
 
@@ -55,8 +55,8 @@ public sealed class CreateCheckoutSessionRequest : StripeWriteRequest
     public long? TrialPeriodDays { get; set; }
 
     /// <summary>
-    /// The Checkout UI mode. Use <c>hosted</c> (default) to redirect to a Stripe-hosted page, or
+    /// The Checkout UI mode. Use <c>hosted_page</c> (default) to redirect to a Stripe-hosted page, or
     /// <c>embedded</c> to render the checkout inline using the returned client secret.
     /// </summary>
-    public string UiMode { get; set; } = "hosted";
+    public string UiMode { get; set; } = "hosted_page";
 }

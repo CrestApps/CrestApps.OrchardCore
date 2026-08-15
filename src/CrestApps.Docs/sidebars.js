@@ -115,6 +115,7 @@ const sidebars = {
                 'modules/phone-number-verifications-veriphone',
                 'modules/phone-number-verifications-twilio',
                 'modules/products',
+                'modules/checkout',
                 'modules/payments',
                 'modules/subscriptions',
                 'modules/recipes',

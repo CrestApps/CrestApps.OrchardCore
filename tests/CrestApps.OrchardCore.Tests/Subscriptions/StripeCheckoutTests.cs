@@ -94,7 +94,7 @@ public class StripeCheckoutTests
             cancelUrl: "https://example.test/cancel");
 
         Assert.Equal("subscription", request.Mode);
-        Assert.Equal("hosted", request.UiMode);
+        Assert.Equal("hosted_page", request.UiMode);
         Assert.Equal("session-123", request.ClientReferenceId);
         Assert.Equal("https://example.test/success", request.SuccessUrl);
         Assert.Equal("https://example.test/cancel", request.CancelUrl);
