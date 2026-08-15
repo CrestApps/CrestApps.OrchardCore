@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Taxation.ViewModels;
 
-public sealed class TaxRuleViewModel
+public class TaxRuleViewModel
 {
     public bool IsNew { get; set; }
 

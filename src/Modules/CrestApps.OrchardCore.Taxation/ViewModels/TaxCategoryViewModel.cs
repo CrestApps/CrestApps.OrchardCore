@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Taxation.ViewModels;
 
-public sealed class TaxCategoryViewModel
+public class TaxCategoryViewModel
 {
     public bool IsNew { get; set; }
 

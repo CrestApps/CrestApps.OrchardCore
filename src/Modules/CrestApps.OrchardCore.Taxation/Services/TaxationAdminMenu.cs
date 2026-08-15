@@ -17,6 +17,8 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], commerce => commerce
+                .AddClass("commerce")
+                .Id("commerce")
                 .Add(S["Taxation"], S["Taxation"].PrefixPosition(), taxation => taxation
                     .AddClass("taxation")
                     .Id("taxation")
