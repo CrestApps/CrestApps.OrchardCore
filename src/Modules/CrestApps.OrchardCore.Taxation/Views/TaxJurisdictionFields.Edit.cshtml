@@ -1,0 +1,102 @@
+@model TaxJurisdictionViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Code" class="form-control" />
+        <span asp-validation-for="Code" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Level" class="ocat-label">@T["Level"]</label>
+    <div class="ocat-end">
+        <select asp-for="Level" asp-items="Model.Levels" class="form-select"></select>
+        <span asp-validation-for="Level" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ParentId" class="ocat-label">@T["Parent jurisdiction"]</label>
+    <div class="ocat-end">
+        <select asp-for="ParentId" asp-items="Model.Parents" class="form-select">
+            <option value="">@T["— None —"]</option>
+        </select>
+        <span class="hint">@T["The parent jurisdiction, forming a hierarchy. Leave empty for a top-level jurisdiction."]</span>
+        <span asp-validation-for="ParentId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="Country" class="form-control ocat-limited" />
+        <span class="hint">@T["The ISO country code, for example US or CA."]</span>
+        <span asp-validation-for="Country" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Region" class="ocat-label">@T["Region"]</label>
+    <div class="ocat-end">
+        <input asp-for="Region" class="form-control" />
+        <span asp-validation-for="Region" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="County" class="ocat-label">@T["County"]</label>
+    <div class="ocat-end">
+        <input asp-for="County" class="form-control" />
+        <span asp-validation-for="County" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="City" class="ocat-label">@T["City"]</label>
+    <div class="ocat-end">
+        <input asp-for="City" class="form-control" />
+        <span asp-validation-for="City" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PostalCode" class="ocat-label">@T["Postal code"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="PostalCode" class="form-control ocat-limited" />
+        <span asp-validation-for="PostalCode" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveFromUtc" class="ocat-label">@T["Effective from (UTC)"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveFromUtc" type="datetime-local" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveFromUtc" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveToUtc" class="ocat-label">@T["Effective to (UTC)"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveToUtc" type="datetime-local" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
+    </div>
+</div>

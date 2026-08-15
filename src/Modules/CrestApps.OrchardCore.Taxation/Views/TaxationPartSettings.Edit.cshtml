@@ -5,18 +5,18 @@
 <div class="ocat-wrapper" asp-validation-class-for="DefaultTaxCategoryCode">
     <label asp-for="DefaultTaxCategoryCode" class="ocat-label">@T["Default tax category"]</label>
     <div class="ocat-end">
-        <input type="text" asp-for="DefaultTaxCategoryCode" class="form-control" />
+        <select asp-for="DefaultTaxCategoryCode" asp-items="Model.TaxCategories" class="form-select"></select>
         <span asp-validation-for="DefaultTaxCategoryCode"></span>
-        <span class="hint">@T["The default tax category code applied to new content items."]</span>
+        <span class="hint">@T["The default tax category applied to new content items. Categories are managed under Commerce → Taxation → Categories."]</span>
     </div>
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="DefaultTaxClassificationCode">
     <label asp-for="DefaultTaxClassificationCode" class="ocat-label">@T["Default tax classification"]</label>
     <div class="ocat-end">
-        <input type="text" asp-for="DefaultTaxClassificationCode" class="form-control" />
+        <select asp-for="DefaultTaxClassificationCode" asp-items="Model.TaxCategories" class="form-select"></select>
         <span asp-validation-for="DefaultTaxClassificationCode"></span>
-        <span class="hint">@T["The default tax classification code applied to new content items."]</span>
+        <span class="hint">@T["An optional, more specific category that refines the default tax category for new content items."]</span>
     </div>
 </div>
 

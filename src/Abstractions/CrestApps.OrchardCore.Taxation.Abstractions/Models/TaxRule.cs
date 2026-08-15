@@ -121,6 +121,21 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC date the rule was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the user that authored the rule.
+    /// </summary>
+    public string Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user that owns the rule.
+    /// </summary>
+    public string OwnerId { get; set; }
+
     /// <inheritdoc />
     public TaxRule Clone()
     {
@@ -148,7 +163,10 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
             MaximumAmount = MaximumAmount,
             EffectiveFromUtc = EffectiveFromUtc,
             EffectiveToUtc = EffectiveToUtc,
+            CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
+            Author = Author,
+            OwnerId = OwnerId,
         };
     }
 }

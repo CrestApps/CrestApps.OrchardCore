@@ -1,5 +1,7 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Drivers;
+using CrestApps.OrchardCore.Taxation.Handlers;
 using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -8,7 +10,10 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Taxation;
 
@@ -31,5 +36,21 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<TaxationPartMigrations>();
 
         services.AddTaxableItemProvider<ContentItemTaxableItemProvider>();
+
+        // Admin management UI for tax catalog entities (categories, jurisdictions, rules).
+        services
+            .AddDisplayDriver<TaxCategory, TaxCategoryDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxCategory>, TaxCategoryHandler>();
+
+        services
+            .AddDisplayDriver<TaxJurisdiction, TaxJurisdictionDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxJurisdiction>, TaxJurisdictionHandler>();
+
+        services
+            .AddDisplayDriver<TaxRule, TaxRuleDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxRule>, TaxRuleHandler>();
+
+        services.AddNavigationProvider<TaxationAdminMenu>();
+        services.AddPermissionProvider<TaxationPermissionsProvider>();
     }
 }

@@ -1,6 +1,11 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -13,18 +18,35 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 /// </summary>
 public sealed class TaxationPartDisplayDriver : ContentPartDisplayDriver<TaxationPart>
 {
+    private readonly ITaxCategoryStore _categoryStore;
+
+    internal readonly IStringLocalizer S;
+
+    public TaxationPartDisplayDriver(
+        ITaxCategoryStore categoryStore,
+        IStringLocalizer<TaxationPartDisplayDriver> stringLocalizer)
+    {
+        _categoryStore = categoryStore;
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc />
     public override IDisplayResult Edit(TaxationPart part, BuildPartEditorContext context)
     {
         var settings = context.TypePartDefinition.GetSettings<TaxationPartSettings>();
 
-        return Initialize<TaxationPartViewModel>(GetEditorShapeType(context), model =>
+        return Initialize<TaxationPartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.Taxable = context.IsNew ? true : part.Taxable;
             model.TaxCategoryCode = context.IsNew ? settings.DefaultTaxCategoryCode : part.TaxCategoryCode;
             model.TaxClassificationCode = context.IsNew ? settings.DefaultTaxClassificationCode : part.TaxClassificationCode;
             model.ExternalTaxCode = part.ExternalTaxCode;
             model.AllowClassificationOverride = settings.AllowClassificationOverride;
+
+            if (settings.AllowClassificationOverride)
+            {
+                model.TaxCategories = await BuildCategoryListAsync();
+            }
         });
     }
 
@@ -52,5 +74,19 @@ public sealed class TaxationPartDisplayDriver : ContentPartDisplayDriver<Taxatio
         }
 
         return Edit(part, context);
+    }
+
+    private async Task<IList<SelectListItem>> BuildCategoryListAsync()
+    {
+        var categories = await _categoryStore.GetAllAsync();
+
+        return
+        [
+            new SelectListItem(S["None"], string.Empty),
+            .. categories
+                .Where(category => !string.IsNullOrEmpty(category.Code))
+                .OrderBy(category => category.Name)
+                .Select(category => new SelectListItem($"{category.Name} ({category.Code})", category.Code)),
+        ];
     }
 }
