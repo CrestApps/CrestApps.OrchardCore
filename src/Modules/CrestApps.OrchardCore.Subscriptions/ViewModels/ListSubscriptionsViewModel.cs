@@ -8,7 +8,7 @@ public class ListSubscriptionsViewModel
     public ListSubscriptionOptions Options { get; set; }
 
     [BindNever]
-    public IEnumerable<dynamic> Notifications { get; set; }
+    public IEnumerable<dynamic> Subscriptions { get; set; }
 
     [BindNever]
     public dynamic Header { get; set; }

@@ -42,15 +42,13 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Configuration"], configuration => configuration
-                .Add(S["Settings"], settings => settings
-                    .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
-                        .AddClass("subscriptions")
-                        .Id("subscriptions")
-                        .Action(_routeValues)
-                        .Permission(SubscriptionPermissions.ManageSubscriptionSettings)
-                        .LocalNav()
-                    )
+            .Add(S["Settings"], settings => settings
+                .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
+                    .AddClass("subscriptions")
+                    .Id("subscriptions")
+                    .Action(_routeValues)
+                    .Permission(SubscriptionPermissions.ManageSubscriptionSettings)
+                    .LocalNav()
                 )
             )
             .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions

@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -29,12 +28,12 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentTypes.Editors;
+using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
-using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
@@ -45,8 +44,6 @@ namespace CrestApps.OrchardCore.Subscriptions;
 
 public sealed class Startup : StartupBase
 {
-    private static readonly string _subscriptionControllerName = typeof(SubscriptionsController).ControllerName();
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<SubscriptionPartMigrations>()
@@ -69,6 +66,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
+        services.AddScoped<IContentDefinitionHandler, SubscriptionContentTypeDefinitionHandler>();
 
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
@@ -128,44 +126,6 @@ public sealed class Startup : StartupBase
 
             return new DefaultSubscriptionsAdminListFilterParser(parser);
         });
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.MapAreaControllerRoute(
-            name: "ListServicePlans",
-            areaName: SubscriptionConstants.Features.Area,
-            pattern: "ServicePlans/{contentType?}",
-            defaults: new { controller = typeof(ServicePlansController).ControllerName(), action = nameof(ServicePlansController.Index) }
-        );
-
-        routes.MapAreaControllerRoute(
-            name: "SubscriptionSignup",
-            areaName: SubscriptionConstants.Features.Area,
-            pattern: "Subscription/Signup/{contentItemId}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
-        );
-
-        routes.MapAreaControllerRoute(
-            name: "SubscriptionConfirmation",
-            areaName: SubscriptionConstants.Features.Area,
-            pattern: "Subscription/Confirmation/{sessionId}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
-        );
-
-        routes.MapAreaControllerRoute(
-            name: "SubscriptionStep",
-            areaName: SubscriptionConstants.Features.Area,
-            pattern: "Subscription/Step/{sessionId}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
-        );
-
-        routes.MapAreaControllerRoute(
-            name: "SubscriptionCheckoutReturn",
-            areaName: SubscriptionConstants.Features.Area,
-            pattern: "Subscription/CheckoutReturn/{sessionId}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.CheckoutReturn) }
-        );
     }
 }
 

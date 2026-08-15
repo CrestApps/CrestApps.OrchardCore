@@ -40,6 +40,7 @@ public sealed class ServicePlansController : Controller
         H = htmlLocalizer;
     }
 
+    [Route("ServicePlans/{contentType?}", Name = "ListServicePlans")]
     public async Task<IActionResult> Index(
         string contentType,
         PagerParameters pagerParameters,

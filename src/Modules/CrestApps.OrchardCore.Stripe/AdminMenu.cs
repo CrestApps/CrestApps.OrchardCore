@@ -24,19 +24,17 @@ public sealed class AdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Configuration"], configuration => configuration
-                .Add(S["Settings"], settings => settings
-                   .Add(S["Payments"], S["Payments"].PrefixPosition(), payments => payments
-                      .Id("payments")
-                      .AddClass("payments")
-                      .Add(S["Stripe"], S["Stripe"].PrefixPosition(), stripe => stripe
-                          .AddClass("stripe")
-                          .Id("stripe")
-                          .Action("Index", "Admin", _routeValues)
-                          .Permission(StripePermissions.ManageStripeSettings)
-                          .LocalNav()
-                       )
-                    )
+            .Add(S["Settings"], settings => settings
+               .Add(S["Payments"], S["Payments"].PrefixPosition(), payments => payments
+                  .Id("payments")
+                  .AddClass("payments")
+                  .Add(S["Stripe"], S["Stripe"].PrefixPosition(), stripe => stripe
+                      .AddClass("stripe")
+                      .Id("stripe")
+                      .Action("Index", "Admin", _routeValues)
+                      .Permission(StripePermissions.ManageStripeSettings)
+                      .LocalNav()
+                   )
                 )
             );
 

@@ -67,6 +67,7 @@ public sealed class SubscriptionsController : Controller
     /// Generate a new signup session for the given subscription id.
     /// </summary>
     /// <param name="contentItemId">The content item that represent the subscription.</param>
+    [HttpGet("Subscription/Signup/{contentItemId}", Name = "SubscriptionSignup")]
     public async Task<IActionResult> Signup(string contentItemId)
     {
         var subscriptionContentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
@@ -109,7 +110,7 @@ public sealed class SubscriptionsController : Controller
     /// <param name="sessionId">The current sessionId.</param>
     /// <param name="step">The current step the user came from.</param>
     /// <returns></returns>
-    [HttpPost]
+    [HttpPost("Subscription/Signup/{contentItemId?}")]
     [ActionName(nameof(Signup))]
     public async Task<IActionResult> SignupPOST(ServicePlanSubscriptionViewModel model)
     {
@@ -237,6 +238,7 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
+    [Route("Subscription/Step/{sessionId}", Name = "SubscriptionSignupStep")]
     public async Task<IActionResult> Display(string sessionId, string step)
     {
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
@@ -279,6 +281,7 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
+    [Route("Subscription/Confirmation/{sessionId}", Name = "SubscriptionConfirmation")]
     public async Task<IActionResult> Confirmation(string sessionId)
     {
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Completed);
@@ -354,6 +357,7 @@ public sealed class SubscriptionsController : Controller
     /// The URL Stripe redirects to after a customer completes (or the browser returns from) a hosted
     /// Stripe Checkout. It records the Stripe subscription against the local session and finalizes the flow.
     /// </summary>
+    [Route("Subscription/CheckoutReturn/{sessionId}", Name = "SubscriptionCheckoutReturn")]
     public async Task<IActionResult> CheckoutReturn(string sessionId, string checkoutSessionId)
     {
         if (string.IsNullOrEmpty(sessionId))

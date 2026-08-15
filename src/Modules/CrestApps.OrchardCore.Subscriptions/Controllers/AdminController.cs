@@ -87,20 +87,20 @@ public sealed class AdminController : Controller
 
         var pagerShape = await shapeFactory.PagerAsync(pager, queryResult.TotalCount, options.RouteValues);
 
-        var notificationShapes = new List<IShape>();
+        var subscriptionShapes = new List<IShape>();
 
         foreach (var subscription in queryResult.Subscriptions)
         {
             var shape = await _displayManager.BuildDisplayAsync(subscription, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
             shape.Properties[nameof(SubscriptionSession)] = subscription;
 
-            notificationShapes.Add(shape);
+            subscriptionShapes.Add(shape);
         }
 
         var startIndex = (pager.Page - 1) * pager.PageSize + 1;
         options.StartIndex = startIndex;
-        options.EndIndex = startIndex + notificationShapes.Count - 1;
-        options.TotalSubscriptions = notificationShapes.Count;
+        options.EndIndex = startIndex + subscriptionShapes.Count - 1;
+        options.TotalSubscriptions = subscriptionShapes.Count;
         options.TotalItemCount = queryResult.TotalCount;
 
         var header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
@@ -109,7 +109,7 @@ public sealed class AdminController : Controller
         {
             viewModel.Options = options;
             viewModel.Header = header;
-            viewModel.Notifications = notificationShapes;
+            viewModel.Subscriptions = subscriptionShapes;
             viewModel.Pager = pagerShape;
         });
 
