@@ -14,7 +14,9 @@ public interface ISubscriptionTaxService
     /// <summary>
     /// Determines the tax for the amounts that are due now on the supplied invoice, sets
     /// <see cref="Invoice.TaxAmount"/>, <see cref="Invoice.TaxLines"/>, <see cref="Invoice.TaxSnapshot"/>,
-    /// and recomputes <see cref="Invoice.GrandTotal"/>.
+    /// and recomputes <see cref="Invoice.GrandTotal"/>. Any exclusive tax is also folded into
+    /// <see cref="Invoice.InitialPaymentAmount"/> so the up-front charge actually collects the tax the
+    /// checkout determined.
     /// </summary>
     /// <param name="invoice">The invoice to tax. Its <see cref="Invoice.DueNow"/> is expected to be set.</param>
     /// <param name="flow">The subscription flow that describes the transaction.</param>

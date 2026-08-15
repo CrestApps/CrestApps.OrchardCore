@@ -84,11 +84,30 @@ public sealed class SubscriptionTaxIntegrationTests
 
         Assert.Equal(15d, invoice.TaxAmount);
         Assert.Equal(215d, invoice.GrandTotal);
+        // The exclusive tax must be folded into the amount the up-front PaymentIntent actually charges.
+        Assert.Equal(215d, invoice.InitialPaymentAmount);
         Assert.NotNull(invoice.TaxSnapshot);
         Assert.Equal(15m, invoice.TaxSnapshot.TaxAmount);
         var line = Assert.Single(invoice.TaxLines);
         Assert.Equal(15m, line.TaxAmount);
         Assert.Equal("California", line.JurisdictionName);
+    }
+
+    [Fact]
+    public async Task ApplyTax_WhenTaxationDisabled_DoesNotChangeInitialPaymentAmount()
+    {
+        var invoice = CreateInvoice(200d, new InvoiceLineItem
+        {
+            Id = "line-1",
+            Quantity = 1,
+            UnitPrice = 200d,
+        });
+
+        var service = new NullSubscriptionTaxService();
+
+        await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(200d, invoice.InitialPaymentAmount);
     }
 
     [Fact]

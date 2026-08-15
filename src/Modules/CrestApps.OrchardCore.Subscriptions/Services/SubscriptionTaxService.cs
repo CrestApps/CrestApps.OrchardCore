@@ -18,6 +18,26 @@ namespace CrestApps.OrchardCore.Subscriptions.Services;
 /// subscription module never calculates tax itself and never persists a rate; it consumes the framework
 /// and stores the immutable <see cref="TaxSnapshot"/> it returns.
 /// </summary>
+/// <remarks>
+/// Tax is applied at two boundaries with deliberately different treatments, reflecting who controls the
+/// charge:
+/// <list type="bullet">
+/// <item>
+/// The initial checkout charge (<see cref="ApplyTaxAsync"/>) is fully controlled by the application, so
+/// tax is determined on the exclusive amount due now and added on top, then folded into the up-front
+/// charge. This covers one-time items and the first (non-delayed) subscription cycle.
+/// </item>
+/// <item>
+/// Recurring renewals (<see cref="ApplyRecurringTaxAsync"/>) are driven by the payment provider, so the
+/// application can only observe the amount the provider actually charged. That amount is treated as
+/// tax-inclusive and the tax portion is extracted with the rules effective at billing time. Merchants
+/// should therefore configure recurring provider prices as tax-inclusive for consistent collection.
+/// </item>
+/// </list>
+/// Because the first cycle's tax is authoritatively determined at checkout and the provider's first
+/// (<c>subscription_create</c>) invoice is not re-taxed by the renewal path, the first cycle is never
+/// taxed twice.
+/// </remarks>
 public sealed class SubscriptionTaxService : ISubscriptionTaxService
 {
     private readonly ITaxService _taxService;
@@ -68,11 +88,23 @@ public sealed class SubscriptionTaxService : ISubscriptionTaxService
             .Sum(line => line.TaxAmount);
 
         var decimals = GetCurrencyDecimals(invoice.Currency);
+        var roundedAddedTax = decimal.Round(addedTax, decimals, MidpointRounding.AwayFromZero);
 
         invoice.TaxAmount = (double)decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
         invoice.TaxLines = result.Lines;
         invoice.TaxSnapshot = _snapshotFactory.Create(context, result);
-        invoice.GrandTotal = Math.Round(invoice.DueNow + (double)addedTax, decimals, MidpointRounding.AwayFromZero);
+        invoice.GrandTotal = Math.Round(invoice.DueNow + (double)roundedAddedTax, decimals, MidpointRounding.AwayFromZero);
+
+        // The up-front charge (PaymentIntent) collects the amount due now. Fold the exclusive tax into it
+        // so the customer is actually charged the tax the checkout determined; otherwise tax would be
+        // displayed but never collected. Tax already included in the price is not added again here.
+        if (roundedAddedTax > 0m)
+        {
+            invoice.InitialPaymentAmount = Math.Round(
+                (invoice.InitialPaymentAmount ?? 0d) + (double)roundedAddedTax,
+                decimals,
+                MidpointRounding.AwayFromZero);
+        }
     }
 
     public async Task ApplyRecurringTaxAsync(PaymentInfo payment, ISubscriptionFlowSession session, CancellationToken cancellationToken = default)
