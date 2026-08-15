@@ -111,6 +111,10 @@ The checkout is extensible from both configuration and code. To surface a new ga
 
 Because consumers depend only on `PaymentMethodOptions` and `IPaymentEvent`, no changes to the Subscriptions or Products modules are required to add a provider.
 
+## Taxes
+
+Payment providers are **tax-agnostic**. They receive the final amount already determined by checkout — including any applicable tax — and never calculate, source, or interpret tax themselves. Tax determination is owned by the [Taxation](taxation) framework and captured on the transaction before payment; the provider simply charges the amount it is given. This keeps every provider (Stripe, PayPal, or a custom gateway) free of tax rules, jurisdictions, and exemptions, and keeps the Orchard transaction the single source of truth for tax.
+
 ## Installation
 
 ```bash
@@ -123,3 +127,4 @@ Then enable **Stripe** in the **Orchard Core Admin Dashboard** under **Tools →
 
 - [Subscriptions](subscriptions) — the primary consumer of the Payments framework.
 - [Products](products) — supplies the priced content items being charged for.
+- [Taxation](taxation) — determines the tax included in the amount the provider charges.

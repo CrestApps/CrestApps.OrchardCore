@@ -95,6 +95,30 @@ Subscriptions inherits the hardening built into the [Payments](payments#payment-
 Enable the **Redis** features so distributed locks and cached checkout state are shared across every node. See the [Orchard Core Redis documentation](https://docs.orchardcore.net/en/latest/reference/modules/Redis/).
 :::
 
+## Taxation
+
+When the [Taxation](taxation) feature is enabled, subscriptions consume it as the authoritative tax engine — the Subscriptions module never calculates tax itself, and it keeps working normally when Taxation is disabled.
+
+- **Checkout.** Tax is determined on the amount due now and captured on the invoice as a tax amount, detailed tax lines, and an immutable snapshot. Exclusive tax is folded into the up-front charge so the payment provider collects the exact taxed total; tax-inclusive pricing is honored without adding tax on top.
+- **Recurring billing.** Each renewal is re-taxed with the rules in effect at billing time and captures its own immutable snapshot, so a rate change applies to future cycles while historical transactions never change. Because renewals are provider-driven, the charged amount is treated as tax-inclusive; configure recurring provider prices as tax-inclusive for consistent collection.
+- **Address changes.** The customer's tax-relevant location is re-resolved at billing time, so moving between jurisdictions affects future cycles only.
+- **Classification.** A subscription's tax category and classification come from the **Taxation** part on the subscribed content; they are persisted on the checkout invoice so renewals reuse them.
+
+Refunds derive their tax from the original transaction snapshot via the taxation framework's refund calculator, never from current rules.
+
+## Reports
+
+When the [Reports](reports) feature is enabled, the Subscriptions module contributes admin reports under the **Reports** area (permission: *Manage subscriptions*):
+
+| Report | Shows |
+| --- | --- |
+| Subscription revenue | Total revenue, transaction count, average value, tax collected, and revenue by month. |
+| Subscriptions dashboard | Active subscriptions, new in period, expiring within 30 days, and total subscribers. |
+| Expiring subscriptions | Subscriptions expiring within the horizon, ordered by expiry. |
+| New subscriptions trend | New subscriptions per month over the period. |
+| Tax collected | Tax collected in the period, with a monthly breakdown. |
+| Product performance | Revenue and tax grouped by product. |
+
 ## Installation
 
 ```bash
@@ -107,3 +131,5 @@ Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enab
 
 - [Products](products) — supplies the priced content items that subscription plans are built on.
 - [Payments](payments) — the provider-agnostic payment framework and hardened Stripe provider.
+- [Taxation](taxation) — determines, snapshots, and refunds tax for subscription transactions when enabled.
+- [Reports](reports) — surfaces the subscription revenue, tax, and product-performance reports.

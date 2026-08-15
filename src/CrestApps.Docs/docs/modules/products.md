@@ -70,9 +70,21 @@ The `ProductType` enum lets the editor and downstream modules reason about what 
 | Value | Use it for |
 | --- | --- |
 | `Undefined` | The default; the product has not been classified. |
-| `Good` | A tangible or digital good sold as a one-time purchase. |
+| `Good` | A tangible good sold as a one-time purchase. |
 | `Service` | A service offering. |
-| `Plan` | A recurring plan, typically consumed by the [Subscriptions](subscriptions) module. |
+| `Digital` | A digital good or download. |
+
+When the [Taxation](taxation) feature is enabled, the product type maps to a taxable-item kind so the taxation engine can classify what is being sold: `Good` → *Physical*, `Service` → *Service*, `Digital` → *Digital*, and `Undefined` falls back to *Physical*.
+
+## Taxation
+
+Products participate in taxation through the [Taxation](taxation) framework — the Products module never calculates tax itself. When both **Products** and **Taxation** are enabled, add the **Taxation** part to a product content type and mark it taxable. A `ProductTaxableItemProvider` then exposes each product to the taxation engine as an `ITaxableItem`, supplying:
+
+- the price from the **Product** part,
+- the taxable-item kind derived from the product type,
+- the tax category, classification, and external tax code from the **Taxation** part.
+
+Because taxation is an optional feature dependency, products keep working normally when Taxation is disabled. See the [Taxation](taxation) module for how tax is then determined, snapshotted, and refunded.
 
 ## Installation
 
@@ -86,3 +98,4 @@ Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools �
 
 - [Subscriptions](subscriptions) — builds recurring billing flows on top of product-enabled content types.
 - [Payments](payments) — the provider-agnostic payment framework used to charge for products.
+- [Taxation](taxation) — determines tax for products that opt in via the Taxation part.

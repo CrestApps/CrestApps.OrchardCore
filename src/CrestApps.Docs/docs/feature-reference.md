@@ -60,6 +60,7 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | Canada LNNTE-DNCL Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.Local` | Local Do Not Call Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.Products` | Products | Feature | [Products](./modules/products) |
+| `CrestApps.OrchardCore.Reports` | Reports | Feature | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.SignalR` | SignalR Compatibility | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Redis` | SignalR Redis Backplane Compatibility | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Azure` | SignalR Azure Backplane Compatibility | Module | [SignalR](./modules/signalr) |
@@ -69,6 +70,7 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | `CrestApps.OrchardCore.Subscriptions.PayLater` | Subscriptions - Pay Later | Feature | [Subscriptions](./modules/subscriptions) |
 | `CrestApps.OrchardCore.Subscriptions.ReCaptcha` | Subscriptions - reCaptcha | Feature | [Subscriptions](./modules/subscriptions) |
 | `CrestApps.OrchardCore.Subscriptions.TenantOnboarding` | Subscriptions - Tenant Onboarding | Feature | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Taxation` | Taxation | Feature | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Users` | Users Core Components | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | Feature | [Users](./modules/users) |

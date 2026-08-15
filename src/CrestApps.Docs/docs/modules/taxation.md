@@ -241,6 +241,21 @@ var snapshot = snapshotFactory.Create(context, result);
 
 A `TaxSnapshot` is an immutable deep copy of the determination, including every tax line with its rule and table versions. Changing a rate, rule, or tax table tomorrow never changes yesterday's snapshot. Refunds and adjustments reverse the original snapshot rather than recalculating with today's rules.
 
+### Refunding tax from a snapshot
+
+`ITaxRefundCalculator` derives the tax portion of a refund from the original transaction's snapshot, never from current rules, so a rate change after the sale can never alter a refund:
+
+```csharp
+// Full refund: reproduces the snapshot's tax exactly.
+var full = refundCalculator.CalculateFullRefund(snapshot);
+
+// Partial refund: proportional to the amount being refunded, allocated across the
+// original tax lines so each jurisdiction is refunded per the original determination.
+var partial = refundCalculator.CalculateProportionalRefund(snapshot, refundTotalAmount: 54m);
+```
+
+A refund at or above the snapshot total returns the full refund; a non-positive amount returns nothing. Refunds never introduce a second tax calculation — the historical snapshot is the single source of truth.
+
 ## Rounding
 
 Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationContext.RoundingLevel`):
@@ -293,6 +308,7 @@ The main extension points are:
 | `ITaxableBaseCalculator` | Computes the taxable base for an item. |
 | `ITaxRoundingStrategy` | Applies the rounding policy. |
 | `ITaxSnapshotFactory` | Captures immutable transaction snapshots. |
+| `ITaxRefundCalculator` | Derives full and proportional refund tax from a snapshot. |
 | `ITaxDeterminationProvider` | Short-circuits the engine with an external determination. |
 
 An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services (for example `CrestApps.OrchardCore.Taxation.Avalara` or `CrestApps.OrchardCore.Taxation.Stripe`) can be layered on top of the same abstractions.
