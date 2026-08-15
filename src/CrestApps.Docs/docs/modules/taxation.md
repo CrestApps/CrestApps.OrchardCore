@@ -33,9 +33,44 @@ The framework is split into three assemblies:
 
 Enable the **Taxation** feature under **Tools → Features**, then:
 
-1. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
-2. Seed jurisdictions, categories, and rules (see [Domain model](#domain-model)).
+1. Create your tax **categories**, **jurisdictions**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
+2. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
 3. At checkout, convert your objects into taxable items and call `ITaxService.CalculateAsync` (see [Calculating tax](#calculating-tax)).
+
+## Managing taxation from the admin UI
+
+Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with three screens: **Categories**, **Jurisdictions**, and **Rules**. Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
+
+Setting up taxes end to end is a four-step workflow. The order matters, because rules reference jurisdictions and categories, and content classification reuses the categories you create.
+
+### 1. Define what you sell — Categories
+
+Go to **Commerce → Taxation → Categories** and add a category for each kind of thing you tax (for example `Electronics`, or a finer `Television`). A category has:
+
+- **Name** — a human-readable label (the unique key, fixed after creation).
+- **Code** — the value matched by tax rules and stored on taxable items (for example `Electronics`).
+- **Parent code** — an optional parent category code, forming a hierarchy.
+- **Description** — optional notes.
+
+Create the broad categories you match rules against, plus any finer classifications you want to assign to individual items.
+
+### 2. Define where you tax — Jurisdictions
+
+Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates.
+
+### 3. Define how tax applies — Rules
+
+Go to **Commerce → Taxation → Rules** and add a rule that binds a jurisdiction and category to a calculation. A rule lets you choose the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, the **Calculation method**, the **Rate** or **Fixed amount**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, and **Applies to shipping**. A disabled rule is never applied, and rules outside their effective window are ignored.
+
+### 4. Classify your content
+
+Attach the **Taxation** part to your content types (see [The TaxationPart](#the-taxationpart)) and, on each item, pick its **Tax category** and optional **Tax classification** from the dropdowns. Those dropdowns are populated from the categories you created in step 1, so there are no free-text codes to keep in sync.
+
+With categories, jurisdictions, and rules in place and your content classified, the engine determines and applies the correct tax automatically at checkout — no per-type tax code is required.
+
+:::tip
+Create at least one **Category** before configuring a content type. The **Tax category** and **Tax classification** dropdowns in the TaxationPart settings and item editors are sourced from the categories catalog, so an empty catalog leaves only the *None* option.
+:::
 
 ## Core concepts
 
@@ -108,9 +143,11 @@ A content editor can then leave the defaults or override the classification per 
 
 | Setting | Description |
 |---------|-------------|
-| `DefaultTaxCategoryCode` | The category applied when the item does not specify one. |
-| `DefaultTaxClassificationCode` | The classification applied when the item does not specify one. |
+| `DefaultTaxCategoryCode` | The category applied when the item does not specify one. Selected from the categories catalog. |
+| `DefaultTaxClassificationCode` | The classification applied when the item does not specify one. Selected from the categories catalog. |
 | `AllowClassificationOverride` | Whether editors may override the classification per content item. |
+
+In the content-type editor, **Default tax category** and **Default tax classification** are dropdowns populated from the tax categories you created under **Commerce → Taxation → Categories**, so create your categories first. When `AllowClassificationOverride` is disabled, editors do not see the category/classification fields and the defaults configured here are always used.
 
 ## Domain model
 

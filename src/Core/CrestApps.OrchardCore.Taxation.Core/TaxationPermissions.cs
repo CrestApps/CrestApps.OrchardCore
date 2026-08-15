@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Taxation;
+namespace CrestApps.OrchardCore.Taxation.Core;
 
 /// <summary>
 /// Represents the permissions exposed by the taxation module.

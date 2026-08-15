@@ -17,18 +17,18 @@
     <div class="ocat-wrapper" asp-validation-class-for="TaxCategoryCode">
         <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category"]</label>
         <div class="ocat-end">
-            <input type="text" asp-for="TaxCategoryCode" class="form-control" />
+            <select asp-for="TaxCategoryCode" asp-items="Model.TaxCategories" class="form-select"></select>
             <span asp-validation-for="TaxCategoryCode"></span>
-            <span class="hint">@T["The tax category code, for example Electronics."]</span>
+            <span class="hint">@T["The tax category this item belongs to, for example Electronics."]</span>
         </div>
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="TaxClassificationCode">
         <label asp-for="TaxClassificationCode" class="ocat-label">@T["Tax classification"]</label>
         <div class="ocat-end">
-            <input type="text" asp-for="TaxClassificationCode" class="form-control" />
+            <select asp-for="TaxClassificationCode" asp-items="Model.TaxCategories" class="form-select"></select>
             <span asp-validation-for="TaxClassificationCode"></span>
-            <span class="hint">@T["The tax classification code that refines the category, for example Television."]</span>
+            <span class="hint">@T["An optional, more specific category that refines the tax category, for example Television."]</span>
         </div>
     </div>
 }
