@@ -123,6 +123,7 @@ const sidebars = {
                 'modules/resources',
                 'modules/roles',
                 'modules/signalr',
+                'modules/taxation',
                 'modules/time-zones',
                 'modules/users',
             ],

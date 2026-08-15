@@ -29,6 +29,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
 | [SignalR compatibility](signalr) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module |
 | [Subscriptions](subscriptions) | `CrestApps.OrchardCore.Subscriptions` | Sell recurring subscriptions and onboard tenants with a pluggable, hardened checkout |
+| [Taxation](taxation) | `CrestApps.OrchardCore.Taxation` | Provider-agnostic, extensible taxation framework with the TaxationPart |
 | [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
 | [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
 

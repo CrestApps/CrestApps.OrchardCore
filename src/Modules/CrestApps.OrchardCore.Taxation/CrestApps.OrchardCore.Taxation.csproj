@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Taxation</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Provider-agnostic, extensible taxation framework module for OrchardCore. Provides the TaxationPart
+      that lets any content type participate in taxation, and exposes the taxation engine and its
+      extension points.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Taxation</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Taxation.Core\CrestApps.OrchardCore.Taxation.Core.csproj" />
+  </ItemGroup>
+
+</Project>
