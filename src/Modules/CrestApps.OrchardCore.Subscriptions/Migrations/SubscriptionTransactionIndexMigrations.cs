@@ -32,4 +32,13 @@ public sealed class SubscriptionTransactionIndexMigrations : DataMigration
 
         return 1;
     }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<SubscriptionTransactionIndex>(table => table
+            .AddColumn<double>("TaxAmount")
+        );
+
+        return 2;
+    }
 }

@@ -8,6 +8,8 @@ public sealed class SubscriptionTransactionIndex : MapIndex
 {
     public double Amount { get; set; }
 
+    public double TaxAmount { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string GatewayId { get; set; }

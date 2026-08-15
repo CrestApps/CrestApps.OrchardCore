@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Reports;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Taxation;
@@ -281,5 +283,23 @@ public sealed class TaxationStartup : StartupBase
         // Taxation feature is enabled, keeping the runtime dependency on taxation optional.
         services.RemoveAll<ISubscriptionTaxService>();
         services.AddScoped<ISubscriptionTaxService, SubscriptionTaxService>();
+    }
+}
+
+/// <summary>
+/// Registers the subscription and commerce reports contributed to the admin Reports area.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IReport, SubscriptionRevenueReport>()
+            .AddScoped<IReport, SubscriptionsDashboardReport>()
+            .AddScoped<IReport, ExpiringSubscriptionsReport>()
+            .AddScoped<IReport, NewSubscriptionsTrendReport>()
+            .AddScoped<IReport, TaxCollectedReport>()
+            .AddScoped<IReport, ProductPerformanceReport>();
     }
 }
