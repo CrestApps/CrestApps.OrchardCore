@@ -79,7 +79,29 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
-        var subscriptionSession = await _subscriptionSessionStore.NewAsync(subscriptionContentItem);
+        var cookieManager = new SubscriptionCookieManager(HttpContext);
+
+        SubscriptionSession subscriptionSession = null;
+
+        if (cookieManager.TryGetValue(contentItemId, out var existingSessionId) && !string.IsNullOrEmpty(existingSessionId))
+        {
+            subscriptionSession = await _subscriptionSessionStore.GetAsync(existingSessionId, SubscriptionSessionStatus.Pending);
+
+            // Only resume a persisted session when it still targets the current published plan version.
+            if (subscriptionSession != null &&
+                !string.Equals(subscriptionSession.ContentItemVersionId, subscriptionContentItem.ContentItemVersionId, StringComparison.Ordinal))
+            {
+                subscriptionSession = null;
+            }
+        }
+
+        // Track whether this request created the session. A resumed session is already durable, so it must
+        // not be re-saved here: a concurrent checkout return could flip it to Completed between our load and
+        // save, and a last-write-wins save would revert it to Pending, dropping payment metadata and risking
+        // a double charge.
+        var isNewSession = subscriptionSession == null;
+
+        subscriptionSession ??= await _subscriptionSessionStore.NewAsync(subscriptionContentItem);
 
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializingAsync(context), new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem), _logger);
@@ -96,10 +118,22 @@ public sealed class SubscriptionsController : Controller
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.LoadedAsync(context), new SubscriptionFlowLoadedContext(flow), _logger);
 
+        // Persist only a newly created pending session so the payment step (Stripe hosted checkout, card, or
+        // pay later) can reference a durable, distributed-safe session when it calls the payment endpoints.
+        // The cookie lets a returning visitor resume that same pending session instead of orphaning a new one
+        // on every visit.
+        if (isNewSession)
+        {
+            subscriptionSession.ModifiedUtc = _clock.UtcNow;
+            await _subscriptionSessionStore.SaveAsync(subscriptionSession);
+        }
+
+        cookieManager.Append(contentItemId, subscriptionSession.SessionId);
+
         return View(new ServicePlanSubscriptionViewModel
         {
             ContentItemId = contentItemId,
-            SessionId = null,
+            SessionId = subscriptionSession.SessionId,
             Step = subscriptionSession.CurrentStep,
             Content = model,
         });
@@ -213,7 +247,7 @@ public sealed class SubscriptionsController : Controller
                     }
                 }
 
-                if (await TryCompleteFlowAsync(flow, subscriptionSession, now))
+                if (await TryCompleteFlowUnderLockAsync(flow, subscriptionSession, now))
                 {
                     cookieManager.Remove(model.ContentItemId);
 
@@ -319,6 +353,37 @@ public sealed class SubscriptionsController : Controller
     /// runs the completed handlers. On failure it rolls back and notifies the user. This is shared by
     /// the standard form post and by the hosted-checkout return so both finalize identically.
     /// </summary>
+    private async Task<bool> TryCompleteFlowUnderLockAsync(SubscriptionFlow flow, SubscriptionSession session, DateTime now)
+    {
+        // Serialize finalization per local session so two concurrent submissions (double click, duplicate
+        // POST, or a Pay Later submit racing a Stripe return) cannot both run the completion handlers and
+        // double-provision (users, content, tenants). The same lock key is used by the Stripe checkout
+        // return so those two finalization paths are mutually exclusive as well.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+            $"SUBSCRIPTION_CHECKOUT_RETURN_{session.SessionId}",
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(5));
+
+        if (!locked)
+        {
+            return false;
+        }
+
+        await using (locker)
+        {
+            // If another request already finalized this session, treat it as an idempotent success so the
+            // caller redirects to the confirmation instead of re-running the provisioning handlers.
+            var current = await _subscriptionSessionStore.GetAsync(session.SessionId);
+
+            if (current != null && current.Status == SubscriptionSessionStatus.Completed)
+            {
+                return true;
+            }
+
+            return await TryCompleteFlowAsync(flow, session, now);
+        }
+    }
+
     private async Task<bool> TryCompleteFlowAsync(SubscriptionFlow flow, SubscriptionSession session, DateTime now)
     {
         try

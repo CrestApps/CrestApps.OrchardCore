@@ -20,6 +20,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Contents",
         "OrchardCore.ContentTypes",
+        "OrchardCore.Title",
         ProductConstants.Feature.ModuleId,
     ]
 )]

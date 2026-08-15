@@ -50,6 +50,10 @@ public sealed class Startup : StartupBase
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();
 
+        // Automatically inject the SubscriptionPart into any content type that uses the Subscription
+        // stereotype, so administrators only need to set the stereotype.
+        services.AddScoped<IContentDefinitionHandler, SubscriptionPartContentTypeDefinitionHandler>();
+
         services.AddDataMigration<SubscriptionSummaryWidgetMigrations>()
             .AddContentPart<SubscriptionSummaryPart>()
             .UseDisplayDriver<SubscriptionSummaryPartDisplayDriver>();

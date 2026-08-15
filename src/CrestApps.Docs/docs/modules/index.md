@@ -17,6 +17,7 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Content Fields](content-fields) | `CrestApps.OrchardCore.ContentFields` | Custom Orchard Core content field editors |
 | [Content Transfer](content-transfer) | `CrestApps.OrchardCore.ContentTransfer` | Bulk Excel import and export for content items |
 | [DNC Registry](dnc-registry) | `CrestApps.OrchardCore.DncRegistry` | National do-not-call registry integrations and import compliance settings |
+| [Checkout](checkout) | `CrestApps.OrchardCore.Checkout` | Provider-agnostic checkout and payment framework with a durable, distributed-safe payment ledger |
 | [Payments](payments) | `CrestApps.OrchardCore.Stripe` | Provider-agnostic payment framework with a hardened Stripe provider |
 | [Phone Number Verifications](phone-number-verifications) | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | Provider-agnostic phone number verification with content-part storage, reporting, and background revalidation |
 | [Phone Number Verifications - AbstractAPI](phone-number-verifications-abstractapi) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | AbstractAPI provider for phone number verification |
