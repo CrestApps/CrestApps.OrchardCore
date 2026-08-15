@@ -23,6 +23,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Payments.Abstractions/CrestApps.OrchardCore.Payments.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
   </Folder>
@@ -42,6 +43,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Stripe.Core/CrestApps.OrchardCore.Stripe.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Subscriptions.Core/CrestApps.OrchardCore.Subscriptions.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Taxation.Core/CrestApps.OrchardCore.Taxation.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </Folder>
@@ -96,6 +98,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Stripe/CrestApps.OrchardCore.Stripe.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Subscriptions/CrestApps.OrchardCore.Subscriptions.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Taxation/CrestApps.OrchardCore.Taxation.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />

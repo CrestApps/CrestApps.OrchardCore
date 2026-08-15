@@ -73,6 +73,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Taxation.Abstractions\CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Taxation.Core\CrestApps.OrchardCore.Taxation.Core.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

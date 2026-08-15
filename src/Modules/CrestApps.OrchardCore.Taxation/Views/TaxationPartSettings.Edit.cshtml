@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Taxation.ViewModels
+
+@model TaxationPartSettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="DefaultTaxCategoryCode" class="form-label">@T["Default tax category"]</label>
+    <input type="text" asp-for="DefaultTaxCategoryCode" class="form-control" />
+    <span class="hint">@T["The default tax category code applied to new content items."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DefaultTaxClassificationCode" class="form-label">@T["Default tax classification"]</label>
+    <input type="text" asp-for="DefaultTaxClassificationCode" class="form-control" />
+    <span class="hint">@T["The default tax classification code applied to new content items."]</span>
+</div>
+
+<div class="mb-3 form-check">
+    <input type="checkbox" asp-for="AllowClassificationOverride" class="form-check-input" />
+    <label asp-for="AllowClassificationOverride" class="form-check-label">@T["Allow editors to override the classification"]</label>
+    <span class="hint">@T["When disabled, editors cannot change the category or classification and the defaults above are always used."]</span>
+</div>
