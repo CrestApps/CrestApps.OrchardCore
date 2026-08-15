@@ -228,7 +228,10 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         }
         else
         {
-            _logger.LogInformation("New subscribed tenant '{TenantName}' was auto setup successfully.", tenantName);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("New subscribed tenant '{TenantName}' was auto setup successfully.", tenantName);
+            }
 
             await TriggerTenantSetupEventAsync(workflowManager, SubscribedTenantSetupSucceededEvent.EventName, tenantName, errors: null);
         }
