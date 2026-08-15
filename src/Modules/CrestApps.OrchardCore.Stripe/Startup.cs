@@ -1,11 +1,15 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
+using CrestApps.OrchardCore.Stripe.Indexes;
+using CrestApps.OrchardCore.Stripe.Migrations;
 using CrestApps.OrchardCore.Stripe.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -25,6 +29,9 @@ public class Startup : StartupBase
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
         services.AddNavigationProvider<AdminMenu>();
         services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
+
+        services.AddDataMigration<StripeWebhookMigrations>();
+        services.AddIndexProvider<ProcessedStripeWebhookEventIndexProvider>();
 
         services.AddScoped<IStripeSubscriptionService, StripeSubscriptionService>();
         services.AddScoped<IStripePaymentIntentService, StripePaymentIntentService>();
