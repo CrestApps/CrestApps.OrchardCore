@@ -31,5 +31,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentHandler, CountryContentHandler>();
 
         services.AddScoped<ICountryService, ContentCountryService>();
+
+        services.AddScoped<IAddressResolver, DefaultAddressResolver>();
     }
 }

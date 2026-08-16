@@ -1,19 +1,31 @@
 # CrestApps.OrchardCore.Addresses
 
-Provides address-related content types and reusable parts for Orchard Core. The module turns the canonical
-ISO 3166-1 country list into editable content so administrators can manage countries, regions, and cities
-through the standard content management experience, and reuse them across checkout, taxation, and any other
-address-aware feature.
+Provides address-related content types and reusable parts for Orchard Core. The module models every geographic
+component of an address &mdash; except the postal code &mdash; as managed content, so administrators can maintain
+countries, regions, counties, cities, and districts through the standard content management experience, and reuse
+them across checkout, taxation, and any other address-aware feature.
 
 ## Features
 
 - **Country content type** – seeded on enable from the canonical ISO 3166-1 list. Each country carries an
   ISO alpha-2 `Code` used for money-safe matching in taxation and checkout.
-- **Region content type** – a state, province, or region that references its parent country and stores an
-  optional abbreviation.
-- **City content type** – a city that references its parent region.
-- **Address part** – a reusable, attachable part that captures street lines, city, postal code, and optional
-  region and country selectors. Attach it to any content type that needs a postal address.
+- **Region content type** – a state, province, or region that references its parent country and stores a `Code`.
+- **County content type** – a county that references its parent region and stores an optional `Code`.
+- **City content type** – a city that references its parent region, an optional county, and stores an optional `Code`.
+- **District content type** – a special or tax district that references its parent city and stores an optional `Code`.
+- **Address part** – a reusable, attachable part that captures street lines and postal code as text, and country,
+  region, county, city, and district as content-item selectors. Attach it to any content type that needs a postal
+  address.
+
+Every geographic part standardizes on a money-safe `Code` field, and each type references its parent so the full
+Country → Region → County → City → District hierarchy can be managed and reused.
+
+## Resolving an address
+
+Because the geographic components of an `AddressPart` are content-item selectors, the module registers an
+`IAddressResolver` that reduces the part to the flat, money-safe `Address` model. Each selector is resolved to its
+stable `Code` (falling back to its display name) and the postal code is copied verbatim, so taxation, checkout, and
+subscriptions keep working against the string-based `Address` contract without ever storing a content item id.
 
 ## Country selectors
 
@@ -28,8 +40,8 @@ dependent features keep working without any address content.
 ## Data storage
 
 Country content items are indexed by `CountryIndex` (ISO code and display name) for efficient lookup. Taxation
-continues to store the ISO alpha-2 country code, so enabling or disabling this module never orphans existing
-tax jurisdictions or rules.
+continues to store stable string codes (ISO alpha-2 country code, plus region, county, city, and district codes),
+so enabling or disabling this module never orphans existing tax jurisdictions or rules.
 
 ## Dependencies
 

@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AddressConstants.Feature.ModuleId,
     Name = "Addresses",
-    Description = "Provides country, region, and city content types with reusable address and selector parts.",
+    Description = "Provides country, region, county, city, and district content types with reusable address and selector parts.",
     Category = "Content Management",
     Dependencies =
     [

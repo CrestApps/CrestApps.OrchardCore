@@ -6,7 +6,7 @@
     <Description>
       $(OCCMSDescription)
 
-      Provides country, region, and city content types together with reusable address and selector parts.
+      Provides country, region, county, city, and district content types together with reusable address and selector parts.
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Addresses</PackageTags>
   </PropertyGroup>
@@ -31,6 +31,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
   </ItemGroup>
 
 </Project>

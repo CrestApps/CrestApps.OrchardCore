@@ -28,9 +28,19 @@ public static class AddressConstants
     public const string Region = "Region";
 
     /// <summary>
+    /// The technical name of the county content type.
+    /// </summary>
+    public const string County = "County";
+
+    /// <summary>
     /// The technical name of the city content type.
     /// </summary>
     public const string City = "City";
+
+    /// <summary>
+    /// The technical name of the district (special or tax district) content type.
+    /// </summary>
+    public const string District = "District";
 
     /// <summary>
     /// The technical name of the country information part attached to the country content type.
@@ -43,12 +53,27 @@ public static class AddressConstants
     public const string RegionPart = "RegionPart";
 
     /// <summary>
+    /// The technical name of the county information part attached to the county content type.
+    /// </summary>
+    public const string CountyPart = "CountyPart";
+
+    /// <summary>
     /// The technical name of the city information part attached to the city content type.
     /// </summary>
     public const string CityPart = "CityPart";
 
     /// <summary>
+    /// The technical name of the district information part attached to the district content type.
+    /// </summary>
+    public const string DistrictPart = "DistrictPart";
+
+    /// <summary>
     /// The technical name of the reusable, attachable address capture part.
     /// </summary>
     public const string AddressPart = "AddressPart";
+
+    /// <summary>
+    /// The technical name of the stable, money-safe code field shared by every geographic information part.
+    /// </summary>
+    public const string CodeField = "Code";
 }
