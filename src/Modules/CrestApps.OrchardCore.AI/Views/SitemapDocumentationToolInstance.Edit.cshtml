@@ -5,7 +5,7 @@
 <div class="ocat-wrapper">
     <label asp-for="BaseUrl" class="ocat-label">@T["Base URL"]</label>
     <div class="ocat-end">
-        <input asp-for="BaseUrl" class="form-control" placeholder="https://core.crestapps.com" />
+        <input asp-for="BaseUrl" class="form-control" placeholder="https://example.com" />
         <span asp-validation-for="BaseUrl" class="text-danger"></span>
         <span class="hint">@T["The root URL of the documentation site. The crawler discovers pages through the site's sitemap.xml."]</span>
     </div>
@@ -14,9 +14,9 @@
 <div class="ocat-wrapper">
     <label asp-for="SitemapUrl" class="ocat-label">@T["Sitemap URL"]</label>
     <div class="ocat-end">
-        <input asp-for="SitemapUrl" class="form-control" placeholder="https://core.crestapps.com/sitemap.xml" />
+        <input asp-for="SitemapUrl" class="form-control" placeholder="https://example.com/sitemap.xml" />
         <span asp-validation-for="SitemapUrl" class="text-danger"></span>
-        <span class="hint">@T["An explicit sitemap URL. Leave it empty to derive it from the base URL as {BaseUrl}/sitemap.xml."]</span>
+        <span class="hint">@T["An explicit sitemap URL. Leave it empty to derive it from the base URL as <code>{0}</code>.", "{BaseUrl}/sitemap.xml"]</span>
     </div>
 </div>
 

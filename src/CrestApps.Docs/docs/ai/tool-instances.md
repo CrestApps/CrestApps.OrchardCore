@@ -59,7 +59,7 @@ Pick the source that matches how the site publishes its content:
 
 All three sources carry the **Knowledgebase** category. Each source captures its own fields:
 
-- **Sitemap** — a **Base URL** (the site root, for example `https://core.crestapps.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
+- **Sitemap** — a **Base URL** (the site root, for example `https://example.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
 - **Search index** — a **Base URL** (used to resolve relative links and the default index URL), an optional **Index URL** (defaults to `{BaseUrl}/search/search_index.json`), and an optional **Maximum results**.
 - **Algolia** — an **Application id**, a **search-only API key** (never a write key), an **Index name**, and an optional **Maximum results**. The API key is encrypted with ASP.NET Core data protection before it is stored; when you edit an existing instance, leaving the API key field empty keeps the previously stored key.
 
@@ -95,6 +95,42 @@ The feature adds two permissions:
 Only `ManageAIToolInstances` is ever checked to decide whether the user may reach the management surface. The ownership check is applied afterwards, so a user who does not hold `ManageAIToolInstancesCreatedByOthers` may still manage their own instances.
 
 In addition, every configured instance produces a dynamic `AccessAITool_{functionName}` permission, exactly like a regular AI tool. The feature replaces the default tool instance registry with a permission-aware one, so an instance is only surfaced to the AI model when the current user is authorized for that instance.
+
+## Importing and exporting
+
+Tool instances can be moved between tenants with the standard Orchard Core deployment and recipe pipeline.
+
+### Deployment plan
+
+Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
+
+Secrets are never written to the export. During export, each source can remove its own sensitive data through an `IAIToolInstanceHandler`. The built-in sources use this to strip their credentials: the **HTTP API request** source clears the API key, bearer token, password, client secret, and any cached OAuth tokens, and the **Algolia** source clears the search-only API key. After importing on the target tenant, edit the instance and re-enter the required credentials.
+
+### Recipe step
+
+The deployment step emits an `AIToolInstances` recipe step, which is also the step you author by hand in a recipe. On import, each entry is matched by `ItemId` first and then by `Name`; a matching instance is updated in place, otherwise a new instance is created from its `Source`. The source must be registered on the target tenant, so enable the feature that provides it before running the recipe.
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIToolInstances",
+      "instances": [
+        {
+          "Source": "http-api-request",
+          "Name": "Order Lookup API",
+          "Description": "Looks up a customer's order status by order identifier.",
+          "Properties": {
+            "HttpApiRequestToolSettings": {
+              "BaseUrl": "https://api.example.com/orders"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Registering a custom source
 
@@ -161,6 +197,36 @@ internal sealed class WeatherToolInstanceDisplayDriver : DisplayDriver<AIToolIns
 ```
 
 Register the driver with `services.AddDisplayDriver<AIToolInstance, WeatherToolInstanceDisplayDriver>();`. Use `Content:1` for the shared name and description fields, and anything after it for source-specific fields, so the shared fields always render first.
+
+### Removing secrets from exports
+
+If your source stores credentials, add an `IAIToolInstanceHandler` so those secrets are removed from the deployment and recipe export. Gate the handler on your source name and clear the sensitive properties from `ExportData`:
+
+```csharp
+using CrestApps.OrchardCore.AI.Tools.Handlers;
+
+internal sealed class WeatherToolInstanceExportHandler : IAIToolInstanceHandler
+{
+    public void Exporting(ExportingAIToolInstanceContext context)
+    {
+        if (!string.Equals(context.Instance.Source, "weather", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var settingsNode = context.ExportData["Properties"]?[nameof(WeatherToolSettings)]?.AsObject();
+
+        if (settingsNode is null)
+        {
+            return;
+        }
+
+        settingsNode[nameof(WeatherToolSettings.ApiKey)] = string.Empty;
+    }
+}
+```
+
+Register it with `services.TryAddEnumerable(ServiceDescriptor.Transient<IAIToolInstanceHandler, WeatherToolInstanceExportHandler>());`. The built-in HTTP API request and Algolia sources ship with their own handlers, so their credentials are stripped automatically.
 
 ## Exposing the selector on your own model
 
