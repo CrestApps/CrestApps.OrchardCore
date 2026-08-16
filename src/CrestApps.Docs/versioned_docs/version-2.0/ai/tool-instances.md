@@ -74,42 +74,6 @@ Only `ManageAIToolInstances` is ever checked to decide whether the user may reac
 
 In addition, every configured instance produces a dynamic `AccessAITool_{functionName}` permission, exactly like a regular AI tool. The feature replaces the default tool instance registry with a permission-aware one, so an instance is only surfaced to the AI model when the current user is authorized for that instance.
 
-## Importing and exporting
-
-Tool instances can be moved between tenants with the standard Orchard Core deployment and recipe pipeline.
-
-### Deployment plan
-
-Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
-
-Secrets are never written to the export. During export, each source can remove its own sensitive data through an `IAIToolInstanceHandler`. The built-in sources use this to strip their credentials: the **HTTP API request** source clears the API key, bearer token, password, client secret, and any cached OAuth tokens, and the **Algolia** source clears the search-only API key. After importing on the target tenant, edit the instance and re-enter the required credentials.
-
-### Recipe step
-
-The deployment step emits an `AIToolInstances` recipe step, which is also the step you author by hand in a recipe. On import, each entry is matched by `ItemId` first and then by `Name`; a matching instance is updated in place, otherwise a new instance is created from its `Source`. The source must be registered on the target tenant, so enable the feature that provides it before running the recipe.
-
-```json
-{
-  "steps": [
-    {
-      "name": "AIToolInstances",
-      "instances": [
-        {
-          "Source": "http-api-request",
-          "Name": "Order Lookup API",
-          "Description": "Looks up a customer's order status by order identifier.",
-          "Properties": {
-            "HttpApiRequestToolSettings": {
-              "BaseUrl": "https://api.example.com/orders"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
 ## Registering a custom source
 
 A tool instance source is an `IAIToolInstanceSource` that turns an `AIToolInstance` into an `AITool`. Register it with `AddAIToolInstanceSource<TSource>` from your own feature's startup:
