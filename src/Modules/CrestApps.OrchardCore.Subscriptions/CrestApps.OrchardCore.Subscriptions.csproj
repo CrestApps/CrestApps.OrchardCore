@@ -44,7 +44,6 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Taxation.Abstractions\CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj" />
   </ItemGroup>
 
