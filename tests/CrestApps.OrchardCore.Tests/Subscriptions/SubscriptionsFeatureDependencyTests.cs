@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
@@ -34,6 +35,35 @@ public class SubscriptionsFeatureDependencyTests
         Assert.NotNull(featureAttribute);
         Assert.Contains("OrchardCore.Contents", featureAttribute.Dependencies);
         Assert.Contains(ProductConstants.Feature.ModuleId, featureAttribute.Dependencies);
+    }
+
+    [Fact]
+    public void SubscriptionsFeature_DependsOnCheckout()
+    {
+        // Subscriptions cannot collect money on its own; it relies on the provider-agnostic Checkout
+        // framework to contribute payment providers. Declaring Checkout as a hard dependency guarantees
+        // the checkout services are present whenever Subscriptions is enabled.
+        var featureAttribute = GetSubscriptionsAreaFeature();
+
+        Assert.NotNull(featureAttribute);
+        Assert.Contains(CheckoutConstants.Features.Area, featureAttribute.Dependencies);
+    }
+
+    [Fact]
+    public void SubscriptionsModule_DoesNotDeclareRemovedIntegrationSubFeatures()
+    {
+        // The former "Subscriptions - Stripe" and "Subscriptions - Pay Later" sub-features were removed.
+        // Stripe now activates via [RequireFeatures] when the Stripe module is enabled, and Pay Later is a
+        // standalone module. Guard against either id being reintroduced as a separate feature.
+        var assembly = typeof(SubscriptionPartDisplayDriver).Assembly;
+
+        var featureIds = assembly
+            .GetCustomAttributes<FeatureAttribute>()
+            .Select(attribute => attribute.Id)
+            .ToArray();
+
+        Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.Stripe", featureIds);
+        Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.PayLater", featureIds);
     }
 
     private static FeatureAttribute GetSubscriptionsAreaFeature()

@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Tests.Checkout;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -10,7 +12,7 @@ using Moq;
 using OrchardCore.Entities;
 using Xunit;
 
-namespace CrestApps.OrchardCore.Tests.Checkout;
+namespace CrestApps.OrchardCore.Tests.PayLater;
 
 public sealed class PayLaterCheckoutPaymentProviderTests
 {

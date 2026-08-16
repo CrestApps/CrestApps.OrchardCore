@@ -19,21 +19,6 @@ public static class CheckoutConstants
         /// The core checkout feature that provides the provider-agnostic checkout and payment framework.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Checkout";
-
-        /// <summary>
-        /// The Pay Later feature that lets a checkout be completed with an offline payment commitment.
-        /// </summary>
-        public const string PayLater = "CrestApps.OrchardCore.Checkout.PayLater";
-
-        /// <summary>
-        /// The Stripe feature that settles checkout payments through Stripe.
-        /// </summary>
-        public const string Stripe = "CrestApps.OrchardCore.Checkout.Stripe";
-
-        /// <summary>
-        /// The taxation feature that folds taxation-framework tax into checkout invoices.
-        /// </summary>
-        public const string Taxation = "CrestApps.OrchardCore.Checkout.Taxation";
     }
 
     /// <summary>

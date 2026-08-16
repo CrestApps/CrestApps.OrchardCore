@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -22,29 +23,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
         "OrchardCore.Title",
         ProductConstants.Feature.ModuleId,
-    ]
-)]
-
-[assembly: Feature(
-    Name = "Subscriptions - Stripe",
-    Id = SubscriptionConstants.Features.Stripe,
-    Description = "Provides a way to pay subscriptions using Stripe.",
-    Category = "Subscriptions",
-    Dependencies =
-    [
-        SubscriptionConstants.Features.Area,
-        StripeConstants.Feature.ModuleId,
-    ]
-)]
-
-[assembly: Feature(
-    Name = "Subscriptions - Pay Later",
-    Id = SubscriptionConstants.Features.PayLater,
-    Description = "Provides a way to pay subscriptions later.",
-    Category = "Subscriptions",
-    Dependencies =
-    [
-        SubscriptionConstants.Features.Area,
+        CheckoutConstants.Features.Area,
     ]
 )]
 

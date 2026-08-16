@@ -1,10 +1,11 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 
-namespace CrestApps.OrchardCore.Checkout.Core.Services;
+namespace CrestApps.OrchardCore.PayLater.Services;
 
 /// <summary>
 /// A deferred <see cref="ICheckoutPaymentProvider"/> that records an offline "pay later" commitment

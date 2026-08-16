@@ -57,7 +57,7 @@ Capabilities let the framework select a suitable provider and enforce constraint
 
 ### Built-in payment providers
 
-- **Pay Later** (`CrestApps.OrchardCore.Checkout` → *Checkout — Pay Later* feature) records an offline commitment instead of moving money through a gateway. Because it never contacts a processor, its verification reports that it is *not* the authoritative source of a charged amount, so the checkout records the commitment on the strength of a recorded transaction id alone — without an amount cross-check — while still flowing through the exact same durable ledger and reconciliation as a real gateway. This keeps the safety guarantees intact and never fabricates a *paid* record a processor could contradict.
+- **Pay Later** — provided by the standalone **[Pay Later](pay-later)** module (`CrestApps.OrchardCore.PayLater`). It records an offline commitment instead of moving money through a gateway. Because it never contacts a processor, its verification reports that it is *not* the authoritative source of a charged amount, so the checkout records the commitment on the strength of a recorded transaction id alone — without an amount cross-check — while still flowing through the exact same durable ledger and reconciliation as a real gateway. This keeps the safety guarantees intact and never fabricates a *paid* record a processor could contradict.
 
 ## The durable payment ledger
 
@@ -100,7 +100,7 @@ Money is compared and rounded through the provider-neutral **`Money`** and **`Cu
 The framework never calculates tax itself. It consumes the [Taxation](taxation) framework through the **`ICheckoutTaxService`** seam:
 
 - When the Taxation feature is **disabled**, a no-op implementation leaves the invoice untaxed and checkout keeps working.
-- When Taxation is **enabled**, a taxation-aware implementation determines the tax for the amount due now, folds any exclusive tax into the charged amount, and captures an immutable snapshot. Recurring cycles are taxed with the rules effective at billing time, each carrying its own snapshot, so historical tax is never recalculated.
+- When the **Checkout** and **Taxation** features are **both enabled**, a taxation-aware implementation is wired in automatically (via `[RequireFeatures]`, so there is no separate integration feature to switch on). It determines the tax for the amount due now, folds any exclusive tax into the charged amount, and captures an immutable snapshot. Recurring cycles are taxed with the rules effective at billing time, each carrying its own snapshot, so historical tax is never recalculated.
 
 An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes.
 
@@ -116,5 +116,6 @@ To use the framework in your own module:
 ## Related
 
 - [Payments](payments) — the lower-level provider-agnostic payment contracts and the Stripe provider.
+- [Pay Later](pay-later) — a built-in offline payment provider packaged as its own module.
 - [Subscriptions](subscriptions) — a consumer of the checkout framework for recurring billing.
 - [Taxation](taxation) — the tax determination framework consumed through `ICheckoutTaxService`.

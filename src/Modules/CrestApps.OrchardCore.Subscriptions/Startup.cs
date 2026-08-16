@@ -86,6 +86,12 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<SubscriptionPaymentSession>();
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
+
+        // Compute the default payment method once every payment provider has registered its methods.
+        // This lives in the base feature so a default is always resolved regardless of which single
+        // provider (Stripe, Pay Later, ...) happens to be enabled.
+        services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
+
         services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
         services.Configure<SubscriptionPaymentSessionOptions>(options =>
         {
@@ -142,18 +148,21 @@ public sealed class RolesStartup : StartupBase
     }
 }
 
-[Feature(SubscriptionConstants.Features.Stripe)]
+/// <summary>
+/// Wires the Stripe payment integration into the subscription checkout. It activates automatically
+/// whenever both the Subscriptions and Stripe features are enabled, so there is no separate integration
+/// feature to switch on.
+/// </summary>
+[RequireFeatures(SubscriptionConstants.Features.Area, StripeConstants.Feature.ModuleId)]
 public sealed class StripeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
         services.AddScoped<StripePriceSyncService>();
-        services.AddScoped<IFeatureEventHandler, StripePriceSyncHandler>();
         services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
         services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
         services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
-        services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
         services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
         services.Configure<PaymentMethodOptions>(options =>
         {
@@ -174,7 +183,15 @@ public sealed class StripeStartup : StartupBase
     }
 }
 
-[Feature(SubscriptionConstants.Features.PayLater)]
+/// <summary>
+/// Wires the offline Pay Later option into the subscription checkout. It activates when the standalone
+/// Pay Later module is enabled alongside Subscriptions, so Pay Later is owned by one module and reused
+/// across checkout scenarios.
+/// </summary>
+// The literal is the Pay Later module feature id (PayLaterConstants.Features.Area). Subscriptions treats
+// Pay Later as optional and must not take a hard compile-time dependency on that module, so the id is
+// referenced by string rather than by constant.
+[RequireFeatures("CrestApps.OrchardCore.PayLater")]
 public sealed class PayLaterStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

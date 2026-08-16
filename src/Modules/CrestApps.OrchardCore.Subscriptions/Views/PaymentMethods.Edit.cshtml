@@ -29,14 +29,22 @@
         }
     </div>
 }
-
-@foreach (var method in Model.PaymentMethods)
+else if (Model.PaymentMethods.Length == 1)
 {
+    <input type="hidden" name="PaymentMethod" value="@Model.PaymentMethods[0].Value" />
+}
+
+@for (var i = 0; i < Model.PaymentMethods.Length; i++)
+{
+    var method = Model.PaymentMethods[i];
     var shape = await DisplayManager.BuildEditorAsync(
     model: new SubscriptionFlowPaymentMethod { Flow = Model.Flow },
     updater: UpdateModelAccessor.ModelUpdater,
     isNew: false, method.Value);
-    <div class="payment-method-wrapper d-none" data-method-name="@method.Value">
+
+    var wrapperCssClass = Model.PaymentMethods.Length > 1 ? "payment-method-wrapper d-none" : "payment-method-wrapper";
+
+    <div class="@wrapperCssClass" data-method-name="@method.Value">
         @await DisplayAsync(shape)
     </div>
 }
