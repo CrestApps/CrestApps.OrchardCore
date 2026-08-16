@@ -65,7 +65,7 @@ Pick the source that matches how the site publishes its content:
 
 All three sources carry the **Knowledgebase** category. Each source captures its own fields:
 
-- **Sitemap** — a **Base URL** (the site root, for example `https://core.crestapps.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
+- **Sitemap** — a **Base URL** (the site root, for example `https://example.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
 - **Search index** — a **Base URL** (used to resolve relative links and the default index URL), an optional **Index URL** (defaults to `{BaseUrl}/search/search_index.json`), and an optional **Maximum results**.
 - **Algolia** — an **Application id**, a **search-only API key** (never a write key), an **Index name**, and an optional **Maximum results**. The API key is encrypted with ASP.NET Core data protection before it is stored; when you edit an existing instance, leaving the API key field empty keeps the previously stored key.
 
