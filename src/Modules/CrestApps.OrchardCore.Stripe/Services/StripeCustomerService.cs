@@ -5,11 +5,19 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Implements Stripe Customer API operations.
+/// </summary>
 public sealed class StripeCustomerService : IStripeCustomerService
 {
     private readonly CustomerService _customerService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeCustomerService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to call the Stripe API.</param>
+    /// <param name="logger">The logger used to record Stripe customer operation failures.</param>
     public StripeCustomerService(
         StripeClient stripeClient,
         ILogger<StripeCustomerService> logger)
@@ -18,6 +26,11 @@ public sealed class StripeCustomerService : IStripeCustomerService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Creates a Stripe customer with the supplied contact and payment method data.
+    /// </summary>
+    /// <param name="model">The customer creation request.</param>
+    /// <returns>The created customer details, or <see langword="null"/> when Stripe creation fails.</returns>
     public async Task<CreateCustomerResponse> CreateAsync(CreateCustomerRequest model)
     {
         var customerOptions = new CustomerCreateOptions
@@ -53,6 +66,12 @@ public sealed class StripeCustomerService : IStripeCustomerService
         }
     }
 
+    /// <summary>
+    /// Updates an existing Stripe customer.
+    /// </summary>
+    /// <param name="id">The Stripe customer identifier.</param>
+    /// <param name="model">The customer values to update.</param>
+    /// <returns>The update response, including whether the update succeeded.</returns>
     public async Task<UpdateCustomerResponse> UpdateAsync(string id, UpdateCustomerRequest model)
     {
         ArgumentNullException.ThrowIfNull(id);
@@ -90,6 +109,11 @@ public sealed class StripeCustomerService : IStripeCustomerService
         }
     }
 
+    /// <summary>
+    /// Retrieves a Stripe customer by identifier.
+    /// </summary>
+    /// <param name="id">The Stripe customer identifier.</param>
+    /// <returns>The matching customer, or <see langword="null"/> when Stripe reports that the customer is missing.</returns>
     public async Task<CustomerResponse> GetAsync(string id)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);

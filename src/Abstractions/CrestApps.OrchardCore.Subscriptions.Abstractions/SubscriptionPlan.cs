@@ -2,30 +2,28 @@ using CrestApps.OrchardCore.Payments.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
+/// <summary>
+/// Describes the billing cadence and optional limits for a subscription.
+/// </summary>
 public sealed class SubscriptionPlan
 {
     /// <summary>
-    /// The number of payments pet duration type.
-    /// For example, 1 Year, 30 Days, 4 Weeks, etc.
-    /// <see cref="DurationType"/> to define the duration limit.
+    /// Gets or sets the number of duration units in each billing cycle, such as 1 year, 30 days, or 4 weeks.
     /// </summary>
     public int BillingDuration { get; set; }
 
     /// <summary>
-    /// The duration type for <see cref="BillingDuration"/>.
-    /// When <see cref="BillingDuration"/> is set to 1 and type is Year,
-    /// This means 1 year billing cycle.
+    /// Gets or sets the unit used by <see cref="BillingDuration"/>.
     /// </summary>
     public DurationType DurationType { get; set; }
 
     /// <summary>
-    /// You can set a limit on how many payment cycles to process.
-    /// For example, 4 would be 4 payment cycle and after that no further payments will be processed.
+    /// Gets or sets the maximum number of billing cycles to process, or <see langword="null"/> for no limit.
     /// </summary>
     public int? BillingCycleLimit { get; set; }
 
     /// <summary>
-    ///  Number of days to delay the start of the subscription.
+    /// Gets or sets the number of days to delay before the subscription starts.
     /// </summary>
     public int? SubscriptionDayDelay { get; set; }
 }

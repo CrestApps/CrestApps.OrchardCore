@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Stripe.Core;
@@ -17,7 +18,16 @@ using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
+/// <summary>
+/// Registers the Stripe subscription creation endpoint for subscription sessions.
+/// </summary>
 public static class CreateSubscriptionEndpoint{
+
+    /// <summary>
+    /// Adds the endpoint that creates Stripe subscriptions for a pending subscription session.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder used to register the route.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder AddCreateStripeSubscriptionEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/stripe/create-subscription", HandleAsync)
@@ -29,6 +39,19 @@ public static class CreateSubscriptionEndpoint{
         return builder;
     }
 
+    /// <summary>
+    /// Handles a request to create one or more Stripe subscriptions for grouped subscription line items.
+    /// </summary>
+    /// <param name="model">The subscription creation request.</param>
+    /// <param name="clock">The clock used to timestamp created subscriptions.</param>
+    /// <param name="subscriptionSessionStore">The store used to load and save subscription sessions.</param>
+    /// <param name="stripeSubscriptionService">The Stripe subscription service used to create subscriptions.</param>
+    /// <param name="stripePaymentMethodService">The Stripe payment method service used to read payment card details.</param>
+    /// <param name="stripePriceService">The Stripe price service used to resolve line item prices.</param>
+    /// <param name="paymentAttemptLimiter">The payment attempt limiter used to throttle repeated requests.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the current request.</param>
+    /// <param name="stripeOptions">The configured Stripe options.</param>
+    /// <returns>An HTTP result that contains subscription creation results or an error response.</returns>
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSessionSubscriptionPayment model,
         IClock clock,

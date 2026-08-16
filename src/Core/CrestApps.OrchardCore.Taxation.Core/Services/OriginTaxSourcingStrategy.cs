@@ -13,6 +13,6 @@ public sealed class OriginTaxSourcingStrategy : ITaxSourcingStrategy
     public string Name => TaxSourcingNames.Origin;
 
     /// <inheritdoc />
-    public TaxAddress Resolve(TaxCalculationContext context, ITaxableItem item)
+    public Address Resolve(TaxCalculationContext context, ITaxableItem item)
         => item?.Origin ?? context?.Origin;
 }

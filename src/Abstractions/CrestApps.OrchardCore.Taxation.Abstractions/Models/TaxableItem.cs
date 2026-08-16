@@ -45,7 +45,7 @@ public sealed class TaxableItem : ITaxableItem
     public decimal? Volume { get; set; }
 
     /// <inheritdoc />
-    public TaxAddress Origin { get; set; }
+    public Address Origin { get; set; }
 
     /// <summary>
     /// Gets or sets the mutable metadata dictionary for the item.

@@ -4,15 +4,27 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Provides Stripe price operations for subscription billing prices.
+/// </summary>
 public sealed class StripePriceService : IStripePriceService
 {
     private readonly PriceService _priceService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripePriceService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to create the price service.</param>
     public StripePriceService(StripeClient stripeClient)
     {
         _priceService = new PriceService(stripeClient);
     }
 
+    /// <summary>
+    /// Gets a Stripe price by its lookup key.
+    /// </summary>
+    /// <param name="lookupKey">The Stripe lookup key assigned to the price.</param>
+    /// <returns>The matching price details, or <see langword="null"/> when no price exists.</returns>
     public async Task<PriceResponse> GetAsync(string lookupKey)
     {
         ArgumentException.ThrowIfNullOrEmpty(lookupKey);
@@ -40,6 +52,11 @@ public sealed class StripePriceService : IStripePriceService
         };
     }
 
+    /// <summary>
+    /// Creates a recurring Stripe price for a product.
+    /// </summary>
+    /// <param name="model">The price creation request.</param>
+    /// <returns>The created Stripe price details.</returns>
     public async Task<PriceResponse> CreateAsync(CreatePriceRequest model)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -70,6 +87,12 @@ public sealed class StripePriceService : IStripePriceService
         };
     }
 
+    /// <summary>
+    /// Updates mutable metadata for an existing Stripe price identified by lookup key.
+    /// </summary>
+    /// <param name="lookupKey">The lookup key assigned to the Stripe price.</param>
+    /// <param name="model">The price update request.</param>
+    /// <returns>The updated Stripe price details.</returns>
     public async Task<PriceResponse> UpdateAsync(string lookupKey, UpdatePriceRequest model)
     {
         ArgumentException.ThrowIfNullOrEmpty(lookupKey);
@@ -95,6 +118,10 @@ public sealed class StripePriceService : IStripePriceService
         };
     }
 
+    /// <summary>
+    /// Lists all Stripe prices available to the configured Stripe account.
+    /// </summary>
+    /// <returns>The complete set of Stripe price details.</returns>
     public async Task<PriceResponse[]> ListAsync()
     {
         // Auto-paging enumerates every price. A plain ListAsync() only returns the first page (Stripe's

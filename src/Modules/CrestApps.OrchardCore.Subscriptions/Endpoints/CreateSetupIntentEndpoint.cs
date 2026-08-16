@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions;
@@ -20,8 +21,16 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
+/// <summary>
+/// Registers the Stripe setup intent creation endpoint for storing subscription payment methods.
+/// </summary>
 public static class CreateSetupIntentEndpoint
 {
+    /// <summary>
+    /// Adds the endpoint that creates a Stripe customer and setup intent for a subscription session.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder used to register the route.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder AddStripeCreateSetupIntentEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/stripe/create-setup-intent", HandleAsync)
@@ -33,6 +42,20 @@ public static class CreateSetupIntentEndpoint
         return builder;
     }
 
+    /// <summary>
+    /// Handles a request to create a Stripe customer and setup intent for a subscription payment method.
+    /// </summary>
+    /// <param name="model">The setup intent creation request.</param>
+    /// <param name="stripeOptions">The configured Stripe options.</param>
+    /// <param name="subscriptionSessionStore">The store used to load and save subscription sessions.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the current user.</param>
+    /// <param name="paymentAttemptLimiter">The payment attempt limiter used to throttle repeated requests.</param>
+    /// <param name="userManager">The user manager used to load authenticated users.</param>
+    /// <param name="displayNameProvider">The display name provider used to populate Stripe customer names.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used to read saved registration data.</param>
+    /// <param name="stripeCustomerService">The Stripe customer service used to create or reuse customers.</param>
+    /// <param name="stripeSetupIntentService">The Stripe setup intent service used to create setup intents.</param>
+    /// <returns>An HTTP result that contains setup intent details or an error response.</returns>
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSetupIntentPayment model,
         IOptions<StripeOptions> stripeOptions,

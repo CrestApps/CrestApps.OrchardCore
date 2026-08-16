@@ -42,8 +42,15 @@ using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
+/// <summary>
+/// Registers the core subscription services, content parts, indexes, permissions, filters, and admin UI components.
+/// </summary>
 public sealed class Startup : StartupBase
 {
+    /// <summary>
+    /// Configures the service registrations required by the base subscriptions feature.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<SubscriptionPartMigrations>()
@@ -85,7 +92,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
 
         services.AddScoped<SubscriptionPaymentSession>();
-        services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
 
         // Compute the default payment method once every payment provider has registered its methods.
         // This lives in the base feature so a default is always resolved regardless of which single
@@ -139,9 +145,16 @@ public sealed class Startup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers subscription settings that depend on the Orchard Core roles feature.
+/// </summary>
 [RequireFeatures("OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
+    /// <summary>
+    /// Configures role-dependent subscription services.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
@@ -156,6 +169,10 @@ public sealed class RolesStartup : StartupBase
 [RequireFeatures(SubscriptionConstants.Features.Area, StripeConstants.Feature.ModuleId)]
 public sealed class StripeStartup : StartupBase
 {
+    /// <summary>
+    /// Configures the Stripe services used by subscription checkout.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
@@ -174,6 +191,12 @@ public sealed class StripeStartup : StartupBase
         });
     }
 
+    /// <summary>
+    /// Adds the Stripe subscription checkout endpoints to the route builder.
+    /// </summary>
+    /// <param name="app">The application builder for the current tenant pipeline.</param>
+    /// <param name="routes">The endpoint route builder to configure.</param>
+    /// <param name="serviceProvider">The tenant service provider.</param>
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddCreateStripeSubscriptionEndpoint()
@@ -183,17 +206,22 @@ public sealed class StripeStartup : StartupBase
     }
 }
 
+// The literal is the Pay Later module feature id (PayLaterConstants.Features.Area). Subscriptions treats
+// Pay Later as optional and must not take a hard compile-time dependency on that module, so the id is
+// referenced by string rather than by constant.
+
 /// <summary>
 /// Wires the offline Pay Later option into the subscription checkout. It activates when the standalone
 /// Pay Later module is enabled alongside Subscriptions, so Pay Later is owned by one module and reused
 /// across checkout scenarios.
 /// </summary>
-// The literal is the Pay Later module feature id (PayLaterConstants.Features.Area). Subscriptions treats
-// Pay Later as optional and must not take a hard compile-time dependency on that module, so the id is
-// referenced by string rather than by constant.
 [RequireFeatures("CrestApps.OrchardCore.PayLater")]
 public sealed class PayLaterStartup : StartupBase
 {
+    /// <summary>
+    /// Configures the Pay Later payment method for subscription checkout.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PayLaterPaymentSubscriptionFlowDisplayDriver>();
@@ -207,15 +235,28 @@ public sealed class PayLaterStartup : StartupBase
         });
     }
 
+    /// <summary>
+    /// Adds the Pay Later subscription checkout endpoint to the route builder.
+    /// </summary>
+    /// <param name="app">The application builder for the current tenant pipeline.</param>
+    /// <param name="routes">The endpoint route builder to configure.</param>
+    /// <param name="serviceProvider">The tenant service provider.</param>
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddCreatePayLaterEndpoint();
     }
 }
 
+/// <summary>
+/// Registers subscription services that create and monitor tenant onboarding flows.
+/// </summary>
 [Feature(SubscriptionConstants.Features.TenantOnboarding)]
 public sealed class TenantOnboardingStartup : StartupBase
 {
+    /// <summary>
+    /// Configures services for tenant onboarding subscription steps and workflow events.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddContentPart<TenantOnboardingPart>()
@@ -231,10 +272,17 @@ public sealed class TenantOnboardingStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers feature profile selection for tenant onboarding subscriptions.
+/// </summary>
 [Feature(SubscriptionConstants.Features.TenantOnboarding)]
 [RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
 public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
 {
+    /// <summary>
+    /// Configures feature profile display drivers and indexing for tenant onboarding.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddContentPart<TenantOnboardingPart>()
@@ -246,18 +294,32 @@ public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers the reCAPTCHA step for subscription flows.
+/// </summary>
 [Feature(SubscriptionConstants.Features.ReCaptcha)]
 public sealed class ReCaptchaStartup : StartupBase
 {
+    /// <summary>
+    /// Configures the reCAPTCHA subscription flow display driver.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, ReCaptchaSubscriptionFlowDisplayDriver>();
     }
 }
 
+/// <summary>
+/// Replaces the default subscription tax service when the taxation feature is available.
+/// </summary>
 [RequireFeatures(TaxationConstants.Feature.Taxation)]
 public sealed class TaxationStartup : StartupBase
 {
+    /// <summary>
+    /// Configures the taxation-aware subscription tax service.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         // Replace the no-op tax service with the taxation-aware implementation. This runs only when the
@@ -273,6 +335,10 @@ public sealed class TaxationStartup : StartupBase
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {
+    /// <summary>
+    /// Configures the report providers used by the subscriptions module.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services

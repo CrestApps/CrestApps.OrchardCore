@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using Microsoft.AspNetCore.Http;
 
@@ -19,7 +20,7 @@ internal static class PaymentEndpointThrottle
         var ip = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
         var discriminator = $"{ip}:{sessionId}";
 
-        return await limiter.TryAcquireAsync(scope, discriminator);
+        return await limiter.AcquireAsync(scope, discriminator);
     }
 
     /// <summary>

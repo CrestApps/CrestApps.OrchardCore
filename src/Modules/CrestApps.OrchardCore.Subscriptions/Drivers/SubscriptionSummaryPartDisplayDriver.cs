@@ -9,11 +9,19 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Provides the display shape for the subscription summary content part.
+/// </summary>
 public sealed class SubscriptionSummaryPartDisplayDriver : ContentPartDisplayDriver<SubscriptionSummaryPart>
 {
     private readonly ISession _session;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionSummaryPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session used to query subscription indexes.</param>
+    /// <param name="clock">The clock used to evaluate active subscriptions.</param>
     public SubscriptionSummaryPartDisplayDriver(
         ISession session,
         IClock clock)
@@ -22,6 +30,12 @@ public sealed class SubscriptionSummaryPartDisplayDriver : ContentPartDisplayDri
         _clock = clock;
     }
 
+    /// <summary>
+    /// Builds the subscription summary display by querying subscription counts and revenue.
+    /// </summary>
+    /// <param name="part">The subscription summary content part.</param>
+    /// <param name="context">The content part display context.</param>
+    /// <returns>The display result for the subscription summary part.</returns>
     public override IDisplayResult Display(SubscriptionSummaryPart part, BuildPartDisplayContext context)
     {
         return Initialize<SubscriptionSummaryViewModel>(GetDisplayShapeType(context), async model =>

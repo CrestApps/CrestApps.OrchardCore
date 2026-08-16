@@ -10,12 +10,20 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Adds feature profile selection to the tenant onboarding part editor.
+/// </summary>
 public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPartDisplayDriver<TenantOnboardingPart>
 {
     private readonly IFeatureProfilesService _featureProfilesService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeatureProfilesTenantOnboardingPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="featureProfilesService">The service used to load available feature profiles.</param>
+    /// <param name="stringLocalizer">The string localizer for validation messages.</param>
     public FeatureProfilesTenantOnboardingPartDisplayDriver(
         IFeatureProfilesService featureProfilesService,
         IStringLocalizer<TenantOnboardingPartDisplayDriver> stringLocalizer)
@@ -24,6 +32,12 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Builds the tenant onboarding part editor with the available feature profiles.
+    /// </summary>
+    /// <param name="part">The tenant onboarding part being edited.</param>
+    /// <param name="context">The content part editor build context.</param>
+    /// <returns>The editor display result.</returns>
     public override IDisplayResult Edit(TenantOnboardingPart part, BuildPartEditorContext context)
     {
         return Initialize<FeatureProfilesViewModel>(GetEditorShapeType(context), async model =>
@@ -36,6 +50,12 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
         });
     }
 
+    /// <summary>
+    /// Updates the tenant onboarding part with the selected feature profile.
+    /// </summary>
+    /// <param name="part">The tenant onboarding part being updated.</param>
+    /// <param name="context">The content part editor update context.</param>
+    /// <returns>The updated editor display result.</returns>
     public override async Task<IDisplayResult> UpdateAsync(TenantOnboardingPart part, UpdatePartEditorContext context)
     {
         var model = new FeatureProfilesViewModel();

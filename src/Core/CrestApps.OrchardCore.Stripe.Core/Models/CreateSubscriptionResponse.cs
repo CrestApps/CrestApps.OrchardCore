@@ -1,11 +1,23 @@
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
+/// <summary>
+/// Represents the result returned after a Stripe subscription is created.
+/// </summary>
 public class CreateSubscriptionResponse
 {
+    /// <summary>
+    /// Gets or sets the Stripe subscription identifier.
+    /// </summary>
     public string Id { get; set; }
 
+    /// <summary>
+    /// Gets or sets the current Stripe status of the subscription.
+    /// </summary>
     public string Status { get; set; }
 
+    /// <summary>
+    /// Gets or sets the client secret for confirming the subscription's initial invoice payment.
+    /// </summary>
     public string ClientSecret { get; set; }
 
     /// <summary>

@@ -5,8 +5,15 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Subscriptions.Indexes;
 
+/// <summary>
+/// Maps subscription session payment metadata to transaction index rows.
+/// </summary>
 public sealed class SubscriptionTransactionIndexProvider : IndexProvider<SubscriptionSession>
 {
+    /// <summary>
+    /// Describes how recorded payments are projected into <see cref="SubscriptionTransactionIndex"/> rows.
+    /// </summary>
+    /// <param name="context">The YesSql describe context for subscription sessions.</param>
     public override void Describe(DescribeContext<SubscriptionSession> context)
     {
         context.For<SubscriptionTransactionIndex>()

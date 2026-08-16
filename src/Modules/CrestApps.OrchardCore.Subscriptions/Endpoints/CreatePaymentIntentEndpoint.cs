@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -13,8 +14,16 @@ using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
+/// <summary>
+/// Registers the Stripe payment intent creation endpoint for initial subscription payments.
+/// </summary>
 public static class CreatePaymentIntentEndpoint
 {
+    /// <summary>
+    /// Adds the endpoint that creates a Stripe payment intent for an initial subscription payment.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder used to register the route.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder AddCreatePaymentIntentEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/stripe/create-payment-intent", HandleAsync)
@@ -26,6 +35,16 @@ public static class CreatePaymentIntentEndpoint
         return builder;
     }
 
+    /// <summary>
+    /// Handles a request to create a Stripe payment intent for the initial amount due on a subscription session.
+    /// </summary>
+    /// <param name="model">The payment intent creation request.</param>
+    /// <param name="subscriptionSessionStore">The store used to load and save subscription sessions.</param>
+    /// <param name="stripePaymentService">The Stripe payment intent service used to create payment intents.</param>
+    /// <param name="paymentAttemptLimiter">The payment attempt limiter used to throttle repeated requests.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the current request.</param>
+    /// <param name="stripeOptions">The configured Stripe options.</param>
+    /// <returns>An HTTP result that contains payment intent details or an error response.</returns>
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSessionPaymentIntent model,
         ISubscriptionSessionStore subscriptionSessionStore,

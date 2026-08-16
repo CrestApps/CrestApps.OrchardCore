@@ -17,6 +17,9 @@ using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
+/// <summary>
+/// Provides admin pages for listing and editing subscription sessions.
+/// </summary>
 public sealed class AdminController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
@@ -28,6 +31,16 @@ public sealed class AdminController : Controller
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminController"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service used to check subscription permissions.</param>
+    /// <param name="updateModelAccessor">The accessor that provides the current model updater.</param>
+    /// <param name="displayManager">The display manager used to build subscription session shapes.</param>
+    /// <param name="optionsDisplayManager">The display manager used to build list option shapes.</param>
+    /// <param name="session">The YesSql session used to query subscription sessions.</param>
+    /// <param name="stringLocalizer">The string localizer for admin text.</param>
+    /// <param name="htmlLocalizer">The HTML localizer for admin text.</param>
     public AdminController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
@@ -46,6 +59,16 @@ public sealed class AdminController : Controller
         H = htmlLocalizer;
     }
 
+    /// <summary>
+    /// Displays the admin subscription list with filtering, sorting, and paging.
+    /// </summary>
+    /// <param name="queryFilterResult">The parsed subscription filter query.</param>
+    /// <param name="pagerParameters">The pager parameters from the current request.</param>
+    /// <param name="options">The subscription list display options.</param>
+    /// <param name="queryService">The service used to query subscription sessions for the list.</param>
+    /// <param name="pagerOptions">The configured pager options.</param>
+    /// <param name="shapeFactory">The shape factory used to create the pager and list view model.</param>
+    /// <returns>The admin subscription list view, or a forbidden result when access is denied.</returns>
     [Admin("manage-subscriptions")]
     public async Task<IActionResult> Index(
         [ModelBinder(BinderType = typeof(SubscriptionFilterEngineModelBinder), Name = "q")] QueryFilterResult<SubscriptionSession> queryFilterResult,
@@ -116,6 +139,11 @@ public sealed class AdminController : Controller
         return View(shapeViewModel);
     }
 
+    /// <summary>
+    /// Displays the editor for a single subscription session.
+    /// </summary>
+    /// <param name="id">The subscription session identifier.</param>
+    /// <returns>The subscription session editor view, a not found result, or a forbidden result.</returns>
     [Admin("manage-subscriptions/{id}")]
     public async Task<IActionResult> Edit(string id)
     {

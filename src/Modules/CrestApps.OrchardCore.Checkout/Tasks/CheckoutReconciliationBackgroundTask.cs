@@ -25,12 +25,21 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
 
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CheckoutReconciliationBackgroundTask"/> class.
+    /// </summary>
+    /// <param name="clock">The clock used to calculate the cutoff time for pending attempts.</param>
     public CheckoutReconciliationBackgroundTask(IClock clock)
     {
         _clock = clock;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Reconciles checkout sessions with pending payment attempts that are old enough to be swept.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to resolve scoped checkout services.</param>
+    /// <param name="cancellationToken">The token used to stop the reconciliation sweep.</param>
+    /// <returns>A task that represents the asynchronous background operation.</returns>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var attemptStore = serviceProvider.GetRequiredService<IPaymentAttemptStore>();
@@ -53,7 +62,7 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
                 break;
             }
 
-            var session = await sessionStore.GetAsync(sessionId);
+            var session = await sessionStore.GetAsync(sessionId, cancellationToken);
 
             if (session == null)
             {
@@ -65,7 +74,7 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
                 // The reconciliation service derives the obligations from the durable attempts on the
                 // session, so an empty expected set is sufficient here.
                 await reconciliationService.ReconcileAsync(session, [], cancellationToken);
-                await sessionStore.SaveAsync(session);
+                await sessionStore.SaveAsync(session, cancellationToken);
             }
             catch (Exception exception)
             {

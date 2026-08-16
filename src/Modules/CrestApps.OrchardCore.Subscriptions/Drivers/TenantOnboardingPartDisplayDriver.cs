@@ -10,12 +10,20 @@ using OrchardCore.Setup.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Provides editor shapes and validation for tenant onboarding content parts.
+/// </summary>
 public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver<TenantOnboardingPart>
 {
     private readonly ISetupService _setupService;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantOnboardingPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="setupService">The setup service used to list available setup recipes.</param>
+    /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public TenantOnboardingPartDisplayDriver(
         ISetupService setupService,
         IStringLocalizer<TenantOnboardingPartDisplayDriver> stringLocalizer)
@@ -24,6 +32,12 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Builds the editor shape for selecting a setup recipe for tenant onboarding.
+    /// </summary>
+    /// <param name="part">The tenant onboarding content part.</param>
+    /// <param name="context">The content part editor context.</param>
+    /// <returns>The display result for the tenant onboarding editor.</returns>
     public override IDisplayResult Edit(TenantOnboardingPart part, BuildPartEditorContext context)
     {
         return Initialize<TenantOnboardingViewModel>(GetEditorShapeType(context), async model =>
@@ -34,6 +48,12 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
         });
     }
 
+    /// <summary>
+    /// Updates the tenant onboarding content part from posted editor values and validates the selected recipe.
+    /// </summary>
+    /// <param name="part">The tenant onboarding content part to update.</param>
+    /// <param name="context">The content part editor update context.</param>
+    /// <returns>The updated editor display result.</returns>
     public override async Task<IDisplayResult> UpdateAsync(TenantOnboardingPart part, UpdatePartEditorContext context)
     {
         var model = new TenantOnboardingViewModel();

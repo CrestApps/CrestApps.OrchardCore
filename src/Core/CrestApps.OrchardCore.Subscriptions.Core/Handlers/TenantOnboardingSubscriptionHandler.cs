@@ -16,6 +16,9 @@ using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Adds tenant onboarding to subscription flows and provisions a subscribed tenant after successful payment.
+/// </summary>
 public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBase
 {
     private readonly IShellHost _shellHost;
@@ -29,6 +32,18 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantOnboardingSubscriptionHandler"/> class.
+    /// </summary>
+    /// <param name="shellHost">The shell host used to inspect and update tenant shell settings.</param>
+    /// <param name="shellSettingsManager">The manager used to create tenant shell settings.</param>
+    /// <param name="shellSettings">The shell settings of the current tenant.</param>
+    /// <param name="clock">The clock used to set setup time zone information.</param>
+    /// <param name="setupService">The setup service used to read recipes and initialize the new tenant.</param>
+    /// <param name="serviceProvider">The service provider used to resolve optional workflow services.</param>
+    /// <param name="logger">The logger used to record tenant provisioning results.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used for persisted onboarding step data.</param>
+    /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public TenantOnboardingSubscriptionHandler(
         IShellHost shellHost,
         IShellSettingsManager shellSettingsManager,
@@ -51,6 +66,10 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Adds a tenant onboarding step when the subscription content item includes tenant onboarding settings.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is being activated.</param>
     public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out _) ||
@@ -81,6 +100,10 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Validates that the requested tenant name, domains, prefix, and setup recipe are available before completion.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is completing.</param>
     public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
@@ -117,6 +140,10 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         }
     }
 
+    /// <summary>
+    /// Provisions the tenant requested during onboarding and raises workflow events for the setup result.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that completed.</param>
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
     {
         if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))

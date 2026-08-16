@@ -6,11 +6,19 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Creates Stripe subscriptions and optional subscription schedules for Orchard Core subscription sessions.
+/// </summary>
 public sealed class StripeSubscriptionService : IStripeSubscriptionService
 {
     private readonly StripeClient _stripeClient;
     private readonly IClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeSubscriptionService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to create subscriptions and schedules.</param>
+    /// <param name="clock">The clock used to calculate trial and schedule dates.</param>
     public StripeSubscriptionService(
         StripeClient stripeClient,
         IClock clock)
@@ -19,6 +27,11 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
         _clock = clock;
     }
 
+    /// <summary>
+    /// Creates a Stripe subscription from the supplied subscription request.
+    /// </summary>
+    /// <param name="model">The subscription creation request.</param>
+    /// <returns>The created subscription details, including any confirmation client secret.</returns>
     public async Task<CreateSubscriptionResponse> CreateAsync(CreateSubscriptionRequest model)
     {
         var now = _clock.UtcNow;

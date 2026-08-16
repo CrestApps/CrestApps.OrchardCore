@@ -4,15 +4,27 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Implements Stripe PaymentIntent operations.
+/// </summary>
 public sealed class StripePaymentIntentService : IStripePaymentIntentService
 {
     private readonly PaymentIntentService _paymentIntentService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripePaymentIntentService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to call the Stripe API.</param>
     public StripePaymentIntentService(StripeClient stripeClient)
     {
         _paymentIntentService = new PaymentIntentService(stripeClient);
     }
 
+    /// <summary>
+    /// Confirms an existing Stripe PaymentIntent.
+    /// </summary>
+    /// <param name="model">The payment intent confirmation request.</param>
+    /// <returns>The confirmed payment intent details returned by Stripe.</returns>
     public async Task<ConfirmPaymentIntentResponse> ConfirmAsync(ConfirmPaymentIntentRequest model)
     {
         var confirmOptions = new PaymentIntentConfirmOptions();
@@ -34,6 +46,11 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
         };
     }
 
+    /// <summary>
+    /// Creates and confirms a Stripe PaymentIntent.
+    /// </summary>
+    /// <param name="model">The payment intent creation request.</param>
+    /// <returns>The created payment intent details returned by Stripe.</returns>
     public async Task<CreatePaymentIntentResponse> CreateAsync(CreatePaymentIntentRequest model)
     {
         ArgumentNullException.ThrowIfNull(model);

@@ -16,6 +16,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
+/// <summary>
+/// Synchronizes subscription content item prices and products with Stripe.
+/// </summary>
 public sealed class StripePriceSyncService
 {
     private const int _batchSize = 500;
@@ -34,6 +37,15 @@ public sealed class StripePriceSyncService
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDistributedLock _distributedLock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripePriceSyncService"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service used to load subscription settings.</param>
+    /// <param name="stripeProductService">The Stripe product service used to read and create products.</param>
+    /// <param name="stripePriceService">The Stripe price service used to read, create, and update prices.</param>
+    /// <param name="session">The YesSql session used to query content item indexes.</param>
+    /// <param name="contentDefinitionManager">The content definition manager used to load subscription content type definitions.</param>
+    /// <param name="distributedLock">The distributed lock service used to serialize full price synchronization.</param>
     public StripePriceSyncService(
         ISiteService siteService,
         IStripeProductService stripeProductService,
@@ -50,6 +62,11 @@ public sealed class StripePriceSyncService
         _distributedLock = distributedLock;
     }
 
+    /// <summary>
+    /// Creates or updates the Stripe price for a subscription content item using its content type definition.
+    /// </summary>
+    /// <param name="contentItem">The subscription content item to synchronize with Stripe.</param>
+    /// <returns>A task that represents the asynchronous synchronization operation.</returns>
     public async Task UpdateOrCreateAsync(ContentItem contentItem)
     {
         ArgumentNullException.ThrowIfNull(contentItem);
@@ -64,6 +81,13 @@ public sealed class StripePriceSyncService
         await UpdateOrCreateAsync(contentItem, definition);
     }
 
+    /// <summary>
+    /// Creates or updates the Stripe price for a subscription content item when the supplied definition supports subscriptions.
+    /// </summary>
+    /// <param name="contentItem">The subscription content item to synchronize with Stripe.</param>
+    /// <param name="definition">The content type definition for the content item.</param>
+    /// <param name="currency">The ISO currency code to use, or <see langword="null"/> to use the site subscription settings.</param>
+    /// <returns>A task that represents the asynchronous synchronization operation.</returns>
     public async Task UpdateOrCreateAsync(ContentItem contentItem, ContentTypeDefinition definition, string currency = null)
     {
         ArgumentNullException.ThrowIfNull(contentItem);
@@ -111,6 +135,11 @@ public sealed class StripePriceSyncService
         await _stripePriceService.CreateAsync(priceRequest);
     }
 
+    /// <summary>
+    /// Marks the Stripe price for the specified content item as inactive when the price exists.
+    /// </summary>
+    /// <param name="contentItem">The content item whose Stripe price should be inactivated.</param>
+    /// <returns>A task that represents the asynchronous unpublish operation.</returns>
     public async Task UnpublishAsync(ContentItem contentItem)
     {
         ArgumentNullException.ThrowIfNull(contentItem);
@@ -129,6 +158,11 @@ public sealed class StripePriceSyncService
         });
     }
 
+    /// <summary>
+    /// Synchronizes all published subscription content item prices with Stripe.
+    /// </summary>
+    /// <param name="currency">The ISO currency code to use, or <see langword="null"/> to use the site subscription settings.</param>
+    /// <returns>A task that represents the asynchronous synchronization operation.</returns>
     public async Task CreateOrUpdateAllAsync(string currency = null)
     {
         // Only one full synchronization may run at a time across all instances. Two concurrent syncs
@@ -181,6 +215,10 @@ public sealed class StripePriceSyncService
         await CreateMissingPriceItemsAsync(lookupIds, contentTypes, currency);
     }
 
+    /// <summary>
+    /// Schedules synchronization of all subscription prices with Stripe after the current HTTP request ends.
+    /// </summary>
+    /// <returns>A task that represents scheduling the background synchronization work.</returns>
     public static Task SyncAllPricesInBackground()
     {
         return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("sync-content-items-with-stripe", (scope) =>

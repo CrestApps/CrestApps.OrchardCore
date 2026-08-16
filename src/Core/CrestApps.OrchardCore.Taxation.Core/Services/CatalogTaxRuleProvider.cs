@@ -3,25 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 
 namespace CrestApps.OrchardCore.Taxation.Core.Services;
 
 /// <summary>
-/// Default <see cref="ITaxRuleProvider"/> backed by the <see cref="ITaxRuleStore"/>. Rules are filtered
+/// Default <see cref="ITaxRuleProvider"/> backed by the <see cref="INamedCatalog{TaxRule}"/>. Rules are filtered
 /// by jurisdiction, classification, customer type, effective dates, thresholds, and shipping, then
 /// ordered deterministically by priority, compound flag, and identifier.
 /// </summary>
 public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
 {
-    private readonly ITaxRuleStore _store;
+    private readonly INamedCatalog<TaxRule> _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogTaxRuleProvider"/> class.
     /// </summary>
     /// <param name="store">The tax rule store.</param>
-    public CatalogTaxRuleProvider(ITaxRuleStore store)
+    public CatalogTaxRuleProvider(INamedCatalog<TaxRule> store)
     {
         _store = store;
     }

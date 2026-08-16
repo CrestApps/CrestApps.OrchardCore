@@ -15,6 +15,9 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
+/// <summary>
+/// Displays and updates content item editor steps inside a subscription flow.
+/// </summary>
 public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
@@ -23,6 +26,14 @@ public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<Sub
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentStepSubscriptionFlowDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="contentItemDisplayManager">The display manager used to build and update content item editors.</param>
+    /// <param name="httpContextAccessor">The accessor used to read the current user from the HTTP context.</param>
+    /// <param name="siteService">The site service used to resolve fallback owner settings.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used to read saved step data.</param>
+    /// <param name="serviceProvider">The service provider used to resolve content services lazily.</param>
     public ContentStepSubscriptionFlowDisplayDriver(
         IContentItemDisplayManager contentItemDisplayManager,
         IHttpContextAccessor httpContextAccessor,
@@ -37,6 +48,12 @@ public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<Sub
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Builds the content item editor for the active content step when the current flow step is a content step.
+    /// </summary>
+    /// <param name="flow">The subscription flow being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result for the content item editor, or <see langword="null"/> when the current step is not a content step.</returns>
     public override IDisplayResult Edit(SubscriptionFlow flow, BuildEditorContext context)
     {
         var step = flow.GetCurrentStep();
@@ -57,6 +74,12 @@ public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<Sub
         }).Location("Content");
     }
 
+    /// <summary>
+    /// Updates the content item editor for the active content step and stores the edited content item in the flow session.
+    /// </summary>
+    /// <param name="flow">The subscription flow being updated.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result for the updated content item editor, or <see langword="null"/> when the current step is not a content step.</returns>
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
         var step = flow.GetCurrentStep();

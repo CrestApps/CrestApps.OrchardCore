@@ -5,8 +5,15 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Subscriptions.Indexes;
 
+/// <summary>
+/// Maps completed subscription sessions to subscription index rows for each recorded subscription.
+/// </summary>
 public sealed class SubscriptionIndexProvider : IndexProvider<SubscriptionSession>
 {
+    /// <summary>
+    /// Describes how completed subscription session metadata is projected into <see cref="SubscriptionIndex"/> rows.
+    /// </summary>
+    /// <param name="context">The YesSql describe context for subscription sessions.</param>
     public override void Describe(DescribeContext<SubscriptionSession> context)
     {
         context.For<SubscriptionIndex>()

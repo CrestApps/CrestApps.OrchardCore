@@ -12,6 +12,9 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Provides display and editor shapes for subscription sessions in the admin UI.
+/// </summary>
 public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<SubscriptionSession>
 {
     private readonly UserManager<IUser> _userManager;
@@ -20,6 +23,13 @@ public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<Subscriptio
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionSessionDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="userManager">The user manager used to load subscription owners.</param>
+    /// <param name="displayNameProvider">The display name provider used to resolve owner names.</param>
+    /// <param name="contentManager">The content manager used to load selected subscription plan versions.</param>
+    /// <param name="stringLocalizer">The localizer used for display text.</param>
     public SubscriptionSessionDisplayDriver(
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
@@ -32,6 +42,12 @@ public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<Subscriptio
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Builds the summary display shapes for a subscription session.
+    /// </summary>
+    /// <param name="subscription">The subscription session to display.</param>
+    /// <param name="context">The display build context.</param>
+    /// <returns>The display result containing the subscription session summary shapes.</returns>
     public override async Task<IDisplayResult> DisplayAsync(SubscriptionSession subscription, BuildDisplayContext context)
     {
         var summary = await BuildSummaryAsync(subscription);
@@ -109,6 +125,12 @@ public sealed class SubscriptionSessionDisplayDriver : DisplayDriver<Subscriptio
         return model;
     }
 
+    /// <summary>
+    /// Builds the editor shape for subscription session metadata.
+    /// </summary>
+    /// <param name="subscription">The subscription session being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result for the subscription metadata editor.</returns>
     public override IDisplayResult Edit(SubscriptionSession subscription, BuildEditorContext context)
     {
         return Initialize<SubscriptionsMetadata>("SubscriptionsMetadata_Edit", model =>

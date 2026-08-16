@@ -10,18 +10,35 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Displays and updates subscription onboarding site settings for tenant domain configuration.
+/// </summary>
 public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDriver<SubscriptionOnboardingSettings>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionOnboardingSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer used for option labels and validation messages.</param>
     public SubscriptionOnboardingSettingsDisplayDriver(IStringLocalizer<SubscriptionOnboardingSettingsDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the settings group where the subscription onboarding editor is displayed.
+    /// </summary>
     protected override string SettingsGroupId
         => SubscriptionSettingsDisplayDriver.GroupId;
 
+    /// <summary>
+    /// Builds the subscription onboarding settings editor with domain mode options.
+    /// </summary>
+    /// <param name="model">The site model that owns the settings.</param>
+    /// <param name="settings">The subscription onboarding settings being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result that renders the onboarding settings editor.</returns>
     public override IDisplayResult Edit(ISite model, SubscriptionOnboardingSettings settings, BuildEditorContext context)
     {
         return Initialize<SubscriptionOnboardingSettingsViewModel>("SubscriptionOnboardingSettings_Edit", model =>
@@ -40,6 +57,13 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         .OnGroup(SettingsGroupId);
     }
 
+    /// <summary>
+    /// Validates and updates subscription onboarding domain settings from the submitted editor values.
+    /// </summary>
+    /// <param name="site">The site model that owns the settings.</param>
+    /// <param name="settings">The subscription onboarding settings being updated.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result that renders the updated onboarding settings editor.</returns>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionOnboardingSettings settings, UpdateEditorContext context)
     {
         var model = new SubscriptionOnboardingSettingsViewModel();

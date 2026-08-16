@@ -3,6 +3,9 @@ using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Registers Stripe JavaScript resources with Orchard Core resource management.
+/// </summary>
 public sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
@@ -23,6 +26,10 @@ public sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<R
             .SetVersion("1.0.0");
     }
 
+    /// <summary>
+    /// Adds the Stripe resource manifest to the Orchard Core resource management options.
+    /// </summary>
+    /// <param name="options">The resource management options to configure.</param>
     public void Configure(ResourceManagementOptions options)
     {
         options.ResourceManifests.Add(_manifest);

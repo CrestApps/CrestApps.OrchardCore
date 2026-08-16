@@ -23,6 +23,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
+/// <summary>
+/// Handles public subscription signup, step navigation, confirmation, and hosted checkout return flows.
+/// </summary>
 public sealed class SubscriptionsController : Controller
 {
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -38,6 +41,20 @@ public sealed class SubscriptionsController : Controller
 
     internal readonly IHtmlLocalizer H;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionsController"/> class.
+    /// </summary>
+    /// <param name="updateModelAccessor">The accessor that provides the current model updater.</param>
+    /// <param name="subscriptionFlowDisplayManager">The display manager used to build subscription flow shapes.</param>
+    /// <param name="subscriptionHandlers">The handlers that participate in subscription flow lifecycle events.</param>
+    /// <param name="logger">The logger used to record subscription flow errors.</param>
+    /// <param name="subscriptionSessionStore">The store used to create, load, and save subscription sessions.</param>
+    /// <param name="notifier">The notifier used to show subscription flow messages.</param>
+    /// <param name="clock">The clock used to assign subscription timestamps.</param>
+    /// <param name="session">The YesSql session used to query subscription content items.</param>
+    /// <param name="subscriptionPaymentSession">The payment session store used during checkout completion.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize subscription finalization.</param>
+    /// <param name="htmlLocalizer">The HTML localizer for subscription flow messages.</param>
     public SubscriptionsController(
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<SubscriptionFlow> subscriptionFlowDisplayManager,
@@ -65,9 +82,10 @@ public sealed class SubscriptionsController : Controller
     }
 
     /// <summary>
-    /// Generate a new signup session for the given subscription id.
+    /// Starts or resumes a pending signup session for a published subscription service plan.
     /// </summary>
-    /// <param name="contentItemId">The content item that represent the subscription.</param>
+    /// <param name="contentItemId">The content item identifier of the published subscription service plan.</param>
+    /// <returns>The signup view, or a not found result when the service plan cannot be loaded.</returns>
     [HttpGet("Subscription/Signup/{contentItemId}", Name = "SubscriptionSignup")]
     public async Task<IActionResult> Signup(string contentItemId)
     {
@@ -140,11 +158,10 @@ public sealed class SubscriptionsController : Controller
     }
 
     /// <summary>
-    /// Save Session.
+    /// Saves posted signup step data and advances, completes, or redisplays the subscription flow.
     /// </summary>
-    /// <param name="sessionId">The current sessionId.</param>
-    /// <param name="step">The current step the user came from.</param>
-    /// <returns></returns>
+    /// <param name="model">The posted service plan subscription view model.</param>
+    /// <returns>The next step redirect, confirmation redirect, redisplayed signup view, or a not found result.</returns>
     [HttpPost("Subscription/Signup/{contentItemId?}")]
     [ActionName(nameof(Signup))]
     [RateLimitGroup(SubscriptionConstants.RateLimitGroups.Checkout)]
@@ -274,6 +291,12 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays a saved step from a pending subscription signup session.
+    /// </summary>
+    /// <param name="sessionId">The subscription session identifier.</param>
+    /// <param name="step">The optional saved step key to display.</param>
+    /// <returns>The signup step view, or a not found result when the session or service plan cannot be loaded.</returns>
     [Route("Subscription/Step/{sessionId}", Name = "SubscriptionSignupStep")]
     [RateLimitGroup(SubscriptionConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> Display(string sessionId, string step)
@@ -318,6 +341,11 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Displays the confirmation page for a completed subscription session.
+    /// </summary>
+    /// <param name="sessionId">The completed subscription session identifier.</param>
+    /// <returns>The confirmation view, or a not found result when the session or service plan cannot be loaded.</returns>
     [Route("Subscription/Confirmation/{sessionId}", Name = "SubscriptionConfirmation")]
     public async Task<IActionResult> Confirmation(string sessionId)
     {
@@ -425,6 +453,9 @@ public sealed class SubscriptionsController : Controller
     /// The URL Stripe redirects to after a customer completes (or the browser returns from) a hosted
     /// Stripe Checkout. It records the Stripe subscription against the local session and finalizes the flow.
     /// </summary>
+    /// <param name="sessionId">The local subscription session identifier.</param>
+    /// <param name="checkoutSessionId">The Stripe Checkout session identifier returned by Stripe.</param>
+    /// <returns>A redirect to confirmation, a redirect back to the payment step, or a not found result.</returns>
     [Route("Subscription/CheckoutReturn/{sessionId}", Name = "SubscriptionCheckoutReturn")]
     public async Task<IActionResult> CheckoutReturn(string sessionId, string checkoutSessionId)
     {

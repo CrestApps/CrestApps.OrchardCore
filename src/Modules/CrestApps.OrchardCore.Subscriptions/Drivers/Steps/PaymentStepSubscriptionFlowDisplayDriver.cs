@@ -11,12 +11,20 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
+/// <summary>
+/// Displays and validates the payment step of a subscription flow.
+/// </summary>
 public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
     private readonly PaymentMethodOptions _paymentMethodOptions;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PaymentStepSubscriptionFlowDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="paymentMethodOptions">The configured payment methods and default payment method.</param>
+    /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public PaymentStepSubscriptionFlowDisplayDriver(
         IOptions<PaymentMethodOptions> paymentMethodOptions,
         IStringLocalizer<PaymentStepSubscriptionFlowDisplayDriver> stringLocalizer)
@@ -25,9 +33,18 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the payment step key handled by this display driver.
+    /// </summary>
     protected override string StepKey
         => SubscriptionConstants.StepKey.Payment;
 
+    /// <summary>
+    /// Builds the payment step editor with the current invoice and the available payment methods.
+    /// </summary>
+    /// <param name="flow">The subscription flow being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result that renders the payment invoice and payment method selector.</returns>
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
         return Combine(
@@ -54,6 +71,12 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
         );
     }
 
+    /// <summary>
+    /// Validates that a required payment can be collected and rebuilds the payment step editor.
+    /// </summary>
+    /// <param name="flow">The subscription flow being updated.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result that renders the updated payment step editor.</returns>
     protected override async Task<IDisplayResult> UpdateStepAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
         // A subscription must never be allowed to complete when money is owed but there is no way to

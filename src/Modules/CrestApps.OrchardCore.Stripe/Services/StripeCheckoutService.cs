@@ -5,15 +5,27 @@ using Stripe.Checkout;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Implements Stripe Checkout Session operations.
+/// </summary>
 public sealed class StripeCheckoutService : IStripeCheckoutService
 {
     private readonly StripeClient _stripeClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeCheckoutService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to call the Stripe API.</param>
     public StripeCheckoutService(StripeClient stripeClient)
     {
         _stripeClient = stripeClient;
     }
 
+    /// <summary>
+    /// Creates a Stripe Checkout Session from the provided request.
+    /// </summary>
+    /// <param name="request">The checkout session creation request.</param>
+    /// <returns>The created checkout session details returned by Stripe.</returns>
     public async Task<CreateCheckoutSessionResponse> CreateAsync(CreateCheckoutSessionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -32,6 +44,11 @@ public sealed class StripeCheckoutService : IStripeCheckoutService
         };
     }
 
+    /// <summary>
+    /// Retrieves an existing Stripe Checkout Session by identifier.
+    /// </summary>
+    /// <param name="checkoutSessionId">The Stripe Checkout Session identifier.</param>
+    /// <returns>The checkout session details, or <see langword="null"/> when the session cannot be found.</returns>
     public async Task<CheckoutSessionDetails> GetAsync(string checkoutSessionId)
     {
         if (string.IsNullOrEmpty(checkoutSessionId))
@@ -83,6 +100,8 @@ public sealed class StripeCheckoutService : IStripeCheckoutService
     /// deliberately thin, side-effect-free projection so the interesting business logic (building the
     /// request from an invoice) lives in a testable place upstream.
     /// </summary>
+    /// <param name="request">The checkout session request to map.</param>
+    /// <returns>The Stripe checkout session creation options.</returns>
     internal static SessionCreateOptions BuildOptions(CreateCheckoutSessionRequest request)
     {
         var options = new SessionCreateOptions

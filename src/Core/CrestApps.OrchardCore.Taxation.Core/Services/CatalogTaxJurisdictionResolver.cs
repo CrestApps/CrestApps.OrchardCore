@@ -3,30 +3,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 
 namespace CrestApps.OrchardCore.Taxation.Core.Services;
 
 /// <summary>
-/// Default <see cref="ITaxJurisdictionResolver"/> backed by the <see cref="ITaxJurisdictionStore"/>. A
+/// Default <see cref="ITaxJurisdictionResolver"/> backed by the <see cref="INamedCatalog{TaxJurisdiction}"/>. A
 /// jurisdiction matches when every non-empty component it defines is satisfied by the address.
 /// </summary>
 public sealed class CatalogTaxJurisdictionResolver : ITaxJurisdictionResolver
 {
-    private readonly ITaxJurisdictionStore _store;
+    private readonly INamedCatalog<TaxJurisdiction> _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogTaxJurisdictionResolver"/> class.
     /// </summary>
     /// <param name="store">The jurisdiction store.</param>
-    public CatalogTaxJurisdictionResolver(ITaxJurisdictionStore store)
+    public CatalogTaxJurisdictionResolver(INamedCatalog<TaxJurisdiction> store)
     {
         _store = store;
     }
 
     /// <inheritdoc />
-    public async ValueTask<IReadOnlyList<TaxJurisdiction>> ResolveAsync(TaxAddress address, DateTime onUtc, CancellationToken cancellationToken = default)
+    public async ValueTask<IReadOnlyList<TaxJurisdiction>> ResolveAsync(Address address, DateTime onUtc, CancellationToken cancellationToken = default)
     {
         if (address is null)
         {
@@ -55,7 +56,7 @@ public sealed class CatalogTaxJurisdictionResolver : ITaxJurisdictionResolver
         return true;
     }
 
-    private static bool Matches(TaxJurisdiction jurisdiction, TaxAddress address)
+    private static bool Matches(TaxJurisdiction jurisdiction, Address address)
     {
         return ComponentMatches(jurisdiction.Country, address.Country) &&
             ComponentMatches(jurisdiction.Region, address.Region) &&

@@ -12,5 +12,5 @@ public interface IPaymentAttemptLimiter
     /// </summary>
     /// <param name="scope">A logical bucket, typically the endpoint name (for example "payment-intent").</param>
     /// <param name="discriminator">A per-caller discriminator such as the client IP and/or session id.</param>
-    Task<bool> TryAcquireAsync(string scope, string discriminator);
+    Task<bool> AcquireAsync(string scope, string discriminator);
 }

@@ -10,8 +10,15 @@ using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
+/// <summary>
+/// Registers the built-in status, sort, and owner filter terms for subscription admin list queries.
+/// </summary>
 public sealed class DefaultSubscriptionAdminListFilterProvider : ISubscriptionAdminListFilterProvider
 {
+    /// <summary>
+    /// Adds the default subscription list filter terms to the specified query engine builder.
+    /// </summary>
+    /// <param name="builder">The query engine builder to configure.</param>
     public void Build(QueryEngineBuilder<SubscriptionSession> builder)
     {
         builder

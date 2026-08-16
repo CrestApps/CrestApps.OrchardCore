@@ -1,5 +1,8 @@
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
+/// <summary>
+/// Represents card-specific details for a Stripe payment method.
+/// </summary>
 public sealed class StripePaymentCardInfoResponse
 {
     /// <summary>

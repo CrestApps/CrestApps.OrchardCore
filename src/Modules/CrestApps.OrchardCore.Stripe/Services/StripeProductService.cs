@@ -5,15 +5,27 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
+/// <summary>
+/// Provides Stripe product operations for products synchronized from Orchard Core.
+/// </summary>
 public sealed class StripeProductService : IStripeProductService
 {
     private readonly ProductService _productService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeProductService"/> class.
+    /// </summary>
+    /// <param name="stripeClient">The Stripe client used to create the product service.</param>
     public StripeProductService(StripeClient stripeClient)
     {
         _productService = new ProductService(stripeClient);
     }
 
+    /// <summary>
+    /// Creates a Stripe product from the supplied product request.
+    /// </summary>
+    /// <param name="model">The product creation request.</param>
+    /// <returns>The created Stripe product details.</returns>
     public async Task<ProductResponse> CreateAsync(CreateProductRequest model)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -43,6 +55,12 @@ public sealed class StripeProductService : IStripeProductService
         };
     }
 
+    /// <summary>
+    /// Updates an existing Stripe product.
+    /// </summary>
+    /// <param name="id">The Stripe product identifier.</param>
+    /// <param name="model">The product update request.</param>
+    /// <returns>The updated Stripe product details.</returns>
     public async Task<ProductResponse> UpdateAsync(string id, UpdateProductRequest model)
     {
         ArgumentNullException.ThrowIfNull(id);
@@ -67,6 +85,11 @@ public sealed class StripeProductService : IStripeProductService
         };
     }
 
+    /// <summary>
+    /// Gets a Stripe product by identifier.
+    /// </summary>
+    /// <param name="id">The Stripe product identifier.</param>
+    /// <returns>The matching product details, or <see langword="null"/> when no product exists.</returns>
     public async Task<ProductResponse> GetAsync(string id)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);

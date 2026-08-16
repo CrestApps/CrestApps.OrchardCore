@@ -14,9 +14,19 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Stripe.Drivers;
 
+/// <summary>
+/// Displays and updates tenant-level Stripe settings in the Orchard Core admin site settings UI.
+/// </summary>
 public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettings>
 {
+    /// <summary>
+    /// The data protection purpose used to protect Stripe secrets stored in site settings.
+    /// </summary>
     public const string ProtectionPurpose = "StripeSettings";
+
+    /// <summary>
+    /// The site settings group identifier used for the Stripe settings editor.
+    /// </summary>
     public const string GroupId = "stripe";
 
     private readonly IAuthorizationService _authorizationService;
@@ -26,6 +36,14 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service used to verify access to Stripe settings.</param>
+    /// <param name="httpContextAccessor">The accessor used to read the current HTTP context.</param>
+    /// <param name="dataProtectionProvider">The provider used to protect Stripe private keys and webhook secrets.</param>
+    /// <param name="shellReleaseManager">The manager used to request a tenant reload after settings change.</param>
+    /// <param name="stringLocalizer">The localizer used to build validation messages.</param>
     public StripeSettingsDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
@@ -40,9 +58,19 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the site settings group identifier handled by this display driver.
+    /// </summary>
     protected override string SettingsGroupId
         => GroupId;
 
+    /// <summary>
+    /// Builds the Stripe settings editor when the current user can manage Stripe settings.
+    /// </summary>
+    /// <param name="site">The site whose settings are being edited.</param>
+    /// <param name="settings">The current Stripe settings.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result for the Stripe settings editor, or <see langword="null"/> when unauthorized.</returns>
     public override async Task<IDisplayResult> EditAsync(ISite site, StripeSettings settings, BuildEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))
@@ -66,6 +94,13 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         .OnGroup(SettingsGroupId);
     }
 
+    /// <summary>
+    /// Updates Stripe settings from the submitted editor model and protects secret values before storage.
+    /// </summary>
+    /// <param name="site">The site whose settings are being updated.</param>
+    /// <param name="settings">The Stripe settings to update.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result for the Stripe settings editor, or <see langword="null"/> when unauthorized.</returns>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, StripeSettings settings, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))

@@ -8,8 +8,14 @@ using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Adds subscription flow steps for content items that must be created after a subscription is purchased.
+/// </summary>
 public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 {
+    /// <summary>
+    /// The prefix used for flow step keys that collect content item data.
+    /// </summary>
     public const string ContentPrefix = "Content-";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -18,6 +24,13 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentSubscriptionHandler"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The manager used to read content type definitions.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used for persisted content step data.</param>
+    /// <param name="contentManager">The content manager used to create and publish collected content items.</param>
+    /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public ContentSubscriptionHandler(
         IContentDefinitionManager contentDefinitionManager,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
@@ -30,6 +43,10 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Adds one data-collection step for each content type configured on the subscription part.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is being activated.</param>
     public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out _))
@@ -82,6 +99,10 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         }
     }
 
+    /// <summary>
+    /// Creates and publishes the content items collected by content subscription flow steps.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is completing.</param>
     public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         foreach (var item in context.Flow.Session.SavedSteps)

@@ -40,10 +40,10 @@ public sealed class CustomerTaxProfile
     /// <summary>
     /// Gets or sets the residential address of the customer.
     /// </summary>
-    public TaxAddress ResidenceAddress { get; set; }
+    public Address ResidenceAddress { get; set; }
 
     /// <summary>
     /// Gets or sets the business address of the customer.
     /// </summary>
-    public TaxAddress BusinessAddress { get; set; }
+    public Address BusinessAddress { get; set; }
 }

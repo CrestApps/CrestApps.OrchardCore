@@ -13,12 +13,12 @@ public sealed class SubscriptionTaxProfile
     /// <summary>
     /// Gets or sets the merchant/ship-from origin address.
     /// </summary>
-    public TaxAddress Origin { get; set; }
+    public Address Origin { get; set; }
 
     /// <summary>
     /// Gets or sets the customer/ship-to destination address.
     /// </summary>
-    public TaxAddress Destination { get; set; }
+    public Address Destination { get; set; }
 
     /// <summary>
     /// Gets or sets the customer tax profile (residence, business status, exemptions).

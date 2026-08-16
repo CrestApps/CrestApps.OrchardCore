@@ -17,5 +17,5 @@ public interface ITaxJurisdictionResolver
     /// <param name="onUtc">The UTC date used to filter effective jurisdictions.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The applicable jurisdictions.</returns>
-    ValueTask<IReadOnlyList<TaxJurisdiction>> ResolveAsync(TaxAddress address, System.DateTime onUtc, CancellationToken cancellationToken = default);
+    ValueTask<IReadOnlyList<TaxJurisdiction>> ResolveAsync(Address address, System.DateTime onUtc, CancellationToken cancellationToken = default);
 }

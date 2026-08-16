@@ -37,7 +37,7 @@ public sealed class PaymentAttemptLimiter : IPaymentAttemptLimiter
     }
 
     /// <inheritdoc/>
-    public async Task<bool> TryAcquireAsync(string scope, string discriminator)
+    public async Task<bool> AcquireAsync(string scope, string discriminator)
     {
         ArgumentException.ThrowIfNullOrEmpty(scope);
         ArgumentException.ThrowIfNullOrEmpty(discriminator);

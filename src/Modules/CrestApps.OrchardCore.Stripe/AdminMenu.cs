@@ -6,6 +6,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Stripe;
 
+/// <summary>
+/// Adds the Stripe settings entry to the Orchard Core admin navigation.
+/// </summary>
 public sealed class AdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
@@ -16,11 +19,20 @@ public sealed class AdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminMenu"/> class.
+    /// </summary>
+    /// <param name="localizer">The localizer used to build menu labels.</param>
     public AdminMenu(IStringLocalizer<AdminMenu> localizer)
     {
         S = localizer;
     }
 
+    /// <summary>
+    /// Builds the Stripe admin navigation entries.
+    /// </summary>
+    /// <param name="builder">The navigation builder to update.</param>
+    /// <returns>A completed task after the navigation entries are registered.</returns>
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder

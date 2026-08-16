@@ -4,10 +4,23 @@ using CrestApps.OrchardCore.Subscriptions;
 
 namespace Json;
 
+/// <summary>
+/// Converts dictionaries keyed by <see cref="BillingDurationKey"/> to and from JSON objects.
+/// </summary>
 public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionary<BillingDurationKey, double>>
 {
+    /// <summary>
+    /// Gets the shared converter instance.
+    /// </summary>
     public static readonly BillingDurationKeyDictionaryJsonConverter Instance = new();
 
+    /// <summary>
+    /// Reads a dictionary whose JSON property names contain serialized billing duration keys and whose values contain amounts.
+    /// </summary>
+    /// <param name="reader">The JSON reader positioned at the dictionary object.</param>
+    /// <param name="typeToConvert">The dictionary type to convert.</param>
+    /// <param name="options">The serializer options used while reading dictionary keys.</param>
+    /// <returns>The dictionary represented by the JSON object.</returns>
     public override Dictionary<BillingDurationKey, double> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var dictionary = new Dictionary<BillingDurationKey, double>();
@@ -37,6 +50,12 @@ public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionar
         return dictionary;
     }
 
+    /// <summary>
+    /// Writes a dictionary as a JSON object whose property names are serialized billing duration keys.
+    /// </summary>
+    /// <param name="writer">The JSON writer that receives the dictionary object.</param>
+    /// <param name="dictionary">The dictionary to write.</param>
+    /// <param name="options">The serializer options used while writing dictionary keys.</param>
     public override void Write(Utf8JsonWriter writer, Dictionary<BillingDurationKey, double> dictionary, JsonSerializerOptions options)
     {
         writer.WriteStartObject();

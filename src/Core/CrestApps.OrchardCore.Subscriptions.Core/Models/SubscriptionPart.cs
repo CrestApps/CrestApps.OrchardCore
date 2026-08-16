@@ -3,45 +3,43 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
+/// <summary>
+/// Represents subscription billing configuration attached to a subscription content item.
+/// </summary>
 public sealed class SubscriptionPart : ContentPart
 {
     /// <summary>
-    /// The line item description for the initial amount.
+    /// Gets or sets the line item description for the initial one-time amount.
     /// </summary>
     public string InitialAmountDescription { get; set; }
 
     /// <summary>
-    /// Initial Payment amount to apply.
+    /// Gets or sets the one-time amount charged when the subscription starts.
     /// </summary>
     public double? InitialAmount { get; set; }
 
     /// <summary>
-    /// The number of payments pet duration type.
-    /// For example, 1 Year, 30 Days, 4 Weeks, etc.
-    /// <see cref="DurationType"/> to define the duration limit.
+    /// Gets or sets the number of <see cref="DurationType"/> units in one billing cycle.
     /// </summary>
     public int BillingDuration { get; set; }
 
     /// <summary>
-    /// The duration type for <see cref="BillingDuration"/>.
-    /// When <see cref="BillingDuration"/> is set to 1 and type is Year,
-    /// This means 1 year billing cycle.
+    /// Gets or sets the unit used with <see cref="BillingDuration"/> to define the billing cycle length.
     /// </summary>
     public DurationType DurationType { get; set; }
 
     /// <summary>
-    /// You can set a limit on how many payment cycles to process.
-    /// For example, 4 would be 4 payment cycle and after that no further payments will be processed.
+    /// Gets or sets the maximum number of billing cycles to process before the subscription ends.
     /// </summary>
     public int? BillingCycleLimit { get; set; }
 
     /// <summary>
-    ///  Number of days to delay the start of the subscription.
+    /// Gets or sets the number of days to delay the first recurring subscription payment.
     /// </summary>
     public int? SubscriptionDayDelay { get; set; }
 
     /// <summary>
-    /// The position the subscription should be sorted by.
+    /// Gets or sets the sort position for displaying the subscription.
     /// </summary>
     public int? Sort { get; set; }
 }

@@ -11,6 +11,9 @@ using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Adds user registration to subscription flows and creates or cleans up subscriber accounts.
+/// </summary>
 public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBase
 {
     private readonly UserManager<IUser> _userManager;
@@ -23,6 +26,17 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserRegistrationSubscriptionHandler"/> class.
+    /// </summary>
+    /// <param name="userManager">The user manager used to create and delete subscriber accounts.</param>
+    /// <param name="signInManager">The sign-in manager used to validate and sign in subscriber accounts.</param>
+    /// <param name="httpContextAccessor">The accessor used to read the current user and request features.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used for persisted registration step data.</param>
+    /// <param name="subscriptionPaymentSession">The cache that stores protected registration passwords during the flow.</param>
+    /// <param name="dataProtectionProvider">The data protection provider used to unprotect cached registration passwords.</param>
+    /// <param name="siteService">The site service used to read subscription role settings.</param>
+    /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public UserRegistrationSubscriptionHandler(
         UserManager<IUser> userManager,
         SignInManager<IUser> signInManager,
@@ -43,6 +57,10 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Adds the registration step to the subscription flow and conceals it for authenticated users.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is being activated.</param>
     public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
@@ -58,6 +76,10 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Updates the registration step visibility when an existing session is initialized.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is initializing.</param>
     public override Task InitializingAsync(SubscriptionFlowInitializingContext context)
     {
         foreach (var step in context.Session.Steps)
@@ -74,6 +96,10 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Creates the subscriber account from the collected registration step data before the flow completes.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is completing.</param>
     public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (_httpContextAccessor.HttpContext.User?.Identity?.IsAuthenticated == true)
@@ -122,6 +148,10 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         context.Flow.Session.OwnerId = registrationStep.User.UserId;
     }
 
+    /// <summary>
+    /// Removes cached registration secrets and signs in the user created during the flow.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that completed.</param>
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
     {
         var subscriber = _httpContextAccessor.HttpContext.Features.Get<CustomerCreatedDuringSubscriptionFlow>();
@@ -136,6 +166,10 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         await _signInManager.PasswordSignInAsync(subscriber.User, subscriber.Password, isPersistent: false, lockoutOnFailure: true);
     }
 
+    /// <summary>
+    /// Deletes the user account created during the flow when completion fails.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that failed.</param>
     public override async Task FailedAsync(SubscriptionFlowFailedContext context)
     {
         var subscriber = _httpContextAccessor.HttpContext.Features.Get<CustomerCreatedDuringSubscriptionFlow>();

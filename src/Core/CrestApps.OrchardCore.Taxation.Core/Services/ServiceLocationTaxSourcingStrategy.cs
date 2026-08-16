@@ -12,6 +12,6 @@ public sealed class ServiceLocationTaxSourcingStrategy : ITaxSourcingStrategy
     public string Name => TaxSourcingNames.ServiceLocation;
 
     /// <inheritdoc />
-    public TaxAddress Resolve(TaxCalculationContext context, ITaxableItem item)
+    public Address Resolve(TaxCalculationContext context, ITaxableItem item)
         => context?.ServiceLocation;
 }

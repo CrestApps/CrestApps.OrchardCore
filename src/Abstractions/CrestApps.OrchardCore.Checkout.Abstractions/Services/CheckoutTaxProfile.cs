@@ -13,12 +13,12 @@ public sealed class CheckoutTaxProfile
     /// <summary>
     /// The merchant/ship-from origin address.
     /// </summary>
-    public TaxAddress Origin { get; set; }
+    public Address Origin { get; set; }
 
     /// <summary>
     /// The customer/ship-to destination address.
     /// </summary>
-    public TaxAddress Destination { get; set; }
+    public Address Destination { get; set; }
 
     /// <summary>
     /// The customer tax profile (residence, business status, exemptions).

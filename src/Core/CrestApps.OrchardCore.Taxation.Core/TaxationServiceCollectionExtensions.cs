@@ -24,10 +24,6 @@ public static class TaxationServiceCollectionExtensions
             .AddCatalogs()
             .AddCatalogManagers();
 
-        services.TryAddScoped<ITaxJurisdictionStore, TaxJurisdictionStore>();
-        services.TryAddScoped<ITaxCategoryStore, TaxCategoryStore>();
-        services.TryAddScoped<ITaxRuleStore, TaxRuleStore>();
-        services.TryAddScoped<ITaxTableStore, TaxTableStore>();
         services.TryAddScoped<IExemptionCertificateStore, ExemptionCertificateStore>();
         services.TryAddScoped<IMerchantTaxRegistrationStore, MerchantTaxRegistrationStore>();
 

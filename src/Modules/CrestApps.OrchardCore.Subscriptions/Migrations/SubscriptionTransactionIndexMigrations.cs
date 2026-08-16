@@ -5,8 +5,15 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 
+/// <summary>
+/// Creates and updates the YesSql map index table for subscription payment transactions.
+/// </summary>
 public sealed class SubscriptionTransactionIndexMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates the subscription transaction index table and its owner/date lookup index.
+    /// </summary>
+    /// <returns>The next migration version number.</returns>
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<SubscriptionTransactionIndex>(table => table
@@ -33,6 +40,10 @@ public sealed class SubscriptionTransactionIndexMigrations : DataMigration
         return 1;
     }
 
+    /// <summary>
+    /// Adds the tax amount column to the subscription transaction index table.
+    /// </summary>
+    /// <returns>The next migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<SubscriptionTransactionIndex>(table => table

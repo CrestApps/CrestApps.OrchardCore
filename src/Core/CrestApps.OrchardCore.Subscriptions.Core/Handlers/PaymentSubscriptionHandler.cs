@@ -12,6 +12,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Adds payment processing to subscription flows and validates payment provider confirmations before completion.
+/// </summary>
 public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 {
     /// <summary>
@@ -26,6 +29,14 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PaymentSubscriptionHandler"/> class.
+    /// </summary>
+    /// <param name="subscriptionPaymentSession">The cache that stores payment provider metadata during the flow.</param>
+    /// <param name="siteService">The site service used to read subscription settings.</param>
+    /// <param name="subscriptionTaxService">The service that applies tax to the subscription invoice.</param>
+    /// <param name="logger">The logger used to record delayed payment confirmation attempts.</param>
+    /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public PaymentSubscriptionHandler(
         SubscriptionPaymentSession subscriptionPaymentSession,
         ISiteService siteService,
@@ -40,6 +51,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Adds the payment step and attaches the subscription plan billing items to it.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is being activated.</param>
     public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
@@ -97,6 +112,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return billingItems.ToArray();
     }
 
+    /// <summary>
+    /// Builds the invoice, rounds payable amounts, applies tax, and stores the invoice on the session.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that was activated.</param>
     public override async Task ActivatedAsync(SubscriptionFlowActivatedContext context)
     {
         var invoice = new Invoice();
@@ -175,6 +194,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     private static int GetCurrencyDecimals(string currency)
         => string.IsNullOrEmpty(currency) ? 2 : StripeCurrency.GetDecimalPlaces(currency);
 
+    /// <summary>
+    /// Redirects the flow away from the payment step until all earlier required steps are completed.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is loading.</param>
     public override Task LoadingAsync(SubscriptionFlowLoadingContext context)
     {
         if (context.Flow.GetCurrentStep()?.Key != SubscriptionConstants.StepKey.Payment)
@@ -204,6 +227,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Waits for payment provider confirmations and records verified payment metadata on the session.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that is completing.</param>
     public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (!context.Flow.Session.TryGet<Invoice>(out var invoice))
@@ -322,6 +349,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return 0;
     }
 
+    /// <summary>
+    /// Removes cached payment metadata after the subscription flow completes.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that completed.</param>
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
     {
         // Now that the transaction is completed, remove the cache.

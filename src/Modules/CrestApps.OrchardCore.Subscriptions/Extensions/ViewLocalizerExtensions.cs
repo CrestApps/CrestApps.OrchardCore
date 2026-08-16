@@ -3,8 +3,19 @@ using Microsoft.AspNetCore.Mvc.Localization;
 
 namespace CrestApps.OrchardCore.Subscriptions.Extensions;
 
+/// <summary>
+/// Provides subscription formatting helpers for Razor view localization.
+/// </summary>
 public static class ViewLocalizerExtensions
 {
+    /// <summary>
+    /// Formats a localized recurring amount label for the specified billing duration.
+    /// </summary>
+    /// <param name="T">The view localizer used to create the localized HTML string.</param>
+    /// <param name="type">The billing duration type.</param>
+    /// <param name="duration">The number of duration units in the billing period.</param>
+    /// <param name="amount">The recurring amount to format as currency.</param>
+    /// <returns>A localized HTML string that describes the recurring amount.</returns>
     public static LocalizedHtmlString GetAmount(this IViewLocalizer T, DurationType type, int duration, double amount)
     {
         return type switch

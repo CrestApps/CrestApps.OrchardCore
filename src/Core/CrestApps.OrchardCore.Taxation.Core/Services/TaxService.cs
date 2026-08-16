@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Taxation.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,7 @@ public sealed class TaxService : ITaxService
     private readonly ITaxExemptionResolver _exemptionResolver;
     private readonly IMerchantTaxRegistrationProvider _registrationProvider;
     private readonly ITaxCalculationMethodProvider _methodProvider;
-    private readonly ITaxTableStore _tableStore;
+    private readonly INamedCatalog<TaxTable> _tableStore;
     private readonly ITaxRoundingStrategy _roundingStrategy;
     private readonly TaxationOptions _options;
     private readonly ILogger _logger;
@@ -55,7 +56,7 @@ public sealed class TaxService : ITaxService
         ITaxExemptionResolver exemptionResolver,
         IMerchantTaxRegistrationProvider registrationProvider,
         ITaxCalculationMethodProvider methodProvider,
-        ITaxTableStore tableStore,
+        INamedCatalog<TaxTable> tableStore,
         ITaxRoundingStrategy roundingStrategy,
         IOptions<TaxationOptions> options,
         ILogger<TaxService> logger)
@@ -249,7 +250,7 @@ public sealed class TaxService : ITaxService
         return applicable;
     }
 
-    private TaxAddress ResolveAddress(TaxCalculationContext context, ITaxableItem item)
+    private Address ResolveAddress(TaxCalculationContext context, ITaxableItem item)
     {
         var strategyName = item.Kind switch
         {

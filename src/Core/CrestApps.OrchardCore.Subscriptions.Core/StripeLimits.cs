@@ -2,8 +2,14 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core;
 
+/// <summary>
+/// Provides Stripe payment amount limits for supported currencies.
+/// </summary>
 public class StripeLimits
 {
+    /// <summary>
+    /// Contains Stripe payment amount limits keyed by ISO currency code.
+    /// </summary>
     public static readonly Dictionary<string, StripePaymentLimits> StripePaymentLimits = new()
     {
         { "AED", new StripePaymentLimits { Minimum = 2.00, Maximum = 999999.99 } },
@@ -33,6 +39,11 @@ public class StripeLimits
         { "ZAR", new StripePaymentLimits { Minimum = 8.00, Maximum = 999999.99 } },
     };
 
+    /// <summary>
+    /// Gets the Stripe payment amount limits for the specified currency.
+    /// </summary>
+    /// <param name="currency">The ISO currency code to look up.</param>
+    /// <returns>The Stripe payment limits for the currency, or <see langword="null"/> when the currency is not supported.</returns>
     public static StripePaymentLimits GetStripePaymentLimit(string currency)
     {
         ArgumentException.ThrowIfNullOrEmpty(currency);
@@ -45,6 +56,12 @@ public class StripeLimits
         return null;
     }
 
+    /// <summary>
+    /// Attempts to get the Stripe payment amount limits for the specified currency.
+    /// </summary>
+    /// <param name="currency">The ISO currency code to look up.</param>
+    /// <param name="limits">When this method returns, contains the matching payment limits, or <see langword="null"/> when not found.</param>
+    /// <returns><see langword="true"/> when limits are found for the currency; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetStripePaymentLimit(string currency, out StripePaymentLimits limits)
     {
         if (currency != null)

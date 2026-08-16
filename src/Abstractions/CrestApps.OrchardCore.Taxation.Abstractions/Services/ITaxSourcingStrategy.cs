@@ -19,5 +19,5 @@ public interface ITaxSourcingStrategy
     /// <param name="context">The tax calculation context.</param>
     /// <param name="item">The taxable item being sourced.</param>
     /// <returns>The address used for jurisdiction resolution, or <see langword="null"/> when unavailable.</returns>
-    TaxAddress Resolve(TaxCalculationContext context, ITaxableItem item);
+    Address Resolve(TaxCalculationContext context, ITaxableItem item);
 }

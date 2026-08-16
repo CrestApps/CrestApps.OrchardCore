@@ -73,7 +73,7 @@ public sealed class DefaultSubscriptionTaxProfileProvider : ISubscriptionTaxProf
 
         if (!string.IsNullOrEmpty(country))
         {
-            profile.Destination = new TaxAddress
+            profile.Destination = new Address
             {
                 Country = country,
             };

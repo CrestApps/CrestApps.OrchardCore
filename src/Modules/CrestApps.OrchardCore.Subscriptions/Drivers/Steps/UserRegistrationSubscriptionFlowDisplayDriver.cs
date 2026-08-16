@@ -15,8 +15,14 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
+/// <summary>
+/// Displays and updates the user registration step of a subscription flow.
+/// </summary>
 public sealed class UserRegistrationSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
+    /// <summary>
+    /// Defines the display editor group used for the subscription registration form.
+    /// </summary>
     public const string UserRegistrationFormGroupId = "Subscription";
 
     private readonly ISiteService _siteService;
@@ -25,6 +31,14 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
     private readonly IDisplayManager<SubscriptionRegisterUserForm> _registerUserDisplayManager;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserRegistrationSubscriptionFlowDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service used to read subscription and registration settings.</param>
+    /// <param name="subscriptionPaymentSession">The subscription payment session used to persist passwords outside the database.</param>
+    /// <param name="dataProtectionProvider">The data protection provider used to protect saved passwords.</param>
+    /// <param name="registerUserDisplayManager">The display manager used to build and update the registration form.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used to read saved registration step data.</param>
     public UserRegistrationSubscriptionFlowDisplayDriver(
         ISiteService siteService,
         SubscriptionPaymentSession subscriptionPaymentSession,
@@ -39,9 +53,18 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
     }
 
+    /// <summary>
+    /// Gets the user registration step key handled by this display driver.
+    /// </summary>
     protected override string StepKey
         => SubscriptionConstants.StepKey.UserRegistration;
 
+    /// <summary>
+    /// Builds the user registration editor and restores saved registration or guest signup values.
+    /// </summary>
+    /// <param name="flow">The subscription flow being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result that renders the user registration step editor.</returns>
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
         return Initialize<UserRegistrationStepViewModel>("UserRegistrationStep_Edit", async model =>
@@ -69,6 +92,12 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
         }).Location("Content");
     }
 
+    /// <summary>
+    /// Updates the user registration step, saves guest selection or user details, and stores the password in the subscription session.
+    /// </summary>
+    /// <param name="flow">The subscription flow being updated.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result that renders the updated user registration step editor.</returns>
     protected override async Task<IDisplayResult> UpdateStepAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
         var model = new UserRegistrationStepViewModel();

@@ -17,6 +17,9 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
+/// <summary>
+/// Displays published service plans for subscription content types.
+/// </summary>
 public sealed class ServicePlansController : Controller
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -26,6 +29,14 @@ public sealed class ServicePlansController : Controller
 
     internal readonly IHtmlLocalizer H;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServicePlansController"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager used to resolve subscription content types.</param>
+    /// <param name="contentItemDisplayManager">The content item display manager used to build service plan shapes.</param>
+    /// <param name="updateModelAccessor">The accessor that provides the current model updater.</param>
+    /// <param name="session">The YesSql session used to query published service plans.</param>
+    /// <param name="htmlLocalizer">The HTML localizer for service plan UI text.</param>
     public ServicePlansController(
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
@@ -40,6 +51,14 @@ public sealed class ServicePlansController : Controller
         H = htmlLocalizer;
     }
 
+    /// <summary>
+    /// Lists published service plans for a specific subscription content type or for all subscription content types.
+    /// </summary>
+    /// <param name="contentType">The optional subscription content type to filter by.</param>
+    /// <param name="pagerParameters">The pager parameters from the current request.</param>
+    /// <param name="pagerOptions">The configured pager options.</param>
+    /// <param name="shapeFactory">The shape factory used to create the pager shape.</param>
+    /// <returns>The service plan list view, or a not found result when no matching plans can be displayed.</returns>
     [Route("ServicePlans/{contentType?}", Name = "ListServicePlans")]
     public async Task<IActionResult> Index(
         string contentType,

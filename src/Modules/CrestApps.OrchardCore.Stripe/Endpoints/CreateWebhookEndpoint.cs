@@ -14,8 +14,14 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
+/// <summary>
+/// Registers and handles the Stripe webhook endpoint used to dispatch supported payment events.
+/// </summary>
 public static class CreateWebhookEndpoint
 {
+    /// <summary>
+    /// The Stripe event types accepted by the webhook dispatcher.
+    /// </summary>
     public static readonly string[] SupportedEvents =
     [
         EventTypes.InvoicePaymentSucceeded,
@@ -23,6 +29,12 @@ public static class CreateWebhookEndpoint
         EventTypes.PaymentIntentSucceeded,
     ];
 
+    /// <summary>
+    /// Adds the Stripe webhook endpoint to the endpoint route builder.
+    /// </summary>
+    /// <typeparam name="T">The category type used for webhook logging.</typeparam>
+    /// <param name="builder">The endpoint route builder to update.</param>
+    /// <returns>The endpoint route builder after the Stripe webhook route is registered.</returns>
     public static IEndpointRouteBuilder AddWebhookEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("stripe/webhook", HandleAsync<T>)

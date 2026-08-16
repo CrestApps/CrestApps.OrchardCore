@@ -12,15 +12,28 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Displays and edits subscription pricing and billing settings on content items.
+/// </summary>
 public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<SubscriptionPart>
 {
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer used for editor labels and validation messages.</param>
     public SubscriptionPartDisplayDriver(IStringLocalizer<SubscriptionPartDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Builds the subscription part display shapes for summary and detail views, including signup placement.
+    /// </summary>
+    /// <param name="part">The subscription part to display.</param>
+    /// <param name="context">The content part display build context.</param>
+    /// <returns>The display result that renders subscription details and signup content.</returns>
     public override Task<IDisplayResult> DisplayAsync(SubscriptionPart part, BuildPartDisplayContext context)
     {
         return CombineAsync(
@@ -43,6 +56,12 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         );
     }
 
+    /// <summary>
+    /// Builds the subscription part editor with billing duration, duration type, initial amount, and cycle options.
+    /// </summary>
+    /// <param name="part">The subscription part being edited.</param>
+    /// <param name="context">The content part editor build context.</param>
+    /// <returns>The display result that renders the subscription part editor.</returns>
     public override IDisplayResult Edit(SubscriptionPart part, BuildPartEditorContext context)
     {
         return Initialize<SubscriptionPartViewModel>(GetEditorShapeType(context), model =>
@@ -63,6 +82,12 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         });
     }
 
+    /// <summary>
+    /// Validates submitted subscription part settings and applies them to the content part.
+    /// </summary>
+    /// <param name="part">The subscription part being updated.</param>
+    /// <param name="context">The content part editor update context.</param>
+    /// <returns>The display result that renders the updated subscription part editor.</returns>
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionPart part, UpdatePartEditorContext context)
     {
         var model = new SubscriptionPartViewModel();

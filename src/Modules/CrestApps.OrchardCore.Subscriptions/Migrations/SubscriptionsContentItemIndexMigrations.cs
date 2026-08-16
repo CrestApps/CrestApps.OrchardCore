@@ -4,8 +4,15 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 
+/// <summary>
+/// Creates the YesSql map index table and database indexes for subscription content items.
+/// </summary>
 public sealed class SubscriptionsContentItemIndexMigrations : DataMigration
 {
+    /// <summary>
+    /// Creates the subscription content item index table and its lookup indexes.
+    /// </summary>
+    /// <returns>The next migration version number.</returns>
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<SubscriptionsContentItemIndex>(table => table

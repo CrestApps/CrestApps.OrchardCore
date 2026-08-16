@@ -8,6 +8,9 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Handlers;
 
+/// <summary>
+/// Handles payment provider events that update subscription session payment metadata.
+/// </summary>
 public sealed class SubscriptionPaymentHandler : PaymentEventBase
 {
     private readonly SubscriptionPaymentSession _paymentSession;
@@ -15,6 +18,13 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
     private readonly ISubscriptionSessionStore _subscriptionSessionStore;
     private readonly ISubscriptionTaxService _subscriptionTaxService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionPaymentHandler"/> class.
+    /// </summary>
+    /// <param name="paymentSession">The payment session used to stage subscription payment metadata.</param>
+    /// <param name="stripePaymentService">The Stripe payment intent service used to confirm initial payment intents.</param>
+    /// <param name="subscriptionSessionStore">The store used to load and save subscription sessions.</param>
+    /// <param name="subscriptionTaxService">The tax service used to capture recurring payment tax snapshots.</param>
     public SubscriptionPaymentHandler(
         SubscriptionPaymentSession paymentSession,
         IStripePaymentIntentService stripePaymentService,
@@ -28,6 +38,11 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         _subscriptionTaxService = subscriptionTaxService;
     }
 
+    /// <summary>
+    /// Records metadata for a succeeded payment intent associated with a subscription session.
+    /// </summary>
+    /// <param name="context">The payment intent success context.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
     {
         if (!context.Data.TryGetValue("sessionId", out var sessionId))
@@ -45,6 +60,11 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         });
     }
 
+    /// <summary>
+    /// Records succeeded subscription creation, renewal, and update payments on the related subscription session.
+    /// </summary>
+    /// <param name="context">The payment success context.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override async Task PaymentSucceededAsync(PaymentSucceededContext context)
     {
         ArgumentNullException.ThrowIfNull(context);

@@ -8,6 +8,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Subscriptions.Services;
 
+/// <summary>
+/// Builds the admin navigation entries for subscription settings and management.
+/// </summary>
 public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
@@ -34,11 +37,20 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionsAdminMenu"/> class.
+    /// </summary>
+    /// <param name="localizer">The string localizer used for admin menu labels.</param>
     public SubscriptionsAdminMenu(IStringLocalizer<SubscriptionsAdminMenu> localizer)
     {
         S = localizer;
     }
 
+    /// <summary>
+    /// Builds the subscription entries in the admin navigation tree.
+    /// </summary>
+    /// <param name="builder">The navigation builder to update.</param>
+    /// <returns>A completed task once the navigation entries have been added.</returns>
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder

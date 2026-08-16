@@ -18,9 +18,19 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Displays and validates the tenant onboarding step of a subscription flow.
+/// </summary>
 public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
+    /// <summary>
+    /// Defines the data protection purpose used to protect saved tenant administrator passwords.
+    /// </summary>
     public const string ProtectorPurpose = "TenantOnboardingStep";
+
+    /// <summary>
+    /// Defines the regular expression pattern used to validate tenant keys.
+    /// </summary>
     public const string KeyNameRegexPattern = @"^[a-zA-Z][a-zA-Z0-9_-]*$";
 
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
@@ -31,6 +41,15 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantOnboardingStepSubscriptionFlowDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="shellHost">The shell host used to validate tenant names, URL prefixes, and domains.</param>
+    /// <param name="siteService">The site service used to read tenant onboarding settings.</param>
+    /// <param name="documentJsonSerializerOptions">The JSON serializer options used to read saved tenant onboarding data.</param>
+    /// <param name="httpContextAccessor">The accessor used to read the current request host and scheme.</param>
+    /// <param name="dataProtectionProvider">The data protection provider used to protect saved administrator passwords.</param>
+    /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public TenantOnboardingStepSubscriptionFlowDisplayDriver(
         IShellHost shellHost,
         ISiteService siteService,
@@ -47,9 +66,18 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the tenant onboarding step key handled by this display driver.
+    /// </summary>
     protected override string StepKey
         => SubscriptionConstants.StepKey.TenantOnboarding;
 
+    /// <summary>
+    /// Builds the tenant onboarding editor with domain settings and any saved onboarding values.
+    /// </summary>
+    /// <param name="flow">The subscription flow being edited.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result that renders the tenant onboarding editor.</returns>
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
         return Initialize<TenantOnboardingStepViewModel>("TenantOnboardingStep_Edit", async model =>
@@ -78,6 +106,12 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         }).Location("Content");
     }
 
+    /// <summary>
+    /// Validates tenant onboarding input, protects the administrator password, and saves tenant setup details in the flow session.
+    /// </summary>
+    /// <param name="flow">The subscription flow being updated.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The display result that renders the updated tenant onboarding editor.</returns>
     protected override async Task<IDisplayResult> UpdateStepAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
         var model = new TenantOnboardingStepViewModel();

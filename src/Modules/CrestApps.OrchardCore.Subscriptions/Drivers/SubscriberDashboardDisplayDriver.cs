@@ -16,6 +16,9 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Displays subscriber profile, subscription, and invoice information on the subscriber dashboard.
+/// </summary>
 public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboard>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -26,6 +29,16 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
     private readonly ILocalClock _localClock;
     private readonly YesSql.ISession _session;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriberDashboardDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The accessor used to read the current subscriber from the HTTP context.</param>
+    /// <param name="userManager">The user manager used to load the current Orchard Core user.</param>
+    /// <param name="displayNameProvider">The display name provider used to format the subscriber display name.</param>
+    /// <param name="contentManager">The content manager used to load service plan content item versions.</param>
+    /// <param name="clock">The clock used to compare subscription expiration dates.</param>
+    /// <param name="localClock">The local clock used to convert subscription and invoice dates to local time.</param>
+    /// <param name="session">The YesSql session used to query subscription sessions and transactions.</param>
     public SubscriberDashboardDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         UserManager<IUser> userManager,
@@ -44,6 +57,12 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
         _session = session;
     }
 
+    /// <summary>
+    /// Builds the subscriber dashboard with subscriber details, subscription summaries, and invoices for the current user.
+    /// </summary>
+    /// <param name="model">The subscriber dashboard model to display.</param>
+    /// <param name="context">The display build context.</param>
+    /// <returns>The display result that renders the dashboard, or <see langword="null"/> when the current user cannot be loaded.</returns>
     public override async Task<IDisplayResult> DisplayAsync(SubscriberDashboard model, BuildDisplayContext context)
     {
         var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
@@ -101,7 +120,6 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
                 }
             }
         }).Location("Content:5");
-
 
         var invoices = Initialize<SubscriberInvoicesViewModel>("SubscriberInvoices", async vm =>
         {

@@ -7,12 +7,21 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Synchronizes Stripe customer information after a subscription flow creates a new user account.
+/// </summary>
 public sealed class StripeSubscriptionHandler : SubscriptionHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IStripeCustomerService _stripeCustomerService;
     private readonly IDisplayNameProvider _displayNameProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StripeSubscriptionHandler"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The accessor used to read request features for the active subscription flow.</param>
+    /// <param name="stripeCustomerService">The Stripe customer service used to update the created customer.</param>
+    /// <param name="displayNameProvider">The provider used to resolve the display name for the created user.</param>
     public StripeSubscriptionHandler(
         IHttpContextAccessor httpContextAccessor,
         IStripeCustomerService stripeCustomerService,
@@ -23,6 +32,10 @@ public sealed class StripeSubscriptionHandler : SubscriptionHandlerBase
         _displayNameProvider = displayNameProvider;
     }
 
+    /// <summary>
+    /// Updates the Stripe customer with the profile information from the user created during the flow.
+    /// </summary>
+    /// <param name="context">The context for the subscription flow that completed.</param>
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
     {
         var subscriber = _httpContextAccessor.HttpContext.Features.Get<CustomerCreatedDuringSubscriptionFlow>();

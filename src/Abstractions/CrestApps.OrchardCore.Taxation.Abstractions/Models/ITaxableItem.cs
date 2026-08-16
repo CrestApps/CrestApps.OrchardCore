@@ -72,7 +72,7 @@ public interface ITaxableItem
     /// <summary>
     /// Gets the origin (ship-from) address of the item, when it differs from the transaction origin.
     /// </summary>
-    TaxAddress Origin { get; }
+    Address Origin { get; }
 
     /// <summary>
     /// Gets optional metadata that providers can attach for rule evaluation.

@@ -4,14 +4,29 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Builds display and editor shapes for subscription list filters and actions.
+/// </summary>
 public sealed class ListSubscriptionOptionsDisplayDriver : DisplayDriver<ListSubscriptionOptions>
 {
     // Maintain the Options prefix for compatibility with binding.
+
+    /// <summary>
+    /// Sets the model binding prefix used by subscription list options.
+    /// </summary>
+    /// <param name="model">The subscription list options model.</param>
+    /// <param name="htmlFieldPrefix">The generated HTML field prefix.</param>
     protected override void BuildPrefix(ListSubscriptionOptions model, string htmlFieldPrefix)
     {
         Prefix = "Options";
     }
 
+    /// <summary>
+    /// Builds thumbnail filter shapes for the subscription list.
+    /// </summary>
+    /// <param name="model">The subscription list options model.</param>
+    /// <param name="context">The display build context.</param>
+    /// <returns>The combined display result for subscription list filters.</returns>
     public override Task<IDisplayResult> DisplayAsync(ListSubscriptionOptions model, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -22,6 +37,12 @@ public sealed class ListSubscriptionOptionsDisplayDriver : DisplayDriver<ListSub
         );
     }
 
+    /// <summary>
+    /// Builds editor shapes for the subscription list search, actions, summary, filters, and bulk actions.
+    /// </summary>
+    /// <param name="model">The subscription list options model.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The combined editor display result for subscription list options.</returns>
     public override Task<IDisplayResult> EditAsync(ListSubscriptionOptions model, BuildEditorContext context)
     {
         model.FilterResult.MapTo(model);
@@ -40,6 +61,12 @@ public sealed class ListSubscriptionOptionsDisplayDriver : DisplayDriver<ListSub
         );
     }
 
+    /// <summary>
+    /// Updates the subscription list filter result from posted list options.
+    /// </summary>
+    /// <param name="model">The subscription list options model.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The updated editor display result for subscription list options.</returns>
     public override Task<IDisplayResult> UpdateAsync(ListSubscriptionOptions model, UpdateEditorContext context)
     {
         // Map the incoming values from a form post to the filter result.

@@ -41,12 +41,12 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
-    public Task<CheckoutSession> GetAsync(string sessionId)
+    public Task<CheckoutSession> GetAsync(string sessionId, CancellationToken cancellationToken = default)
         => _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.SessionId == sessionId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<CheckoutSession> GetAsync(string sessionId, CheckoutSessionStatus status)
+    public async Task<CheckoutSession> GetAsync(string sessionId, CheckoutSessionStatus status, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
@@ -56,10 +56,10 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         {
             var ownerId = CurrentUserId();
 
-            return await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
+            return await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync(cancellationToken);
         }
 
-        var checkoutSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync();
+        var checkoutSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync(cancellationToken);
 
         var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
 
@@ -76,9 +76,11 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
-    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null)
+    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(referenceType);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var checkoutSession = await GetNewSessionAsync(referenceType, referenceId, referenceVersionId);
 
@@ -98,8 +100,8 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
-    public Task SaveAsync(CheckoutSession session)
-        => _session.SaveAsync(session);
+    public Task SaveAsync(CheckoutSession session, CancellationToken cancellationToken = default)
+        => _session.SaveAsync(session, cancellationToken: cancellationToken);
 
     private async Task<CheckoutSession> GetNewSessionAsync(string referenceType, string referenceId, string referenceVersionId)
     {

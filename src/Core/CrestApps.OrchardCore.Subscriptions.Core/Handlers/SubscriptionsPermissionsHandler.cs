@@ -5,17 +5,29 @@ using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
+/// <summary>
+/// Grants subscription management permission to users who own a subscription and can manage their own subscriptions.
+/// </summary>
 public sealed class SubscriptionsPermissionsHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionsPermissionsHandler"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to resolve authorization services lazily.</param>
     public SubscriptionsPermissionsHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Evaluates whether the current user can manage the subscription session in the authorization resource.
+    /// </summary>
+    /// <param name="context">The authorization context that contains the user and resource.</param>
+    /// <param name="requirement">The permission requirement being evaluated.</param>
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
         if (context.HasSucceeded)

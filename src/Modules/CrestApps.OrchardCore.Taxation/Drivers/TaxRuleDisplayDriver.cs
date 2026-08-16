@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
@@ -29,15 +30,15 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
         TaxTypeNames.Other,
     ];
 
-    private readonly ITaxJurisdictionStore _jurisdictionStore;
-    private readonly ITaxCategoryStore _categoryStore;
+    private readonly INamedCatalog<TaxJurisdiction> _jurisdictionStore;
+    private readonly INamedCatalog<TaxCategory> _categoryStore;
     private readonly IEnumerable<ITaxCalculationMethod> _calculationMethods;
 
     internal readonly IStringLocalizer S;
 
     public TaxRuleDisplayDriver(
-        ITaxJurisdictionStore jurisdictionStore,
-        ITaxCategoryStore categoryStore,
+        INamedCatalog<TaxJurisdiction> jurisdictionStore,
+        INamedCatalog<TaxCategory> categoryStore,
         IEnumerable<ITaxCalculationMethod> calculationMethods,
         IStringLocalizer<TaxRuleDisplayDriver> stringLocalizer)
     {

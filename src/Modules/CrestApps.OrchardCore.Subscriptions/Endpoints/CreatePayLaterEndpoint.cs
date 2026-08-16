@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -17,8 +18,16 @@ using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
+/// <summary>
+/// Registers the endpoint that records offline Pay Later subscription commitments.
+/// </summary>
 public static class CreatePayLaterEndpoint
 {
+    /// <summary>
+    /// Adds the endpoint that processes a Pay Later subscription request.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder used to register the route.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder AddCreatePayLaterEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/pay-later/process", HandleAsync)
@@ -30,6 +39,18 @@ public static class CreatePayLaterEndpoint
         return builder;
     }
 
+    /// <summary>
+    /// Handles a Pay Later request by creating subscription and payment metadata for the pending session.
+    /// </summary>
+    /// <param name="model">The Pay Later request.</param>
+    /// <param name="clock">The clock used to timestamp the subscription commitment.</param>
+    /// <param name="subscriptionSessionStore">The store used to load and save subscription sessions.</param>
+    /// <param name="subscriptionPaymentSession">The payment session used to store initial payment metadata.</param>
+    /// <param name="paymentAttemptLimiter">The payment attempt limiter used to throttle repeated requests.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the current request.</param>
+    /// <param name="hostEnvironment">The host environment used to determine the gateway mode.</param>
+    /// <param name="loggerFactory">The logger factory used to create endpoint logs.</param>
+    /// <returns>An HTTP result that reports completion or a structured error response.</returns>
     private static async Task<IResult> HandleAsync(
         [FromBody] PayLaterRequest model,
         IClock clock,

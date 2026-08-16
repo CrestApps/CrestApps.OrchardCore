@@ -1,5 +1,5 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
-using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore;
@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdiction>
 {
-    private readonly ITaxJurisdictionStore _jurisdictionStore;
+    private readonly INamedCatalog<TaxJurisdiction> _jurisdictionStore;
 
-    public TaxJurisdictionDisplayDriver(ITaxJurisdictionStore jurisdictionStore)
+    public TaxJurisdictionDisplayDriver(INamedCatalog<TaxJurisdiction> jurisdictionStore)
     {
         _jurisdictionStore = jurisdictionStore;
     }

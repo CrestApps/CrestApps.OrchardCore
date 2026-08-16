@@ -20,8 +20,15 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe;
 
+/// <summary>
+/// Configures the Stripe module services and routes.
+/// </summary>
 public class Startup : StartupBase
 {
+    /// <summary>
+    /// Registers Stripe services, settings drivers, permissions, migrations, indexes, and resource options.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<ISite>, StripeSettingsDisplayDriver>();
@@ -55,6 +62,12 @@ public class Startup : StartupBase
         });
     }
 
+    /// <summary>
+    /// Configures the Stripe webhook endpoint route.
+    /// </summary>
+    /// <param name="builder">The application builder.</param>
+    /// <param name="routes">The endpoint route builder.</param>
+    /// <param name="serviceProvider">The application service provider.</param>
     public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes

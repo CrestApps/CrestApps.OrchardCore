@@ -12,6 +12,6 @@ public sealed class DestinationTaxSourcingStrategy : ITaxSourcingStrategy
     public string Name => TaxSourcingNames.Destination;
 
     /// <inheritdoc />
-    public TaxAddress Resolve(TaxCalculationContext context, ITaxableItem item)
+    public Address Resolve(TaxCalculationContext context, ITaxableItem item)
         => context?.Destination;
 }

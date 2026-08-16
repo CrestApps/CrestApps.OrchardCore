@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
-using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -18,12 +18,12 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 /// </summary>
 public sealed class TaxationPartDisplayDriver : ContentPartDisplayDriver<TaxationPart>
 {
-    private readonly ITaxCategoryStore _categoryStore;
+    private readonly INamedCatalog<TaxCategory> _categoryStore;
 
     internal readonly IStringLocalizer S;
 
     public TaxationPartDisplayDriver(
-        ITaxCategoryStore categoryStore,
+        INamedCatalog<TaxCategory> categoryStore,
         IStringLocalizer<TaxationPartDisplayDriver> stringLocalizer)
     {
         _categoryStore = categoryStore;

@@ -134,7 +134,7 @@ public sealed class TaxServiceTests
             IsCompound = true,
         });
 
-        var context = TaxTestData.Context(100m, destination: new TaxAddress { Country = "CA", Region = "QC" });
+        var context = TaxTestData.Context(100m, destination: new Address { Country = "CA", Region = "QC" });
         var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var gst = result.Lines.Single(line => line.TaxType == TaxTypeNames.Gst);

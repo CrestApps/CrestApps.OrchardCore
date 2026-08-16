@@ -17,8 +17,14 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
+/// <summary>
+/// Provides the site settings editor for global subscription options.
+/// </summary>
 public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<SubscriptionSettings>
 {
+    /// <summary>
+    /// The settings group identifier used for subscription settings.
+    /// </summary>
     public const string GroupId = "subscriptions";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -28,6 +34,14 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
     internal IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the current user.</param>
+    /// <param name="authorizationService">The authorization service used to check access to subscription settings.</param>
+    /// <param name="paymentMethodOptions">The configured payment methods available to subscriptions.</param>
+    /// <param name="shellReleaseManager">The shell release manager used to restart the tenant after settings changes.</param>
+    /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public SubscriptionSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -42,9 +56,19 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Gets the settings group used to render subscription settings.
+    /// </summary>
     protected override string SettingsGroupId
         => GroupId;
 
+    /// <summary>
+    /// Builds the editor shape for subscription settings when the current user is authorized.
+    /// </summary>
+    /// <param name="model">The site being edited.</param>
+    /// <param name="settings">The subscription settings to display.</param>
+    /// <param name="context">The editor build context.</param>
+    /// <returns>The display result for the subscription settings editor, or <see langword="null"/> when access is denied.</returns>
     public override async Task<IDisplayResult> EditAsync(ISite model, SubscriptionSettings settings, BuildEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionSettings))
@@ -67,6 +91,13 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         .OnGroup(SettingsGroupId);
     }
 
+    /// <summary>
+    /// Updates subscription settings from the posted site settings values and requests a tenant reload.
+    /// </summary>
+    /// <param name="site">The site being updated.</param>
+    /// <param name="settings">The subscription settings to update.</param>
+    /// <param name="context">The editor update context.</param>
+    /// <returns>The updated editor display result, or <see langword="null"/> when access is denied.</returns>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionSettings settings, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionSettings))

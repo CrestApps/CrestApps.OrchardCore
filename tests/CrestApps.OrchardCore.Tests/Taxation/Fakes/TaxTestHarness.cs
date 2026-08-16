@@ -1,4 +1,6 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -26,24 +28,26 @@ public sealed class TaxTestHarness
         services.AddOptions();
         services.AddSingleton<IClock>(clock);
 
-        services.AddSingleton<ITaxJurisdictionStore, InMemoryTaxJurisdictionStore>();
-        services.AddSingleton<ITaxCategoryStore, InMemoryTaxCategoryStore>();
-        services.AddSingleton<ITaxRuleStore, InMemoryTaxRuleStore>();
-        services.AddSingleton<ITaxTableStore, InMemoryTaxTableStore>();
+        services.AddTaxationCore();
+
+        // Register the in-memory catalogs after AddTaxationCore so these closed-generic registrations take
+        // precedence over the open-generic INamedCatalog<> registered by AddCatalogs().
+        services.AddSingleton<INamedCatalog<TaxJurisdiction>, InMemoryNamedCatalog<TaxJurisdiction>>();
+        services.AddSingleton<INamedCatalog<TaxCategory>, InMemoryNamedCatalog<TaxCategory>>();
+        services.AddSingleton<INamedCatalog<TaxRule>, InMemoryNamedCatalog<TaxRule>>();
+        services.AddSingleton<INamedCatalog<TaxTable>, InMemoryNamedCatalog<TaxTable>>();
         services.AddSingleton<IExemptionCertificateStore, InMemoryExemptionCertificateStore>();
         services.AddSingleton<IMerchantTaxRegistrationStore, InMemoryMerchantTaxRegistrationStore>();
-
-        services.AddTaxationCore();
 
         configure?.Invoke(services);
 
         _services = services.BuildServiceProvider();
 
         Clock = clock;
-        Jurisdictions = _services.GetRequiredService<ITaxJurisdictionStore>();
-        Categories = _services.GetRequiredService<ITaxCategoryStore>();
-        Rules = _services.GetRequiredService<ITaxRuleStore>();
-        Tables = _services.GetRequiredService<ITaxTableStore>();
+        Jurisdictions = _services.GetRequiredService<INamedCatalog<TaxJurisdiction>>();
+        Categories = _services.GetRequiredService<INamedCatalog<TaxCategory>>();
+        Rules = _services.GetRequiredService<INamedCatalog<TaxRule>>();
+        Tables = _services.GetRequiredService<INamedCatalog<TaxTable>>();
         Exemptions = _services.GetRequiredService<IExemptionCertificateStore>();
         Registrations = _services.GetRequiredService<IMerchantTaxRegistrationStore>();
         TaxService = _services.GetRequiredService<ITaxService>();
@@ -60,24 +64,24 @@ public sealed class TaxTestHarness
     public ITaxService TaxService { get; }
 
     /// <summary>
-    /// Gets the in-memory jurisdiction store.
+    /// Gets the in-memory jurisdiction catalog.
     /// </summary>
-    public ITaxJurisdictionStore Jurisdictions { get; }
+    public INamedCatalog<TaxJurisdiction> Jurisdictions { get; }
 
     /// <summary>
-    /// Gets the in-memory category store.
+    /// Gets the in-memory category catalog.
     /// </summary>
-    public ITaxCategoryStore Categories { get; }
+    public INamedCatalog<TaxCategory> Categories { get; }
 
     /// <summary>
-    /// Gets the in-memory rule store.
+    /// Gets the in-memory rule catalog.
     /// </summary>
-    public ITaxRuleStore Rules { get; }
+    public INamedCatalog<TaxRule> Rules { get; }
 
     /// <summary>
-    /// Gets the in-memory tax table store.
+    /// Gets the in-memory tax table catalog.
     /// </summary>
-    public ITaxTableStore Tables { get; }
+    public INamedCatalog<TaxTable> Tables { get; }
 
     /// <summary>
     /// Gets the in-memory exemption certificate store.

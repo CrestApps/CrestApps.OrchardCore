@@ -16,7 +16,7 @@ public static class TaxTestData
     /// Creates a destination address in California, United States.
     /// </summary>
     /// <returns>The address.</returns>
-    public static TaxAddress California()
+    public static Address California()
         => new() { Country = "US", Region = "CA", City = "Los Angeles", PostalCode = "90001" };
 
     /// <summary>
@@ -72,7 +72,7 @@ public static class TaxTestData
     public static TaxCalculationContext Context(
         decimal unitPrice,
         decimal quantity = 1m,
-        TaxAddress destination = null,
+        Address destination = null,
         CustomerTaxProfile customer = null,
         string categoryCode = null)
     {

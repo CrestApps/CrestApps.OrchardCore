@@ -3,6 +3,9 @@ using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.Services;
 
+/// <summary>
+/// Registers the client-side resources used by subscription payment flows.
+/// </summary>
 public sealed class SubscriptionResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
@@ -23,6 +26,10 @@ public sealed class SubscriptionResourceManagementOptionsConfiguration : IConfig
             .SetVersion("1.0.0");
     }
 
+    /// <summary>
+    /// Adds the subscription resource manifest to the Orchard Core resource management options.
+    /// </summary>
+    /// <param name="options">The resource management options to configure.</param>
     public void Configure(ResourceManagementOptions options)
     {
         options.ResourceManifests.Add(_manifest);

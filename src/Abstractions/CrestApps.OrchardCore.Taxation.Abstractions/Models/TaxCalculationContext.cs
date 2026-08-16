@@ -21,22 +21,22 @@ public sealed class TaxCalculationContext
     /// <summary>
     /// Gets or sets the origin (ship-from / merchant) address.
     /// </summary>
-    public TaxAddress Origin { get; set; }
+    public Address Origin { get; set; }
 
     /// <summary>
     /// Gets or sets the destination (ship-to) address.
     /// </summary>
-    public TaxAddress Destination { get; set; }
+    public Address Destination { get; set; }
 
     /// <summary>
     /// Gets or sets the location where a service is performed.
     /// </summary>
-    public TaxAddress ServiceLocation { get; set; }
+    public Address ServiceLocation { get; set; }
 
     /// <summary>
     /// Gets or sets the location where an event takes place.
     /// </summary>
-    public TaxAddress EventLocation { get; set; }
+    public Address EventLocation { get; set; }
 
     /// <summary>
     /// Gets or sets the transaction date, in UTC, used to select effective rules and tables.

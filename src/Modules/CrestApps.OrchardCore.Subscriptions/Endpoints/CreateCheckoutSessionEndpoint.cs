@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
@@ -16,8 +17,16 @@ using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
+/// <summary>
+/// Registers the Stripe checkout session creation endpoint for subscription payments.
+/// </summary>
 public static class CreateCheckoutSessionEndpoint
 {
+    /// <summary>
+    /// Adds the endpoint that creates a Stripe checkout session for a pending subscription session.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder used to register the route.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder AddCreateCheckoutSessionEndpoint(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("subscriptions/stripe/create-checkout-session", HandleAsync)
@@ -29,6 +38,18 @@ public static class CreateCheckoutSessionEndpoint
         return builder;
     }
 
+    /// <summary>
+    /// Handles a request to create a Stripe checkout session for subscription line items.
+    /// </summary>
+    /// <param name="model">The checkout session creation request.</param>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="linkGenerator">The link generator used to build checkout return URLs.</param>
+    /// <param name="subscriptionSessionStore">The store used to load pending subscription sessions.</param>
+    /// <param name="stripeCheckoutService">The Stripe checkout service used to create checkout sessions.</param>
+    /// <param name="stripePriceService">The Stripe price service used to resolve line item prices.</param>
+    /// <param name="paymentAttemptLimiter">The payment attempt limiter used to throttle repeated requests.</param>
+    /// <param name="stripeOptions">The configured Stripe options.</param>
+    /// <returns>An HTTP result that contains the checkout URL or an error response.</returns>
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSessionCheckout model,
         HttpContext httpContext,
