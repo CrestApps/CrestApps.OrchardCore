@@ -1,8 +1,8 @@
-namespace CrestApps.OrchardCore.Taxation.Models;
+namespace CrestApps.OrchardCore.Addresses.Models;
 
 /// <summary>
-/// Represents a location used to determine the applicable tax jurisdictions. No particular hierarchy
-/// is assumed; empty components are simply ignored during jurisdiction resolution.
+/// Represents a postal or geographic address. Components are optional; empty components are simply
+/// ignored by consumers such as tax jurisdiction resolution. No particular hierarchy is assumed.
 /// </summary>
 public sealed class Address
 {
