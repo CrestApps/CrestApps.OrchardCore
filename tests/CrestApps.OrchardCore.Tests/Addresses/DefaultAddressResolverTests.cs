@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Services;
-using OrchardCore.ContentManagement;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Addresses;
@@ -10,11 +9,11 @@ namespace CrestApps.OrchardCore.Tests.Addresses;
 public sealed class DefaultAddressResolverTests
 {
     [Fact]
-    public void BuildAddress_UsesPartCode_WhenPresent()
+    public void BuildAddress_UsesAreaCode_WhenPresent()
     {
         // Arrange
-        var country = CreateGeographic(AddressConstants.CountryPart, "United States", "us");
-        var region = CreateGeographic(AddressConstants.RegionPart, "California", "ca");
+        var country = CreateArea("country-id", "United States", "US");
+        var region = CreateArea("region-id", "California", "CA");
 
         var addressPart = new JsonObject
         {
@@ -22,7 +21,7 @@ public sealed class DefaultAddressResolverTests
             ["Region"] = Selector("region-id"),
         };
 
-        var resolved = new Dictionary<string, ContentItem>
+        var resolved = new Dictionary<string, GeographicAreaIndex>
         {
             ["country-id"] = country,
             ["region-id"] = region,
@@ -32,16 +31,16 @@ public sealed class DefaultAddressResolverTests
         var address = DefaultAddressResolver.BuildAddress(addressPart, resolved);
 
         // Assert
-        Assert.Equal("us", address.Country);
-        Assert.Equal("ca", address.Region);
+        Assert.Equal("US", address.Country);
+        Assert.Equal("CA", address.Region);
     }
 
     [Fact]
     public void BuildAddress_FallsBackToDisplayText_WhenCodeMissing()
     {
         // Arrange
-        var county = CreateGeographic(AddressConstants.CountyPart, "Santa Clara", code: null);
-        var city = CreateGeographic(AddressConstants.CityPart, "San Jose", code: null);
+        var county = CreateArea("county-id", "Santa Clara", code: null);
+        var city = CreateArea("city-id", "San Jose", code: null);
 
         var addressPart = new JsonObject
         {
@@ -49,7 +48,7 @@ public sealed class DefaultAddressResolverTests
             ["City"] = Selector("city-id"),
         };
 
-        var resolved = new Dictionary<string, ContentItem>
+        var resolved = new Dictionary<string, GeographicAreaIndex>
         {
             ["county-id"] = county,
             ["city-id"] = city,
@@ -73,7 +72,7 @@ public sealed class DefaultAddressResolverTests
         };
 
         // Act
-        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, ContentItem>());
+        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, GeographicAreaIndex>());
 
         // Assert
         Assert.Equal("95113", address.PostalCode);
@@ -86,7 +85,7 @@ public sealed class DefaultAddressResolverTests
         var addressPart = new JsonObject();
 
         // Act
-        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, ContentItem>());
+        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, GeographicAreaIndex>());
 
         // Assert
         Assert.Null(address.Country);
@@ -107,7 +106,7 @@ public sealed class DefaultAddressResolverTests
         };
 
         // Act
-        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, ContentItem>());
+        var address = DefaultAddressResolver.BuildAddress(addressPart, new Dictionary<string, GeographicAreaIndex>());
 
         // Assert
         Assert.Null(address.District);
@@ -121,23 +120,15 @@ public sealed class DefaultAddressResolverTests
         };
     }
 
-    private static ContentItem CreateGeographic(string partName, string displayText, string code)
+    private static GeographicAreaIndex CreateArea(string contentItemId, string displayText, string code)
     {
-        var contentItem = new ContentItem
+        return new GeographicAreaIndex
         {
+            ContentItemId = contentItemId,
             DisplayText = displayText,
+            Code = code,
+            Published = true,
+            Latest = true,
         };
-
-        var part = new JsonObject();
-
-        if (!string.IsNullOrEmpty(code))
-        {
-            part[AddressConstants.CodeField] = new JsonObject { ["Text"] = code };
-        }
-
-        JsonNode content = contentItem.Content;
-        content[partName] = part;
-
-        return contentItem;
     }
 }

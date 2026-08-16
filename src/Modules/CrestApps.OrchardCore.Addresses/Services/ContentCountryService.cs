@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Models;
-using OrchardCore.ContentManagement;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Addresses.Services;
@@ -17,7 +16,7 @@ public sealed class ContentCountryService : ICountryService
     /// <summary>
     /// Initializes a new instance of the <see cref="ContentCountryService"/> class.
     /// </summary>
-    /// <param name="session">The YesSql session used to query country content items.</param>
+    /// <param name="session">The YesSql session used to query the geographic area index.</param>
     public ContentCountryService(ISession session)
     {
         _session = session;
@@ -26,24 +25,25 @@ public sealed class ContentCountryService : ICountryService
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<CountryInfo>> GetCountriesAsync()
     {
-        var indexed = await _session.Query<ContentItem, CountryIndex>(index => index.Published)
+        var indexed = await _session.QueryIndex<GeographicAreaIndex>(index =>
+                index.ContentType == AddressConstants.Country && index.Published)
             .ListAsync();
 
         var countries = new List<CountryInfo>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in indexed)
+        foreach (var area in indexed)
         {
-            var code = item.Content?[AddressConstants.CountryPart]?["Code"]?["Text"]?.GetValue<string>()?.Trim();
+            var code = area.Code?.Trim();
 
             if (string.IsNullOrWhiteSpace(code) || !seen.Add(code))
             {
                 continue;
             }
 
-            var name = string.IsNullOrWhiteSpace(item.DisplayText)
+            var name = string.IsNullOrWhiteSpace(area.DisplayText)
                 ? code
-                : item.DisplayText;
+                : area.DisplayText;
 
             countries.Add(new CountryInfo(code.ToUpperInvariant(), name));
         }

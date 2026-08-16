@@ -69,8 +69,11 @@ public sealed class CountryContentHandler : ContentHandlerBase
 
         var contentItemId = context.ContentItem.ContentItemId;
 
-        var duplicate = await _session.Query<ContentItem, CountryIndex>(index =>
-                index.Code == code && index.ContentItemId != contentItemId && index.Latest)
+        var duplicate = await _session.QueryIndex<GeographicAreaIndex>(index =>
+                index.ContentType == AddressConstants.Country &&
+                index.Code == code &&
+                index.ContentItemId != contentItemId &&
+                index.Latest)
             .FirstOrDefaultAsync();
 
         if (duplicate is not null)

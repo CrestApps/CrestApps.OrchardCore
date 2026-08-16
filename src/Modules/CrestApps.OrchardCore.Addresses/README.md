@@ -39,7 +39,9 @@ dependent features keep working without any address content.
 
 ## Data storage
 
-Country content items are indexed by `CountryIndex` (ISO code and display name) for efficient lookup. Taxation
+All geographic content items (country, region, county, city, and district) are indexed by the shared
+`GeographicAreaIndex` (content type, ISO/money-safe code, parent reference, and display name) for efficient
+lookup. Taxation
 continues to store stable string codes (ISO alpha-2 country code, plus region, county, city, and district codes),
 so enabling or disabling this module never orphans existing tax jurisdictions or rules.
 

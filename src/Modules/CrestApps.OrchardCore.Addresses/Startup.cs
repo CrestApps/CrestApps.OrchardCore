@@ -23,10 +23,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AddressMigrations>();
-        services.AddDataMigration<CountryIndexMigrations>();
+        services.AddDataMigration<GeographicAreaIndexMigrations>();
         services.AddDataMigration<CountrySeedMigrations>();
 
-        services.AddIndexProvider<CountryIndexProvider>();
+        services.AddIndexProvider<GeographicAreaIndexProvider>();
 
         services.AddScoped<IContentHandler, CountryContentHandler>();
 

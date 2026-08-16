@@ -61,7 +61,7 @@ public interface IAddressResolver
 
 ## Country selectors
 
-When the feature is enabled it registers a content-backed `ICountryService`. Country dropdowns across the platform &mdash; for example the taxation jurisdiction editor &mdash; are populated from the managed `Country` content items and indexed by `CountryIndex` for efficient lookup. When no country content exists yet, the service falls back to the canonical ISO list so selectors are never empty.
+When the feature is enabled it registers a content-backed `ICountryService`. Country dropdowns across the platform &mdash; for example the taxation jurisdiction editor &mdash; are populated from the managed `Country` content items and indexed by the shared `GeographicAreaIndex` for efficient lookup. When no country content exists yet, the service falls back to the canonical ISO list so selectors are never empty.
 
 When the feature is disabled, the default `ICountryService` returns the canonical ISO list, so dependent features keep working without any address content.
 
@@ -71,6 +71,10 @@ public interface ICountryService
     ValueTask<IReadOnlyList<CountryInfo>> GetCountriesAsync();
 }
 ```
+
+## Indexing
+
+All five geographic content types share a single `GeographicAreaIndex` map index. Each row records the `ContentItemId`, `ContentType`, money-safe `Code`, `ParentContentItemId`, `DisplayText`, and the `Published`/`Latest` flags. One shared index powers country selectors, ISO code uniqueness for countries, cascading parent/child lookups, and address resolution across the whole hierarchy without loading full content items.
 
 ## Money safety
 

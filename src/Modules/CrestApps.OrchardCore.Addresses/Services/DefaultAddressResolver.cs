@@ -1,24 +1,28 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Models;
 using OrchardCore.ContentManagement;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Addresses.Services;
 
 /// <summary>
-/// Default <see cref="IAddressResolver"/> that reads the <c>AddressPart</c> selectors, loads the referenced
-/// geographic content items, and reduces each one to its stable money-safe code (or display name).
+/// Default <see cref="IAddressResolver"/> that reads the <c>AddressPart</c> selectors and reduces each
+/// referenced geographic area to its stable money-safe code (or display name) using the shared
+/// <see cref="GeographicAreaIndex"/>, so no full content items have to be loaded.
 /// </summary>
 public sealed class DefaultAddressResolver : IAddressResolver
 {
-    private readonly IContentManager _contentManager;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAddressResolver"/> class.
     /// </summary>
-    /// <param name="contentManager">The content manager used to load the referenced geographic content items.</param>
-    public DefaultAddressResolver(IContentManager contentManager)
+    /// <param name="session">The YesSql session used to query the geographic area index.</param>
+    public DefaultAddressResolver(ISession session)
     {
-        _contentManager = contentManager;
+        _session = session;
     }
 
     /// <inheritdoc />
@@ -34,22 +38,29 @@ public sealed class DefaultAddressResolver : IAddressResolver
 
         var pickerFields = new[] { "Country", "Region", "County", "City", "District" };
 
-        var resolved = new Dictionary<string, ContentItem>(StringComparer.Ordinal);
+        var contentItemIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var pickerField in pickerFields)
         {
             var contentItemId = GetFirstReferencedId(addressPart, pickerField);
 
-            if (string.IsNullOrEmpty(contentItemId) || resolved.ContainsKey(contentItemId))
+            if (!string.IsNullOrEmpty(contentItemId))
             {
-                continue;
+                contentItemIds.Add(contentItemId);
             }
+        }
 
-            var referenced = await _contentManager.GetAsync(contentItemId);
+        var resolved = new Dictionary<string, GeographicAreaIndex>(StringComparer.Ordinal);
 
-            if (referenced is not null)
+        if (contentItemIds.Count > 0)
+        {
+            var areas = await _session.QueryIndex<GeographicAreaIndex>(index =>
+                    index.ContentItemId.IsIn(contentItemIds) && index.Published)
+                .ListAsync();
+
+            foreach (var area in areas)
             {
-                resolved[contentItemId] = referenced;
+                resolved.TryAdd(area.ContentItemId, area);
             }
         }
 
@@ -57,21 +68,21 @@ public sealed class DefaultAddressResolver : IAddressResolver
     }
 
     /// <summary>
-    /// Builds a money-safe <see cref="Address"/> from the supplied address part and the referenced geographic
-    /// content items that were already loaded.
+    /// Builds a money-safe <see cref="Address"/> from the supplied address part and the geographic area index
+    /// rows that were already resolved.
     /// </summary>
     /// <param name="addressPart">The JSON of the <c>AddressPart</c> to read the selectors and postal code from.</param>
-    /// <param name="resolvedItems">The referenced geographic content items keyed by their content item identifier.</param>
+    /// <param name="resolvedAreas">The resolved geographic areas keyed by their content item identifier.</param>
     /// <returns>The resolved money-safe address. Never <see langword="null"/>.</returns>
-    internal static Address BuildAddress(JsonNode addressPart, IReadOnlyDictionary<string, ContentItem> resolvedItems)
+    internal static Address BuildAddress(JsonNode addressPart, IReadOnlyDictionary<string, GeographicAreaIndex> resolvedAreas)
     {
         return new Address
         {
-            Country = ResolveComponent(addressPart, "Country", AddressConstants.CountryPart, resolvedItems),
-            Region = ResolveComponent(addressPart, "Region", AddressConstants.RegionPart, resolvedItems),
-            County = ResolveComponent(addressPart, "County", AddressConstants.CountyPart, resolvedItems),
-            City = ResolveComponent(addressPart, "City", AddressConstants.CityPart, resolvedItems),
-            District = ResolveComponent(addressPart, "District", AddressConstants.DistrictPart, resolvedItems),
+            Country = ResolveComponent(addressPart, "Country", resolvedAreas),
+            Region = ResolveComponent(addressPart, "Region", resolvedAreas),
+            County = ResolveComponent(addressPart, "County", resolvedAreas),
+            City = ResolveComponent(addressPart, "City", resolvedAreas),
+            District = ResolveComponent(addressPart, "District", resolvedAreas),
             PostalCode = ReadText(addressPart, "PostalCode"),
         };
     }
@@ -79,27 +90,25 @@ public sealed class DefaultAddressResolver : IAddressResolver
     private static string ResolveComponent(
         JsonNode addressPart,
         string pickerField,
-        string partName,
-        IReadOnlyDictionary<string, ContentItem> resolvedItems)
+        IReadOnlyDictionary<string, GeographicAreaIndex> resolvedAreas)
     {
         var contentItemId = GetFirstReferencedId(addressPart, pickerField);
 
-        if (string.IsNullOrEmpty(contentItemId) || !resolvedItems.TryGetValue(contentItemId, out var item) || item is null)
+        if (string.IsNullOrEmpty(contentItemId) || !resolvedAreas.TryGetValue(contentItemId, out var area) || area is null)
         {
             return null;
         }
 
-        JsonNode itemContent = item.Content;
-        var code = itemContent?[partName]?[AddressConstants.CodeField]?["Text"]?.GetValue<string>()?.Trim();
+        var code = area.Code?.Trim();
 
         if (!string.IsNullOrEmpty(code))
         {
             return code;
         }
 
-        return string.IsNullOrWhiteSpace(item.DisplayText)
+        return string.IsNullOrWhiteSpace(area.DisplayText)
             ? null
-            : item.DisplayText.Trim();
+            : area.DisplayText.Trim();
     }
 
     private static string GetFirstReferencedId(JsonNode addressPart, string pickerField)
