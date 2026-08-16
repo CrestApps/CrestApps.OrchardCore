@@ -42,9 +42,6 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
     public override LocalizedString Description => S["Gross revenue, transaction volume, average transaction value, and tax collected, with a monthly revenue trend."];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.BillingUsage;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();

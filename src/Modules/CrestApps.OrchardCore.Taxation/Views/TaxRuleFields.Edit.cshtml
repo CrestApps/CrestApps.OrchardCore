@@ -1,5 +1,34 @@
 @model TaxRuleViewModel
 
+@functions {
+    string CalculationInputTokens(string methodName)
+    {
+        if (!string.IsNullOrEmpty(methodName) && Model.MethodInputs.TryGetValue(methodName, out var flags))
+        {
+            var tokens = new List<string>();
+
+            if (flags.HasFlag(TaxCalculationMethodInputs.Rate))
+            {
+                tokens.Add("Rate");
+            }
+
+            if (flags.HasFlag(TaxCalculationMethodInputs.FixedAmount))
+            {
+                tokens.Add("FixedAmount");
+            }
+
+            if (flags.HasFlag(TaxCalculationMethodInputs.TaxTable))
+            {
+                tokens.Add("TaxTable");
+            }
+
+            return string.Join(" ", tokens);
+        }
+
+        return string.Empty;
+    }
+}
+
 <div class="ocat-wrapper">
     <label asp-for="Name" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
@@ -89,12 +118,18 @@
 <div class="ocat-wrapper">
     <label asp-for="CalculationMethod" class="ocat-label">@T["Calculation method"]</label>
     <div class="ocat-end">
-        <select asp-for="CalculationMethod" asp-items="Model.CalculationMethods" class="form-select"></select>
+        <select asp-for="CalculationMethod" class="form-select" data-tax-calculation-method>
+            @foreach (var method in Model.CalculationMethods)
+            {
+                <option value="@method.Value" data-inputs="@CalculationInputTokens(method.Value)" selected="@(string.Equals(method.Value, Model.CalculationMethod, StringComparison.OrdinalIgnoreCase))">@method.Text</option>
+            }
+        </select>
+        <span class="hint">@T["The source that determines how the tax is calculated. The fields below change to match the selected method."]</span>
         <span asp-validation-for="CalculationMethod" class="text-danger"></span>
     </div>
 </div>
 
-<div class="ocat-wrapper">
+<div class="ocat-wrapper" data-tax-input="Rate">
     <label asp-for="Rate" class="ocat-label">@T["Rate"]</label>
     <div class="ocat-end ocat-limited-wrapper">
         <input asp-for="Rate" type="number" step="0.0001" class="form-control ocat-limited" />
@@ -103,12 +138,21 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
+<div class="ocat-wrapper" data-tax-input="FixedAmount">
     <label asp-for="FixedAmount" class="ocat-label">@T["Fixed amount"]</label>
     <div class="ocat-end ocat-limited-wrapper">
         <input asp-for="FixedAmount" type="number" step="0.01" class="form-control ocat-limited" />
         <span class="hint">@T["Used when the calculation method is amount based."]</span>
         <span asp-validation-for="FixedAmount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-tax-input="TaxTable">
+    <label asp-for="TaxTableId" class="ocat-label">@T["Tax table"]</label>
+    <div class="ocat-end">
+        <select asp-for="TaxTableId" asp-items="Model.TaxTables" class="form-select"></select>
+        <span class="hint">@T["The tax table used by table-based calculation methods such as brackets, progressive schedules, and lookups."]</span>
+        <span asp-validation-for="TaxTableId" class="text-danger"></span>
     </div>
 </div>
 
@@ -160,3 +204,26 @@
         <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
     </div>
 </div>
+
+<script at="Foot">
+    (function () {
+        var select = document.querySelector('[data-tax-calculation-method]');
+
+        if (!select) {
+            return;
+        }
+
+        function refresh() {
+            var option = select.options[select.selectedIndex];
+            var active = (option && option.getAttribute('data-inputs') ? option.getAttribute('data-inputs') : '').split(' ');
+
+            document.querySelectorAll('[data-tax-input]').forEach(function (group) {
+                var key = group.getAttribute('data-tax-input');
+                group.style.display = active.indexOf(key) !== -1 ? '' : 'none';
+            });
+        }
+
+        select.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>

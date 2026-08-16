@@ -20,6 +20,7 @@
                         <th scope="col">@T["Date"]</th>
                         <th scope="col">@T["Service Plan"]</th>
                         <th scope="col">@T["Status"]</th>
+                        <th scope="col" class="text-end">@T["Receipt"]</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -30,6 +31,19 @@
                             <td scope="col">@invoice.Date.ToString("g")</td>
                             <td scope="col">@invoice.ServicePlanTitle</td>
                             <td scope="col">@invoice.Status</td>
+                            <td scope="col" class="text-end">
+                                @if (!string.IsNullOrEmpty(invoice.SessionId) && !string.IsNullOrEmpty(invoice.TransactionId))
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       asp-controller="Dashboard"
+                                       asp-action="Receipt"
+                                       asp-route-sessionId="@invoice.SessionId"
+                                       asp-route-transactionId="@invoice.TransactionId"
+                                       target="_blank">
+                                        @T["Print"]
+                                    </a>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

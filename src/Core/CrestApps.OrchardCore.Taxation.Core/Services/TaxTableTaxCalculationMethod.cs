@@ -15,6 +15,9 @@ public sealed class TaxTableTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.TaxTable;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.TaxTable;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

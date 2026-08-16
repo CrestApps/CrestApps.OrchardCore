@@ -15,6 +15,9 @@ public sealed class ProgressiveTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.Progressive;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.TaxTable;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

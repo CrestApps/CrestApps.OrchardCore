@@ -49,9 +49,6 @@ public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase
     public override LocalizedString Description => S["Subscriptions due to expire within the next {0} days, ordered by expiration date.", HorizonDays];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.Operations;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var nowUtc = _clock.UtcNow;

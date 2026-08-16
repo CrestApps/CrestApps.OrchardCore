@@ -140,7 +140,9 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
                     Amount = item.Amount,
                     Status = item.Status,
                     Date = (await _localClock.ConvertToLocalAsync(item.CreatedUtc)).DateTime,
-                    ServicePlanTitle = contentItem.DisplayText
+                    ServicePlanTitle = contentItem.DisplayText,
+                    SessionId = item.SessionId,
+                    TransactionId = item.GatewayTransactionId,
                 };
 
                 vm.Invoices.Add(invoice);

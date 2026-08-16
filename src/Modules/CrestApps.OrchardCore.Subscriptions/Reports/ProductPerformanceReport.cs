@@ -43,9 +43,6 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
     public override LocalizedString Description => S["Revenue, transaction volume, and tax grouped by subscription product, highlighting the top products by revenue."];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.BillingUsage;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();

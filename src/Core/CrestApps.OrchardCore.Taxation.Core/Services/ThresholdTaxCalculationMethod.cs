@@ -15,6 +15,9 @@ public sealed class ThresholdTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.Threshold;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.TaxTable;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

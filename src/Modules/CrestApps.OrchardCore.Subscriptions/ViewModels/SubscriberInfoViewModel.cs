@@ -63,4 +63,15 @@ public class SubscriberInvoiceViewModel
     /// Gets or sets the invoice payment status.
     /// </summary>
     public PaymentStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subscription session identifier that recorded the transaction. Used to build the
+    /// printable receipt link.
+    /// </summary>
+    public string SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the transaction identifier. Used to build the printable receipt link.
+    /// </summary>
+    public string TransactionId { get; set; }
 }

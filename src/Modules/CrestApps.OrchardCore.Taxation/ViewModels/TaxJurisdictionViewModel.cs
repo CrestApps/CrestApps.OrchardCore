@@ -77,6 +77,12 @@ public class TaxJurisdictionViewModel
     public IList<SelectListItem> Levels { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the available country options.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Countries { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the available parent jurisdiction options.
     /// </summary>
     [BindNever]

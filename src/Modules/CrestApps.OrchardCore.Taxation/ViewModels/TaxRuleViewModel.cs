@@ -76,6 +76,11 @@ public class TaxRuleViewModel
     public decimal? FixedAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the tax table used by table-based tax calculations.
+    /// </summary>
+    public string TaxTableId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the tax is included in item prices.
     /// </summary>
     public bool IncludedInPrice { get; set; }
@@ -139,4 +144,17 @@ public class TaxRuleViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available tax table options.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> TaxTables { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a map of calculation method name to the configuration fields the method consumes. The
+    /// editor uses this map to show only the fields required by the selected calculation method.
+    /// </summary>
+    [BindNever]
+    public IDictionary<string, TaxCalculationMethodInputs> MethodInputs { get; set; } = new Dictionary<string, TaxCalculationMethodInputs>(StringComparer.OrdinalIgnoreCase);
 }

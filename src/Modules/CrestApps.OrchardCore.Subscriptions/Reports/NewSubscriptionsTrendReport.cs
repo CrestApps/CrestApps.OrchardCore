@@ -42,9 +42,6 @@ public sealed class NewSubscriptionsTrendReport : SubscriptionReportBase
     public override LocalizedString Description => S["The number of new subscriptions started each month over the reporting period."];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.Executive;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();

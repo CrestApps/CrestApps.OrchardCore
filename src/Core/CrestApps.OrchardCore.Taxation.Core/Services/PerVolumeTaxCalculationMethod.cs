@@ -13,6 +13,9 @@ public sealed class PerVolumeTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.PerVolume;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.FixedAmount;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

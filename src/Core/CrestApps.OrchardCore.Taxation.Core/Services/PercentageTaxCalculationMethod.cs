@@ -13,6 +13,9 @@ public sealed class PercentageTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.Percentage;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.Rate;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

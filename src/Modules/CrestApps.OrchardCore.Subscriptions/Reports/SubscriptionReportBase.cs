@@ -43,7 +43,7 @@ public abstract class SubscriptionReportBase : IReport
     public abstract LocalizedString Description { get; }
 
     /// <inheritdoc/>
-    public virtual string Category => ReportsConstants.Categories.General;
+    public virtual string Category => ReportsConstants.Categories.Commerce;
 
     /// <inheritdoc/>
     public Permission Permission => SubscriptionPermissions.ManageSubscriptions;

@@ -42,9 +42,6 @@ public sealed class TaxCollectedReport : SubscriptionReportBase
     public override LocalizedString Description => S["Total tax collected and taxable transaction volume, with a monthly breakdown."];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.BillingUsage;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();

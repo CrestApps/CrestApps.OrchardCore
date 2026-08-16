@@ -13,6 +13,9 @@ public sealed class FixedAmountTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.FixedAmount;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.FixedAmount;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

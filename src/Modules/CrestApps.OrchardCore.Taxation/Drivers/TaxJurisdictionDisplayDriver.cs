@@ -1,7 +1,9 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -12,9 +14,14 @@ internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdicti
 {
     private readonly INamedCatalog<TaxJurisdiction> _jurisdictionStore;
 
-    public TaxJurisdictionDisplayDriver(INamedCatalog<TaxJurisdiction> jurisdictionStore)
+    internal readonly IStringLocalizer S;
+
+    public TaxJurisdictionDisplayDriver(
+        INamedCatalog<TaxJurisdiction> jurisdictionStore,
+        IStringLocalizer<TaxJurisdictionDisplayDriver> stringLocalizer)
     {
         _jurisdictionStore = jurisdictionStore;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(TaxJurisdiction jurisdiction, BuildDisplayContext context)
@@ -49,6 +56,19 @@ internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdicti
             model.Levels = Enum.GetValues<JurisdictionLevel>()
                 .Select(level => new SelectListItem(level.ToString(), level.ToString()))
                 .ToList();
+
+            model.Countries =
+            [
+                new SelectListItem(S["Select a country"], string.Empty),
+                .. CountryProvider.GetCountries()
+                    .Select(country => new SelectListItem($"{country.Name} ({country.Code})", country.Code)),
+            ];
+
+            if (!string.IsNullOrEmpty(jurisdiction.Country) &&
+                !model.Countries.Any(item => string.Equals(item.Value, jurisdiction.Country, StringComparison.OrdinalIgnoreCase)))
+            {
+                model.Countries.Insert(1, new SelectListItem(jurisdiction.Country, jurisdiction.Country));
+            }
 
             var jurisdictions = await _jurisdictionStore.GetAllAsync();
 

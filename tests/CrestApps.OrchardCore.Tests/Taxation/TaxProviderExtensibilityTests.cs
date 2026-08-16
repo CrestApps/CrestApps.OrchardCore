@@ -65,6 +65,8 @@ public sealed class TaxProviderExtensibilityTests
 
         public string Name => MethodName;
 
+        public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.FixedAmount;
+
         public TaxComputationResult Compute(TaxComputationRequest request)
         {
             return new TaxComputationResult

@@ -13,6 +13,9 @@ public sealed class PerUnitTaxCalculationMethod : ITaxCalculationMethod
     public string Name => TaxCalculationMethodNames.PerUnit;
 
     /// <inheritdoc />
+    public TaxCalculationMethodInputs Inputs => TaxCalculationMethodInputs.FixedAmount;
+
+    /// <inheritdoc />
     public TaxComputationResult Compute(TaxComputationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

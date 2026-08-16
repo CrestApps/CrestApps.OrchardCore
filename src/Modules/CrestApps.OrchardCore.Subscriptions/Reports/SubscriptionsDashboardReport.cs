@@ -48,9 +48,6 @@ public sealed class SubscriptionsDashboardReport : SubscriptionReportBase
     public override LocalizedString Description => S["Active, new, and expiring subscriptions plus the total number of distinct subscribers."];
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.Executive;
-
-    /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();

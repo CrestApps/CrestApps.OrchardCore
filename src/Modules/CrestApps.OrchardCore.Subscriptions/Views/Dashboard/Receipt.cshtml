@@ -1,0 +1,119 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionReceiptViewModel
+
+@{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var decimals = CurrencyScale.GetDecimalPlaces(Model.Currency);
+    var amountFormat = "N" + decimals;
+
+    string Money(double value)
+    {
+        return string.IsNullOrEmpty(Model.Currency)
+            ? value.ToString(amountFormat, culture)
+            : $"{Model.Currency} {value.ToString(amountFormat, culture)}";
+    }
+
+    var subtotal = Model.Amount - Model.TaxAmount;
+}
+
+<style>
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="mb-3 no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print receipt"]</button>
+    <a class="btn btn-secondary" asp-controller="Dashboard" asp-action="Index">@T["Back"]</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h3 class="mb-1">@Model.SiteName</h3>
+                <div class="text-muted">@T["Payment receipt"]</div>
+            </div>
+            <div class="text-end">
+                <div><strong>@T["Transaction"]:</strong> @Model.TransactionId</div>
+                <div><strong>@T["Date"]:</strong> @Model.Date.ToString("g", culture)</div>
+                @if (Model.GatewayMode != GatewayMode.Live)
+                {
+                    <div><span class="badge bg-warning text-dark">@T["Test payment"]</span></div>
+                }
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="text-muted">@T["Billed to"]</h6>
+                <div>@Model.BilledToName</div>
+                <div>@Model.BilledToEmail</div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <h6 class="text-muted">@T["Status"]</h6>
+                @if (Model.Status == PaymentStatus.Succeeded)
+                {
+                    <span class="badge bg-success">@T["Paid"]</span>
+                }
+                else if (Model.Status == PaymentStatus.Failed)
+                {
+                    <span class="badge bg-danger">@T["Failed"]</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">@T["Pending"]</span>
+                }
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Description"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@Model.ServicePlanTitle</td>
+                    <td class="text-end">@Money(subtotal)</td>
+                </tr>
+                @if (Model.TaxLines != null && Model.TaxLines.Count > 0)
+                {
+                    foreach (var line in Model.TaxLines)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted">
+                                @(string.IsNullOrEmpty(line.TaxName) ? T["Tax"].Value : line.TaxName)
+                                @if (!string.IsNullOrEmpty(line.JurisdictionName))
+                                {
+                                    <span>&mdash; @line.JurisdictionName</span>
+                                }
+                            </td>
+                            <td class="text-end text-muted">@Money((double)line.TaxAmount)</td>
+                        </tr>
+                    }
+                }
+                else if (Model.TaxAmount > 0)
+                {
+                    <tr>
+                        <td class="ps-4 text-muted">@T["Tax"]</td>
+                        <td class="text-end text-muted">@Money(Model.TaxAmount)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" class="text-end">@T["Total"]</th>
+                    <th class="text-end">@Money(Model.Amount)</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

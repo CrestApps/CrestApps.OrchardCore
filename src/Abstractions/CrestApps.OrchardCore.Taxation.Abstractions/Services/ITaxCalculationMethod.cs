@@ -15,6 +15,12 @@ public interface ITaxCalculationMethod
     string Name { get; }
 
     /// <summary>
+    /// Gets the tax rule configuration fields this method consumes. The tax rule editor uses these flags to
+    /// show only the fields the selected method needs.
+    /// </summary>
+    TaxCalculationMethodInputs Inputs { get; }
+
+    /// <summary>
     /// Computes a tax amount for the supplied request.
     /// </summary>
     /// <param name="request">The computation request describing the taxable base and configuration.</param>

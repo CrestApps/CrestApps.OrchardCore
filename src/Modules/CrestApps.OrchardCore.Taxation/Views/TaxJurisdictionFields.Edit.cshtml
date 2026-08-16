@@ -46,9 +46,9 @@
 
 <div class="ocat-wrapper">
     <label asp-for="Country" class="ocat-label">@T["Country"]</label>
-    <div class="ocat-end ocat-limited-wrapper">
-        <input asp-for="Country" class="form-control ocat-limited" />
-        <span class="hint">@T["The ISO country code, for example US or CA."]</span>
+    <div class="ocat-end">
+        <select asp-for="Country" asp-items="Model.Countries" class="form-select"></select>
+        <span class="hint">@T["The country the jurisdiction belongs to. The ISO country code is stored."]</span>
         <span asp-validation-for="Country" class="text-danger"></span>
     </div>
 </div>
