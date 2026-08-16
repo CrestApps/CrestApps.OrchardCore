@@ -9,4 +9,9 @@
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Products Core</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
 </Project>

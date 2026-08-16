@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Taxation.Models;
 /// customer criteria, and a calculation method. Rules are versioned and carry effective dates so that
 /// historical determinations remain reproducible.
 /// </summary>
-public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxRule>
+public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcAwareModel, ICloneable<TaxRule>
 {
     /// <inheritdoc />
     public string Name { get; set; }
@@ -37,7 +37,8 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
     public string TaxType { get; set; } = TaxTypeNames.SalesTax;
 
     /// <summary>
-    /// Gets or sets the human readable name of the tax the rule produces.
+    /// Gets or sets the human readable name of the tax the rule produces. When left empty the tax line
+    /// falls back to <see cref="Name"/>.
     /// </summary>
     public string TaxName { get; set; }
 
@@ -62,11 +63,6 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
     /// matches every customer type.
     /// </summary>
     public CustomerTaxType? CustomerType { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the calculation method used by the rule.
-    /// </summary>
-    public string CalculationMethod { get; set; } = TaxCalculationMethodNames.Percentage;
 
     /// <summary>
     /// Gets or sets the rate applied by the rule, expressed as a fraction (for example <c>0.2</c> for 20%).
@@ -142,6 +138,7 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
         return new TaxRule
         {
             ItemId = ItemId,
+            Source = Source,
             Name = Name,
             Version = Version,
             Enabled = Enabled,
@@ -152,7 +149,6 @@ public sealed class TaxRule : CatalogItem, INameAwareModel, IModifiedUtcAwareMod
             JurisdictionId = JurisdictionId,
             CategoryCode = CategoryCode,
             CustomerType = CustomerType,
-            CalculationMethod = CalculationMethod,
             Rate = Rate,
             FixedAmount = FixedAmount,
             TaxTableId = TaxTableId,

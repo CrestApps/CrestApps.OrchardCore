@@ -19,7 +19,7 @@ public sealed class TaxRoundingTests
             Name = "State",
             TaxType = "STATE",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.0825m,
         });
 
@@ -28,7 +28,7 @@ public sealed class TaxRoundingTests
             Name = "County",
             TaxType = "COUNTY",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.0825m,
         });
     }

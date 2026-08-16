@@ -9,3 +9,12 @@
         <span asp-validation-for="Price"></span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Sku">
+    <label asp-for="Sku" class="ocat-label">@T["SKU"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="Sku" class="form-control" />
+        <span class="hint">@T["An optional stock-keeping unit that uniquely identifies this product."]</span>
+        <span asp-validation-for="Sku"></span>
+    </div>
+</div>

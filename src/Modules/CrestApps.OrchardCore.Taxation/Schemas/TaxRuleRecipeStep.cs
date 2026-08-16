@@ -52,7 +52,7 @@ public sealed class TaxRuleRecipeStep : IRecipeStep
                 ("JurisdictionId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The identifier of the jurisdiction the rule belongs to.")),
                 ("CategoryCode", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The tax category code the rule applies to. Omit to match every category.")),
                 ("CustomerType", customerTypeSchema),
-                ("CalculationMethod", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The calculation method used by the rule (for example 'Percentage').")),
+                ("Source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The calculation method used by the rule (for example 'Percentage').")),
                 ("Rate", number.Description("The rate applied by the rule, expressed as a fraction (for example 0.2 for 20%).")),
                 ("FixedAmount", number.Description("The fixed amount applied by the rule, when the method is amount based.")),
                 ("TaxTableId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The identifier of the tax table the rule uses, when the method is table based.")),

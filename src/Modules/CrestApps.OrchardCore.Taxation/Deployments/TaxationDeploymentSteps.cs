@@ -19,4 +19,9 @@ public static class TaxationDeploymentSteps
     /// The recipe step that carries tax rules.
     /// </summary>
     public const string TaxRule = "TaxRule";
+
+    /// <summary>
+    /// The recipe step that carries tax types.
+    /// </summary>
+    public const string TaxType = "TaxType";
 }

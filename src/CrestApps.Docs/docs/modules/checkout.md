@@ -58,6 +58,7 @@ Capabilities let the framework select a suitable provider and enforce constraint
 ### Built-in payment providers
 
 - **Pay Later** — provided by the standalone **[Pay Later](pay-later)** module (`CrestApps.OrchardCore.PayLater`). It records an offline commitment instead of moving money through a gateway. Because it never contacts a processor, its verification reports that it is *not* the authoritative source of a charged amount, so the checkout records the commitment on the strength of a recorded transaction id alone — without an amount cross-check — while still flowing through the exact same durable ledger and reconciliation as a real gateway. This keeps the safety guarantees intact and never fabricates a *paid* record a processor could contradict.
+- **Stripe** — provided by the **[Stripe](payments#stripe-as-a-generic-checkout-provider)** module. When both the Stripe and Checkout features are enabled, Stripe registers a generic `ICheckoutPaymentProvider` (and `ICheckoutPaymentRefundProvider`) so *any* checkout — subscriptions today, a storefront tomorrow — can collect and refund a card payment through a Stripe PaymentIntent without depending on the subscription-specific endpoints. It verifies against Stripe's authoritative API and converts every amount through `StripeCurrency`.
 
 ## The durable payment ledger
 
@@ -80,6 +81,20 @@ The rules that prevent orphaned records:
 - reports whether **every** expected obligation is settled.
 
 A cached webhook notification is only a hint; it never completes a checkout on its own. If the provider cannot yet confirm success, the obligation stays *outstanding* and the checkout is **not** marked paid — a later reconciliation (or webhook) settles it. This is the guarantee that our side never shows *paid* while the payment failed at the provider.
+
+### Refunds — the durable refund ledger
+
+Refunds move money too, so they get the same safety model as payments rather than a fire-and-forget call to a gateway.
+
+A **`PaymentRefund`** is a durable, per-refund record persisted through **`IPaymentRefundStore`** in the tenant database. **`ICheckoutRefundService`** is the single authoritative entry point for issuing one — callers never talk to a gateway directly. For each request it:
+
+1. **Resolves the settled payment** from the durable attempt ledger and computes the remaining refundable amount, so a payment can never be refunded for more than it was charged, even across several partial refunds.
+2. **Derives the refunded tax from the original payment's immutable `TaxSnapshot`** through the Taxation framework's `ITaxRefundCalculator`, never by recalculating with today's rules — a full refund reuses the captured amounts and a partial refund allocates them proportionally. When Taxation is disabled the gross is still refunded.
+3. **Persists the refund as `Requested` before calling the provider**, so a crash can never strand a real refund.
+4. **Serializes concurrent refunds of the same payment with an `IDistributedLock`**, so two nodes can never read each other's partial state and over-refund.
+5. **Reconciles the ledger against what the provider confirms**, storing the provider's authoritative refund reference and updating the status; a retried refund reuses the refund's idempotency key so the gateway never double-refunds.
+
+A gateway opts in to executable refunds by *also* implementing the additive **`ICheckoutPaymentRefundProvider`** contract. It is intentionally separate from `ICheckoutPaymentProvider` so a provider that cannot refund (for example an offline Pay Later commitment) is never forced to change, and so `Capabilities.SupportsRefunds` becomes a real, executable promise. When the owning provider has no executable refund operation, the refund is recorded as `PendingManualReview` for an operator to settle rather than being silently dropped.
 
 ## Distributed safety
 
@@ -112,6 +127,7 @@ To use the framework in your own module:
 2. Implement **`ICheckoutHandler`** to contribute your steps and billing items and to react to completion.
 3. Create a session with `ICheckoutSessionStore.NewAsync(referenceType, referenceId, referenceVersionId)` and drive the `CheckoutFlow`.
 4. To add a gateway, implement **`ICheckoutPaymentProvider`** and register it; the framework's reconciliation and ledger handle the safety guarantees for you.
+5. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
 
 ## Related
 

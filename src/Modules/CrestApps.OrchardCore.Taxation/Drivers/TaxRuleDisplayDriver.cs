@@ -1,6 +1,5 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
-using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -11,44 +10,28 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Taxation.Drivers;
 
+/// <summary>
+/// Renders the fields shared by every tax rule regardless of its calculation method. Method specific
+/// inputs are contributed by <see cref="TaxRuleMethodDisplayDriver"/> and by any driver a third-party
+/// calculation method registers for its own source.
+/// </summary>
 internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
 {
-    private static readonly string[] _taxTypes =
-    [
-        TaxTypeNames.SalesTax,
-        TaxTypeNames.Vat,
-        TaxTypeNames.Gst,
-        TaxTypeNames.Hst,
-        TaxTypeNames.Pst,
-        TaxTypeNames.Qst,
-        TaxTypeNames.ExciseTax,
-        TaxTypeNames.AlcoholTax,
-        TaxTypeNames.TobaccoTax,
-        TaxTypeNames.TourismTax,
-        TaxTypeNames.LodgingTax,
-        TaxTypeNames.EnvironmentalTax,
-        TaxTypeNames.DigitalServicesTax,
-        TaxTypeNames.Other,
-    ];
-
     private readonly INamedCatalog<TaxJurisdiction> _jurisdictionStore;
     private readonly INamedCatalog<TaxCategory> _categoryStore;
-    private readonly INamedCatalog<TaxTable> _tableStore;
-    private readonly IEnumerable<ITaxCalculationMethod> _calculationMethods;
+    private readonly INamedCatalog<TaxType> _typeStore;
 
     internal readonly IStringLocalizer S;
 
     public TaxRuleDisplayDriver(
         INamedCatalog<TaxJurisdiction> jurisdictionStore,
         INamedCatalog<TaxCategory> categoryStore,
-        INamedCatalog<TaxTable> tableStore,
-        IEnumerable<ITaxCalculationMethod> calculationMethods,
+        INamedCatalog<TaxType> typeStore,
         IStringLocalizer<TaxRuleDisplayDriver> stringLocalizer)
     {
         _jurisdictionStore = jurisdictionStore;
         _categoryStore = categoryStore;
-        _tableStore = tableStore;
-        _calculationMethods = calculationMethods;
+        _typeStore = typeStore;
         S = stringLocalizer;
     }
 
@@ -78,10 +61,6 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
             model.JurisdictionId = rule.JurisdictionId;
             model.CategoryCode = rule.CategoryCode;
             model.CustomerType = rule.CustomerType;
-            model.CalculationMethod = rule.CalculationMethod;
-            model.Rate = rule.Rate;
-            model.FixedAmount = rule.FixedAmount;
-            model.TaxTableId = rule.TaxTableId;
             model.IncludedInPrice = rule.IncludedInPrice;
             model.IsCompound = rule.IsCompound;
             model.AppliesToShipping = rule.AppliesToShipping;
@@ -90,32 +69,24 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
             model.EffectiveFromUtc = rule.EffectiveFromUtc;
             model.EffectiveToUtc = rule.EffectiveToUtc;
 
-            model.TaxTypes = _taxTypes
-                .Select(type => new SelectListItem(type, type))
+            var taxTypes = await _typeStore.GetAllAsync();
+
+            model.TaxTypes = taxTypes
+                .OrderBy(type => type.Name)
+                .Select(type => new SelectListItem(type.Name, type.Name))
                 .ToList();
 
-            model.CalculationMethods = _calculationMethods
-                .Select(method => method.Name)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name)
-                .Select(name => new SelectListItem(name, name))
-                .ToList();
-
-            if (!string.IsNullOrEmpty(rule.CalculationMethod) &&
-                !model.CalculationMethods.Any(item => string.Equals(item.Value, rule.CalculationMethod, StringComparison.OrdinalIgnoreCase)))
+            if (!string.IsNullOrEmpty(rule.TaxType) &&
+                !model.TaxTypes.Any(item => string.Equals(item.Value, rule.TaxType, StringComparison.OrdinalIgnoreCase)))
             {
-                model.CalculationMethods.Insert(0, new SelectListItem(rule.CalculationMethod, rule.CalculationMethod));
+                model.TaxTypes.Insert(0, new SelectListItem(rule.TaxType, rule.TaxType));
             }
-
-            model.MethodInputs = _calculationMethods
-                .GroupBy(method => method.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.First().Inputs, StringComparer.OrdinalIgnoreCase);
 
             model.CustomerTypes =
             [
                 new SelectListItem(S["Any customer"], string.Empty),
-                .. Enum.GetValues<CustomerTaxType>()
-                    .Select(type => new SelectListItem(type.ToString(), type.ToString())),
+                new SelectListItem(S["Consumer (B2C)"], nameof(CustomerTaxType.B2C)),
+                new SelectListItem(S["Business (B2B)"], nameof(CustomerTaxType.B2B)),
             ];
 
             var jurisdictions = await _jurisdictionStore.GetAllAsync();
@@ -138,16 +109,6 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
                     .OrderBy(c => c.Name)
                     .Select(c => new SelectListItem($"{c.Name} ({c.Code})", c.Code)),
             ];
-
-            var tables = await _tableStore.GetAllAsync();
-
-            model.TaxTables =
-            [
-                new SelectListItem(S["Select a tax table"], string.Empty),
-                .. tables
-                    .OrderBy(t => t.Name)
-                    .Select(t => new SelectListItem(t.Name, t.ItemId)),
-            ];
         }).Location("Content:1");
     }
 
@@ -165,46 +126,11 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
         rule.Enabled = model.Enabled;
         rule.Priority = model.Priority;
         rule.TaxType = model.TaxType?.Trim();
-        rule.TaxName = model.TaxName?.Trim();
+        rule.TaxName = string.IsNullOrWhiteSpace(model.TaxName) ? null : model.TaxName.Trim();
         rule.TaxCode = model.TaxCode?.Trim();
         rule.JurisdictionId = string.IsNullOrEmpty(model.JurisdictionId) ? null : model.JurisdictionId;
         rule.CategoryCode = string.IsNullOrEmpty(model.CategoryCode) ? null : model.CategoryCode.Trim();
         rule.CustomerType = model.CustomerType;
-        rule.CalculationMethod = model.CalculationMethod?.Trim();
-
-        var method = _calculationMethods
-            .FirstOrDefault(m => string.Equals(m.Name, rule.CalculationMethod, StringComparison.OrdinalIgnoreCase));
-
-        if (method is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CalculationMethod), S["The calculation method '{0}' is not registered. Enable the module that provides it before saving.", rule.CalculationMethod]);
-
-            rule.Rate = model.Rate;
-            rule.FixedAmount = model.FixedAmount;
-            rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
-        }
-        else
-        {
-            var inputs = method.Inputs;
-
-            rule.Rate = inputs.HasFlag(TaxCalculationMethodInputs.Rate) ? model.Rate : null;
-            rule.FixedAmount = inputs.HasFlag(TaxCalculationMethodInputs.FixedAmount) ? model.FixedAmount : null;
-
-            if (inputs.HasFlag(TaxCalculationMethodInputs.TaxTable))
-            {
-                if (string.IsNullOrEmpty(model.TaxTableId))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.TaxTableId), S["A tax table is required for the '{0}' calculation method.", rule.CalculationMethod]);
-                }
-
-                rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
-            }
-            else
-            {
-                rule.TaxTableId = null;
-            }
-        }
-
         rule.IncludedInPrice = model.IncludedInPrice;
         rule.IsCompound = model.IsCompound;
         rule.AppliesToShipping = model.AppliesToShipping;

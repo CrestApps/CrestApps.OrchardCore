@@ -70,9 +70,9 @@ internal sealed class TaxRuleHandler : CatalogEntryHandlerBase<TaxRule>
             context.Result.Fail(new ValidationResult(S["Tax type is required."], [nameof(TaxRule.TaxType)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Model.CalculationMethod))
+        if (string.IsNullOrWhiteSpace(context.Model.Source))
         {
-            context.Result.Fail(new ValidationResult(S["Calculation method is required."], [nameof(TaxRule.CalculationMethod)]));
+            context.Result.Fail(new ValidationResult(S["Calculation method is required."], [nameof(TaxRule.Source)]));
         }
 
         if (context.Model.MinimumAmount.HasValue &&

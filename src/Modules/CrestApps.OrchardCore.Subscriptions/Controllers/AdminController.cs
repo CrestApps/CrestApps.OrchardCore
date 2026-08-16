@@ -6,12 +6,14 @@ using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 using YesSql;
 using YesSql.Filters.Query;
 
@@ -137,6 +139,42 @@ public sealed class AdminController : Controller
         });
 
         return View(shapeViewModel);
+    }
+
+    /// <summary>
+    /// Handles the subscriptions admin list filter form post by mapping the selected status, sort, and search
+    /// values into the filter query and redirecting to the list using the Post-Redirect-Get pattern.
+    /// </summary>
+    /// <param name="queryFilterResult">The parsed subscription filter query from the current request.</param>
+    /// <param name="options">The posted subscription list options.</param>
+    /// <returns>A redirect to the subscription list, or a forbidden result when access is denied.</returns>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("manage-subscriptions")]
+    public async Task<IActionResult> IndexFilterPost(
+        [ModelBinder(BinderType = typeof(SubscriptionFilterEngineModelBinder), Name = "q")] QueryFilterResult<SubscriptionSession> queryFilterResult,
+        ListSubscriptionOptions options)
+    {
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, SubscriptionPermissions.ManageSubscriptions))
+        {
+            return Forbid();
+        }
+
+        options.FilterResult = queryFilterResult;
+
+        if (!string.Equals(options.SearchText, options.OriginalSearchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return RedirectToAction(nameof(Index), new RouteValueDictionary
+            {
+                { "q", options.SearchText },
+            });
+        }
+
+        await _optionsDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
+        options.RouteValues.TryAdd("q", options.FilterResult.ToString());
+
+        return RedirectToAction(nameof(Index), options.RouteValues);
     }
 
     /// <summary>

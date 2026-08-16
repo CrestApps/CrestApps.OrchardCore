@@ -150,11 +150,11 @@ public sealed class TaxService : ITaxService
 
         foreach (var rule in applicableRules)
         {
-            var method = _methodProvider.GetMethod(rule.CalculationMethod);
+            var method = _methodProvider.GetMethod(rule.Source);
 
             if (method is null)
             {
-                _logger.LogWarning("No tax calculation method is registered for '{Method}'. The rule '{Rule}' was skipped.", rule.CalculationMethod, rule.ItemId);
+                _logger.LogWarning("No tax calculation method is registered for '{Method}'. The rule '{Rule}' was skipped.", rule.Source, rule.ItemId);
 
                 continue;
             }
@@ -181,14 +181,14 @@ public sealed class TaxService : ITaxService
             {
                 ItemId = item.Id,
                 TaxCode = rule.TaxCode,
-                TaxName = rule.TaxName,
+                TaxName = string.IsNullOrEmpty(rule.TaxName) ? rule.Name : rule.TaxName,
                 TaxType = rule.TaxType,
                 JurisdictionId = rule.JurisdictionId,
                 JurisdictionName = jurisdiction?.Name,
                 Rate = computation.EffectiveRate,
                 TaxableAmount = baseAmount,
                 TaxAmount = computation.TaxAmount,
-                CalculationMethod = rule.CalculationMethod,
+                CalculationMethod = rule.Source,
                 IncludedInPrice = effectiveIncluded,
                 IsCompound = rule.IsCompound,
                 RuleId = rule.ItemId,
@@ -214,7 +214,7 @@ public sealed class TaxService : ITaxService
 
             if (effectiveIncluded &&
                 !rule.IsCompound &&
-                string.Equals(rule.CalculationMethod, TaxCalculationMethodNames.Percentage, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(rule.Source, TaxCalculationMethodNames.Percentage, StringComparison.OrdinalIgnoreCase) &&
                 rule.Rate.HasValue)
             {
                 sumInclusiveRates += rule.Rate.Value;

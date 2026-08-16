@@ -36,7 +36,7 @@ public sealed class TaxServiceTests
             TaxName = "CA Sales Tax",
             TaxCode = "US-CA-SALES",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.075m,
         });
 
@@ -62,7 +62,7 @@ public sealed class TaxServiceTests
             Name = "VAT",
             TaxType = TaxTypeNames.Vat,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.20m,
         });
 
@@ -89,7 +89,7 @@ public sealed class TaxServiceTests
             Name = "State",
             TaxType = TaxTypeNames.SalesTax,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.06m,
         });
 
@@ -98,7 +98,7 @@ public sealed class TaxServiceTests
             Name = "City",
             TaxType = TaxTypeNames.SalesTax,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.025m,
         });
 
@@ -120,7 +120,7 @@ public sealed class TaxServiceTests
             TaxType = TaxTypeNames.Gst,
             JurisdictionId = jurisdictionId,
             Priority = 1,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.05m,
         });
 
@@ -130,7 +130,7 @@ public sealed class TaxServiceTests
             TaxType = TaxTypeNames.Qst,
             JurisdictionId = jurisdictionId,
             Priority = 2,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.09975m,
             IsCompound = true,
         });
@@ -156,7 +156,7 @@ public sealed class TaxServiceTests
         {
             Name = "Old",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
             EffectiveToUtc = TaxTestData.TransactionDate.AddDays(-1),
         });
@@ -176,7 +176,7 @@ public sealed class TaxServiceTests
         {
             Name = "Future",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
             EffectiveFromUtc = TaxTestData.TransactionDate.AddDays(1),
         });
@@ -197,7 +197,7 @@ public sealed class TaxServiceTests
             Name = "Alcohol only",
             JurisdictionId = jurisdictionId,
             CategoryCode = "Alcohol",
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
 
@@ -219,7 +219,7 @@ public sealed class TaxServiceTests
             Name = "B2B tax",
             JurisdictionId = jurisdictionId,
             CustomerType = CustomerTaxType.B2B,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
 
@@ -241,7 +241,7 @@ public sealed class TaxServiceTests
         {
             Name = "CA",
             JurisdictionId = californiaId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.075m,
         });
 
@@ -249,7 +249,7 @@ public sealed class TaxServiceTests
         {
             Name = "TX",
             JurisdictionId = texasId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.0625m,
         });
 
@@ -271,7 +271,7 @@ public sealed class TaxServiceTests
             Name = "Env fee",
             TaxType = TaxTypeNames.ExciseTax,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.FixedAmount,
+            Source = TaxCalculationMethodNames.FixedAmount,
             FixedAmount = 3m,
         });
 
@@ -291,7 +291,7 @@ public sealed class TaxServiceTests
         {
             Name = "Sales",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
 

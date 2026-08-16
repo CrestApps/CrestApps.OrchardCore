@@ -32,6 +32,13 @@ public sealed class DefaultSubscriptionAdminListFilterProvider : ISubscriptionAd
 
                     return ValueTask.FromResult(query);
                 })
+                .MapTo<ListSubscriptionOptions>((val, model) =>
+                {
+                    if (Enum.TryParse<SubscriptionSessionStatus>(val, true, out var status))
+                    {
+                        model.Status = status;
+                    }
+                })
                 .MapFrom<ListSubscriptionOptions>((model) =>
                 {
                     if (model.Status.HasValue)

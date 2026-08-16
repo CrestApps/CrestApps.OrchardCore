@@ -28,31 +28,42 @@ public sealed class TaxRulesController : Controller
     private const string _optionsSearch = "Options.Search";
     private const string _nameFieldName = "Name";
 
-    private readonly INamedCatalogManager<TaxRule> _manager;
-    private readonly INamedCatalog<TaxRule> _catalog;
+    private readonly INamedSourceCatalogManager<TaxRule> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<TaxRule> _displayManager;
+    private readonly TaxCalculationMethodOptions _methodOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TaxRulesController"/> class.
+    /// </summary>
+    /// <param name="manager">The tax rule catalog manager.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
+    /// <param name="displayManager">The tax rule display manager.</param>
+    /// <param name="methodOptions">The tax calculation method options.</param>
+    /// <param name="notifier">The notifier service.</param>
+    /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TaxRulesController(
-        INamedCatalogManager<TaxRule> manager,
-        INamedCatalog<TaxRule> catalog,
+        INamedSourceCatalogManager<TaxRule> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<TaxRule> displayManager,
+        IOptions<TaxCalculationMethodOptions> methodOptions,
         INotifier notifier,
         IHtmlLocalizer<TaxRulesController> htmlLocalizer,
         IStringLocalizer<TaxRulesController> stringLocalizer)
     {
         _manager = manager;
-        _catalog = catalog;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
+        _methodOptions = methodOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -84,11 +95,13 @@ public sealed class TaxRulesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxRule>>
+        var viewModel = new ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _methodOptions.Methods.Values
+                .OrderBy(entry => entry.DisplayName.Value, StringComparer.OrdinalIgnoreCase),
         };
 
         foreach (var model in result.Entries)
@@ -115,19 +128,26 @@ public sealed class TaxRulesController : Controller
             { _optionsSearch, model.Options?.Search },
         });
 
-    [Admin("taxation/rules/create", "TaxationRulesCreate")]
-    public async Task<IActionResult> Create()
+    [Admin("taxation/rules/create/{source}", "TaxationRulesCreate")]
+    public async Task<IActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TaxationPermissions.ManageTaxation))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!_methodOptions.Methods.TryGetValue(source, out var method))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a calculation method with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = await _manager.NewAsync(method.Name);
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Tax Rule"],
+            DisplayName = method.DisplayName.Value,
             Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -136,19 +156,26 @@ public sealed class TaxRulesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("taxation/rules/create", "TaxationRulesCreate")]
-    public async Task<IActionResult> CreatePost()
+    [Admin("taxation/rules/create/{source}", "TaxationRulesCreate")]
+    public async Task<IActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TaxationPermissions.ManageTaxation))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!_methodOptions.Methods.TryGetValue(source, out var method))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a calculation method with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = await _manager.NewAsync(method.Name);
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Tax Rule"],
+            DisplayName = method.DisplayName.Value,
             Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -156,7 +183,7 @@ public sealed class TaxRulesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            var existing = await _manager.FindByNameAsync(model.Name);
 
             if (existing != null)
             {
@@ -226,7 +253,7 @@ public sealed class TaxRulesController : Controller
 
         if (isValid && ModelState.IsValid)
         {
-            var existing = await _catalog.FindByNameAsync(model.Name);
+            var existing = await _manager.FindByNameAsync(model.Name);
 
             if (existing != null && !string.Equals(existing.ItemId, model.ItemId, StringComparison.OrdinalIgnoreCase))
             {

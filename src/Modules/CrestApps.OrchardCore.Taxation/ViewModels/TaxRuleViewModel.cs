@@ -61,26 +61,6 @@ public class TaxRuleViewModel
     public CustomerTaxType? CustomerType { get; set; }
 
     /// <summary>
-    /// Gets or sets the calculation method used by the tax rule.
-    /// </summary>
-    public string CalculationMethod { get; set; }
-
-    /// <summary>
-    /// Gets or sets the percentage rate used by rate-based tax calculations.
-    /// </summary>
-    public decimal? Rate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the amount used by fixed-amount tax calculations.
-    /// </summary>
-    public decimal? FixedAmount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the tax table used by table-based tax calculations.
-    /// </summary>
-    public string TaxTableId { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the tax is included in item prices.
     /// </summary>
     public bool IncludedInPrice { get; set; }
@@ -125,12 +105,6 @@ public class TaxRuleViewModel
     /// Gets or sets the available calculation method options.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> CalculationMethods { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the available customer tax type options.
-    /// </summary>
-    [BindNever]
     public IList<SelectListItem> CustomerTypes { get; set; } = [];
 
     /// <summary>
@@ -144,17 +118,4 @@ public class TaxRuleViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Categories { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the available tax table options.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> TaxTables { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets a map of calculation method name to the configuration fields the method consumes. The
-    /// editor uses this map to show only the fields required by the selected calculation method.
-    /// </summary>
-    [BindNever]
-    public IDictionary<string, TaxCalculationMethodInputs> MethodInputs { get; set; } = new Dictionary<string, TaxCalculationMethodInputs>(StringComparer.OrdinalIgnoreCase);
 }

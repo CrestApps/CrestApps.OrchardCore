@@ -33,15 +33,15 @@ The framework is split into three assemblies:
 
 Enable the **Taxation** feature under **Tools → Features**, then:
 
-1. Create your tax **categories**, **jurisdictions**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
+1. Create your tax **categories**, **types**, **jurisdictions**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
 2. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
 3. At checkout, convert your objects into taxable items and call `ITaxService.CalculateAsync` (see [Calculating tax](#calculating-tax)).
 
 ## Managing taxation from the admin UI
 
-Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with three screens: **Categories**, **Jurisdictions**, and **Rules**. Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
+Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with four screens: **Categories**, **Types**, **Jurisdictions**, and **Rules**. Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
 
-Setting up taxes end to end is a four-step workflow. The order matters, because rules reference jurisdictions and categories, and content classification reuses the categories you create.
+Setting up taxes end to end is a workflow of a few ordered steps. The order matters, because rules reference jurisdictions, types, and categories, and content classification reuses the categories you create.
 
 ### 1. Define what you sell — Categories
 
@@ -54,7 +54,16 @@ Go to **Commerce → Taxation → Categories** and add a category for each kind 
 
 Create the broad categories you match rules against, plus any finer classifications you want to assign to individual items.
 
-### 2. Define where you tax — Jurisdictions
+### 2. Name your kinds of tax — Types
+
+Go to **Commerce → Taxation → Types** and manage the list of **tax types** — the labels that group and report the kind of tax a rule produces (for example `SalesTax`, `VAT`, or `GST`). A tax type has:
+
+- **Name** — the value stored on the resulting tax lines and offered in the rule editor (the unique key, fixed after creation).
+- **Description** — optional notes.
+
+The catalog is seeded with a set of well-known types on first run so existing behavior is preserved, but the list is fully editable: add the types your business uses, rename or remove the ones you do not. A tax type is a reporting and grouping label only — it never changes how an amount is calculated.
+
+### 3. Define where you tax — Jurisdictions
 
 Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
 
@@ -62,11 +71,13 @@ Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for
 When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
 :::
 
-### 3. Define how tax applies — Rules
+### 4. Define how tax applies — Rules
 
-Go to **Commerce → Taxation → Rules** and add a rule that binds a jurisdiction and category to a calculation. A rule lets you choose the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, the **Calculation method**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, and **Applies to shipping**. The **Calculation method** is the rule's *source*: it decides which calculation fields the editor shows — a **Rate** for percentage methods, a **Fixed amount** for fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`). Only the fields the selected method needs are captured; the rest are cleared on save. A disabled rule is never applied, and rules outside their effective window are ignored.
+Go to **Commerce → Taxation → Rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`). A disabled rule is never applied, and rules outside their effective window are ignored.
 
-### 4. Classify your content
+The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce → Taxation → Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
+
+### 5. Classify your content
 
 Attach the **Taxation** part to your content types (see [The TaxationPart](#the-taxationpart)) and, on each item, pick its **Tax category** and optional **Tax classification** from the dropdowns. Those dropdowns are populated from the categories you created in step 1, so there are no free-text codes to keep in sync.
 
@@ -161,6 +172,7 @@ All taxation data is stored through the CrestApps catalog abstraction, so each e
 |--------|-------|---------|
 | `TaxJurisdiction` | `ITaxJurisdictionStore` | A hierarchical taxing authority (country → state/province → county → city → special district), matched to an address by its non-empty components. |
 | `TaxCategory` | `ITaxCategoryStore` | A classification such as `Electronics/Television` or `Alcohol/Wine`, with optional external codes. |
+| `TaxType` | `INamedCatalog<TaxType>` | A user-managed label that groups and reports the kind of tax a rule produces (for example `SalesTax`, `VAT`, `GST`). Seeded with well-known values and never affects calculation. |
 | `TaxRule` | `ITaxRuleStore` | Determines whether and how a tax applies. Versioned, prioritized, with effective dates. |
 | `TaxTable` | `ITaxTableStore` | Brackets, ranges, and schedules for progressive, threshold, and lookup taxes. |
 | `ExemptionCertificate` | `IExemptionCertificateStore` | A customer exemption scoped by tax type, jurisdiction, and classification. |
@@ -168,7 +180,7 @@ All taxation data is stored through the CrestApps catalog abstraction, so each e
 
 ### Tax rules
 
-A `TaxRule` binds a jurisdiction, tax type, classification, and customer criteria to a calculation method:
+A `TaxRule` binds a jurisdiction, tax type, classification, and customer criteria to a calculation method. The calculation method is stored in the rule's `Source` property (inherited from `SourceCatalogEntry`), which is set when the rule is created and fixed thereafter:
 
 ```csharp
 await ruleStore.CreateAsync(new TaxRule
@@ -179,12 +191,12 @@ await ruleStore.CreateAsync(new TaxRule
     TaxCode = "US-CA-SALES",
     JurisdictionId = californiaJurisdictionId,
     CategoryCode = "Electronics",
-    CalculationMethod = TaxCalculationMethodNames.Percentage,
+    Source = TaxCalculationMethodNames.Percentage,
     Rate = 0.075m,
 });
 ```
 
-Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `CustomerType`, `IsCompound`, `IncludedInPrice`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
+The `TaxName` is optional; when it is left empty the tax line falls back to the rule `Name`. Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `CustomerType`, `IsCompound`, `IncludedInPrice`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
 
 ### Nexus vs. a jurisdiction having a tax
 
@@ -423,9 +435,9 @@ The whole setup is reproducible as a recipe — the taxonomy term simply carries
 
 ## Recipes and deployment
 
-The three catalog entities — **Tax categories**, **Tax jurisdictions**, and **Tax rules** — can be imported and exported as code.
+The four catalog entities — **Tax categories**, **Tax types**, **Tax jurisdictions**, and **Tax rules** — can be imported and exported as code.
 
-**Recipe steps** (names `TaxCategory`, `TaxJurisdiction`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`) are never imported; an entry is matched by its `ItemId` and updated in place, or created when new:
+**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`) are never imported; an entry is matched by its `ItemId` and updated in place, or created when new:
 
 ```json
 {
@@ -438,6 +450,13 @@ The three catalog entities — **Tax categories**, **Tax jurisdictions**, and **
       ]
     },
     {
+      "name": "TaxType",
+      "TaxTypes": [
+        { "ItemId": "sales-tax", "Name": "SalesTax" },
+        { "ItemId": "excise-tax", "Name": "ExciseTax", "Description": "Excise duty on regulated goods." }
+      ]
+    },
+    {
       "name": "TaxJurisdiction",
       "TaxJurisdictions": [
         { "ItemId": "us-ca", "Name": "California", "CountryCode": "US", "RegionCode": "CA", "Level": "State" }
@@ -446,8 +465,8 @@ The three catalog entities — **Tax categories**, **Tax jurisdictions**, and **
     {
       "name": "TaxRule",
       "TaxRules": [
-        { "ItemId": "ca-sales", "Name": "CA sales tax", "JurisdictionId": "us-ca", "CalculationMethod": "Percentage", "Rate": 0.075 },
-        { "ItemId": "ca-tobacco", "Name": "CA tobacco excise", "JurisdictionId": "us-ca", "CategoryCode": "TOBACCO", "CalculationMethod": "Percentage", "Rate": 0.30 }
+        { "ItemId": "ca-sales", "Name": "CA sales tax", "JurisdictionId": "us-ca", "Source": "Percentage", "Rate": 0.075 },
+        { "ItemId": "ca-tobacco", "Name": "CA tobacco excise", "JurisdictionId": "us-ca", "CategoryCode": "TOBACCO", "Source": "Percentage", "Rate": 0.30 }
       ]
     }
   ]
@@ -456,7 +475,7 @@ The three catalog entities — **Tax categories**, **Tax jurisdictions**, and **
 
 When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for each of these steps (and for the `TaxationPart` and its settings), giving editor validation and IntelliSense while authoring recipes.
 
-**Deployment steps** with the same three names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+**Deployment steps** with the same four names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
 ## Determinism
 

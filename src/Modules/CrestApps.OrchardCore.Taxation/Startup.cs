@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
@@ -48,12 +49,21 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<TaxCategory>, TaxCategoryHandler>();
 
         services
+            .AddDisplayDriver<TaxType, TaxTypeDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxType>, TaxTypeHandler>();
+
+        services.AddDataMigration<TaxTypeMigrations>();
+
+        services
             .AddDisplayDriver<TaxJurisdiction, TaxJurisdictionDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxJurisdiction>, TaxJurisdictionHandler>();
 
         services
             .AddDisplayDriver<TaxRule, TaxRuleDisplayDriver>()
+            .AddDisplayDriver<TaxRule, TaxRuleMethodDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxRule>, TaxRuleHandler>();
+
+        services.AddTransient<IConfigureOptions<TaxCalculationMethodOptions>, TaxCalculationMethodOptionsConfiguration>();
 
         services.AddNavigationProvider<TaxationAdminMenu>();
         services.AddPermissionProvider<TaxationPermissionsProvider>();

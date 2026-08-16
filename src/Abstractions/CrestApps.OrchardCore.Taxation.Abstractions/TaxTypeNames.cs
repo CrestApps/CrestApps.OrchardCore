@@ -78,4 +78,27 @@ public static class TaxTypeNames
     /// Any other tax type not covered by the well-known values.
     /// </summary>
     public const string Other = "Other";
+
+    /// <summary>
+    /// Gets the well-known tax type identifiers in the order they are presented to operators. The list is a
+    /// convenience for the editor only; any string is accepted so region-specific types can be introduced
+    /// without changing the framework.
+    /// </summary>
+    public static readonly string[] All =
+    [
+        SalesTax,
+        Vat,
+        Gst,
+        Hst,
+        Pst,
+        Qst,
+        ExciseTax,
+        AlcoholTax,
+        TobaccoTax,
+        TourismTax,
+        LodgingTax,
+        EnvironmentalTax,
+        DigitalServicesTax,
+        Other,
+    ];
 }

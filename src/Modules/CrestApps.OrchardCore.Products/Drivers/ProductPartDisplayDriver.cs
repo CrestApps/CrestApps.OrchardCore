@@ -22,6 +22,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
         return Initialize<ProductPartViewModel>(GetEditorShapeType(context), model =>
         {
             model.Price = context.IsNew ? null : part.Price;
+            model.Sku = part.Sku;
         });
     }
 
@@ -44,6 +45,8 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
         {
             part.Price = model.Price.Value;
         }
+
+        part.Sku = model.Sku?.Trim();
 
         return Edit(part, context);
     }

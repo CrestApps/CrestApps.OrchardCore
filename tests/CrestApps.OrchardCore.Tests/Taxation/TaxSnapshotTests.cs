@@ -21,7 +21,7 @@ public sealed class TaxSnapshotTests
         {
             Name = "Sales",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
             Version = 1,
         };
@@ -59,7 +59,7 @@ public sealed class TaxSnapshotTests
         {
             Name = "Sales",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
 
@@ -84,7 +84,7 @@ public sealed class TaxSnapshotTests
         {
             Name = "Sales",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         };
 

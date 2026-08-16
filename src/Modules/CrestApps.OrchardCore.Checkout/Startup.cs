@@ -24,8 +24,11 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
+        services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
+        services.AddScoped<ICheckoutPaymentRefundProviderResolver, CheckoutPaymentRefundProviderResolver>();
+        services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
         services.AddScoped<PaymentSessionCache>();
         services.AddScoped<ICheckoutHandler, PaymentCheckoutHandler>();
@@ -37,7 +40,8 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()
-            .AddIndexProvider<PaymentAttemptIndexProvider>();
+            .AddIndexProvider<PaymentAttemptIndexProvider>()
+            .AddIndexProvider<PaymentRefundIndexProvider>();
 
         services.Configure<PaymentSessionCacheOptions>(options =>
         {

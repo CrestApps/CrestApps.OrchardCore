@@ -15,6 +15,7 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, TaxCategoryRecipeStep>();
+        services.AddScoped<IRecipeStep, TaxTypeRecipeStep>();
         services.AddScoped<IRecipeStep, TaxJurisdictionRecipeStep>();
         services.AddScoped<IRecipeStep, TaxRuleRecipeStep>();
 

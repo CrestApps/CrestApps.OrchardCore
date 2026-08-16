@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Drivers;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Taxation;
@@ -20,6 +21,8 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<ProductPartDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
+
+        services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
 
         services.AddDataMigration<ProductPartMigrations>();
     }

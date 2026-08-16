@@ -17,7 +17,7 @@ public sealed class TaxNexusTests
             Name = "Sales",
             TaxType = TaxTypeNames.SalesTax,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
     }

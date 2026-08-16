@@ -1,0 +1,9 @@
+@model ShapeViewModel<TaxType>
+
+<h5 class="mb-0">@Model.Value.Name</h5>
+@if (!string.IsNullOrEmpty(Model.Value.Description))
+{
+    <small class="text-muted">
+        <span class="d-block">@Model.Value.Description</span>
+    </small>
+}

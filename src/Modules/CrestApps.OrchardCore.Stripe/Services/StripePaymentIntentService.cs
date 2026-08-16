@@ -80,4 +80,93 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Status = paymentIntent.Status,
         };
     }
+
+    /// <summary>
+    /// Creates an unconfirmed Stripe PaymentIntent for a generic checkout payment collected through
+    /// embedded Stripe Elements.
+    /// </summary>
+    /// <param name="model">The checkout payment intent creation request.</param>
+    /// <returns>The created payment intent details, including the client secret used to confirm it.</returns>
+    public async Task<CreatePaymentIntentResponse> CreateForCheckoutAsync(CreateCheckoutPaymentIntentRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var paymentIntentOptions = new PaymentIntentCreateOptions
+        {
+            // Currency-aware minor units (for example 1000 == $10.00, 500 == ¥500).
+            Amount = StripeCurrency.ToMinorUnits(model.Amount, model.Currency),
+            Currency = model.Currency,
+            Customer = model.CustomerId,
+            Description = model.Description,
+
+            // The customer confirms with Stripe.js using the returned client secret, so the payment goes
+            // through Strong Customer Authentication instead of being confirmed off-session.
+            Confirm = false,
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            {
+                Enabled = true,
+                AllowRedirects = "never",
+            },
+            Metadata = model.Metadata,
+        };
+
+        var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
+
+        return new CreatePaymentIntentResponse
+        {
+            Id = paymentIntent.Id,
+            ClientSecret = paymentIntent.ClientSecret,
+            CustomerId = paymentIntent.CustomerId,
+            Status = paymentIntent.Status,
+        };
+    }
+
+    /// <summary>
+    /// Retrieves the authoritative state of a Stripe PaymentIntent.
+    /// </summary>
+    /// <param name="model">The retrieve request identifying the payment intent.</param>
+    /// <returns>The authoritative payment intent details.</returns>
+    public async Task<PaymentIntentDetails> RetrieveAsync(RetrievePaymentIntentRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
+
+        var paymentIntent = await _paymentIntentService.GetAsync(model.PaymentIntentId);
+
+        return ToDetails(paymentIntent);
+    }
+
+    /// <summary>
+    /// Cancels a Stripe PaymentIntent that has not yet been captured.
+    /// </summary>
+    /// <param name="model">The cancel request identifying the payment intent.</param>
+    /// <returns>The authoritative payment intent details after cancellation.</returns>
+    public async Task<PaymentIntentDetails> CancelAsync(CancelPaymentIntentRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
+
+        var cancelOptions = new PaymentIntentCancelOptions();
+
+        if (!string.IsNullOrEmpty(model.CancellationReason))
+        {
+            cancelOptions.CancellationReason = model.CancellationReason;
+        }
+
+        var paymentIntent = await _paymentIntentService.CancelAsync(model.PaymentIntentId, cancelOptions, model.ToRequestOptions());
+
+        return ToDetails(paymentIntent);
+    }
+
+    private static PaymentIntentDetails ToDetails(PaymentIntent paymentIntent)
+        => new()
+        {
+            Id = paymentIntent.Id,
+            Status = paymentIntent.Status,
+            Amount = paymentIntent.Amount,
+            AmountReceived = paymentIntent.AmountReceived,
+            Currency = paymentIntent.Currency,
+            LiveMode = paymentIntent.Livemode,
+            LatestChargeId = paymentIntent.LatestChargeId,
+        };
 }

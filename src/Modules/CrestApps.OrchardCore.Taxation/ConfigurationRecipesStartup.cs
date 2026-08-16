@@ -15,6 +15,7 @@ public sealed class ConfigurationRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<TaxCategoryStep>();
+        services.AddRecipeExecutionStep<TaxTypeStep>();
         services.AddRecipeExecutionStep<TaxJurisdictionStep>();
         services.AddRecipeExecutionStep<TaxRuleStep>();
     }

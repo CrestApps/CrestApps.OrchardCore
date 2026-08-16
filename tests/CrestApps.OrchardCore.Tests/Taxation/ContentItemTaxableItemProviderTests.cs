@@ -64,7 +64,7 @@ public sealed class ContentItemTaxableItemProviderTests
             Name = "Electronics tax",
             JurisdictionId = jurisdictionId,
             CategoryCode = "Electronics",
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.075m,
         });
 

@@ -1,34 +1,5 @@
 @model TaxRuleViewModel
 
-@functions {
-    string CalculationInputTokens(string methodName)
-    {
-        if (!string.IsNullOrEmpty(methodName) && Model.MethodInputs.TryGetValue(methodName, out var flags))
-        {
-            var tokens = new List<string>();
-
-            if (flags.HasFlag(TaxCalculationMethodInputs.Rate))
-            {
-                tokens.Add("Rate");
-            }
-
-            if (flags.HasFlag(TaxCalculationMethodInputs.FixedAmount))
-            {
-                tokens.Add("FixedAmount");
-            }
-
-            if (flags.HasFlag(TaxCalculationMethodInputs.TaxTable))
-            {
-                tokens.Add("TaxTable");
-            }
-
-            return string.Join(" ", tokens);
-        }
-
-        return string.Empty;
-    }
-}
-
 <div class="ocat-wrapper">
     <label asp-for="Name" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
@@ -42,6 +13,7 @@
             <input asp-for="Name" type="hidden" />
             <span class="hint">@T["The name is fixed after creation."]</span>
         }
+        <span class="hint">@T["Used to identify this rule in the admin. It must be unique."]</span>
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 </div>
@@ -68,15 +40,16 @@
     <label asp-for="TaxType" class="ocat-label">@T["Tax type"]</label>
     <div class="ocat-end">
         <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-select"></select>
+        <span class="hint">@T["Labels the kind of tax this rule produces, such as sales tax or VAT. It is used to group and report taxes and does not change how the amount is calculated."]</span>
         <span asp-validation-for="TaxType" class="text-danger"></span>
     </div>
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="TaxName" class="ocat-label">@T["Tax name"]</label>
+    <label asp-for="TaxName" class="ocat-label">@T["Display name"]</label>
     <div class="ocat-end">
         <input asp-for="TaxName" class="form-control" />
-        <span class="hint">@T["The human readable name of the tax the rule produces."]</span>
+        <span class="hint">@T["The name shown to customers on invoices and receipts. When left empty the rule name is used."]</span>
         <span asp-validation-for="TaxName" class="text-danger"></span>
     </div>
 </div>
@@ -112,47 +85,6 @@
     <div class="ocat-end ocat-limited-wrapper">
         <select asp-for="CustomerType" asp-items="Model.CustomerTypes" class="form-select ocat-limited"></select>
         <span asp-validation-for="CustomerType" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="CalculationMethod" class="ocat-label">@T["Calculation method"]</label>
-    <div class="ocat-end">
-        <select asp-for="CalculationMethod" class="form-select" data-tax-calculation-method>
-            @foreach (var method in Model.CalculationMethods)
-            {
-                <option value="@method.Value" data-inputs="@CalculationInputTokens(method.Value)" selected="@(string.Equals(method.Value, Model.CalculationMethod, StringComparison.OrdinalIgnoreCase))">@method.Text</option>
-            }
-        </select>
-        <span class="hint">@T["The source that determines how the tax is calculated. The fields below change to match the selected method."]</span>
-        <span asp-validation-for="CalculationMethod" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" data-tax-input="Rate">
-    <label asp-for="Rate" class="ocat-label">@T["Rate"]</label>
-    <div class="ocat-end ocat-limited-wrapper">
-        <input asp-for="Rate" type="number" step="0.0001" class="form-control ocat-limited" />
-        <span class="hint">@T["Expressed as a fraction, for example 0.2 for 20%."]</span>
-        <span asp-validation-for="Rate" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" data-tax-input="FixedAmount">
-    <label asp-for="FixedAmount" class="ocat-label">@T["Fixed amount"]</label>
-    <div class="ocat-end ocat-limited-wrapper">
-        <input asp-for="FixedAmount" type="number" step="0.01" class="form-control ocat-limited" />
-        <span class="hint">@T["Used when the calculation method is amount based."]</span>
-        <span asp-validation-for="FixedAmount" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" data-tax-input="TaxTable">
-    <label asp-for="TaxTableId" class="ocat-label">@T["Tax table"]</label>
-    <div class="ocat-end">
-        <select asp-for="TaxTableId" asp-items="Model.TaxTables" class="form-select"></select>
-        <span class="hint">@T["The tax table used by table-based calculation methods such as brackets, progressive schedules, and lookups."]</span>
-        <span asp-validation-for="TaxTableId" class="text-danger"></span>
     </div>
 </div>
 
@@ -204,26 +136,3 @@
         <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
     </div>
 </div>
-
-<script at="Foot">
-    (function () {
-        var select = document.querySelector('[data-tax-calculation-method]');
-
-        if (!select) {
-            return;
-        }
-
-        function refresh() {
-            var option = select.options[select.selectedIndex];
-            var active = (option && option.getAttribute('data-inputs') ? option.getAttribute('data-inputs') : '').split(' ');
-
-            document.querySelectorAll('[data-tax-input]').forEach(function (group) {
-                var key = group.getAttribute('data-tax-input');
-                group.style.display = active.indexOf(key) !== -1 ? '' : 'none';
-            });
-        }
-
-        select.addEventListener('change', refresh);
-        refresh();
-    })();
-</script>

@@ -25,7 +25,7 @@ public sealed class TaxProviderExtensibilityTests
         {
             Name = "Flat ten",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = FlatTenTaxCalculationMethod.MethodName,
+            Source = FlatTenTaxCalculationMethod.MethodName,
         });
 
         var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(250m), TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public sealed class TaxProviderExtensibilityTests
         {
             Name = "Ignored",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
 

@@ -18,10 +18,12 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep>();
+        services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep>();
         services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep>();
         services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep>();
 
         services.AddDisplayDriver<DeploymentStep, TaxCategoryDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, TaxTypeDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, TaxJurisdictionDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, TaxRuleDeploymentStepDisplayDriver>();
     }

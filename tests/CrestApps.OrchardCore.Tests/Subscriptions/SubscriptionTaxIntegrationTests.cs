@@ -45,7 +45,7 @@ public sealed class SubscriptionTaxIntegrationTests
             TaxName = code,
             TaxCode = code,
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = rate,
         });
 
@@ -170,7 +170,7 @@ public sealed class SubscriptionTaxIntegrationTests
             TaxName = "US-CA-DISTRICT",
             TaxCode = "US-CA-DISTRICT",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.01m,
         });
 

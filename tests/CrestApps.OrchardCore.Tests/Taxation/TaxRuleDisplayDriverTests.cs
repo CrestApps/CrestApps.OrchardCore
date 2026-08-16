@@ -14,21 +14,22 @@ namespace CrestApps.OrchardCore.Tests.Taxation;
 
 public sealed class TaxRuleDisplayDriverTests
 {
-    private static TaxRuleDisplayDriver CreateDriver()
+    private static TaxRuleMethodDisplayDriver CreateDriver()
     {
-        return new TaxRuleDisplayDriver(
-            new InMemoryNamedCatalog<TaxJurisdiction>(),
-            new InMemoryNamedCatalog<TaxCategory>(),
-            new InMemoryNamedCatalog<TaxTable>(),
+        var provider = new DefaultTaxCalculationMethodProvider(
             new ITaxCalculationMethod[]
             {
                 new PercentageTaxCalculationMethod(),
                 new TaxTableTaxCalculationMethod(),
-            },
-            new PassThroughStringLocalizer<TaxRuleDisplayDriver>());
+            });
+
+        return new TaxRuleMethodDisplayDriver(
+            provider,
+            new InMemoryNamedCatalog<TaxTable>(),
+            new PassThroughStringLocalizer<TaxRuleMethodDisplayDriver>());
     }
 
-    private static UpdateEditorContext CreateUpdateContext(TaxRuleViewModel submitted)
+    private static UpdateEditorContext CreateUpdateContext(TaxRuleMethodViewModel submitted)
     {
         var updater = new FakeUpdateModel(submitted);
 
@@ -36,28 +37,30 @@ public sealed class TaxRuleDisplayDriverTests
     }
 
     [Fact]
-    public async Task UpdateAsync_WhenMethodIsNotRegistered_PreservesSubmittedValuesAndAddsModelError()
+    public async Task UpdateAsync_WhenSourceHasNoRegisteredMethod_DoesNotBindOrThrow()
     {
         // Arrange
         var driver = CreateDriver();
-        var submitted = new TaxRuleViewModel
+        var submitted = new TaxRuleMethodViewModel
         {
-            CalculationMethod = "does-not-exist",
             Rate = 5,
             FixedAmount = 3,
             TaxTableId = "tt1",
         };
         var context = CreateUpdateContext(submitted);
-        var rule = new TaxRule();
+        var rule = new TaxRule
+        {
+            Source = "does-not-exist",
+        };
 
         // Act
         await driver.UpdateAsync(rule, context);
 
         // Assert
-        Assert.False(context.Updater.ModelState.IsValid);
-        Assert.Equal(5m, rule.Rate);
-        Assert.Equal(3m, rule.FixedAmount);
-        Assert.Equal("tt1", rule.TaxTableId);
+        Assert.True(context.Updater.ModelState.IsValid);
+        Assert.Null(rule.Rate);
+        Assert.Null(rule.FixedAmount);
+        Assert.Null(rule.TaxTableId);
     }
 
     [Fact]
@@ -65,13 +68,15 @@ public sealed class TaxRuleDisplayDriverTests
     {
         // Arrange
         var driver = CreateDriver();
-        var submitted = new TaxRuleViewModel
+        var submitted = new TaxRuleMethodViewModel
         {
-            CalculationMethod = TaxCalculationMethodNames.TaxTable,
             TaxTableId = string.Empty,
         };
         var context = CreateUpdateContext(submitted);
-        var rule = new TaxRule();
+        var rule = new TaxRule
+        {
+            Source = TaxCalculationMethodNames.TaxTable,
+        };
 
         // Act
         await driver.UpdateAsync(rule, context);
@@ -86,15 +91,17 @@ public sealed class TaxRuleDisplayDriverTests
     {
         // Arrange
         var driver = CreateDriver();
-        var submitted = new TaxRuleViewModel
+        var submitted = new TaxRuleMethodViewModel
         {
-            CalculationMethod = TaxCalculationMethodNames.TaxTable,
             TaxTableId = "tt-42",
             Rate = 7,
             FixedAmount = 9,
         };
         var context = CreateUpdateContext(submitted);
-        var rule = new TaxRule();
+        var rule = new TaxRule
+        {
+            Source = TaxCalculationMethodNames.TaxTable,
+        };
 
         // Act
         await driver.UpdateAsync(rule, context);
@@ -111,15 +118,17 @@ public sealed class TaxRuleDisplayDriverTests
     {
         // Arrange
         var driver = CreateDriver();
-        var submitted = new TaxRuleViewModel
+        var submitted = new TaxRuleMethodViewModel
         {
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
             Rate = 12,
             FixedAmount = 4,
             TaxTableId = "tt-should-clear",
         };
         var context = CreateUpdateContext(submitted);
-        var rule = new TaxRule();
+        var rule = new TaxRule
+        {
+            Source = TaxCalculationMethodNames.Percentage,
+        };
 
         // Act
         await driver.UpdateAsync(rule, context);

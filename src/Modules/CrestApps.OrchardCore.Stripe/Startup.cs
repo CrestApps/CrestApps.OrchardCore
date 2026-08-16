@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
@@ -48,6 +50,7 @@ public class Startup : StartupBase
         services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
         services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
+        services.AddScoped<IStripeRefundService, StripeRefundService>();
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<StripeOptions>>();
@@ -72,5 +75,25 @@ public class Startup : StartupBase
     {
         routes
             .AddWebhookEndpoint<Startup>();
+    }
+}
+
+/// <summary>
+/// Registers the generic Stripe checkout payment provider when the checkout framework is present, so any
+/// checkout can collect and refund a card payment through Stripe without depending on the
+/// subscription-specific Stripe endpoints.
+/// </summary>
+[RequireFeatures(CheckoutConstants.Features.Area)]
+public sealed class CheckoutStartup : StartupBase
+{
+    /// <summary>
+    /// Registers the Stripe checkout payment and refund provider.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<StripeCheckoutPaymentProvider>();
+        services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
+        services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
     }
 }

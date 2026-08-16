@@ -18,7 +18,7 @@ public sealed class TaxExemptionTests
             TaxType = TaxTypeNames.SalesTax,
             JurisdictionId = jurisdictionId,
             CategoryCode = "Electronics",
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.10m,
         });
     }

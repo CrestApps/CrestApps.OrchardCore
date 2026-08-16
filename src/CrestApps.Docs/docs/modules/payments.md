@@ -117,6 +117,18 @@ The Stripe integration and the [Subscriptions](subscriptions) endpoints that dri
 For load-balanced or multi-instance hosting, enable the **Redis** features (`OrchardCore.Redis`, `OrchardCore.Redis.Lock`, `OrchardCore.Redis.Cache`, `OrchardCore.Redis.Bus`) so the distributed locks and cached payment state are shared across every node. See the [Orchard Core Redis documentation](https://docs.orchardcore.net/en/latest/reference/modules/Redis/).
 :::
 
+## Stripe as a generic checkout provider
+
+Beyond the subscription-specific endpoints, Stripe also registers a **generic `ICheckoutPaymentProvider`** when the [Checkout](checkout) feature is enabled (through a `[RequireFeatures]` startup, so there is no separate integration feature to switch on). This lets *any* checkout — recurring subscriptions today, a one-time storefront tomorrow — collect a card payment through a Stripe PaymentIntent without taking a dependency on the subscription flow.
+
+- **`BeginAsync`** creates an *unconfirmed* PaymentIntent for the attempt's gross amount (base plus the tax the checkout determined) and returns its client secret, so the browser confirms it through Strong Customer Authentication with embedded Stripe Elements.
+- **`VerifyAsync`** retrieves the PaymentIntent from Stripe's authoritative API and reports the net/tax split the durable ledger validates, so an obligation is never marked paid on a cached webhook.
+- Every amount crosses the Stripe boundary through **`StripeCurrency`**, which honors zero-decimal (JPY) and three-decimal (KWD, rounded to a multiple of ten) currencies.
+
+### Refunds
+
+The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled Stripe payment can be refunded through the checkout's durable refund ledger (`ICheckoutRefundService`) rather than by calling Stripe directly. Refunds are recorded before Stripe is contacted, carry the refund's idempotency key so a retry never double-refunds, and allocate tax from the original payment's immutable snapshot. See [Checkout → Refunds](checkout#refunds--the-durable-refund-ledger) for the full model. The refund itself runs through the `IStripeRefundService`, which converts the major-unit amount to the currency's minor units with `StripeCurrency`.
+
 ## Adding another payment provider
 
 The checkout is extensible from both configuration and code. To surface a new gateway (for example PayPal) as a checkout option:

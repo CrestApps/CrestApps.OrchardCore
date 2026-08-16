@@ -22,6 +22,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Contents",
         "OrchardCore.ContentTypes",
         "OrchardCore.Title",
+        "CrestApps.OrchardCore.Users",
         ProductConstants.Feature.ModuleId,
         CheckoutConstants.Features.Area,
     ]

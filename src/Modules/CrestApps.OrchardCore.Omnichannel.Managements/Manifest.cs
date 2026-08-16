@@ -28,7 +28,6 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Flows",
         "OrchardCore.Users",
         TimeZonesConstants.Features.Area,
-        "CrestApps.OrchardCore.Users",
     ]
 )]
 

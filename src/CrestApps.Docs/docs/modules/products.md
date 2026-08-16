@@ -26,6 +26,7 @@ Because the part is a normal Orchard Core content part, products participate in 
 | Property | Type | Description |
 | --- | --- | --- |
 | `Price` | `double` | The price of the item, expressed in the site's configured currency. |
+| `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
 
 The part's behavior is configured per content type through **`ProductPartSettings`**:
 
@@ -85,6 +86,15 @@ Products participate in taxation through the [Taxation](taxation) framework — 
 - the tax category, classification, and external tax code from the **Taxation** part.
 
 Because taxation is an optional feature dependency, products keep working normally when Taxation is disabled. See the [Taxation](taxation) module for how tax is then determined, snapshotted, and refunded.
+
+## The sellable snapshot
+
+A price on a content item is not enough to sell it: a cart or order must capture *what was purchasable at the moment of purchase* so a later price or definition change never rewrites history. The Products module provides that seam without forcing every consumer to read the content item directly.
+
+- **`ISellableProduct`** is an immutable snapshot of a purchasable product — its content item id and version, content type, SKU, title, unit price (as `decimal`), currency, product type, and tax classification codes.
+- **`IProductSnapshotResolver`** resolves an `ISellableProduct` from a `ProductSnapshotContext` (the content item plus the requested currency, quantity, SKU, and variant). The default resolver reads the **Product** and **Taxation** parts and the `ProductPartSettings`.
+
+The snapshot deliberately carries money as `decimal`, the authoritative representation for stored financial records, even though the editable `ProductPart.Price` remains a `double` for backward compatibility. A consuming module (a future storefront, or the existing checkout) resolves a snapshot once and stores it, so the order of record is stable and self-contained.
 
 ## Installation
 

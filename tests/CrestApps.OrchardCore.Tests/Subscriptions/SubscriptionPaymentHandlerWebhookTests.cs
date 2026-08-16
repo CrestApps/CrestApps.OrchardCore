@@ -156,7 +156,7 @@ public class SubscriptionPaymentHandlerWebhookTests
             TaxName = "CA Sales Tax",
             TaxCode = "US-CA-SALES",
             JurisdictionId = jurisdictionId,
-            CalculationMethod = TaxCalculationMethodNames.Percentage,
+            Source = TaxCalculationMethodNames.Percentage,
             Rate = 0.08m,
         });
 
