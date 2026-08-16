@@ -16,7 +16,7 @@
     <div class="ocat-end">
         <input asp-for="SitemapUrl" class="form-control" placeholder="https://core.crestapps.com/sitemap.xml" />
         <span asp-validation-for="SitemapUrl" class="text-danger"></span>
-        <span class="hint">@T["An explicit sitemap URL. Leave it empty to derive it from the base URL as {{BaseUrl}}/sitemap.xml."]</span>
+        <span class="hint">@T["An explicit sitemap URL. Leave it empty to derive it from the base URL as <code>{0}</code>.", "{BaseUrl}/sitemap.xml"]</span>
     </div>
 </div>
 
