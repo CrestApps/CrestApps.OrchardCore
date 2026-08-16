@@ -411,3 +411,29 @@ public sealed class ToolInstancesStartup : StartupBase
             .AddPermissionProvider<AIToolInstancePermissionsProvider>();
     }
 }
+
+/// <summary>
+/// Registers the recipe execution step for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class ToolInstancesRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIToolInstanceStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ToolInstancesOCDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
+    }
+}
