@@ -29,6 +29,7 @@ using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -397,6 +398,12 @@ public sealed class ToolInstancesStartup : StartupBase
         );
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
+
+        services.TryAddEnumerable(
+        [
+            ServiceDescriptor.Transient<IAIToolInstanceHandler, AlgoliaDocumentationToolInstanceExportHandler>(),
+            ServiceDescriptor.Transient<IAIToolInstanceHandler, HttpApiRequestToolInstanceExportHandler>(),
+        ]);
 
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()

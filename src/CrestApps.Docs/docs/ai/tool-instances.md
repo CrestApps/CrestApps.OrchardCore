@@ -108,7 +108,9 @@ Tool instances can be moved between tenants with the standard Orchard Core deplo
 
 ### Deployment plan
 
-Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and all source-specific settings (including secrets that were stored encrypted).
+Enable **OrchardCore.Deployment** together with **AI Tool Instances**. The **AI Tool Instances** deployment step then becomes available when you build a deployment plan under **Configuration → Deployment Plans**. The step exports either every tool instance or only the instances you select. Each exported instance keeps its source, name, description, owner, and source-specific settings.
+
+Secrets are never written to the export. During export, each source can remove its own sensitive data through an `IAIToolInstanceHandler`. The built-in sources use this to strip their credentials: the **HTTP API request** source clears the API key, bearer token, password, client secret, and any cached OAuth tokens, and the **Algolia** source clears the search-only API key. After importing on the target tenant, edit the instance and re-enter the required credentials.
 
 ### Recipe step
 
@@ -201,6 +203,36 @@ internal sealed class WeatherToolInstanceDisplayDriver : DisplayDriver<AIToolIns
 ```
 
 Register the driver with `services.AddDisplayDriver<AIToolInstance, WeatherToolInstanceDisplayDriver>();`. Use `Content:1` for the shared name and description fields, and anything after it for source-specific fields, so the shared fields always render first.
+
+### Removing secrets from exports
+
+If your source stores credentials, add an `IAIToolInstanceHandler` so those secrets are removed from the deployment and recipe export. Gate the handler on your source name and clear the sensitive properties from `ExportData`:
+
+```csharp
+using CrestApps.OrchardCore.AI.Tools.Handlers;
+
+internal sealed class WeatherToolInstanceExportHandler : IAIToolInstanceHandler
+{
+    public void Exporting(ExportingAIToolInstanceContext context)
+    {
+        if (!string.Equals(context.Instance.Source, "weather", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var settingsNode = context.ExportData["Properties"]?[nameof(WeatherToolSettings)]?.AsObject();
+
+        if (settingsNode is null)
+        {
+            return;
+        }
+
+        settingsNode[nameof(WeatherToolSettings.ApiKey)] = string.Empty;
+    }
+}
+```
+
+Register it with `services.TryAddEnumerable(ServiceDescriptor.Transient<IAIToolInstanceHandler, WeatherToolInstanceExportHandler>());`. The built-in HTTP API request and Algolia sources ship with their own handlers, so their credentials are stripped automatically.
 
 ## Exposing the selector on your own model
 
