@@ -1,5 +1,5 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -13,14 +13,17 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdiction>
 {
     private readonly INamedCatalog<TaxJurisdiction> _jurisdictionStore;
+    private readonly ICountryService _countryService;
 
     internal readonly IStringLocalizer S;
 
     public TaxJurisdictionDisplayDriver(
         INamedCatalog<TaxJurisdiction> jurisdictionStore,
+        ICountryService countryService,
         IStringLocalizer<TaxJurisdictionDisplayDriver> stringLocalizer)
     {
         _jurisdictionStore = jurisdictionStore;
+        _countryService = countryService;
         S = stringLocalizer;
     }
 
@@ -57,10 +60,12 @@ internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdicti
                 .Select(level => new SelectListItem(level.ToString(), level.ToString()))
                 .ToList();
 
+            var countries = await _countryService.GetCountriesAsync();
+
             model.Countries =
             [
                 new SelectListItem(S["Select a country"], string.Empty),
-                .. CountryProvider.GetCountries()
+                .. countries
                     .Select(country => new SelectListItem($"{country.Name} ({country.Code})", country.Code)),
             ];
 

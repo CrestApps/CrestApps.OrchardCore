@@ -38,14 +38,31 @@ public static class CountryProvider
                 continue;
             }
 
-            if (seen.Add(region.TwoLetterISORegionName))
+            var code = region.TwoLetterISORegionName;
+
+            if (!IsIsoAlpha2Code(code))
             {
-                countries.Add(new CountryInfo(region.TwoLetterISORegionName, region.EnglishName));
+                continue;
+            }
+
+            if (seen.Add(code))
+            {
+                countries.Add(new CountryInfo(code, region.EnglishName));
             }
         }
 
         return countries
             .OrderBy(country => country.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
+    }
+
+    private static bool IsIsoAlpha2Code(string code)
+    {
+        if (code is null || code.Length != 2)
+        {
+            return false;
+        }
+
+        return char.IsAsciiLetterUpper(code[0]) && char.IsAsciiLetterUpper(code[1]);
     }
 }

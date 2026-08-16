@@ -54,4 +54,28 @@ public sealed class CountryProviderTests
 
         Assert.Equal(ordered, countries.Select(country => country.Code));
     }
+
+    [Fact]
+    public void GetCountries_AllCodesAreIsoAlpha2()
+    {
+        // Act
+        var countries = CountryProvider.GetCountries();
+
+        // Assert
+        Assert.All(countries, country =>
+        {
+            Assert.Equal(2, country.Code.Length);
+            Assert.True(country.Code.All(char.IsAsciiLetterUpper), $"'{country.Code}' is not a valid ISO 3166-1 alpha-2 code.");
+        });
+    }
+
+    [Fact]
+    public void GetCountries_ExcludesMacroRegionCodes()
+    {
+        // Act
+        var countries = CountryProvider.GetCountries();
+
+        // Assert
+        Assert.DoesNotContain(countries, country => country.Code is "001" or "003" or "150" or "419");
+    }
 }

@@ -58,6 +58,10 @@ Create the broad categories you match rules against, plus any finer classificati
 
 Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
 
+:::tip
+When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
+:::
+
 ### 3. Define how tax applies — Rules
 
 Go to **Commerce → Taxation → Rules** and add a rule that binds a jurisdiction and category to a calculation. A rule lets you choose the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, the **Calculation method**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, and **Applies to shipping**. The **Calculation method** is the rule's *source*: it decides which calculation fields the editor shows — a **Rate** for percentage methods, a **Fixed amount** for fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`). Only the fields the selected method needs are captured; the rest are cleared on save. A disabled rule is never applied, and rules outside their effective window are ignored.

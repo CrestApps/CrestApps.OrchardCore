@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Drivers;
 using CrestApps.OrchardCore.Taxation.Handlers;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
@@ -27,6 +29,9 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTaxationCore();
+
+        // The Addresses module replaces this with a content-backed implementation when enabled.
+        services.TryAddScoped<ICountryService, DefaultCountryService>();
 
         services.AddContentPart<TaxationPart>()
             .UseDisplayDriver<TaxationPartDisplayDriver>();
