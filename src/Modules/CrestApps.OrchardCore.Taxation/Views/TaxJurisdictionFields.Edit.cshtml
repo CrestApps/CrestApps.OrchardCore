@@ -86,17 +86,17 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="EffectiveFromUtc" class="ocat-label">@T["Effective from (UTC)"]</label>
+    <label asp-for="EffectiveFromUtc" class="ocat-label">@T["Effective from"]</label>
     <div class="ocat-end ocat-limited-wrapper">
-        <input asp-for="EffectiveFromUtc" type="datetime-local" class="form-control ocat-limited" />
+        <input asp-for="EffectiveFromUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
         <span asp-validation-for="EffectiveFromUtc" class="text-danger"></span>
     </div>
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="EffectiveToUtc" class="ocat-label">@T["Effective to (UTC)"]</label>
+    <label asp-for="EffectiveToUtc" class="ocat-label">@T["Effective to"]</label>
     <div class="ocat-end ocat-limited-wrapper">
-        <input asp-for="EffectiveToUtc" type="datetime-local" class="form-control ocat-limited" />
+        <input asp-for="EffectiveToUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
         <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
     </div>
 </div>

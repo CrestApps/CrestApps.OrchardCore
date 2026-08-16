@@ -57,7 +57,7 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings => settings
                 .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
                     .AddClass("subscriptions")
-                    .Id("subscriptions")
+                    .Id("subscriptionsSettings")
                     .Action(_routeValues)
                     .Permission(SubscriptionPermissions.ManageSubscriptionSettings)
                     .LocalNav()
