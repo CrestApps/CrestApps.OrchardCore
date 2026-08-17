@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Receipts.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Receipts Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for the CrestApps OrchardCore Receipts module, including the default receipt builder
+      that merges the tenant's issuer branding into consumer-supplied purchase data.
+    </Description>
+    <PackageTags>$(PackageTags) Receipts Commerce</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Receipts.Abstractions\CrestApps.OrchardCore.Receipts.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

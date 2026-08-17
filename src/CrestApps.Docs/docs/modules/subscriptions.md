@@ -71,7 +71,7 @@ Hosted Checkout redirects the browser to Stripe and, on return, the `Subscriptio
 
 ## Subscriber dashboard
 
-Subscribers get a self-service **dashboard** (`SubscriberDashboard`) where they can review their subscriptions and related information. Recorded payments are indexed (`SubscriptionTransactionIndex`) so a subscriber's transaction history is available for display. Each payment in the **Payments** list offers a **Print** action that opens a printable receipt — showing the site name, billed-to details, service plan, tax breakdown, total, and transaction reference. A receipt is only served to the subscriber that owns the transaction.
+Subscribers get a self-service **dashboard** (`SubscriberDashboard`) where they can review their subscriptions and related information. Recorded payments are indexed (`SubscriptionTransactionIndex`) so a subscriber's transaction history is available for display. Each payment in the **Payments** list offers a **Print** action that opens a printable receipt, rendered through the reusable [Receipts](receipts) module — showing the configured issuer branding, billed-to details, service plan, tax breakdown, total, and transaction reference. A receipt is only served to the subscriber that owns the transaction.
 
 ## Admin management
 

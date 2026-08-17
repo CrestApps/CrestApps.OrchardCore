@@ -1,0 +1,169 @@
+@using CrestApps.OrchardCore.Payments
+@model ReceiptDocument
+
+@{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var decimals = CurrencyScale.GetDecimalPlaces(Model.Currency);
+    var amountFormat = "N" + decimals;
+
+    string Money(decimal value)
+    {
+        return string.IsNullOrEmpty(Model.Currency)
+            ? value.ToString(amountFormat, culture)
+            : $"{Model.Currency} {value.ToString(amountFormat, culture)}";
+    }
+
+    var headerTitle = string.IsNullOrWhiteSpace(Model.HeaderTitle)
+        ? T["Payment receipt"].Value
+        : Model.HeaderTitle;
+}
+
+<style>
+    .receipt .receipt-logo {
+        max-height: 64px;
+    }
+</style>
+
+<div class="card receipt">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+                {
+                    <img class="receipt-logo mb-2" src="@Model.LogoUrl" alt="@Model.BusinessName" />
+                }
+                <h3 class="mb-1">@Model.BusinessName</h3>
+                <div class="text-muted">@headerTitle</div>
+                @if (!string.IsNullOrWhiteSpace(Model.BusinessAddress))
+                {
+                    <div class="text-muted small">@Model.BusinessAddress</div>
+                }
+            </div>
+            <div class="text-end">
+                @if (!string.IsNullOrWhiteSpace(Model.Reference))
+                {
+                    <div><strong>@(string.IsNullOrWhiteSpace(Model.SourceLabel) ? T["Reference"].Value : Model.SourceLabel):</strong> @Model.Reference</div>
+                }
+                <div><strong>@T["Date"]:</strong> @Model.IssuedAt.ToString("g", culture)</div>
+                @if (Model.IsTest && Model.ShowTestBadge)
+                {
+                    <div><span class="badge bg-warning text-dark">@T["Test payment"]</span></div>
+                }
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="text-muted">@T["Billed to"]</h6>
+                @if (!string.IsNullOrWhiteSpace(Model.BilledToName))
+                {
+                    <div>@Model.BilledToName</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.BilledToEmail))
+                {
+                    <div>@Model.BilledToEmail</div>
+                }
+            </div>
+            <div class="col-md-6 text-md-end">
+                <h6 class="text-muted">@T["Status"]</h6>
+                @switch (Model.Status)
+                {
+                    case ReceiptStatus.Paid:
+                        <span class="badge bg-success">@T["Paid"]</span>
+                        break;
+                    case ReceiptStatus.Failed:
+                        <span class="badge bg-danger">@T["Failed"]</span>
+                        break;
+                    default:
+                        <span class="badge bg-secondary">@T["Pending"]</span>
+                        break;
+                }
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Description"]</th>
+                    <th scope="col" class="text-end">@T["Qty"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.LineItems)
+                {
+                    <tr>
+                        <td>@item.Description</td>
+                        <td class="text-end">@item.Quantity</td>
+                        <td class="text-end">@Money(item.Amount)</td>
+                    </tr>
+                }
+                @if (Model.TaxLines != null && Model.TaxLines.Count > 0)
+                {
+                    foreach (var line in Model.TaxLines)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted" colspan="2">
+                                @(string.IsNullOrWhiteSpace(line.Description) ? T["Tax"].Value : line.Description)
+                            </td>
+                            <td class="text-end text-muted">@Money(line.Amount)</td>
+                        </tr>
+                    }
+                }
+                else if (Model.TaxAmount > 0)
+                {
+                    <tr>
+                        <td class="ps-4 text-muted" colspan="2">@T["Tax"]</td>
+                        <td class="text-end text-muted">@Money(Model.TaxAmount)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" class="text-end" colspan="2">@T["Subtotal"]</th>
+                    <th class="text-end fw-normal">@Money(Model.Subtotal)</th>
+                </tr>
+                <tr>
+                    <th scope="row" class="text-end" colspan="2">@T["Total"]</th>
+                    <th class="text-end">@Money(Model.Total)</th>
+                </tr>
+            </tfoot>
+        </table>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div class="mt-3">
+                <h6 class="text-muted">@T["Notes"]</h6>
+                <div>@Model.Notes</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.FooterText) ||
+            !string.IsNullOrWhiteSpace(Model.ContactEmail) ||
+            !string.IsNullOrWhiteSpace(Model.ContactPhone) ||
+            !string.IsNullOrWhiteSpace(Model.Website))
+        {
+            <hr />
+            <div class="text-muted small">
+                @if (!string.IsNullOrWhiteSpace(Model.FooterText))
+                {
+                    <div>@Model.FooterText</div>
+                }
+                <div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ContactEmail))
+                    {
+                        <span class="me-3">@Model.ContactEmail</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.ContactPhone))
+                    {
+                        <span class="me-3">@Model.ContactPhone</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Website))
+                    {
+                        <span>@Model.Website</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

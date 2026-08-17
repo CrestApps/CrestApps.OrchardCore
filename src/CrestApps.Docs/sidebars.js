@@ -118,6 +118,7 @@ const sidebars = {
                 'modules/checkout',
                 'modules/payments',
                 'modules/subscriptions',
+                'modules/receipts',
                 'modules/recipes',
                 'modules/reports',
                 'modules/workflow-activity-schemas',

@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Receipts.Models;
+using CrestApps.OrchardCore.Receipts.Services;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
-using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +14,6 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -31,8 +32,8 @@ public class DashboardController : Controller
     private readonly IContentManager _contentManager;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
-    private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
+    private readonly IReceiptService _receiptService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DashboardController"/> class.
@@ -44,8 +45,8 @@ public class DashboardController : Controller
     /// <param name="contentManager">The content manager used to load the service plan content item version.</param>
     /// <param name="userManager">The user manager used to load the current subscriber.</param>
     /// <param name="displayNameProvider">The display name provider used to format the subscriber display name.</param>
-    /// <param name="siteService">The site service used to read the site name printed on the receipt.</param>
     /// <param name="localClock">The local clock used to convert the transaction date to local time.</param>
+    /// <param name="receiptService">The receipt service used to build the printable receipt document.</param>
     public DashboardController(
         IDisplayManager<SubscriberDashboard> displayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -54,8 +55,8 @@ public class DashboardController : Controller
         IContentManager contentManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        ISiteService siteService,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IReceiptService receiptService)
     {
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
@@ -64,8 +65,8 @@ public class DashboardController : Controller
         _contentManager = contentManager;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
-        _siteService = siteService;
         _localClock = localClock;
+        _receiptService = receiptService;
     }
 
     /// <summary>
@@ -127,29 +128,77 @@ public class DashboardController : Controller
 
         var user = await _userManager.GetUserAsync(HttpContext.User);
         var contentItem = await _contentManager.GetVersionAsync(session.ContentItemVersionId);
-        var site = await _siteService.GetSiteSettingsAsync();
+        var subtotal = payment.Amount - payment.TaxAmount;
 
-        var model = new SubscriptionReceiptViewModel
+        var request = new ReceiptRequest
         {
-            SiteName = site.SiteName,
-            ServicePlanTitle = contentItem?.DisplayText,
-            TransactionId = payment.TransactionId,
-            Date = (await _localClock.ConvertToLocalAsync(session.CreatedUtc)).DateTime,
+            Reference = payment.TransactionId,
+            IssuedAt = (await _localClock.ConvertToLocalAsync(session.CreatedUtc)).DateTime,
             Currency = payment.Currency,
-            Amount = payment.Amount,
+            LineItems =
+            [
+                new ReceiptLineItem
+                {
+                    Description = contentItem?.DisplayText,
+                    Quantity = 1,
+                    UnitAmount = subtotal,
+                    Amount = subtotal,
+                },
+            ],
+            TaxLines = BuildTaxLines(payment),
             TaxAmount = payment.TaxAmount,
-            Status = payment.Status,
+            Total = payment.Amount,
+            Status = MapStatus(payment.Status),
+            IsTest = payment.GatewayMode != GatewayMode.Live,
             GatewayId = payment.GatewayId,
-            GatewayMode = payment.GatewayMode,
-            TaxLines = payment.TaxSnapshot?.Lines ?? [],
         };
 
         if (user is User u)
         {
-            model.BilledToName = await _displayNameProvider.GetAsync(user);
-            model.BilledToEmail = u.Email;
+            request.BilledToName = await _displayNameProvider.GetAsync(user);
+            request.BilledToEmail = u.Email;
         }
 
-        return View(model);
+        var document = await _receiptService.BuildAsync(request);
+
+        return View(document);
     }
+
+    private static List<ReceiptTaxLine> BuildTaxLines(PaymentInfo payment)
+    {
+        if (payment.TaxSnapshot?.Lines is not { Count: > 0 } lines)
+        {
+            return [];
+        }
+
+        var taxLines = new List<ReceiptTaxLine>(lines.Count);
+
+        foreach (var line in lines)
+        {
+            var description = line.TaxName;
+
+            if (!string.IsNullOrEmpty(line.JurisdictionName))
+            {
+                description = string.IsNullOrEmpty(description)
+                    ? line.JurisdictionName
+                    : $"{description} — {line.JurisdictionName}";
+            }
+
+            taxLines.Add(new ReceiptTaxLine
+            {
+                Description = description,
+                Amount = line.TaxAmount,
+            });
+        }
+
+        return taxLines;
+    }
+
+    private static ReceiptStatus MapStatus(PaymentStatus status)
+        => status switch
+        {
+            PaymentStatus.Succeeded => ReceiptStatus.Paid,
+            PaymentStatus.Failed => ReceiptStatus.Failed,
+            _ => ReceiptStatus.Pending,
+        };
 }
