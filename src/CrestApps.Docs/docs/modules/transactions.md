@@ -69,7 +69,7 @@ Authenticated users with the **View own transactions** permission get a **My Tra
 
 ### Administrator report and console
 
-Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It filters by status (including an *outstanding* view), searches by title, and shows the total outstanding across the tenant. Opening a transaction reveals its full timeline and the management actions:
+Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It filters by status (including an *outstanding* view), searches by title, and filters by **source** through a dropdown of the sources registered by the enabled features. Opening a transaction reveals its full timeline and the management actions:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
 - **Record payment** — record a full or partial payment received offline.
@@ -78,6 +78,36 @@ Users with the **Manage transactions** permission get a **Commerce → Transacti
 - **Add note** — attach a free-form note to the timeline.
 
 Because the report is provider-agnostic, an administrator can see and manage an unpaid balance the same way regardless of which module created it. If a customer never pays, a manager has one place to chase, settle, cancel, or annotate the obligation, and can pair it with whatever downstream action a consuming module exposes (for example disabling a service or canceling a subscription).
+
+## Registering a transaction source
+
+The `Source` stored on a transaction is a technical key. To have it appear with a friendly, localizable name in the report table and its **source** filter dropdown, register the source from a module's `Startup` using `AddTransactionSource`:
+
+```csharp
+using CrestApps.OrchardCore.Transactions.Core;
+using Microsoft.Extensions.Localization;
+
+public sealed class Startup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransactionSource("pay-later", source =>
+        {
+            source.DisplayName = S["Pay Later"];
+            source.Description = S["Outstanding balances committed through the offline Pay Later option."];
+        });
+    }
+}
+```
+
+The `name` must match the value the provider assigns to `Transaction.Source`. Registered sources populate the report's source filter; an unregistered source still appears in the table using its raw key.
 
 ## Configuring reminders
 

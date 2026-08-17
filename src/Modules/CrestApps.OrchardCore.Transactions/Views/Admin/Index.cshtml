@@ -19,7 +19,7 @@
                     <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
                 </div>
                 <div class="col-auto">
-                    <input asp-for="Options.Source" class="form-control" placeholder="@T["Source"]" autocomplete="off" />
+                    <select asp-for="Options.Source" asp-items="Model.Options.Sources" class="form-select"></select>
                 </div>
                 <div class="col-auto">
                     <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
@@ -31,10 +31,12 @@
     </div>
 </form>
 
-<div class="alert alert-secondary d-flex justify-content-between align-items-center" role="alert">
-    <span>@T["Total outstanding (all matching transactions)"]</span>
-    <strong>@Model.TotalOutstanding.ToString("0.00")</strong>
-</div>
+@{
+    var sourceNames = Model.Options.Sources?
+        .Where(s => !string.IsNullOrEmpty(s.Value))
+        .ToDictionary(s => s.Value, s => s.Text, StringComparer.OrdinalIgnoreCase)
+        ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+}
 
 @if (Model.Transactions.Count > 0)
 {
@@ -62,7 +64,7 @@
                             <a asp-action="Detail" asp-route-itemId="@transaction.ItemId">@(string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title)</a>
                         </td>
                         <td>@(item.OwnerName ?? T["Unknown"].Value)</td>
-                        <td>@transaction.Source</td>
+                        <td>@(sourceNames.TryGetValue(transaction.Source ?? string.Empty, out var sourceName) ? sourceName : transaction.Source)</td>
                         <td class="text-end">@transaction.Currency @transaction.TotalAmount.ToString("0.00")</td>
                         <td class="text-end">@transaction.Currency @transaction.OutstandingAmount.ToString("0.00")</td>
                         <td>

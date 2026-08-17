@@ -21,4 +21,30 @@ public static class TransactionsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a transaction source so the administration report can present and filter transactions by a
+    /// friendly, localizable name instead of the raw source key.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="name">The technical source key stored on the transaction.</param>
+    /// <param name="configure">A delegate that configures the source (for example its display name).</param>
+    /// <returns>The same service collection so calls can be chained.</returns>
+    public static IServiceCollection AddTransactionSource(
+        this IServiceCollection services,
+        string name,
+        Action<TransactionSource> configure)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        services.Configure<TransactionSourceOptions>(options =>
+        {
+            var source = new TransactionSource(name);
+            configure(source);
+            options.AddSource(source);
+        });
+
+        return services;
+    }
 }

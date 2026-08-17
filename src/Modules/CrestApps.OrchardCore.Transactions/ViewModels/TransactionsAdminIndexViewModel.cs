@@ -16,11 +16,6 @@ public class TransactionsAdminIndexViewModel
     public TransactionsAdminIndexOptions Options { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the total outstanding amount across every transaction that matches the current filter.
-    /// </summary>
-    public decimal TotalOutstanding { get; set; }
-
-    /// <summary>
     /// Gets or sets the pager shape rendered under the report.
     /// </summary>
     public dynamic Pager { get; set; }

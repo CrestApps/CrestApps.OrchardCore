@@ -26,4 +26,9 @@ public class TransactionsAdminIndexOptions
     /// Gets or sets the status filter items rendered in the report toolbar.
     /// </summary>
     public List<SelectListItem> Statuses { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source filter items rendered in the report toolbar.
+    /// </summary>
+    public List<SelectListItem> Sources { get; set; }
 }

@@ -38,6 +38,7 @@ public sealed class AdminController : Controller
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly TransactionSourceOptions _sourceOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +52,7 @@ public sealed class AdminController : Controller
     /// <param name="displayNameProvider">The display name provider used to describe owners.</param>
     /// <param name="clock">The clock used to timestamp management events.</param>
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
+    /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="reminderService">The optional reminder service, available only when the Transaction Reminders feature is enabled.</param>
@@ -61,6 +63,7 @@ public sealed class AdminController : Controller
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         INotifier notifier,
+        IOptions<TransactionSourceOptions> sourceOptions,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         ITransactionReminderService reminderService = null)
@@ -72,6 +75,7 @@ public sealed class AdminController : Controller
         _displayNameProvider = displayNameProvider;
         _clock = clock;
         _notifier = notifier;
+        _sourceOptions = sourceOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -101,13 +105,6 @@ public sealed class AdminController : Controller
 
         var result = await _transactionManager.PageAsync(pager.Page, pager.PageSize, query);
 
-        var outstandingResult = await _transactionManager.PageAsync(1, int.MaxValue, new TransactionQuery
-        {
-            OutstandingOnly = true,
-            Source = options.Source,
-            Search = options.Search,
-        });
-
         var routeData = new RouteData();
 
         if (!string.IsNullOrEmpty(options.Search))
@@ -126,11 +123,11 @@ public sealed class AdminController : Controller
         }
 
         options.Statuses = BuildStatusFilterItems(options.Status);
+        options.Sources = BuildSourceFilterItems(options.Source);
 
         var model = new TransactionsAdminIndexViewModel
         {
             Options = options,
-            TotalOutstanding = outstandingResult.Entries.Sum(x => x.OutstandingAmount),
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
@@ -512,6 +509,23 @@ public sealed class AdminController : Controller
             new SelectListItem(S["Abandoned"], nameof(TransactionStatusFilter.Abandoned), selected == TransactionStatusFilter.Abandoned),
             new SelectListItem(S["Refunded"], nameof(TransactionStatusFilter.Refunded), selected == TransactionStatusFilter.Refunded),
         ];
+    }
+
+    private List<SelectListItem> BuildSourceFilterItems(string selected)
+    {
+        var items = new List<SelectListItem>
+        {
+            new(S["All sources"], string.Empty, string.IsNullOrEmpty(selected)),
+        };
+
+        foreach (var source in _sourceOptions.Sources.Values)
+        {
+            var text = source.DisplayName?.Value ?? source.Name;
+
+            items.Add(new SelectListItem(text, source.Name, string.Equals(source.Name, selected, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return items;
     }
 
     private async Task<string> ResolveOwnerNameAsync(string ownerId)
