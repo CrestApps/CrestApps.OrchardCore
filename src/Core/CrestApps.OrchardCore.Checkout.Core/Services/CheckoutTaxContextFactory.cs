@@ -109,7 +109,7 @@ public static class CheckoutTaxContextFactory
     {
         return new TaxableItem
         {
-            Id = lineItem.Id,
+            Id = lineItem.ItemId,
             Kind = lineItem.Plan is null ? TaxableItemKind.Physical : TaxableItemKind.Service,
             Quantity = lineItem.Quantity,
             UnitPrice = (decimal)lineItem.UnitPrice,

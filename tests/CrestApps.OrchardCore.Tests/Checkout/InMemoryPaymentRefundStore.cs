@@ -1,3 +1,6 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 
@@ -11,24 +14,48 @@ internal sealed class InMemoryPaymentRefundStore : IPaymentRefundStore
 {
     private readonly Dictionary<string, PaymentRefund> _refunds = new(StringComparer.Ordinal);
 
-    public IReadOnlyCollection<PaymentRefund> Refunds => _refunds.Values;
-
-    public Task CreateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
+    public ValueTask CreateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
     {
-        _refunds[refund.Id] = refund;
+        if (string.IsNullOrEmpty(refund.ItemId))
+        {
+            refund.ItemId = UniqueId.GenerateId();
+        }
 
-        return Task.CompletedTask;
+        _refunds[refund.ItemId] = refund;
+
+        return ValueTask.CompletedTask;
     }
 
-    public Task UpdateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
+    public ValueTask UpdateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
     {
-        _refunds[refund.Id] = refund;
+        _refunds[refund.ItemId] = refund;
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task<PaymentRefund> GetAsync(string id, CancellationToken cancellationToken = default)
-        => Task.FromResult(_refunds.GetValueOrDefault(id));
+    public ValueTask<bool> DeleteAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_refunds.Remove(refund.ItemId));
+
+    public ValueTask<PaymentRefund> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_refunds.GetValueOrDefault(id));
+
+    public ValueTask<IReadOnlyCollection<PaymentRefund>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyCollection<PaymentRefund>>(_refunds.Values.Where(r => ids.Contains(r.ItemId, StringComparer.Ordinal)).ToArray());
+
+    public ValueTask<IReadOnlyCollection<PaymentRefund>> GetAllAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyCollection<PaymentRefund>>(_refunds.Values.ToArray());
+
+    public ValueTask<PageResult<PaymentRefund>> PageAsync<TQuery>(int page, int pageSize, TQuery context, CancellationToken cancellationToken = default)
+        where TQuery : QueryContext
+    {
+        var entries = _refunds.Values.ToArray();
+
+        return ValueTask.FromResult(new PageResult<PaymentRefund>
+        {
+            Count = entries.Length,
+            Entries = entries,
+        });
+    }
 
     public Task<PaymentRefund> GetByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
         => Task.FromResult(_refunds.Values.FirstOrDefault(r => r.IdempotencyKey == idempotencyKey));

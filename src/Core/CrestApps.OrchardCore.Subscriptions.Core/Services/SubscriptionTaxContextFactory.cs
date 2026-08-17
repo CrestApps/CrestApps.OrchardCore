@@ -131,7 +131,7 @@ public static class SubscriptionTaxContextFactory
     {
         return new TaxableItem
         {
-            Id = lineItem.Id,
+            Id = lineItem.ItemId,
             Kind = lineItem.Subscription is null ? TaxableItemKind.Physical : TaxableItemKind.Service,
             Quantity = lineItem.Quantity,
             UnitPrice = (decimal)lineItem.UnitPrice,

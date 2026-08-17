@@ -69,7 +69,7 @@ public sealed class SubscriptionTaxIntegrationTests
 
         var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
-            Id = "line-1",
+            ItemId = "line-1",
             Description = "Setup fee",
             Quantity = 1,
             UnitPrice = 200m,
@@ -98,7 +98,7 @@ public sealed class SubscriptionTaxIntegrationTests
     {
         var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
-            Id = "line-1",
+            ItemId = "line-1",
             Quantity = 1,
             UnitPrice = 200m,
         });
@@ -115,7 +115,7 @@ public sealed class SubscriptionTaxIntegrationTests
     {
         var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
-            Id = "line-1",
+            ItemId = "line-1",
             Quantity = 1,
             UnitPrice = 200m,
         });
@@ -138,7 +138,7 @@ public sealed class SubscriptionTaxIntegrationTests
 
         var invoice = CreateInvoice(215m, new InvoiceLineItem
         {
-            Id = "line-1",
+            ItemId = "line-1",
             Quantity = 1,
             UnitPrice = 215m,
         });
@@ -176,7 +176,7 @@ public sealed class SubscriptionTaxIntegrationTests
 
         var invoice = CreateInvoice(100m, new InvoiceLineItem
         {
-            Id = "line-1",
+            ItemId = "line-1",
             Quantity = 1,
             UnitPrice = 100m,
         });
@@ -201,17 +201,17 @@ public sealed class SubscriptionTaxIntegrationTests
             Currency = "USD",
             LineItems =
             [
-                new InvoiceLineItem { Id = "initial", Quantity = 1, UnitPrice = 50m },
+                new InvoiceLineItem { ItemId = "initial", Quantity = 1, UnitPrice = 50m },
                 new InvoiceLineItem
                 {
-                    Id = "now",
+                    ItemId = "now",
                     Quantity = 1,
                     UnitPrice = 20m,
                     Subscription = new SubscriptionPlan { SubscriptionDayDelay = 0 },
                 },
                 new InvoiceLineItem
                 {
-                    Id = "delayed",
+                    ItemId = "delayed",
                     Quantity = 1,
                     UnitPrice = 30m,
                     Subscription = new SubscriptionPlan { SubscriptionDayDelay = 30 },
@@ -234,7 +234,7 @@ public sealed class SubscriptionTaxIntegrationTests
 
         var lineItem = new InvoiceLineItem
         {
-            Id = "cycle",
+            ItemId = "cycle",
             Quantity = 1,
             UnitPrice = 100m,
             Subscription = new SubscriptionPlan(),

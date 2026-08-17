@@ -6,7 +6,8 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Checkout.Core.Migrations;
 
 /// <summary>
-/// Creates the index tables that back checkout sessions and the durable payment attempt ledger.
+/// Creates the index tables that back checkout sessions, the durable payment attempt ledger, and the
+/// durable refund ledger.
 /// </summary>
 public sealed class CheckoutMigrations : DataMigration
 {
@@ -36,7 +37,7 @@ public sealed class CheckoutMigrations : DataMigration
         );
 
         await SchemaBuilder.CreateMapIndexTableAsync<PaymentAttemptIndex>(table => table
-            .Column<string>("AttemptId", column => column.WithLength(26))
+            .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("SessionId", column => column.WithLength(26))
             .Column<string>("ProviderKey")
             .Column<string>("ObligationId")
@@ -47,7 +48,7 @@ public sealed class CheckoutMigrations : DataMigration
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
-            .CreateIndex("IDX_PaymentAttemptIndex_AttemptId", "AttemptId")
+            .CreateIndex("IDX_PaymentAttemptIndex_ItemId", "ItemId")
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
@@ -58,25 +59,8 @@ public sealed class CheckoutMigrations : DataMigration
             .CreateIndex("IDX_PaymentAttemptIndex_Idempotency", "IdempotencyKey")
         );
 
-        await CreatePaymentRefundSchemaAsync();
-
-        return 2;
-    }
-
-    /// <summary>
-    /// Adds the durable refund ledger schema for tenants created before it existed.
-    /// </summary>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await CreatePaymentRefundSchemaAsync();
-
-        return 2;
-    }
-
-    private async Task CreatePaymentRefundSchemaAsync()
-    {
         await SchemaBuilder.CreateMapIndexTableAsync<PaymentRefundIndex>(table => table
-            .Column<string>("RefundId", column => column.WithLength(26))
+            .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("SessionId", column => column.WithLength(26))
             .Column<string>("ProviderKey")
             .Column<string>("OriginalTransactionId")
@@ -87,7 +71,7 @@ public sealed class CheckoutMigrations : DataMigration
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentRefundIndex>(table => table
-            .CreateIndex("IDX_PaymentRefundIndex_RefundId", "RefundId")
+            .CreateIndex("IDX_PaymentRefundIndex_ItemId", "ItemId")
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentRefundIndex>(table => table
@@ -101,5 +85,7 @@ public sealed class CheckoutMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<PaymentRefundIndex>(table => table
             .CreateIndex("IDX_PaymentRefundIndex_Idempotency", "IdempotencyKey")
         );
+
+        return 1;
     }
 }

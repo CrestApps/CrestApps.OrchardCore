@@ -1,18 +1,13 @@
+using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
-using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 /// <summary>
 /// The queryable projection of a <see cref="PaymentRefund"/>, the durable refund ledger.
 /// </summary>
-public sealed class PaymentRefundIndex : MapIndex
+public sealed class PaymentRefundIndex : CatalogItemIndex
 {
-    /// <summary>
-    /// The refund id.
-    /// </summary>
-    public string RefundId { get; set; }
-
     /// <summary>
     /// The checkout session id the original payment belongs to.
     /// </summary>

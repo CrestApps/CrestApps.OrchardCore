@@ -8,7 +8,7 @@ public class InvoiceLineItem
     /// <summary>
     /// Gets or sets the unique identifier for the line item.
     /// </summary>
-    public string Id { get; set; }
+    public string ItemId { get; set; }
 
     /// <summary>
     /// Gets or sets the short description of the line item.

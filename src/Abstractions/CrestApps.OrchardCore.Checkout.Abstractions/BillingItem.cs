@@ -9,7 +9,7 @@ public sealed class BillingItem
     /// <summary>
     /// A stable identifier for the item, used to correlate it back to the thing being purchased.
     /// </summary>
-    public string Id { get; set; }
+    public string ItemId { get; set; }
 
     /// <summary>
     /// A human-readable description shown to the customer.

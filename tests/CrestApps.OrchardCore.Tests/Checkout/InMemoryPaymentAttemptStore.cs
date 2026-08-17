@@ -1,3 +1,6 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 
@@ -14,26 +17,57 @@ internal sealed class InMemoryPaymentAttemptStore : IPaymentAttemptStore
     {
         foreach (var attempt in seed)
         {
-            _attempts[attempt.Id] = attempt;
+            if (string.IsNullOrEmpty(attempt.ItemId))
+            {
+                attempt.ItemId = UniqueId.GenerateId();
+            }
+
+            _attempts[attempt.ItemId] = attempt;
         }
     }
 
-    public Task CreateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
+    public ValueTask CreateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
     {
-        _attempts[attempt.Id] = attempt;
+        if (string.IsNullOrEmpty(attempt.ItemId))
+        {
+            attempt.ItemId = UniqueId.GenerateId();
+        }
 
-        return Task.CompletedTask;
+        _attempts[attempt.ItemId] = attempt;
+
+        return ValueTask.CompletedTask;
     }
 
-    public Task UpdateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
+    public ValueTask UpdateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
     {
-        _attempts[attempt.Id] = attempt;
+        _attempts[attempt.ItemId] = attempt;
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task<PaymentAttempt> GetAsync(string id, CancellationToken cancellationToken = default)
-        => Task.FromResult(_attempts.GetValueOrDefault(id));
+    public ValueTask<bool> DeleteAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_attempts.Remove(attempt.ItemId));
+
+    public ValueTask<PaymentAttempt> FindByIdAsync(string id, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(_attempts.GetValueOrDefault(id));
+
+    public ValueTask<IReadOnlyCollection<PaymentAttempt>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyCollection<PaymentAttempt>>(_attempts.Values.Where(a => ids.Contains(a.ItemId, StringComparer.Ordinal)).ToArray());
+
+    public ValueTask<IReadOnlyCollection<PaymentAttempt>> GetAllAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromResult<IReadOnlyCollection<PaymentAttempt>>(_attempts.Values.ToArray());
+
+    public ValueTask<PageResult<PaymentAttempt>> PageAsync<TQuery>(int page, int pageSize, TQuery context, CancellationToken cancellationToken = default)
+        where TQuery : QueryContext
+    {
+        var entries = _attempts.Values.ToArray();
+
+        return ValueTask.FromResult(new PageResult<PaymentAttempt>
+        {
+            Count = entries.Length,
+            Entries = entries,
+        });
+    }
 
     public Task<PaymentAttempt> GetByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
         => Task.FromResult(_attempts.Values.FirstOrDefault(a => a.IdempotencyKey == idempotencyKey));

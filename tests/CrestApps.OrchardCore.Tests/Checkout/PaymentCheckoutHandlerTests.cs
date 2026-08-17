@@ -29,8 +29,8 @@ public sealed class PaymentCheckoutHandlerTests
             Order = 1,
             BillingItems =
             [
-                new BillingItem { Id = "book", Description = "Book", Amount = 30m },
-                new BillingItem { Id = "plan", Description = "Membership", Amount = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new BillingItem { ItemId = "book", Description = "Book", Amount = 30m },
+                new BillingItem { ItemId = "plan", Description = "Membership", Amount = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
             ],
         });
 

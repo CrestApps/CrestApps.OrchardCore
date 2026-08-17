@@ -56,7 +56,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
             if (provider == null)
             {
-                _logger.LogWarning("No checkout payment provider registered for key '{ProviderKey}'; attempt '{AttemptId}' cannot be verified and its obligation stays outstanding.", attempt.ProviderKey, attempt.Id);
+                _logger.LogWarning("No checkout payment provider registered for key '{ProviderKey}'; attempt '{AttemptId}' cannot be verified and its obligation stays outstanding.", attempt.ProviderKey, attempt.ItemId);
 
                 continue;
             }
@@ -136,7 +136,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
                     attempt.FailureReason = rejection;
                     await _attemptStore.UpdateAsync(attempt, cancellationToken);
 
-                    _logger.LogError("Provider '{ProviderKey}' reported attempt '{AttemptId}' as succeeded but the confirmation was rejected: {Reason}. The obligation stays outstanding.", attempt.ProviderKey, attempt.Id, rejection);
+                    _logger.LogError("Provider '{ProviderKey}' reported attempt '{AttemptId}' as succeeded but the confirmation was rejected: {Reason}. The obligation stays outstanding.", attempt.ProviderKey, attempt.ItemId, rejection);
 
                     break;
                 }

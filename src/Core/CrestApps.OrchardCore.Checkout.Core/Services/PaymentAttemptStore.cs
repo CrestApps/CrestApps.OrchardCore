@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using OrchardCore;
+using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -12,50 +12,21 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// records every provider interaction in the tenant database so a charge is never tracked only in a
 /// distributed cache that could be evicted.
 /// </summary>
-public sealed class PaymentAttemptStore : IPaymentAttemptStore
+public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, PaymentAttemptIndex>, IPaymentAttemptStore
 {
-    private readonly ISession _session;
     private readonly IClock _clock;
 
-    public PaymentAttemptStore(ISession session, IClock clock)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PaymentAttemptStore"/> class.
+    /// </summary>
+    /// <param name="session">The tenant YesSql session.</param>
+    /// <param name="clock">The clock used for timestamps.</param>
+    public PaymentAttemptStore(
+        ISession session,
+        IClock clock)
+        : base(session)
     {
-        _session = session;
         _clock = clock;
-    }
-
-    /// <inheritdoc/>
-    public Task CreateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(attempt);
-
-        if (string.IsNullOrEmpty(attempt.Id))
-        {
-            attempt.Id = IdGenerator.GenerateId();
-        }
-
-        var now = _clock.UtcNow;
-        attempt.CreatedUtc = now;
-        attempt.UpdatedUtc = now;
-
-        return _session.SaveAsync(attempt, cancellationToken: cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task UpdateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(attempt);
-
-        attempt.UpdatedUtc = _clock.UtcNow;
-
-        return _session.SaveAsync(attempt, cancellationToken: cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task<PaymentAttempt> GetAsync(string id, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(id);
-
-        return _session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.AttemptId == id).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -63,7 +34,7 @@ public sealed class PaymentAttemptStore : IPaymentAttemptStore
     {
         ArgumentException.ThrowIfNullOrEmpty(idempotencyKey);
 
-        return _session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync(cancellationToken);
+        return Session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -71,15 +42,30 @@ public sealed class PaymentAttemptStore : IPaymentAttemptStore
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        return await _session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.SessionId == sessionId).ListAsync(cancellationToken);
+        return await Session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.SessionId == sessionId).ListAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<PaymentAttempt>> GetPendingAsync(DateTime olderThanUtc, CancellationToken cancellationToken = default)
     {
-        return await _session.Query<PaymentAttempt, PaymentAttemptIndex>(x =>
+        return await Session.Query<PaymentAttempt, PaymentAttemptIndex>(x =>
                 (x.State == PaymentAttemptState.Created || x.State == PaymentAttemptState.Pending) &&
                 x.UpdatedUtc < olderThanUtc)
             .ListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    protected override ValueTask SavingAsync(PaymentAttempt record)
+    {
+        var now = _clock.UtcNow;
+
+        if (record.CreatedUtc == default)
+        {
+            record.CreatedUtc = now;
+        }
+
+        record.UpdatedUtc = now;
+
+        return ValueTask.CompletedTask;
     }
 }

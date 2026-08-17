@@ -10,7 +10,7 @@ public sealed class CheckoutLineItem
     /// <summary>
     /// A unique identifier for the line item.
     /// </summary>
-    public string Id { get; set; }
+    public string ItemId { get; set; }
 
     /// <summary>
     /// A short description of the line item.

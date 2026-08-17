@@ -1,6 +1,6 @@
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Checkout.Models;
 
@@ -11,12 +11,12 @@ namespace CrestApps.OrchardCore.Checkout.Models;
 /// provider call, and updating it with the provider's returned reference immediately after, is what
 /// guarantees no orphaned charges when a multi-obligation checkout partially fails or a node crashes.
 /// </summary>
-public sealed class PaymentAttempt : Entity
+public sealed class PaymentAttempt : CatalogItem
 {
     /// <summary>
-    /// The unique identifier of the attempt (26-character generated id).
+    /// The YesSql document identifier.
     /// </summary>
-    public string Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>
     /// The checkout session this attempt belongs to.

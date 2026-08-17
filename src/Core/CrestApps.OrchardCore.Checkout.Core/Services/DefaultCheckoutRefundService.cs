@@ -142,7 +142,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
                 {
                     _logger.LogWarning(
                         "Refund '{RefundId}' for transaction '{TransactionId}' collected tax but no tax allocation is available; recorded for manual review.",
-                        refund.Id,
+                        refund.ItemId,
                         context.OriginalTransactionId);
                 }
 
@@ -164,7 +164,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
                 {
                     _logger.LogInformation(
                         "Refund '{RefundId}' for transaction '{TransactionId}' has no executable provider '{ProviderKey}' and was recorded for manual review.",
-                        refund.Id,
+                        refund.ItemId,
                         context.OriginalTransactionId,
                         attempt.ProviderKey);
                 }
@@ -231,10 +231,10 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
 
         var refund = new PaymentRefund
         {
-            Id = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             SessionId = context.SessionId,
             ProviderKey = attempt.ProviderKey,
-            OriginalAttemptId = attempt.Id,
+            OriginalAttemptId = attempt.ItemId,
             OriginalTransactionId = context.OriginalTransactionId,
             ObligationId = attempt.ObligationId,
             Currency = attempt.Currency,
@@ -253,7 +253,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
 
         // The refund id seeds the provider idempotency key so retrying the same refund record never
         // double-refunds at the gateway.
-        refund.IdempotencyKey = "refund_" + refund.Id;
+        refund.IdempotencyKey = "refund_" + refund.ItemId;
 
         return refund;
     }
@@ -298,7 +298,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
             _logger.LogError(
                 ex,
                 "The refund '{RefundId}' for transaction '{TransactionId}' failed to complete against provider '{ProviderKey}' and was left pending.",
-                refund.Id,
+                refund.ItemId,
                 context.OriginalTransactionId,
                 attempt.ProviderKey);
         }

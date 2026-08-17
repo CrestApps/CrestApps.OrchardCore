@@ -142,7 +142,7 @@ public static class CreateSubscriptionEndpoint{
 
             foreach (var lineItem in subscription.Value)
             {
-                var price = await stripePriceService.GetAsync(lineItem.Id);
+                var price = await stripePriceService.GetAsync(lineItem.ItemId);
 
                 if (price == null)
                 {
@@ -156,7 +156,7 @@ public static class CreateSubscriptionEndpoint{
                     PriceId = price.Id,
                     Metadata = new Dictionary<string, string>()
                     {
-                        { nameof(ContentItem.ContentItemVersionId), lineItem.Id },
+                        { nameof(ContentItem.ContentItemVersionId), lineItem.ItemId },
                     },
                 });
 

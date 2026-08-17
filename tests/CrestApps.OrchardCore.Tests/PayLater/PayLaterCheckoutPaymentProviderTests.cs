@@ -23,7 +23,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         var provider = CreateProvider(isProduction: false);
         var attempt = new PaymentAttempt
         {
-            Id = "attempt-1",
+            ItemId = "attempt-1",
             ProviderReference = "ref-1",
             ExpectedAmount = 42m,
             ExpectedTaxAmount = 2m,
@@ -49,7 +49,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
     {
         // Arrange
         var provider = CreateProvider(isProduction: true);
-        var attempt = new PaymentAttempt { Id = "attempt-1", ProviderReference = "ref-1", Currency = "USD" };
+        var attempt = new PaymentAttempt { ItemId = "attempt-1", ProviderReference = "ref-1", Currency = "USD" };
 
         // Act
         var result = await provider.VerifyAsync(
@@ -69,7 +69,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
 
         var attempt = new PaymentAttempt
         {
-            Id = "attempt-1",
+            ItemId = "attempt-1",
             SessionId = "session-1",
             ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
             ObligationId = CheckoutObligations.OneTime,
@@ -102,7 +102,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         // Arrange: an attempt with no persisted provider reference has not been begun, so there is nothing
         // to confirm and it must not fabricate a settlement.
         var provider = CreateProvider(isProduction: false);
-        var attempt = new PaymentAttempt { Id = "attempt-1", Currency = "USD" };
+        var attempt = new PaymentAttempt { ItemId = "attempt-1", Currency = "USD" };
 
         // Act
         var result = await provider.VerifyAsync(

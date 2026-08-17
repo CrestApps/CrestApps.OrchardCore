@@ -1,18 +1,13 @@
+using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
-using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 /// <summary>
 /// The queryable projection of a <see cref="PaymentAttempt"/>, the durable payment ledger.
 /// </summary>
-public sealed class PaymentAttemptIndex : MapIndex
+public sealed class PaymentAttemptIndex : CatalogItemIndex
 {
-    /// <summary>
-    /// The attempt id.
-    /// </summary>
-    public string AttemptId { get; set; }
-
     /// <summary>
     /// The checkout session id the attempt belongs to.
     /// </summary>

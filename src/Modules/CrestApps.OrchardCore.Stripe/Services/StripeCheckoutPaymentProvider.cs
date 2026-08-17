@@ -87,7 +87,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 IdempotencyKey = attempt.IdempotencyKey,
                 Metadata = new Dictionary<string, string>
                 {
-                    ["checkout_attempt_id"] = attempt.Id,
+                    ["checkout_attempt_id"] = attempt.ItemId,
                     ["checkout_session_id"] = attempt.SessionId,
                 },
             });
@@ -102,7 +102,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create a Stripe PaymentIntent for checkout attempt '{AttemptId}'.", attempt.Id);
+            _logger.LogError(ex, "Failed to create a Stripe PaymentIntent for checkout attempt '{AttemptId}'.", attempt.ItemId);
 
             return PaymentBeginResult.Failure(ex.Message);
         }
@@ -137,7 +137,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve Stripe PaymentIntent '{PaymentIntentId}' for checkout attempt '{AttemptId}'.", attempt.ProviderReference, attempt.Id);
+            _logger.LogError(ex, "Failed to retrieve Stripe PaymentIntent '{PaymentIntentId}' for checkout attempt '{AttemptId}'.", attempt.ProviderReference, attempt.ItemId);
 
             // A transient retrieval failure is not an authoritative outcome; leave the attempt pending so a
             // later reconciliation can settle it.
@@ -231,7 +231,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                     Amount = grossCharged,
                     Currency = intent.Currency,
                     Reason = "requested_by_customer",
-                    IdempotencyKey = "cancel_" + attempt.Id,
+                    IdempotencyKey = "cancel_" + attempt.ItemId,
                 });
 
                 return refund.Status == "failed"
@@ -245,14 +245,14 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
             {
                 PaymentIntentId = intent.Id,
                 CancellationReason = "abandoned",
-                IdempotencyKey = "cancel_" + attempt.Id,
+                IdempotencyKey = "cancel_" + attempt.ItemId,
             });
 
             return PaymentCancelResult.Success();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cancel Stripe PaymentIntent '{PaymentIntentId}' for checkout attempt '{AttemptId}'.", attempt.ProviderReference, attempt.Id);
+            _logger.LogError(ex, "Failed to cancel Stripe PaymentIntent '{PaymentIntentId}' for checkout attempt '{AttemptId}'.", attempt.ProviderReference, attempt.ItemId);
 
             return PaymentCancelResult.Failure(ex.Message);
         }

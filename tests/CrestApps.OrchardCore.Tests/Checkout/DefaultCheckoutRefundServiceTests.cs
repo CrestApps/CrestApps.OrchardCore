@@ -248,7 +248,7 @@ public sealed class DefaultCheckoutRefundServiceTests
 
         var attempt = new PaymentAttempt
         {
-            Id = "attempt-1",
+            ItemId = "attempt-1",
             SessionId = SessionId,
             ProviderKey = "Stripe",
             State = PaymentAttemptState.Succeeded,

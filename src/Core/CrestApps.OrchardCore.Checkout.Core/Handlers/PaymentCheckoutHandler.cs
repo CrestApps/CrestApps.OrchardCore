@@ -93,7 +93,7 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
             {
                 var lineItem = new CheckoutLineItem
                 {
-                    Id = billingItem.Id,
+                    ItemId = billingItem.ItemId,
                     Description = billingItem.Description,
                     Quantity = 1,
                     UnitPrice = billingItem.Amount,

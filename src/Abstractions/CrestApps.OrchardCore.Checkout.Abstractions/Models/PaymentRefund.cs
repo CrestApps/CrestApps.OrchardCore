@@ -1,6 +1,6 @@
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Checkout.Models;
 
@@ -11,13 +11,12 @@ namespace CrestApps.OrchardCore.Checkout.Models;
 /// <see cref="decimal"/> — the authoritative representation for durable financial records — and are only
 /// converted to a provider's integer minor units at the gateway boundary.
 /// </summary>
-public sealed class PaymentRefund : Entity
+public sealed class PaymentRefund : CatalogItem
 {
     /// <summary>
-    /// The unique identifier of the refund (26-character generated id). Also seeds the provider
-    /// idempotency key so a retried refund of the same record never double-refunds.
+    /// The YesSql document identifier.
     /// </summary>
-    public string Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>
     /// The checkout session the original payment belongs to.

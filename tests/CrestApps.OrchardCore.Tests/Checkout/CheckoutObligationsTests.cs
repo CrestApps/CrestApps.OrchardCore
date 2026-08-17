@@ -56,9 +56,9 @@ public sealed class CheckoutObligationsTests
             Currency = "USD",
             LineItems =
             [
-                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "b", Quantity = 1, UnitPrice = 20m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "c", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "b", Quantity = 1, UnitPrice = 20m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "c", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
             ],
         };
 
@@ -81,7 +81,7 @@ public sealed class CheckoutObligationsTests
             InitialPaymentAmount = 5m,
             LineItems =
             [
-                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
             ],
         };
 
@@ -103,8 +103,8 @@ public sealed class CheckoutObligationsTests
             Currency = "USD",
             LineItems =
             [
-                new CheckoutLineItem { Id = "free", Quantity = 1, UnitPrice = 0m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "paid", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "free", Quantity = 1, UnitPrice = 0m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { ItemId = "paid", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
             ],
         };
 

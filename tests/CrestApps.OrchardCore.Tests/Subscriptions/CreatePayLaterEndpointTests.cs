@@ -128,7 +128,7 @@ public class CreatePayLaterEndpointTests
             [
                 new InvoiceLineItem
                 {
-                    Id = "plan",
+                    ItemId = "plan",
                     Description = "plan",
                     Quantity = 1,
                     UnitPrice = 10.00m,

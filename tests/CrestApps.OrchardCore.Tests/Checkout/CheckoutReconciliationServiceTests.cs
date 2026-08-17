@@ -356,7 +356,7 @@ public sealed class CheckoutReconciliationServiceTests
     private static PaymentAttempt NewAttempt(string obligationId, PaymentAttemptState state)
         => new()
         {
-            Id = "attempt-" + obligationId,
+            ItemId = "attempt-" + obligationId,
             SessionId = SessionId,
             ProviderKey = ProviderKey,
             ObligationId = obligationId,

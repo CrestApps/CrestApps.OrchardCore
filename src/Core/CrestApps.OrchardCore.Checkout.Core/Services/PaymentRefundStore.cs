@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
-using OrchardCore;
+using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -13,9 +13,8 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// that could be evicted, and so the total already-refunded amount can be enforced against the original
 /// charge across nodes.
 /// </summary>
-public sealed class PaymentRefundStore : IPaymentRefundStore
+public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentRefundIndex>, IPaymentRefundStore
 {
-    private readonly ISession _session;
     private readonly IClock _clock;
 
     /// <summary>
@@ -23,45 +22,12 @@ public sealed class PaymentRefundStore : IPaymentRefundStore
     /// </summary>
     /// <param name="session">The tenant YesSql session.</param>
     /// <param name="clock">The clock used for timestamps.</param>
-    public PaymentRefundStore(ISession session, IClock clock)
+    public PaymentRefundStore(
+        ISession session,
+        IClock clock)
+        : base(session)
     {
-        _session = session;
         _clock = clock;
-    }
-
-    /// <inheritdoc/>
-    public Task CreateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(refund);
-
-        if (string.IsNullOrEmpty(refund.Id))
-        {
-            refund.Id = IdGenerator.GenerateId();
-        }
-
-        var now = _clock.UtcNow;
-        refund.CreatedUtc = now;
-        refund.UpdatedUtc = now;
-
-        return _session.SaveAsync(refund, cancellationToken: cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task UpdateAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(refund);
-
-        refund.UpdatedUtc = _clock.UtcNow;
-
-        return _session.SaveAsync(refund, cancellationToken: cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public Task<PaymentRefund> GetAsync(string id, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(id);
-
-        return _session.Query<PaymentRefund, PaymentRefundIndex>(x => x.RefundId == id).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -69,7 +35,7 @@ public sealed class PaymentRefundStore : IPaymentRefundStore
     {
         ArgumentException.ThrowIfNullOrEmpty(idempotencyKey);
 
-        return _session.Query<PaymentRefund, PaymentRefundIndex>(x => x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync(cancellationToken);
+        return Session.Query<PaymentRefund, PaymentRefundIndex>(x => x.IdempotencyKey == idempotencyKey).FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -77,7 +43,7 @@ public sealed class PaymentRefundStore : IPaymentRefundStore
     {
         ArgumentException.ThrowIfNullOrEmpty(originalTransactionId);
 
-        return await _session.Query<PaymentRefund, PaymentRefundIndex>(x => x.OriginalTransactionId == originalTransactionId).ListAsync(cancellationToken);
+        return await Session.Query<PaymentRefund, PaymentRefundIndex>(x => x.OriginalTransactionId == originalTransactionId).ListAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -85,6 +51,21 @@ public sealed class PaymentRefundStore : IPaymentRefundStore
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        return await _session.Query<PaymentRefund, PaymentRefundIndex>(x => x.SessionId == sessionId).ListAsync(cancellationToken);
+        return await Session.Query<PaymentRefund, PaymentRefundIndex>(x => x.SessionId == sessionId).ListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    protected override ValueTask SavingAsync(PaymentRefund record)
+    {
+        var now = _clock.UtcNow;
+
+        if (record.CreatedUtc == default)
+        {
+            record.CreatedUtc = now;
+        }
+
+        record.UpdatedUtc = now;
+
+        return ValueTask.CompletedTask;
     }
 }

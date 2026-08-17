@@ -1,4 +1,4 @@
-using System.Threading;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 
 namespace CrestApps.OrchardCore.Checkout.Services;
@@ -10,29 +10,8 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 /// is backed by the tenant database, never by a distributed cache, so it survives eviction, expiry, and
 /// node failure.
 /// </summary>
-public interface IPaymentAttemptStore
+public interface IPaymentAttemptStore : ICatalog<PaymentAttempt>
 {
-    /// <summary>
-    /// Persists a new attempt.
-    /// </summary>
-    /// <param name="attempt">The attempt to persist.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task CreateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Persists changes to an existing attempt.
-    /// </summary>
-    /// <param name="attempt">The attempt to update.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task UpdateAsync(PaymentAttempt attempt, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets an attempt by its id, or <c>null</c> when it does not exist.
-    /// </summary>
-    /// <param name="id">The attempt id.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<PaymentAttempt> GetAsync(string id, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Gets an attempt by its idempotency key, or <c>null</c> when it does not exist. Used to resume a
     /// prior attempt instead of starting a second charge for the same obligation.

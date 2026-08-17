@@ -65,12 +65,12 @@ public class PaymentSubscriptionHandlerTests
 
         var recurring = Assert.Single(paymentStep.BillingItems, b => b.Subscription != null);
         Assert.Equal(9.99m, recurring.BillingAmount);
-        Assert.Equal("plan-version-1", recurring.Id);
+        Assert.Equal("plan-version-1", recurring.ItemId);
 
         var setupFee = Assert.Single(paymentStep.BillingItems, b => b.Subscription == null);
         Assert.Equal(50, setupFee.BillingAmount);
         Assert.Equal("setup", setupFee.Description);
-        Assert.Equal("plan-version-1" + SubscriptionConstants.InitialFeeIdPrefix, setupFee.Id);
+        Assert.Equal("plan-version-1" + SubscriptionConstants.InitialFeeIdPrefix, setupFee.ItemId);
     }
 
     [Fact]
@@ -367,7 +367,7 @@ public class PaymentSubscriptionHandlerTests
             [
                 new BillingItem
                 {
-                    Id = key,
+                    ItemId = key,
                     Description = key,
                     BillingAmount = amount,
                     Subscription = null,
@@ -384,7 +384,7 @@ public class PaymentSubscriptionHandlerTests
             [
                 new BillingItem
                 {
-                    Id = key,
+                    ItemId = key,
                     Description = key,
                     BillingAmount = amount,
                     Subscription = new SubscriptionPlan

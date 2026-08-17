@@ -14,7 +14,7 @@ public sealed class PaymentAttemptIndexProvider : IndexProvider<PaymentAttempt>
         context.For<PaymentAttemptIndex>()
             .Map(attempt => new PaymentAttemptIndex
             {
-                AttemptId = attempt.Id,
+                ItemId = attempt.ItemId,
                 SessionId = attempt.SessionId,
                 ProviderKey = attempt.ProviderKey,
                 ObligationId = attempt.ObligationId,

@@ -34,7 +34,7 @@ public sealed class CheckoutTaxServiceTests
             Currency = Currency,
             InitialPaymentAmount = 30m,
             DueNow = 30m,
-            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 30m }],
+            LineItems = [new CheckoutLineItem { ItemId = "book", Quantity = 1, UnitPrice = 30m }],
         };
 
         var flow = new CheckoutFlow(new CheckoutSession { SessionId = "s1", Status = CheckoutSessionStatus.Pending });
@@ -67,7 +67,7 @@ public sealed class CheckoutTaxServiceTests
             Currency = Currency,
             InitialPaymentAmount = 50m,
             DueNow = 50m,
-            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 50m }],
+            LineItems = [new CheckoutLineItem { ItemId = "book", Quantity = 1, UnitPrice = 50m }],
         };
 
         var flow = new CheckoutFlow(new CheckoutSession { SessionId = "s1", Status = CheckoutSessionStatus.Pending });

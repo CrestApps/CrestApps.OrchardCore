@@ -14,7 +14,7 @@ public sealed class PaymentRefundIndexProvider : IndexProvider<PaymentRefund>
         context.For<PaymentRefundIndex>()
             .Map(refund => new PaymentRefundIndex
             {
-                RefundId = refund.Id,
+                ItemId = refund.ItemId,
                 SessionId = refund.SessionId,
                 ProviderKey = refund.ProviderKey,
                 OriginalTransactionId = refund.OriginalTransactionId,

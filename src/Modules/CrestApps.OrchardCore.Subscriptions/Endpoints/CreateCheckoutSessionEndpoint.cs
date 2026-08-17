@@ -98,7 +98,7 @@ public static class CreateCheckoutSessionEndpoint
         {
             foreach (var lineItem in group.Value)
             {
-                var price = await stripePriceService.GetAsync(lineItem.Id);
+                var price = await stripePriceService.GetAsync(lineItem.ItemId);
 
                 if (price == null)
                 {

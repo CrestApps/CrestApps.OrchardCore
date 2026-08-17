@@ -86,7 +86,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         {
             new()
             {
-                Id = context.Session.ContentItemVersionId,
+                ItemId = context.Session.ContentItemVersionId,
                 Description = context.SubscriptionContentItem.DisplayText,
                 BillingAmount = productPart.Price,
                 Subscription = new SubscriptionPlan()
@@ -103,7 +103,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         {
             billingItems.Add(new BillingItem()
             {
-                Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
+                ItemId = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
                 Description = subscriptionPart.InitialAmountDescription,
                 BillingAmount = subscriptionPart.InitialAmount.Value,
             });
@@ -134,7 +134,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             {
                 var lineItem = new InvoiceLineItem()
                 {
-                    Id = plan.Id,
+                    ItemId = plan.ItemId,
                     Description = plan.Description,
                     Quantity = 1,
                     UnitPrice = plan.BillingAmount,

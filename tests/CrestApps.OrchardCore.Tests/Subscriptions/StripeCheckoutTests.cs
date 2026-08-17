@@ -15,7 +15,7 @@ public class StripeCheckoutTests
         {
             LineItems =
             [
-                new InvoiceLineItem { Id = "one-time", Quantity = 1, UnitPrice = 10, Subscription = null },
+                new InvoiceLineItem { ItemId = "one-time", Quantity = 1, UnitPrice = 10, Subscription = null },
             ],
         };
 
@@ -180,7 +180,7 @@ public class StripeCheckoutTests
     private static InvoiceLineItem Subscription(string id, decimal unitPrice, DurationType durationType, int billingDuration)
         => new()
         {
-            Id = id,
+            ItemId = id,
             Description = id,
             Quantity = 1,
             UnitPrice = unitPrice,

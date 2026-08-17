@@ -13,7 +13,7 @@ public class BillingItem
     /// <summary>
     /// Gets or sets the identifier of the billed item or plan.
     /// </summary>
-    public string Id { get; set; }
+    public string ItemId { get; set; }
 
     /// <summary>
     /// Gets or sets the amount to collect for each billing cycle.
