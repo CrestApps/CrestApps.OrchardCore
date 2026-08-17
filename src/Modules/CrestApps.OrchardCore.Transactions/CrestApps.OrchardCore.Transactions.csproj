@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
-    <Title>CrestApps OrchardCore Pay Later</Title>
-    <Description>
-      $(OCCMSDescription)
-
-      Adds an offline "pay later" payment option to the checkout framework, reusable by subscriptions and one-time purchases.
-    </Description>
-    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Checkout Payments PayLater</PackageTags>
-  </PropertyGroup>
-
-  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Transactions Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      A provider-agnostic ledger that tracks, reports, and settles financial obligations from any payment
+      provider. Provides customer statements of outstanding payments, an administrator report and management
+      UI, offline and online settlement, and scheduled and manual payment reminders delivered through the
+      notification system.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Transactions Commerce Payments</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,12 +27,17 @@
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Transactions.Abstractions\CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Transactions.Core\CrestApps.OrchardCore.Transactions.Core.csproj" />
   </ItemGroup>

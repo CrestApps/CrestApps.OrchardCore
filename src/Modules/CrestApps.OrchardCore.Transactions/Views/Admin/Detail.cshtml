@@ -1,0 +1,154 @@
+@using CrestApps.OrchardCore.Transactions.Models
+@model TransactionDetailViewModel
+
+@{
+    var transaction = Model.Transaction;
+    var canSettle = transaction.OutstandingAmount > 0m &&
+        transaction.Status != TransactionStatus.Canceled;
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title])</h1></zone>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T["Summary"]</span>
+                <partial name="_TransactionStatusBadge" model="transaction.Status" />
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Owner"]</dt>
+                    <dd class="col-sm-8">@(Model.OwnerName ?? T["Unknown"].Value)</dd>
+
+                    <dt class="col-sm-4">@T["Source"]</dt>
+                    <dd class="col-sm-8">@transaction.Source</dd>
+
+                    <dt class="col-sm-4">@T["Reference"]</dt>
+                    <dd class="col-sm-8">@transaction.ReferenceType @(string.IsNullOrEmpty(transaction.ReferenceId) ? "" : $"({transaction.ReferenceId})")</dd>
+
+                    <dt class="col-sm-4">@T["Total"]</dt>
+                    <dd class="col-sm-8">@transaction.Currency @transaction.TotalAmount.ToString("0.00")</dd>
+
+                    <dt class="col-sm-4">@T["Paid"]</dt>
+                    <dd class="col-sm-8">@transaction.Currency @transaction.AmountPaid.ToString("0.00")</dd>
+
+                    <dt class="col-sm-4">@T["Outstanding"]</dt>
+                    <dd class="col-sm-8"><strong>@transaction.Currency @transaction.OutstandingAmount.ToString("0.00")</strong></dd>
+
+                    <dt class="col-sm-4">@T["Created"]</dt>
+                    <dd class="col-sm-8">@transaction.CreatedUtc.ToString("g")</dd>
+
+                    @if (transaction.DueUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">@T["Due"]</dt>
+                        <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
+                    }
+
+                    @if (transaction.SettledUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">@T["Settled"]</dt>
+                        <dd class="col-sm-8">@transaction.SettledUtc.Value.ToString("g") (@transaction.SettlementMethod)</dd>
+                    }
+
+                    <dt class="col-sm-4">@T["Reminders sent"]</dt>
+                    <dd class="col-sm-8">@transaction.ReminderCount</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">@T["Timeline"]</div>
+            <ul class="list-group list-group-flush">
+                @if (transaction.Events.Count > 0)
+                {
+                    @foreach (var evt in transaction.Events.OrderByDescending(x => x.CreatedUtc))
+                    {
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>@evt.Type</strong>
+                                <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
+                            </div>
+                            <div>@evt.Message</div>
+                            @if (!string.IsNullOrEmpty(evt.ActorName))
+                            {
+                                <div class="text-muted small">@T["By {0}", evt.ActorName]</div>
+                            }
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item text-muted">@T["No events recorded yet."]</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        @if (Model.CanManage)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Send a reminder"]</div>
+                <div class="card-body">
+                    <p class="text-muted">@T["Notify the owner about the outstanding balance through their preferred notification channel."]</p>
+                    <form asp-action="SendReminder" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <button type="submit" class="btn btn-primary" disabled="@(!canSettle)">@T["Send reminder"]</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">@T["Record an offline payment"]</div>
+                <div class="card-body">
+                    <form asp-action="RecordPayment" method="post">
+                        <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
+                        <div class="mb-2">
+                            <label class="form-label" for="Amount">@T["Amount"]</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="Amount" name="Amount" value="@transaction.OutstandingAmount.ToString("0.00")" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="Note">@T["Note"]</label>
+                            <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
+                        </div>
+                        <button type="submit" class="btn btn-success" disabled="@(!canSettle)">@T["Record payment"]</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body d-grid gap-2">
+                    <form asp-action="MarkPaid" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <button type="submit" class="btn btn-outline-success w-100" disabled="@(!canSettle)"
+                                data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]">
+                            @T["Mark as paid"]
+                        </button>
+                    </form>
+                    <form asp-action="Cancel" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <input type="text" class="form-control mb-2" name="note" placeholder="@T["Cancellation reason (optional)"]" />
+                        <button type="submit" class="btn btn-outline-danger w-100" disabled="@(transaction.Status == TransactionStatus.Canceled)"
+                                data-title="@T["Cancel transaction"]" data-message="@T["Are you sure you want to cancel this transaction?"]">
+                            @T["Cancel transaction"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">@T["Add a note"]</div>
+                <div class="card-body">
+                    <form asp-action="AddNote" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <textarea class="form-control mb-2" name="note" rows="2" placeholder="@T["Internal note"]"></textarea>
+                        <button type="submit" class="btn btn-secondary">@T["Add note"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<a class="btn btn-link" asp-action="Index">@T["Back to transactions"]</a>

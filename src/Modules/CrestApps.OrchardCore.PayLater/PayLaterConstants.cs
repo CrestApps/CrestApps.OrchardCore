@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.PayLater;
 public static class PayLaterConstants
 {
     /// <summary>
+    /// The identifier of the site settings group used to configure Pay Later.
+    /// </summary>
+    public const string SettingsGroupId = "paylater";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Pay Later module.
     /// </summary>
     public static class Features
