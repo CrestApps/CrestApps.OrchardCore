@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Receipts;
+namespace CrestApps.OrchardCore.Receipts.Core;
 
 /// <summary>
 /// Contains constant values used by the Receipts feature.

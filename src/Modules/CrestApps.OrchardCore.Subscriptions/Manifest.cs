@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
-using CrestApps.OrchardCore.Receipts;
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using OrchardCore.Modules.Manifest;

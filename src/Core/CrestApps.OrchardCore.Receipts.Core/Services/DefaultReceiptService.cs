@@ -1,6 +1,4 @@
 using CrestApps.OrchardCore.Receipts.Models;
-using CrestApps.OrchardCore.Receipts.Services;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Receipts.Core.Services;

@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Receipts;
+namespace CrestApps.OrchardCore.Receipts.Core;
 
 /// <summary>
 /// Defines the permissions used by the Receipts feature.

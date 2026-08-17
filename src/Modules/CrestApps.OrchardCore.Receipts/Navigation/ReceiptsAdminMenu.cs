@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Receipts.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;

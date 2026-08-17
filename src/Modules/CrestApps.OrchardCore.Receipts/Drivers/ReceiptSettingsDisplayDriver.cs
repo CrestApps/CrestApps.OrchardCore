@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Receipts.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

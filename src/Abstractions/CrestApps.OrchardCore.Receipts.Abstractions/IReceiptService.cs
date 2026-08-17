@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Receipts.Models;
 
-namespace CrestApps.OrchardCore.Receipts.Services;
+namespace CrestApps.OrchardCore.Receipts;
 
 /// <summary>
 /// Builds printable receipt documents from consumer-supplied purchase data, merging in the tenant's

@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Receipts;
+using CrestApps.OrchardCore.Receipts.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

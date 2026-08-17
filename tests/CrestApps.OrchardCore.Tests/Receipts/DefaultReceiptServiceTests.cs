@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Receipts;
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Models;
 using Moq;

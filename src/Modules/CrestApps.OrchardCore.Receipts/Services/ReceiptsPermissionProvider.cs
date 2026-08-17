@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Receipts.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 

@@ -32,7 +32,6 @@ using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
@@ -206,10 +205,6 @@ public sealed class StripeStartup : StartupBase
     }
 }
 
-// The literal is the Pay Later module feature id (PayLaterConstants.Features.Area). Subscriptions treats
-// Pay Later as optional and must not take a hard compile-time dependency on that module, so the id is
-// referenced by string rather than by constant.
-
 /// <summary>
 /// Wires the offline Pay Later option into the subscription checkout. It activates when the standalone
 /// Pay Later module is enabled alongside Subscriptions, so Pay Later is owned by one module and reused
@@ -306,7 +301,7 @@ public sealed class ReCaptchaStartup : StartupBase
     /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, ReCaptchaSubscriptionFlowDisplayDriver>();
+        services.AddDisplayDriver<SubscriptionFlow, ReCaptchaSubscriptionFlowDisplayDriver>();
     }
 }
 

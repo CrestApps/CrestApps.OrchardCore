@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
-using CrestApps.OrchardCore.Receipts.Services;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Users;

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Receipts;
+namespace CrestApps.OrchardCore.Receipts.Core;
 
 /// <summary>
 /// The site settings that brand every receipt the tenant issues. These are merged into each built receipt
