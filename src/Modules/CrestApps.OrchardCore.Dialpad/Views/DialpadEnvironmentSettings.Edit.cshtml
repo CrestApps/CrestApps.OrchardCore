@@ -1,6 +1,15 @@
 @model DialpadEnvironmentSettingsViewModel
 
 <div data-dialpad-environment-section>
+    <div class="ocat-wrapper" asp-validation-class-for="Host">
+        <label asp-for="Host" class="ocat-label">@T["Host"]</label>
+        <div class="ocat-end">
+            <input asp-for="Host" class="form-control" autocomplete="off" placeholder="@T["Leave empty to use the environment default host."]" />
+            <span asp-validation-for="Host"></span>
+            <span class="hint">@T["Optional. The Dialpad host (domain) this environment connects to, for example sandbox.dialpad.com or dialpadbeta.com. Leave empty to use the default host (dialpad.com for production, sandbox.dialpad.com for sandbox). HTTPS is assumed when no scheme is provided. This host is used for the OAuth 2.0 endpoints and the default REST API base address."]</span>
+        </div>
+    </div>
+
     <div class="ocat-wrapper" asp-validation-class-for="AuthenticationType">
         <label asp-for="AuthenticationType" class="ocat-label">@T["Authentication type"]</label>
         <div class="ocat-end">

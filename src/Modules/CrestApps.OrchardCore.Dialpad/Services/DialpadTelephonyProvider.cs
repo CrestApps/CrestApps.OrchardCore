@@ -627,7 +627,7 @@ public sealed class DialpadTelephonyProvider :
             parameters["code_challenge_method"] = string.IsNullOrEmpty(context.CodeChallengeMethod) ? "S256" : context.CodeChallengeMethod;
         }
 
-        return QueryHelpers.AddQueryString(DialpadConstants.GetAuthorizeUrl(settings.Environment), parameters);
+        return QueryHelpers.AddQueryString(DialpadConstants.GetAuthorizeUrl(settings.Environment, settings.Host), parameters);
     }
 
     /// <inheritdoc/>
@@ -701,7 +701,7 @@ public sealed class DialpadTelephonyProvider :
         {
             var client = _httpClientFactory.CreateClient(DialpadConstants.ProviderTechnicalName);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, DialpadConstants.GetDeauthorizeUrl(settings.Environment))
+            using var request = new HttpRequestMessage(HttpMethod.Post, DialpadConstants.GetDeauthorizeUrl(settings.Environment, settings.Host))
             {
                 Content = new StringContent(string.Empty),
             };
@@ -771,7 +771,7 @@ public sealed class DialpadTelephonyProvider :
             var client = _httpClientFactory.CreateClient(DialpadConstants.ProviderTechnicalName);
 
             using var content = new FormUrlEncodedContent(form);
-            using var response = await client.PostAsync(DialpadConstants.GetTokenUrl(settings.Environment), content, cancellationToken);
+            using var response = await client.PostAsync(DialpadConstants.GetTokenUrl(settings.Environment, settings.Host), content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1065,7 +1065,7 @@ public sealed class DialpadTelephonyProvider :
         var client = _httpClientFactory.CreateClient(DialpadConstants.ProviderTechnicalName);
 
         var baseUrl = string.IsNullOrWhiteSpace(settings.ApiBaseUrl)
-            ? DialpadConstants.GetApiBaseUrl(settings.Environment)
+            ? DialpadConstants.GetApiBaseUrl(settings.Environment, settings.Host)
             : settings.ApiBaseUrl.EndsWith('/') ? settings.ApiBaseUrl : settings.ApiBaseUrl + '/';
 
         client.BaseAddress = new Uri(baseUrl);
@@ -1087,6 +1087,7 @@ public sealed class DialpadTelephonyProvider :
             {
                 IsEnabled = settings.IsEnabled,
                 Environment = settings.Environment,
+                Host = environment.Host,
                 ApiBaseUrl = environment.ApiBaseUrl,
                 UserId = environment.UserId,
                 OutboundCallerId = environment.OutboundCallerId,

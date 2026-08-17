@@ -156,6 +156,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
     private static void MapEnvironmentToViewModel(DialpadEnvironmentSettings environment, DialpadEnvironmentSettingsViewModel model)
     {
         model.AuthenticationType = environment.GetEffectiveAuthenticationType();
+        model.Host = environment.Host;
         model.ClientId = environment.ClientId;
         model.Scopes = environment.Scopes;
         model.UserId = environment.UserId;
@@ -175,12 +176,16 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         var prefix = environmentType == DialpadEnvironment.Sandbox ? nameof(DialpadSettingsViewModel.Sandbox) : nameof(DialpadSettingsViewModel.Production);
         var hasChanges = false;
 
+        var host = string.IsNullOrWhiteSpace(model.Host) ? null : model.Host.Trim();
+
         hasChanges |= environment.AuthenticationType != model.AuthenticationType;
+        hasChanges |= environment.Host != host;
         hasChanges |= environment.UserId != model.UserId;
         hasChanges |= environment.OutboundCallerId != model.OutboundCallerId;
         hasChanges |= environment.ClientId != model.ClientId;
         hasChanges |= environment.Scopes != model.Scopes;
         environment.AuthenticationType = model.AuthenticationType;
+        environment.Host = host;
         environment.UserId = model.UserId;
         environment.OutboundCallerId = model.OutboundCallerId;
         environment.ClientId = model.ClientId;

@@ -13,6 +13,15 @@ public sealed class DialpadEnvironmentSettings
     public DialpadAuthenticationType AuthenticationType { get; set; }
 
     /// <summary>
+    /// Gets or sets the host (domain) the provider connects to for this environment. Dialpad exposes more
+    /// than one sandbox-style host, so this lets a tenant target an alternate host. When empty the default
+    /// host for the environment is used (<c>dialpad.com</c> for production and <c>sandbox.dialpad.com</c>
+    /// for sandbox). The value may include a scheme; when it does not, HTTPS is assumed. This host drives
+    /// the OAuth 2.0 endpoints and the default REST API base address.
+    /// </summary>
+    public string Host { get; set; }
+
+    /// <summary>
     /// Gets or sets the protected Dialpad API key used when API key authentication is selected. The value
     /// is stored encrypted using the data protection provider.
     /// </summary>

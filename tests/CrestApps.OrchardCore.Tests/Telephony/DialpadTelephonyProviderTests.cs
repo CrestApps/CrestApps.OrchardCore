@@ -379,6 +379,22 @@ public sealed class DialpadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenHostConfigured_UsesConfiguredHost()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler, DialpadEnvironment.Sandbox, host: "dialpadbeta.com");
+
+        // Act
+        var url = await provider.GetAuthorizationUrlAsync(
+            new TelephonyAuthorizationContext { RedirectUri = "https://site.test/cb", State = "xyz" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.StartsWith("https://dialpadbeta.com/oauth2/authorize", url);
+    }
+
+    [Fact]
     public async Task ExchangeCodeAsync_PostsToTokenEndpoint_AndParsesTokens()
     {
         // Arrange
@@ -433,6 +449,22 @@ public sealed class DialpadTelephonyProviderTests
 
         // Assert
         Assert.Equal("https://sandbox.dialpad.com/oauth2/token", handler.LastRequest.RequestUri.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_WhenHostConfigured_PostsToConfiguredHostTokenEndpoint()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"access_token\":\"at\",\"token_type\":\"Bearer\"}");
+        var provider = CreateOAuthProvider(handler, DialpadEnvironment.Sandbox, host: "dialpadbeta.com");
+
+        // Act
+        await provider.ExchangeCodeAsync(
+            new TelephonyCodeExchangeContext { Code = "auth-code", RedirectUri = "https://site.test/cb" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("https://dialpadbeta.com/oauth2/token", handler.LastRequest.RequestUri.AbsoluteUri);
     }
 
     [Fact]
@@ -563,7 +595,7 @@ public sealed class DialpadTelephonyProviderTests
         Assert.False(requiresUserAuthentication);
     }
 
-    private static DialpadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialpadEnvironment environment = DialpadEnvironment.Production, DialpadAuthenticationType authenticationType = DialpadAuthenticationType.OAuth2)
+    private static DialpadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialpadEnvironment environment = DialpadEnvironment.Production, DialpadAuthenticationType authenticationType = DialpadAuthenticationType.OAuth2, string host = null)
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
 
@@ -578,6 +610,7 @@ public sealed class DialpadTelephonyProviderTests
             ClientSecret = protectedSecret,
             Scopes = "calls",
             ApiBaseUrl = BaseUrl,
+            Host = host,
         };
 
         var settings = new DialpadSettings

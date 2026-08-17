@@ -14,6 +14,12 @@ public class DialpadEnvironmentSettingsViewModel
     public DialpadAuthenticationType AuthenticationType { get; set; }
 
     /// <summary>
+    /// Gets or sets the host (domain) the provider connects to for this environment. When empty the
+    /// default host for the environment is used.
+    /// </summary>
+    public string Host { get; set; }
+
+    /// <summary>
     /// Gets or sets the Dialpad API key used when API key authentication is selected.
     /// </summary>
     public string ApiToken { get; set; }

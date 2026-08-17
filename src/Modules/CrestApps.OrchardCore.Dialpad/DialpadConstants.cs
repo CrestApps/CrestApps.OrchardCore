@@ -34,55 +34,81 @@ public static class DialpadConstants
     public const string OfflineAccessScope = "offline_access";
 
     /// <summary>
-    /// The base address of the production Dialpad environment.
+    /// The default host of the production Dialpad environment.
     /// </summary>
-    public const string ProductionBaseUrl = "https://dialpad.com";
+    public const string ProductionHost = "dialpad.com";
 
     /// <summary>
-    /// The base address of the sandbox Dialpad environment.
+    /// The default host of the sandbox Dialpad environment. Dialpad exposes more than one sandbox-style
+    /// host (for example a beta host), so this value is only a default that a tenant can override through
+    /// its environment settings.
     /// </summary>
-    public const string SandboxBaseUrl = "https://sandbox.dialpad.com";
+    public const string SandboxHost = "sandbox.dialpad.com";
 
     /// <summary>
-    /// Gets the base address for the given Dialpad environment.
+    /// Gets the default host for the given Dialpad environment.
     /// </summary>
     /// <param name="environment">The Dialpad environment.</param>
+    /// <returns>The default environment host.</returns>
+    public static string GetDefaultHost(DialpadEnvironment environment)
+        => environment == DialpadEnvironment.Sandbox ? SandboxHost : ProductionHost;
+
+    /// <summary>
+    /// Gets the scheme-qualified base address for the given Dialpad environment, applying an optional
+    /// tenant-configured host override. When <paramref name="host"/> is empty the environment default host
+    /// is used. A host without a scheme is assumed to use HTTPS.
+    /// </summary>
+    /// <param name="environment">The Dialpad environment.</param>
+    /// <param name="host">The optional tenant-configured host override.</param>
     /// <returns>The environment base address.</returns>
-    public static string GetBaseUrl(DialpadEnvironment environment)
-        => environment == DialpadEnvironment.Sandbox ? SandboxBaseUrl : ProductionBaseUrl;
+    public static string GetBaseUrl(DialpadEnvironment environment, string host = null)
+    {
+        var effectiveHost = string.IsNullOrWhiteSpace(host) ? GetDefaultHost(environment) : host.Trim();
+
+        if (!effectiveHost.Contains("://", StringComparison.Ordinal))
+        {
+            effectiveHost = "https://" + effectiveHost;
+        }
+
+        return effectiveHost.TrimEnd('/');
+    }
 
     /// <summary>
     /// Gets the OAuth 2.0 authorization endpoint for the given Dialpad environment.
     /// </summary>
     /// <param name="environment">The Dialpad environment.</param>
+    /// <param name="host">The optional tenant-configured host override.</param>
     /// <returns>The authorization endpoint URL.</returns>
-    public static string GetAuthorizeUrl(DialpadEnvironment environment)
-        => $"{GetBaseUrl(environment)}/oauth2/authorize";
+    public static string GetAuthorizeUrl(DialpadEnvironment environment, string host = null)
+        => $"{GetBaseUrl(environment, host)}/oauth2/authorize";
 
     /// <summary>
     /// Gets the OAuth 2.0 token endpoint for the given Dialpad environment.
     /// </summary>
     /// <param name="environment">The Dialpad environment.</param>
+    /// <param name="host">The optional tenant-configured host override.</param>
     /// <returns>The token endpoint URL.</returns>
-    public static string GetTokenUrl(DialpadEnvironment environment)
-        => $"{GetBaseUrl(environment)}/oauth2/token";
+    public static string GetTokenUrl(DialpadEnvironment environment, string host = null)
+        => $"{GetBaseUrl(environment, host)}/oauth2/token";
 
     /// <summary>
     /// Gets the OAuth 2.0 deauthorize endpoint for the given Dialpad environment, used to revoke the
     /// tokens issued to the application on behalf of a user.
     /// </summary>
     /// <param name="environment">The Dialpad environment.</param>
+    /// <param name="host">The optional tenant-configured host override.</param>
     /// <returns>The deauthorize endpoint URL.</returns>
-    public static string GetDeauthorizeUrl(DialpadEnvironment environment)
-        => $"{GetBaseUrl(environment)}/oauth2/deauthorize";
+    public static string GetDeauthorizeUrl(DialpadEnvironment environment, string host = null)
+        => $"{GetBaseUrl(environment, host)}/oauth2/deauthorize";
 
     /// <summary>
     /// Gets the default REST API base address for the given Dialpad environment.
     /// </summary>
     /// <param name="environment">The Dialpad environment.</param>
+    /// <param name="host">The optional tenant-configured host override.</param>
     /// <returns>The REST API base address.</returns>
-    public static string GetApiBaseUrl(DialpadEnvironment environment)
-        => $"{GetBaseUrl(environment)}/api/v2/";
+    public static string GetApiBaseUrl(DialpadEnvironment environment, string host = null)
+        => $"{GetBaseUrl(environment, host)}/api/v2/";
 
     /// <summary>
     /// Contains the feature identifiers exposed by the Dialpad module.

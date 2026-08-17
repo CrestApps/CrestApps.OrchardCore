@@ -46,6 +46,7 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | Setting | Description |
 | --- | --- |
 | **Authentication type** | Select **API key** or **OAuth 2.0**. The default **Select authentication type** option keeps Dialpad disabled until an authentication mode is chosen for the active environment. |
+| **Host** | Optional. The Dialpad host (domain) this environment connects to, for example `sandbox.dialpad.com` or `dialpadbeta.com`. Leave it empty to use the default host (`dialpad.com` for production, `sandbox.dialpad.com` for sandbox). HTTPS is assumed when no scheme is provided. This host drives the OAuth 2.0 endpoints and the default REST API base address. |
 | **API key** | The Dialpad API key used when **API key** authentication is selected. Stored encrypted with the data protection provider. |
 | **User id** | The Dialpad user id that places outbound calls when **API key** authentication is selected. |
 | **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
@@ -54,8 +55,10 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
 | **Webhook signing secret** | Required when Dialpad Contact Center Voice is enabled. The secret Dialpad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. See [Where to obtain the webhook signing secret](#where-to-obtain-the-webhook-signing-secret). |
 
-Dialpad API calls use the active environment's fixed REST endpoint (`https://dialpad.com/api/v2/` for production or
-`https://sandbox.dialpad.com/api/v2/` for sandbox), so there is no tenant-level API base URL field to configure.
+Dialpad API calls default to the active environment's REST endpoint (`https://dialpad.com/api/v2/` for production or
+`https://sandbox.dialpad.com/api/v2/` for sandbox). Set the environment **Host** when you need to target an alternate
+Dialpad host — for example an alternate sandbox or beta host — and both the REST API base and the OAuth 2.0 endpoints
+follow that host.
 
 When you enable Dialpad and no default provider is set yet, Dialpad becomes the default
 automatically. When you disable Dialpad while it is the default provider, the default is cleared and
@@ -103,7 +106,7 @@ provider follows Dialpad's documented requirements:
   connected user's access token. Tokens are refreshed automatically when they expire.
 - The **active environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
-  endpoints.
+  endpoints. When the environment **Host** is set, the OAuth endpoints follow that host instead.
 - When a user **disconnects**, the local tokens are always removed first — and that deletion is durably
   committed before the provider is contacted, so a concurrent request cannot observe stale credentials — so
   the interactive credentials are cleared immediately, then the provider calls Dialpad's `deauthorize`
