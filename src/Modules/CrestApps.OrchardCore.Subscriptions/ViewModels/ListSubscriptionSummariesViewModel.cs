@@ -16,4 +16,9 @@ public class ListSubscriptionSummariesViewModel
     /// Gets or sets the subscription summaries to display.
     /// </summary>
     public IList<SubscriptionsSummaryViewModel> Subscriptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pager shape used to navigate the subscription summaries.
+    /// </summary>
+    public dynamic Pager { get; set; }
 }

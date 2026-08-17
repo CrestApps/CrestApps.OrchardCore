@@ -37,6 +37,11 @@ public class SubscriberInvoicesViewModel
     /// Gets or sets the subscriber invoices to display.
     /// </summary>
     public IList<SubscriberInvoiceViewModel> Invoices { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pager shape used to navigate the subscriber invoices.
+    /// </summary>
+    public dynamic Pager { get; set; }
 }
 
 /// <summary>

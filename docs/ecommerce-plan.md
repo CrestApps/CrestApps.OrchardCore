@@ -5,13 +5,13 @@
 **Planning only.** This document defines the ecommerce architecture and delivery sequence. It does
 not implement runtime behavior.
 
-This revision replaces the previous ecommerce roadmap after a source-level review of the current
-branch and working tree. It keeps gaps that still exist, removes gaps already closed, and records
-the difference between:
+This revision re-audits the roadmap against the current branch, including the Transactions, Receipts,
+Commerce, TaxTable, address, checkout, refund, and architecture changes now committed. It keeps
+gaps that still exist, removes gaps already closed, and records the difference between:
 
 - reusable infrastructure that already exists;
 - ecommerce domain capabilities that are still absent;
-- work currently present in the working tree but not yet verified as a released baseline; and
+- newly committed reusable infrastructure that is complete but not yet connected to Orders; and
 - decisions that must be approved before schema-committing implementation begins.
 
 The target is a **single-merchant, modular Orchard Core ecommerce solution** that can sell:
@@ -40,8 +40,9 @@ Relative effort labels are directional only:
 
 ## Executive decision
 
-The current branch has a strong financial and Orchard foundation, but it is **not yet an ecommerce
-platform**. The missing center is the durable commercial domain:
+The current branch now has a strong, tested financial and Orchard foundation, including a generic
+outstanding-obligation ledger and reusable receipt builder, but it is **not yet an ecommerce
+platform**. The missing center is still the durable commercial domain:
 
 `Customer → Product/Variant → Cart → Draft Order → Checkout → Payment → Fulfillment → Receipt/Report`
 
@@ -58,6 +59,7 @@ The existing modules must remain usable independently:
 - Products remains the catalog owner.
 - Taxation remains the tax engine.
 - Addresses remains the geographic reference and resolution layer.
+- Transactions remains the provider-neutral outstanding-obligation ledger.
 - Receipts and Reports remain reusable presentation/infrastructure modules.
 
 ## Current branch inventory
@@ -69,16 +71,18 @@ and contracts exist; it does not mean that the capability is complete for ecomme
 | --- | --- | --- |
 | Products | `src/Core/CrestApps.OrchardCore.Products.Core` owns `ProductPart`, `ProductType`, `ISellableProduct`, `SellableProduct`, `ProductSnapshotContext`, and `IProductSnapshotResolver`. The Products module provides the editor, schema, migration, snapshot resolver, and Taxation bridge. | Reusable catalog seam exists. Full catalog, variants, schedules, availability, digital delivery, and shipping metadata do not. |
 | Checkout | `CheckoutSession`, flow/step contracts, durable session store, payment attempts, payment refunds, reconciliation, tax integration, rate limiting, distributed coordination, and a reconciliation background task exist in `Checkout.Abstractions` and `Checkout.Core`. | Reusable payment checkout exists. A checkout session is not an order, cart, quote, or fulfillment record. |
-| Generic Stripe checkout | `StripeCheckoutPaymentProvider` is registered when Checkout is enabled. It supports one-time embedded PaymentIntent payments and Stripe refunds. Its capabilities explicitly report no recurring or hosted-checkout support. | Reusable one-time card payment exists. Orders must use this adapter, not subscription-specific endpoints. |
+| Generic Stripe checkout | `StripeCheckoutPaymentProvider` is registered when Checkout is enabled. It supports one-time embedded PaymentIntent payments and Stripe refunds. Stripe webhooks now dispatch payment failure/cancellation, refund, refund-update/failure, and dispute events through provider-neutral payment-event and refund-reconciliation contracts. | Reusable one-time card payment and refund-event reconciliation exist. Orders must use this adapter, not subscription-specific endpoints. |
 | Subscription Stripe flows | Stripe services also support products, prices, customers, setup intents, subscriptions, and Checkout Sessions. Subscriptions has its own Payment Elements and hosted Checkout paths, with eligibility rules and return validation. | Hosted and recurring Stripe behavior exists for Subscriptions only. It must not be described as generic ecommerce Checkout capability without a separate design. |
-| Pay Later | `PayLaterCheckoutPaymentProvider` implements the generic checkout provider. It supports one-time, recurring, and combined obligations but no processor refund operation. | Reusable deferred/offline payment exists. Manual settlement and refund workflows are required for orders using it. |
+| Pay Later | `PayLaterCheckoutPaymentProvider` implements the generic checkout provider. It supports one-time, recurring, and combined obligations but no processor refund operation. Its checkout handler now creates idempotent outstanding Transactions entries, and settlement checkouts do not create duplicate debts. | Reusable deferred/offline payment and outstanding-balance tracking exist. Guest ownership, concurrency-safe settlement, and order-specific refund/write-off behavior remain ecommerce integration work. |
 | Taxation | Tax categories, types, jurisdictions, rules, calculation methods, sourcing strategies, exemptions, merchant registrations, snapshots, refund calculation, TaxationPart, product taxable-item integration, recipes, and deployments exist. Calculation methods include percentage, fixed, per-unit, weight, volume, progressive, threshold, and table-driven calculation. | Strong reusable tax foundation exists. Commerce must provide order-line, shipping, discount, fee, and customer/address tax inputs and persist order snapshots. |
-| Tax tables | `TaxTable`/`TaxTableRow` and table-driven calculation exist. The current working tree also contains TaxTable admin controller, display driver, handler, menu, and views wired from Taxation startup. | Treat TaxTable management as **in-progress working-tree capability**, not a closed released baseline, until build, migration, deployment/recipe, UI, and tests are verified. |
-| Addresses | Content-backed Country → Region → County → City → District hierarchy, `GeographicAreaIndex`, `IAddressResolver`, and canonical country fallback exist. | Geographic resolution is reusable. The flat `Address` abstraction currently carries geography and postal code but does not preserve all street/contact fields needed by orders and shipping. |
-| Recipes | The Recipes module and `Recipes.Core` provide JSON import/deployment rendering and content-part schema registration patterns used by Products, Subscriptions, and Taxation. | Reuse the existing recipe/deployment/schema conventions for every future ecommerce entity and content part; do not invent ecommerce-specific transport formats. |
+| Tax tables | `TaxTable`/`TaxTableRow`, effective periods, row validation, admin CRUD, protection from deletion while referenced, recipes, deployments, schemas, and tests exist. | TaxTable management is a closed foundation capability. Commerce still supplies order-specific taxable items and immutable order tax snapshots. |
+| Addresses | Content-backed Country → Region → County → City → District hierarchy, `GeographicAreaIndex`, `IAddressResolver`, canonical country fallback, and an immutable `Address` snapshot with recipient, company, street lines, postal code, and phone exist. | Geographic resolution and the reusable value contract are complete. Customers and Orders still need to implement address ownership, validation by purpose, and snapshot persistence. |
+| Recipes | The Recipes module and `Recipes.Core` provide JSON import/deployment rendering and content-part schema registration patterns used by Products, Subscriptions, and Taxation. TaxTable now has admin, recipe, deployment, schema, and validation coverage. | Reuse the existing recipe/deployment/schema conventions for every future ecommerce entity and content part; do not invent ecommerce-specific transport formats. |
+| Commerce | The dependency-only Commerce feature registers the shared top-level Commerce admin menu and icon. It has no order, cart, customer, fulfillment, or orchestration domain yet. | The composition/menu shell exists. The future Commerce layer must remain a thin orchestrator rather than a catch-all domain assembly. |
 | Subscriptions | Subscription content parts, recurring invoice/tax behavior, payment flow, Stripe synchronization, hosted Checkout, Pay Later, admin management, tenant onboarding, receipts, indexes, and subscription reports exist. | Provides a reference consumer and regression surface. It is not a generic order/cart/storefront implementation. |
-| Receipts | `IReceiptService`, `ReceiptRequest`, `ReceiptDocument`, tax lines, branding settings, permissions, and a reusable printable view exist. Receipts are generated from consumer records and are not persisted by the module. | Orders can produce receipts without duplicating branding or rendering. Receipt numbering and order-driven data remain to be designed. |
+| Receipts | `IReceiptService`, `ReceiptRequest`, `ReceiptDocument`, tax lines, branding settings, permissions, tests, and a reusable printable view exist. Receipts are generated on demand from consumer-supplied data and are not persisted. | Reusable printable receipts are complete. Orders still own order numbers, invoice/credit-note policy, immutable financial documents if required, and order-derived receipt data; no second receipt renderer should be created. |
 | Reports | `IReport`, report filters/date ranges, metric/table/chart documents, CSV export, optional OpenXml export, admin navigation, and report rendering exist. | Commerce reports should be separate `IReport` implementations over order/inventory/shipping/refund data. |
+| Transactions | Provider-neutral `Transaction` ledger, indexes, customer statement, administrator management report, offline/online settlement, registered sources, optional notification reminders, Pay Later integration, migrations, permissions, and tests exist. | This tracks outstanding obligations, not orders, payment attempts, refunds, or fulfillment. Orders must link to it where deferred balances exist. Guest ownership/access, concurrency-safe settlement, order integration, and refund/chargeback semantics remain to be designed. |
 | Customers | Users and subscription customer/provider references exist, but no reusable customer profile, guest identity, merge, address book, tax profile ownership, or customer CRM module exists. | Greenfield reusable block. |
 | Carts | No durable guest/authenticated cart, merge, expiration, line selection, or cart API exists. | Greenfield reusable block. |
 | Orders | No durable order aggregate, order number, immutable line/address snapshot, order state machine, fulfillment linkage, or order history exists. `SubscriptionOrder` is a subscription-specific model and must not become the generic order. | Greenfield reusable block and the commercial system of record. |
@@ -110,124 +114,118 @@ The following older plan gaps must not be reopened:
 7. **Product recipe schema.** `ProductPartSchemaDefinition` exists and is registered through the
    Recipes feature. Subscription and tenant-onboarding part schemas also exist.
 8. **Taxation catalog foundation.** Tax categories, types, jurisdictions, rules, calculation
-   methods, and deployment/recipe patterns exist. TaxTable is now present in the current source
-   and working tree, subject to the verification gate below.
+   methods, TaxTable effective periods and validation, and deployment/recipe/schema patterns exist.
 9. **Reusable receipts and reports.** Future order consumers should use the existing services and
    report document/export contracts instead of creating parallel implementations.
+10. **Foundation boundary tests.** Architecture, project-reference, provider-capability, checkout
+    reference, address, TaxTable, refund reconciliation, and regression tests now enforce the
+    completed foundation contracts.
 
-## Foundation gaps before ecommerce design
+## Foundation review result
 
-These are prerequisites for the ecommerce domain. They are not the same as building the missing
-commerce modules.
+The previous F0–F5 foundation gaps are closed or recorded and must not remain as blockers:
 
-### F0 — Establish a clean verified baseline — XL
+1. **Taxation baseline:** TaxTable effective periods, validation, admin management, deletion
+   protection, recipes, deployments, schemas, and tests are implemented.
+2. **Payment events and refunds:** Stripe refund, refund-update/failure, dispute, payment-failure,
+   and cancellation events use provider-neutral contexts. Refunds are correlated under distributed
+   locking, unmatched remote refunds are quarantined for manual review, and stale events cannot
+   regress terminal states.
+3. **Order-to-checkout contract:** `CheckoutReferenceTypes.Order` defines the canonical reference;
+   the future order owns the reverse checkout-session link and payment attempts remain authoritative.
+4. **Address value contract:** `Address` is an immutable snapshot with recipient, company, street
+   lines, geographic fields, postal code, and phone; the resolver normalizes country values.
+5. **Architecture enforcement:** project-reference and assembly dependency tests enforce the
+   provider-neutral foundation boundaries and provider capability truthfulness.
+6. **Foundation decisions:** approved defaults for product identity, variants, prices, cart ownership,
+   order numbers, inventory, shipping, storefront mode, retention, and guest access are recorded in
+   [`docs/ecommerce-foundation-decisions.md`](./ecommerce-foundation-decisions.md).
+7. **Reusable financial support:** Transactions provides outstanding-obligation tracking and
+   settlement; Receipts provides branded printable documents; Reports provides shared reporting and
+   exports.
 
-The working tree contains TaxTable changes that are not all tracked. Before treating TaxTable as
-complete:
+These closures remove the foundation gate. They do **not** mean that the ecommerce domain has been
+implemented.
 
-- build the affected Taxation project and the full test project;
-- verify `TaxTable` registration, migration behavior, admin create/edit/delete, validation,
-  duplicate-name handling, and route/view coverage;
-- add or verify deployment and recipe steps/schema for this user-addable catalog entity;
-- add tests for serialization, versioning, effective dates, row boundaries, permissions, and
-  tenant isolation;
-- update Taxation documentation and the changelog only after the capability is verified.
+## Remaining gaps before the first ecommerce vertical slice
 
-The clean baseline must also include the completed money/product/refund changes and no undocumented
-foundation behavior.
+These are the actual unresolved boundaries revealed by the current source review:
 
-### F1 — Complete Stripe event truthfulness — XL
+### G1 — Build Customers and guest ownership — L
 
-The Stripe webhook endpoint verifies signatures, locks by event id, deduplicates processed events,
-and commits handler changes with the processed-event marker. However, its supported dispatcher list
-currently covers subscription/payment success events and does not provide a generic order refund
-reconciliation path for `charge.refunded`.
+No reusable Customers module owns profiles, authenticated/guest identity, saved addresses, tax
+profiles, merge behavior, retention, or customer authorization. The current Transactions ledger
+identifies owners by authenticated user id and its reminders resolve users through `IUserService`;
+an anonymous Pay Later checkout therefore has no customer statement or reminder path.
 
-Before order refunds are exposed:
+The Customers design must:
 
-- define the provider-neutral event contract for payment failure, cancellation, refund, dispute,
-  and chargeback notifications;
-- dispatch `charge.refunded` (and relevant refund failure/update events) to the existing refund
-  ledger reconciliation path;
-- correlate remote refunds to `PaymentRefund` using provider reference, original transaction,
-  idempotency key, and metadata;
-- define behavior when a remote refund exists without a local refund request;
-- preserve duplicate-event, retry, lock-contention, and partial-write behavior;
-- add integration tests for signature failure, duplicate delivery, provider timeout, refund
-  success/failure, and event replay.
+- own customer records and address-book entries while using the immutable `Address` value contract;
+- define authenticated/guest ownership, guest order access, merge, and PII policy;
+- provide a guest-safe reference for outstanding Transactions without exposing another customer's
+  balance;
+- define how notifications and online settlement work for guest obligations;
+- preserve customer/order ownership across tenant boundaries and account deletion.
 
-Do not fabricate success from a webhook. The provider API remains authoritative when a webhook and
-local state disagree.
+### G2 — Complete the catalog and price contract — XL
 
-### F2 — Define the order-to-checkout contract — XL
+Products still provide a single `ProductPart.Price` and optional `Sku`. `ISellableProduct` is a
+useful snapshot seam, but it does not yet provide variants, explicit product currency, price
+schedules, sale windows, quantity/customer-group pricing, availability, shipping metadata, or
+digital/service metadata.
 
-`CheckoutSession.ReferenceType`, `ReferenceId`, and `ReferenceVersionId` are intentionally generic,
-but the ecommerce system needs one canonical relationship:
+The approved catalog decisions must be implemented before order snapshots are finalized. Product
+price currency must not be inferred only from the tenant Checkout setting when products can carry
+different currencies or price lists.
 
-- `ReferenceType = "Order"` for ecommerce orders;
-- `ReferenceId = Order.ItemId`;
-- `ReferenceVersionId` identifies the draft/quote version only when versioning is required;
-- the order stores the checkout session id for reverse lookup;
-- payment attempts and refunds remain owned by Checkout and link through the session and provider
-  transaction references;
-- an order cannot be marked paid from a session flag alone.
+### G3 — Define Transactions integration and concurrency — L
 
-Define the ownership, guest access, expiry, cancellation, retry, and recovery rules before Orders
-or Storefront code is written.
+Transactions is complete as a reusable outstanding-balance ledger, but it is not an order ledger,
+payment-attempt ledger, refund ledger, or fulfillment ledger. Before Orders consume it:
 
-### F3 — Complete the address value contract — XL
+- link deferred obligations to the canonical order and payment-attempt references;
+- support guest ownership/access or explicitly prohibit guest deferred payment;
+- make online settlement, offline payment recording, cancellation, and reminders safe under
+  concurrent requests and retries;
+- define partial payment, overpayment, write-off, refund, chargeback, and dispute behavior;
+- prevent a stale settlement checkout from charging an amount that no longer matches the current
+  outstanding balance;
+- base outstanding queries on the computed balance as well as lifecycle status, and use
+  currency-specific precision in transaction pages, payment inputs, and reminder messages rather
+  than the current fixed two-decimal presentation;
+- keep transaction status separate from order payment, fulfillment, and refund states.
 
-The Addresses module correctly owns geographic reference data, but the current resolved `Address`
-model contains only Country, Region, County, City, District, and PostalCode. The AddressPart also
-captures street lines, while the resolver does not preserve them in the flat contract.
+### G4 — Define order financial documents — M
 
-Before customer addresses, shipping, or order snapshots:
+Receipts are now reusable and intentionally on-demand. They are not persisted invoices, credit
+notes, refund documents, or tax-compliance records. Orders must decide whether the first release
+needs only receipts or also immutable invoice/credit-note documents, document numbering, billing
+address display, refund references, and legal retention. The implementation must still use
+`IReceiptService` for the printable receipt path and must not create a second receipt renderer.
 
-- extend the reusable address contract to preserve street lines and the required recipient/company,
-  phone, and normalization fields;
-- define required versus optional fields by address purpose;
-- normalize country and geographic codes through `IAddressResolver`;
-- distinguish customer-editable address records from immutable order billing/shipping snapshots;
-- define PII access, retention, deletion, and guest-token rules;
-- add country/region/postal validation without hard-coding a second geography source.
+### G5 — Define the commerce application boundary — M
 
-### F4 — Enforce the reusable module graph — L
-
-Create architecture tests and project-reference rules for the following direction:
-
-```text
-Users + Addresses ──> Customers
-Products + Customers + Addresses + Taxation ──> Orders
-Carts ──> Checkout-facing contracts (never providers)
-Checkout ──> Payments abstractions
-Stripe/PayLater ──> Checkout provider contracts
-Orders + Checkout + Taxation + optional Inventory/Shipping/Promotions ──> Commerce orchestration
-Commerce domain ──> Storefront/Admin/Reports adapters
-Subscriptions ──> shared reusable contracts, never Commerce presentation
-```
-
-Reusable modules must not reference Storefront, Admin, Stripe implementation types, or
-subscription controllers. Every new module requires a manifest, feature dependencies, permissions,
-migrations/indexes, recipes/deployments where applicable, tests, and documentation.
-
-### F5 — Decide the non-negotiable domain choices — M
-
-Record and approve these decisions before implementation:
-
-| Decision | Required answer |
-| --- | --- |
-| Product identity | How content item, product, variant, SKU, and external provider ids relate. |
-| Variant storage | Child content items, a structured part, or a separate catalog document. |
-| Price policy | Currency, tax-inclusive/exclusive behavior, sale windows, quantity tiers, customer groups, and effective-date resolution. |
-| Cart persistence | Tenant YesSql document, ownership token, authenticated merge, expiry, and concurrency model. |
-| Order number | Tenant-scoped sequence or non-sequential identifier, with retry and multi-node behavior. |
-| Inventory topology | Single location for v1 or a location-aware schema from the start. |
-| Reservation timing | Reserve at cart, checkout, or order creation; expiry; release; backorder/preorder. |
-| Shipping provider | Contract for flat/table/free/carrier rates, zones, packages, and tax inputs. |
-| Storefront mode | Server-rendered first, headless/API first, or both behind shared contracts. |
-| Data retention | Customer PII, guest orders, payment references, downloads, audit history, and deletion rules. |
+The Commerce module currently owns only the shared admin menu. The future Commerce orchestration
+feature must be kept separate from the reusable Customers, Products, Carts, Orders, Transactions,
+Checkout, Taxation, Receipts, and Reports contracts. Define which commands belong in Orders versus
+Commerce orchestration, and keep Storefront/Admin as adapters over those contracts.
 
 ## Target module architecture
+
+### Existing reusable support modules
+
+These modules now exist and must be consumed rather than duplicated:
+
+- **Commerce** provides the shared admin menu and feature shell. It may later host composition and
+  cross-domain orchestration, but it must not own the order, payment, tax, receipt, or report data
+  models.
+- **Transactions** owns provider-neutral outstanding obligations, settlement history, reminders,
+  and management views. It is optional for orders that are fully settled at checkout and required
+  when a payment method leaves a balance to collect.
+- **Receipts** owns branded printable receipt construction and rendering. It does not persist
+  financial records or replace Orders, Checkout, or the refund ledger.
+- **Reports** owns report documents, filters, metrics, tables, charts, and exports. Commerce
+  reporting must add consumers over durable order, payment, tax, inventory, and fulfillment data.
 
 ### Reusable modules
 
@@ -300,6 +298,19 @@ Owns:
 Carts do not call payment providers or directly mutate stock. Inventory contributes an optional
 availability/reservation contract.
 
+#### Transactions integration
+
+Do not create a second debt or payment-obligation model in Orders. Orders reference the existing
+Transactions ledger for deferred or partially unpaid balances, while Checkout continues to own
+payment attempts and refunds. Transactions must remain usable by Subscriptions and other consumers
+without taking a dependency on Orders or Commerce presentation.
+
+#### Receipts integration
+
+Orders build receipt requests from immutable order and payment data and pass them to
+`IReceiptService`. Receipt rendering remains in Receipts; order numbering, invoice/credit-note
+semantics, legal retention, and refund documents remain outside that module.
+
 ### Ecommerce capability modules
 
 Use independent features/projects. An umbrella Commerce feature may compose them but must not become
@@ -366,6 +377,10 @@ Every monetary amount is `decimal` and carries an ISO currency. Provider minor-u
 performed only by the provider adapter. Orders, payment attempts, refunds, receipts, and reports
 must use the same precision policy.
 
+The order quote must also distinguish the amount due now, deferred or partially unpaid amounts
+represented by Transactions, provider-confirmed payment amounts, refunds, credits, and chargebacks.
+None of these states may be inferred from a single checkout status or receipt status.
+
 ### Order and checkout lifecycle
 
 The canonical one-time order flow is:
@@ -379,8 +394,9 @@ The canonical one-time order flow is:
 7. Begin payment and persist provider references immediately.
 8. Verify payment against the provider API; webhooks are hints and reconciliation triggers.
 9. Mark the order paid only after every expected obligation is settled.
-10. Commit inventory, create fulfillment/digital/service work, issue confirmation, and expose the order.
-11. On expiry, cancellation, failure, or compensation failure, retain explicit state and release or
+10. Create Transactions entries for any deferred balance, with an idempotent order/obligation link.
+11. Commit inventory, create fulfillment/digital/service work, issue confirmation, and expose the order.
+12. On expiry, cancellation, failure, or compensation failure, retain explicit state and release or
     review reservations; never silently delete the order or payment record.
 
 ### Order state model
@@ -400,38 +416,37 @@ successful payment.
 
 ## Delivery plan
 
-### Phase 0 — Baseline, decisions, and foundation closure
+### Phase 0 — Foundation baseline — completed
 
-**Effort: XL. Blocks all ecommerce domain work.**
+The foundation work is complete in the current branch. TaxTable management and coverage,
+provider-neutral payment events and refund reconciliation, the canonical Order checkout reference,
+the immutable address value contract, architecture tests, provider capability checks, and the
+foundation decision record are implemented. Transactions and Receipts are also available as
+reusable support modules.
 
-1. Verify the current TaxTable working-tree implementation and complete its migration,
-   deployment/recipe/schema, permission, UI, and test surface.
-2. Complete Stripe refund/event reconciliation and provider failure/dispute event contracts.
-3. Approve the Order ↔ CheckoutSession relationship and address snapshot contract.
-4. Approve product variant, price, cart, order number, inventory, shipping, storefront, and data
-   retention decisions listed in F5.
-5. Add architecture tests for project references, feature dependencies, tenant-scoped indexes,
-   provider capability truthfulness, and money field types.
-6. Update stale module documentation so generic Stripe one-time capability is not confused with
-   subscription-only hosted/recurring flows.
+Continue to run the foundation regression suite, documentation checks, and clean build as part of
+every ecommerce phase, but do not reopen these items as ecommerce design blockers unless a new
+consumer exposes a concrete contract defect.
 
-**Exit gate:** Build/test baseline is green; no unresolved foundation ambiguity remains; all schema
-decisions are recorded; existing Subscription checkout and payment regression tests pass.
-
-### Phase 1 — Reusable Customers and address contracts
+### Phase 1 — Reusable Customers and transaction ownership
 
 **Effort: L. Depends on Phase 0.**
 
 1. Create Customers abstractions/core/module with profile, guest identity, authenticated link,
    merge, status, contact preferences, provider-neutral ids, and tax-profile reference.
 2. Add customer address book with defaults and immutable-copy support using Addresses geography.
-3. Extend the address value contract for street lines, recipient/company, phone, and normalization.
-4. Define guest order access tokens, PII retention, authorization, and merge audit events.
-5. Refactor only duplicated subscription customer behavior that clearly belongs in Customers; do
+3. Define guest order and outstanding-Transaction access tokens, PII retention, authorization, and
+   merge audit events.
+4. Define whether guest Pay Later is supported; if supported, connect guest ownership, reminders,
+   and online settlement without relying on `IUserService`.
+5. Define concurrency and idempotency rules for online Transaction settlement, offline payment
+   recording, cancellation, and stale settlement sessions.
+6. Refactor only duplicated subscription customer behavior that clearly belongs in Customers; do
    not make Subscriptions depend on Commerce presentation.
 
 **Exit gate:** A customer can be authenticated or guest, merged safely, associated with saved
-addresses, and resolved for tax/order ownership without any Orders or Storefront dependency.
+addresses, and resolved for tax/order ownership. Any supported guest outstanding balance has a
+scoped access and settlement path without exposing another customer's data.
 
 ### Phase 2 — Catalog completion
 
@@ -464,7 +479,7 @@ provider-neutral snapshots for physical, digital, service, and subscription use 
 **Exit gate:** Guest and authenticated carts persist, merge, expire, and convert only through the
 approved draft-order/checkout path. Carts never accept client totals as authoritative.
 
-### Phase 4 — Orders and commercial snapshots
+### Phase 4 — Orders, financial snapshots, and ledger integration
 
 **Effort: XL. Depends on address contract, product snapshots, Customers, and Carts.**
 
@@ -472,12 +487,15 @@ approved draft-order/checkout path. Carts never accept client totals as authorit
 2. Define order number generation that is tenant-scoped and safe across nodes/retries.
 3. Persist immutable line, price, promotion, tax, billing, shipping, and fulfillment snapshots.
 4. Add draft quote versioning and canonical `Order` ↔ `CheckoutSession` linkage.
-5. Add customer and guest ownership indexes, status/payment/fulfillment indexes, provider
+5. Link payment attempts, refunds, Transactions obligations, and provider references without
+   duplicating any existing ledger.
+6. Add customer and guest ownership indexes, status/payment/fulfillment indexes, provider
    transaction indexes, and audit/event history.
-6. Add idempotent commands for draft, quote, cancel, expire, pay, fulfill, refund, and manual
+7. Add idempotent commands for draft, quote, cancel, expire, pay, fulfill, refund, and manual
    review transitions.
-7. Add administrator order list/detail/notes/permission contracts without Storefront coupling.
-8. Build order receipts through `IReceiptService` from order data.
+8. Add administrator order list/detail/notes/permission contracts without Storefront coupling.
+9. Build order receipts through `IReceiptService`; decide and implement invoice/credit-note
+   persistence only if the approved financial-document policy requires it.
 
 **Exit gate:** A draft order remains historically correct after product/tax changes and can be
 queried by customer, guest token, order number, payment reference, and administrator.
@@ -494,6 +512,7 @@ Implement one complete path before expanding every feature:
 - one variable product;
 - Stripe embedded one-time payment;
 - Pay Later commitment;
+- authenticated and supported guest deferred-payment ownership;
 - tax enabled and disabled;
 - guest and authenticated customer;
 - receipt and order history.
@@ -503,7 +522,8 @@ and confirmation steps. It must not route through `SubscriptionsController`.
 
 **Exit gate:** A customer can purchase a mixed one-time cart, receive an order and receipt, and
 recover the result after browser refresh, timeout, duplicate request, provider retry, or webhook
-replay. Existing Subscriptions behavior is unchanged.
+replay. Any Pay Later balance is visible and settleable through the approved Transactions ownership
+path. Existing Subscriptions behavior is unchanged.
 
 ### Phase 6 — Inventory and reservations
 
@@ -696,6 +716,8 @@ The plan is complete only when these standard ecommerce concerns are addressed e
 - Price schedule, variant, discount, shipping, tax, and refund allocation.
 - Order and payment state transition legality and idempotency.
 - Guest merge and order access token expiry.
+- Transaction creation, guest ownership, concurrent settlement, partial payment, reminders, and
+  order/obligation correlation.
 - Inventory reservation boundaries and release reasons.
 - Shipping rate and taxability rules.
 - Digital token authorization and service completion rules.
@@ -734,6 +756,5 @@ Every implementation phase must update:
 - the changelog matching `VersionPrefix`;
 - migration, configuration, security, and operational notes.
 
-The ecommerce implementation must not start until Phase 0 exits successfully. The first coding
-milestone after that gate is the reusable Customers/address contract and catalog extension work,
-not a storefront controller or a second payment/refund implementation.
+Phase 0 is complete. The first coding milestone is the reusable Customers/guest-ownership contract
+and catalog extension work, not a storefront controller or a second payment/refund implementation.

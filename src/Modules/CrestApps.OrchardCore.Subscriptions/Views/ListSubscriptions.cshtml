@@ -36,4 +36,10 @@
             </table>
         }
     </div>
+    @if (Model.Pager != null)
+    {
+        <div class="card-footer">
+            @await DisplayAsync(Model.Pager)
+        </div>
+    }
 </div>
