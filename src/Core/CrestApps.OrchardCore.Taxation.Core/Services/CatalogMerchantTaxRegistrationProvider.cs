@@ -67,6 +67,12 @@ public sealed class CatalogMerchantTaxRegistrationProvider : IMerchantTaxRegistr
             return false;
         }
 
+        if (registration.ThresholdAmount.HasValue &&
+            registration.ThresholdAccumulatedAmount < registration.ThresholdAmount.Value)
+        {
+            return false;
+        }
+
         return true;
     }
 }

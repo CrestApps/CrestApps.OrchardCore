@@ -90,6 +90,13 @@ public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcA
     public bool IsCompound { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the recipient accounts for the tax (reverse charge). When
+    /// set and the customer matches, the rule produces a zero-amount reverse-charge line instead of
+    /// charging tax, for example for EU B2B cross-border supplies.
+    /// </summary>
+    public bool ReverseCharge { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the rule applies to shipping charges.
     /// </summary>
     public bool AppliesToShipping { get; set; }
@@ -154,6 +161,7 @@ public sealed class TaxRule : SourceCatalogEntry, INameAwareModel, IModifiedUtcA
             TaxTableId = TaxTableId,
             IncludedInPrice = IncludedInPrice,
             IsCompound = IsCompound,
+            ReverseCharge = ReverseCharge,
             AppliesToShipping = AppliesToShipping,
             MinimumAmount = MinimumAmount,
             MaximumAmount = MaximumAmount,

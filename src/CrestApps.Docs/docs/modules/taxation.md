@@ -33,13 +33,13 @@ The framework is split into three assemblies:
 
 Enable the **Taxation** feature under **Tools → Features**, then:
 
-1. Create your tax **categories**, **types**, **jurisdictions**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
+1. Create your tax **categories**, **types**, **jurisdictions**, optional **tables**, and **rules** from the admin UI (see [Managing taxation from the admin UI](#managing-taxation-from-the-admin-ui)).
 2. Attach the **Taxation** part to a content type and classify it (see [The TaxationPart](#the-taxationpart)).
 3. At checkout, convert your objects into taxable items and call `ITaxService.CalculateAsync` (see [Calculating tax](#calculating-tax)).
 
 ## Managing taxation from the admin UI
 
-Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with four screens: **Categories**, **Types**, **Jurisdictions**, and **Rules**. Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
+Once the feature is enabled, an admin with the **Manage taxation** permission gets a **Commerce → Taxation** menu with five screens: **Categories**, **Types**, **Jurisdictions**, **Tables**, and **Rules**. Each screen is a searchable list with **Add**, **Edit**, and **Delete** actions, and is rendered through Orchard Core's display management so the list items and editors can be extended or overridden by other modules.
 
 Setting up taxes end to end is a workflow of a few ordered steps. The order matters, because rules reference jurisdictions, types, and categories, and content classification reuses the categories you create.
 
@@ -71,13 +71,34 @@ Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for
 When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
 :::
 
-### 4. Define how tax applies — Rules
+### 4. Provide lookup tables — Tables (optional)
 
-Go to **Commerce → Taxation → Rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`). A disabled rule is never applied, and rules outside their effective window are ignored.
+Go to **Commerce → Taxation → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
+
+- **Name** — a human-readable label (the unique key, fixed after creation).
+- **Description** — optional notes.
+- **Effective from/to** — optional date-only window during which the table is valid. A table is only used for a transaction whose date falls inside this window; a rule that requires a table but has no table in effect on the transaction date is **skipped** (it never silently taxes at zero).
+- **Rows** — one or more brackets, each with a **Minimum** (inclusive lower bound), an optional **Maximum** (exclusive upper bound; leave empty for the top bracket), a **Rate**, a **Fixed amount**, and an optional **Base amount**. Use **Add row** / **Remove** to manage the list.
+
+Rows are validated when you save. Minimums cannot be negative, at most one open-ended row (no maximum) is allowed, bounded ranges must be ordered and non-overlapping, and an open-ended row must start at or above the highest bounded maximum. This prevents overlapping brackets from double-counting in progressive calculations. A table that is still referenced by a rule cannot be deleted; remove or repoint the rules first.
+
+How a rule reads the rows depends on the method it uses:
+
+- **Tax table lookup** finds the single row whose `Minimum ≤ base < Maximum` and charges `base × Rate + Fixed amount`.
+- **Progressive** taxes each bracket only on the portion of the base that falls inside it, then sums the brackets (classic tiered/marginal calculation).
+- **Threshold** taxes only the amount **above** the matching row's minimum.
+
+Each time you save a table its **Version** is incremented, and that version is captured on every tax line and [snapshot](#snapshots-immutability-and-refunds) that used it, so historical calculations stay reproducible even after you edit the table.
+
+### 5. Define how tax applies — Rules
+
+Go to **Commerce → Taxation → Rules** and click **Add Tax Rule**. A dialog lists the available **calculation methods** — Percentage, Fixed amount, Per unit, Per weight, Per volume, Progressive, Threshold, and Tax table lookup. The method you pick becomes the rule's **source** and is fixed for the life of the rule, exactly like the source-aware editors used elsewhere in the platform (for example AI data sources and deployments). The editor then shows the fields shared by every rule — the **Name** (the rule's unique identifier, fixed after creation), the **Jurisdiction**, the **Category** it applies to (or *Any category*), the **Tax type**, an optional **Display name**, the **Customer type** (or *Any customer*), a **Priority**, **Effective from/to** dates, minimum/maximum thresholds, and flags such as **Enabled**, **Included in price**, **Compound**, **Reverse charge**, and **Applies to shipping** — plus only the calculation fields the selected method needs: a **Rate** for the percentage method, a **Fixed amount** for the fixed/per-unit/per-weight/per-volume methods, or a **Tax table** selector for the table-driven methods (`TaxTable`, `Progressive`, `Threshold`), populated from the tables you created in step 4. A disabled rule is never applied, and rules outside their effective window are ignored.
+
+The **Reverse charge** flag marks a rule whose liability shifts to a registered business buyer (for example the EU B2B reverse charge). When it is set and the customer is a **B2B** customer, the engine does not charge the tax; instead it emits a zero-amount line marked *Reverse charge* so the obligation is still visible on the document. For any other customer the rule behaves normally.
 
 The **Display name** (`TaxName`) is optional: it is the label shown to customers on invoices and receipts, and when it is left empty the tax line falls back to the rule **Name**. The **Tax type** labels and groups the kind of tax the rule produces (for example `SalesTax`, `VAT`, or `GST`); the dropdown is populated from the **Tax types** you manage under **Commerce → Taxation → Types**, and a rule that already stores a value not present in the catalog keeps it. The tax type never changes how the amount is calculated.
 
-### 5. Classify your content
+### 6. Classify your content
 
 Attach the **Taxation** part to your content types (see [The TaxationPart](#the-taxationpart)) and, on each item, pick its **Tax category** and optional **Tax classification** from the dropdowns. Those dropdowns are populated from the categories you created in step 1, so there are no free-text codes to keep in sync.
 
@@ -196,11 +217,13 @@ await ruleStore.CreateAsync(new TaxRule
 });
 ```
 
-The `TaxName` is optional; when it is left empty the tax line falls back to the rule `Name`. Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `CustomerType`, `IsCompound`, `IncludedInPrice`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
+The `TaxName` is optional; when it is left empty the tax line falls back to the rule `Name`. Rules carry `Version`, `Priority`, `EffectiveFromUtc`, `EffectiveToUtc`, `MinimumAmount`, `MaximumAmount`, `CustomerType`, `IsCompound`, `IncludedInPrice`, `ReverseCharge`, and `AppliesToShipping`. Historical rules must remain immutable once used by a transaction; publish a new version rather than mutating a rule that has already been applied.
 
 ### Nexus vs. a jurisdiction having a tax
 
 The engine distinguishes **a jurisdiction has a tax** from **the merchant is obligated to collect it**. When no `MerchantTaxRegistration` records exist, the engine operates in permissive manual-rule mode and collects the tax. As soon as registrations exist, a rule's tax is only collected when an active registration covers its jurisdiction and tax type.
+
+A registration also supports **economic nexus** thresholds. Set `MerchantTaxRegistration.ThresholdAmount` to the sales volume that must be reached before the obligation begins (leave it `null` to be obligated as soon as the registration is active), and keep `MerchantTaxRegistration.ThresholdAccumulatedAmount` updated with the running sales into that jurisdiction as orders are recorded. The registration only establishes nexus once the accumulated amount reaches the threshold. The framework does not own a sales ledger, so the host is responsible for maintaining the accumulated total — this keeps the engine deterministic while still letting you model destination-based economic-nexus rules such as the US *Wayfair* thresholds.
 
 ## Calculating tax
 
@@ -259,7 +282,10 @@ var taxableItem = await taxableItemResolver.ResolveAsync(contentItem);
 | `Rate`, `TaxableAmount`, `TaxAmount` | The computed values. |
 | `CalculationMethod` | The method used. |
 | `IncludedInPrice`, `IsCompound` | Pricing and compounding flags. |
+| `Treatment`, `TreatmentReason` | How the supply was treated (`Taxable`, `Exempt`, `ZeroRated`, `ReverseCharge`, or `OutOfScope`) and a human-readable explanation. |
 | `RuleId`, `RuleVersion`, `TableId`, `TableVersion` | Audit references to the exact rule and table versions used. |
+
+Exempt customers, valid exemption certificates, and reverse-charge rules do **not** silently drop a tax. The engine still emits a `TaxLine` with `TaxAmount = 0` and the appropriate `Treatment`, so invoices and receipts can show a compliant *Exempt* or *Reverse charge* line instead of omitting the tax entirely. Only a rule that the merchant has no nexus for produces no line at all.
 
 ## Calculation methods
 
@@ -278,7 +304,7 @@ The engine ships with the following calculation methods, all registered by name 
 
 ### Tax-inclusive vs. tax-exclusive pricing
 
-Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`) to control whether the price already contains tax. For inclusive percentage taxes the engine nets the base out of the gross price before applying each rule, so the total stays equal to the displayed price. Inclusive extraction is supported for percentage taxes.
+Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`) to control whether the price already contains tax. For inclusive taxes the engine nets the base out of the gross price before applying each rule, so the total stays equal to the displayed price. Both inclusive **percentage** taxes and inclusive **fixed-amount** taxes (`FixedAmount`, `PerUnit`, `PerWeight`, `PerVolume`) are un-grossed: the engine subtracts the fixed portions and divides out the combined percentage rate, clamping the net base at zero. Table-driven inclusive taxes (`TaxTable`, `Progressive`, `Threshold`) cannot be un-grossed because their amount depends on the base itself; keep those rules tax-exclusive.
 
 ## Tax sourcing
 
@@ -431,13 +457,13 @@ The whole setup is reproducible as a recipe — the taxonomy term simply carries
 | Stack an extra tax (excise, environmental fee) on some items | Keep the general rule (no category) and add a second rule scoped to that category. Both match and stack. |
 | Exempt a customer or region | Implement an `ITaxExemptionResolver`; see [Extending the framework](#extending-the-framework). |
 | Delegate to Avalara / Stripe Tax | Register an `ITaxDeterminationProvider` that short-circuits the engine. |
-| Move a catalog between environments | Export the categories, jurisdictions, and rules as a [recipe or deployment plan](#recipes-and-deployment). |
+| Move a catalog between environments | Export the categories, types, jurisdictions, tables, and rules as a [recipe or deployment plan](#recipes-and-deployment). |
 
 ## Recipes and deployment
 
-The four catalog entities — **Tax categories**, **Tax types**, **Tax jurisdictions**, and **Tax rules** — can be imported and exported as code.
+The five catalog entities — **Tax categories**, **Tax types**, **Tax jurisdictions**, **Tax tables**, and **Tax rules** — can be imported and exported as code.
 
-**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`) are never imported; an entry is matched by its `ItemId` and updated in place, or created when new:
+**Recipe steps** (names `TaxCategory`, `TaxType`, `TaxJurisdiction`, `TaxTable`, `TaxRule`) each take a plural array payload. Environment-owned fields (`CreatedUtc`, `ModifiedUtc`, `Author`, `OwnerId`, and `Version`) are never imported; `Version` is stamped by the environment and incremented on each save, so it stays an authoritative audit identity and a recipe can never regress or reuse it. An entry is matched by its `ItemId` and updated in place, or created when new:
 
 ```json
 {
@@ -463,10 +489,24 @@ The four catalog entities — **Tax categories**, **Tax types**, **Tax jurisdict
       ]
     },
     {
+      "name": "TaxTable",
+      "TaxTables": [
+        {
+          "ItemId": "luxury-brackets",
+          "Name": "Luxury brackets",
+          "Rows": [
+            { "Minimum": 0, "Maximum": 1000, "Rate": 0.05 },
+            { "Minimum": 1000, "Rate": 0.10 }
+          ]
+        }
+      ]
+    },
+    {
       "name": "TaxRule",
       "TaxRules": [
         { "ItemId": "ca-sales", "Name": "CA sales tax", "JurisdictionId": "us-ca", "Source": "Percentage", "Rate": 0.075 },
-        { "ItemId": "ca-tobacco", "Name": "CA tobacco excise", "JurisdictionId": "us-ca", "CategoryCode": "TOBACCO", "Source": "Percentage", "Rate": 0.30 }
+        { "ItemId": "ca-tobacco", "Name": "CA tobacco excise", "JurisdictionId": "us-ca", "CategoryCode": "TOBACCO", "Source": "Percentage", "Rate": 0.30 },
+        { "ItemId": "ca-luxury", "Name": "CA luxury tax", "JurisdictionId": "us-ca", "Source": "Progressive", "TaxTableId": "luxury-brackets" }
       ]
     }
   ]
@@ -475,7 +515,7 @@ The four catalog entities — **Tax categories**, **Tax types**, **Tax jurisdict
 
 When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for each of these steps (and for the `TaxationPart` and its settings), giving editor validation and IntelliSense while authoring recipes.
 
-**Deployment steps** with the same four names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
+**Deployment steps** with the same five names are available under **Configuration → Deployment**, so an existing tenant's taxation catalog can be exported into a deployment plan and re-imported elsewhere. The exported JSON is identical in shape to the recipe payloads above.
 
 ## Determinism
 

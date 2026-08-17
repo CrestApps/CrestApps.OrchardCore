@@ -39,6 +39,14 @@ public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentR
     }
 
     /// <inheritdoc/>
+    public Task<PaymentRefund> GetByProviderRefundReferenceAsync(string providerRefundReference, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerRefundReference);
+
+        return Session.Query<PaymentRefund, PaymentRefundIndex>(x => x.ProviderRefundReference == providerRefundReference).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<PaymentRefund>> GetByOriginalTransactionAsync(string originalTransactionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(originalTransactionId);

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,6 +32,7 @@ public sealed class TaxService : ITaxService
     private readonly INamedCatalog<TaxTable> _tableStore;
     private readonly ITaxRoundingStrategy _roundingStrategy;
     private readonly TaxationOptions _options;
+    private readonly IStringLocalizer S;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -47,6 +49,7 @@ public sealed class TaxService : ITaxService
     /// <param name="tableStore">The tax table store.</param>
     /// <param name="roundingStrategy">The rounding strategy.</param>
     /// <param name="options">The taxation options.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public TaxService(
         IEnumerable<ITaxDeterminationProvider> determinationProviders,
@@ -60,6 +63,7 @@ public sealed class TaxService : ITaxService
         INamedCatalog<TaxTable> tableStore,
         ITaxRoundingStrategy roundingStrategy,
         IOptions<TaxationOptions> options,
+        IStringLocalizer<TaxService> stringLocalizer,
         ILogger<TaxService> logger)
     {
         _determinationProviders = determinationProviders.OrderBy(provider => provider.Order).ToArray();
@@ -73,6 +77,7 @@ public sealed class TaxService : ITaxService
         _tableStore = tableStore;
         _roundingStrategy = roundingStrategy;
         _options = options.Value;
+        S = stringLocalizer;
         _logger = logger;
     }
 
@@ -141,10 +146,12 @@ public sealed class TaxService : ITaxService
         };
 
         var candidateRules = await _ruleProvider.GetApplicableRulesAsync(query, cancellationToken);
-        var applicableRules = await FilterRulesAsync(context, candidateRules, cancellationToken);
+        var classification = await ClassifyRulesAsync(context, candidateRules, cancellationToken);
+
+        var applicableRules = classification.Applicable;
 
         var itemInclusive = item.PriceIncludesTax ?? (context.DefaultPriceType == TaxPriceType.Inclusive);
-        var netBase = ComputeNetBase(nominalBase, applicableRules, itemInclusive);
+        var netBase = ComputeNetBase(nominalBase, applicableRules, item, itemInclusive);
 
         decimal priorItemTax = 0m;
 
@@ -161,7 +168,17 @@ public sealed class TaxService : ITaxService
 
             var effectiveIncluded = itemInclusive || rule.IncludedInPrice;
             var baseAmount = rule.IsCompound ? netBase + priorItemTax : netBase;
-            var table = await GetTableAsync(rule.TaxTableId, cancellationToken);
+            var table = await GetTableAsync(rule.TaxTableId, context.TransactionDateUtc, cancellationToken);
+
+            if (method.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable) && table is null)
+            {
+                _logger.LogWarning(
+                    "The rule '{Rule}' uses a table-driven method but its tax table is missing or is not effective on {Date:o}. The rule was skipped so an inactive table cannot silently produce zero tax.",
+                    rule.ItemId,
+                    context.TransactionDateUtc);
+
+                continue;
+            }
 
             var computation = method.Compute(new TaxComputationRequest
             {
@@ -200,55 +217,132 @@ public sealed class TaxService : ITaxService
             priorItemTax += computation.TaxAmount;
         }
 
+        foreach (var zeroRated in classification.ZeroRated)
+        {
+            var rule = zeroRated.Rule;
+
+            jurisdictionLookup.TryGetValue(rule.JurisdictionId ?? string.Empty, out var jurisdiction);
+
+            result.Lines.Add(new TaxLine
+            {
+                ItemId = item.Id,
+                TaxCode = rule.TaxCode,
+                TaxName = string.IsNullOrEmpty(rule.TaxName) ? rule.Name : rule.TaxName,
+                TaxType = rule.TaxType,
+                JurisdictionId = rule.JurisdictionId,
+                JurisdictionName = jurisdiction?.Name,
+                Rate = 0m,
+                TaxableAmount = netBase,
+                TaxAmount = 0m,
+                CalculationMethod = rule.Source,
+                IncludedInPrice = itemInclusive || rule.IncludedInPrice,
+                IsCompound = rule.IsCompound,
+                RuleId = rule.ItemId,
+                RuleVersion = rule.Version,
+                Treatment = zeroRated.Treatment,
+                TreatmentReason = zeroRated.Reason,
+            });
+        }
+
         return new ItemTaxState(nominalBase, netBase);
     }
 
-    private static decimal ComputeNetBase(decimal nominalBase, IReadOnlyList<TaxRule> rules, bool itemInclusive)
+    private decimal ComputeNetBase(decimal nominalBase, IReadOnlyList<TaxRule> rules, ITaxableItem item, bool itemInclusive)
     {
         decimal sumInclusiveRates = 0m;
+        decimal sumInclusiveFixed = 0m;
         var anyInclusive = false;
 
         foreach (var rule in rules)
         {
             var effectiveIncluded = itemInclusive || rule.IncludedInPrice;
 
-            if (effectiveIncluded &&
-                !rule.IsCompound &&
-                string.Equals(rule.Source, TaxCalculationMethodNames.Percentage, StringComparison.OrdinalIgnoreCase) &&
+            if (!effectiveIncluded || rule.IsCompound)
+            {
+                continue;
+            }
+
+            if (string.Equals(rule.Source, TaxCalculationMethodNames.Percentage, StringComparison.OrdinalIgnoreCase) &&
                 rule.Rate.HasValue)
             {
                 sumInclusiveRates += rule.Rate.Value;
                 anyInclusive = true;
             }
+            else if (IsFixedAmountFamily(rule.Source))
+            {
+                var method = _methodProvider.GetMethod(rule.Source);
+
+                if (method is null)
+                {
+                    continue;
+                }
+
+                var computation = method.Compute(new TaxComputationRequest
+                {
+                    TaxableBase = 0m,
+                    Quantity = item.Quantity,
+                    Weight = item.Weight,
+                    Volume = item.Volume,
+                    Rate = rule.Rate,
+                    FixedAmount = rule.FixedAmount,
+                    PriceIncludesTax = false,
+                });
+
+                sumInclusiveFixed += computation.TaxAmount;
+                anyInclusive = true;
+            }
         }
 
-        return anyInclusive ? nominalBase / (1 + sumInclusiveRates) : nominalBase;
+        if (!anyInclusive)
+        {
+            return nominalBase;
+        }
+
+        var net = (nominalBase - sumInclusiveFixed) / (1 + sumInclusiveRates);
+
+        return net < 0m ? 0m : net;
     }
 
-    private async ValueTask<IReadOnlyList<TaxRule>> FilterRulesAsync(
+    private static bool IsFixedAmountFamily(string source)
+        => string.Equals(source, TaxCalculationMethodNames.FixedAmount, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(source, TaxCalculationMethodNames.PerUnit, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(source, TaxCalculationMethodNames.PerWeight, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(source, TaxCalculationMethodNames.PerVolume, StringComparison.OrdinalIgnoreCase);
+
+    private async ValueTask<RuleClassification> ClassifyRulesAsync(
         TaxCalculationContext context,
         IReadOnlyList<TaxRule> rules,
         CancellationToken cancellationToken)
     {
         var applicable = new List<TaxRule>();
+        var zeroRated = new List<ZeroRatedRule>();
 
         foreach (var rule in rules)
         {
-            if (await _exemptionResolver.IsExemptAsync(context.Customer, rule, context.TransactionDateUtc, cancellationToken))
-            {
-                continue;
-            }
-
             if (!string.IsNullOrEmpty(rule.JurisdictionId) &&
                 !await _registrationProvider.HasNexusAsync(rule.JurisdictionId, rule.TaxType, context.TransactionDateUtc, cancellationToken))
             {
                 continue;
             }
 
+            if (rule.ReverseCharge && context.Customer?.CustomerType == CustomerTaxType.B2B)
+            {
+                zeroRated.Add(new ZeroRatedRule(rule, TaxTreatment.ReverseCharge, S["Reverse charge — the customer accounts for the tax."]));
+
+                continue;
+            }
+
+            if (await _exemptionResolver.IsExemptAsync(context.Customer, rule, context.TransactionDateUtc, cancellationToken))
+            {
+                zeroRated.Add(new ZeroRatedRule(rule, TaxTreatment.Exempt, S["The customer is exempt from this tax."]));
+
+                continue;
+            }
+
             applicable.Add(rule);
         }
 
-        return applicable;
+        return new RuleClassification(applicable, zeroRated);
     }
 
     private Address ResolveAddress(TaxCalculationContext context, ITaxableItem item)
@@ -272,15 +366,29 @@ public sealed class TaxService : ITaxService
             ?? context.Customer?.ResidenceAddress;
     }
 
-    private async ValueTask<TaxTable> GetTableAsync(string tableId, CancellationToken cancellationToken)
+    private async ValueTask<TaxTable> GetTableAsync(string tableId, DateTime transactionDateUtc, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(tableId))
         {
             return null;
         }
 
-        return await _tableStore.FindByIdAsync(tableId, cancellationToken);
+        var table = await _tableStore.FindByIdAsync(tableId, cancellationToken);
+
+        if (table is null || !IsEffectiveOn(table, transactionDateUtc))
+        {
+            return null;
+        }
+
+        return table;
     }
+
+    // A tax table only applies to a transaction that falls within its effective window, so an expired or
+    // not-yet-effective table is never used to calculate tax for a dated transaction. The end bound is
+    // exclusive, matching the effective-window semantics used for tax rules.
+    internal static bool IsEffectiveOn(TaxTable table, DateTime transactionDateUtc)
+        => (!table.EffectiveFromUtc.HasValue || transactionDateUtc >= table.EffectiveFromUtc.Value) &&
+            (!table.EffectiveToUtc.HasValue || transactionDateUtc < table.EffectiveToUtc.Value);
 
     private static Dictionary<string, TaxJurisdiction> BuildJurisdictionLookup(IReadOnlyList<TaxJurisdiction> jurisdictions)
     {
@@ -360,5 +468,34 @@ public sealed class TaxService : ITaxService
         public decimal NominalBase { get; }
 
         public decimal NetBase { get; }
+    }
+
+    private readonly struct RuleClassification
+    {
+        public RuleClassification(IReadOnlyList<TaxRule> applicable, IReadOnlyList<ZeroRatedRule> zeroRated)
+        {
+            Applicable = applicable;
+            ZeroRated = zeroRated;
+        }
+
+        public IReadOnlyList<TaxRule> Applicable { get; }
+
+        public IReadOnlyList<ZeroRatedRule> ZeroRated { get; }
+    }
+
+    private readonly struct ZeroRatedRule
+    {
+        public ZeroRatedRule(TaxRule rule, TaxTreatment treatment, string reason)
+        {
+            Rule = rule;
+            Treatment = treatment;
+            Reason = reason;
+        }
+
+        public TaxRule Rule { get; }
+
+        public TaxTreatment Treatment { get; }
+
+        public string Reason { get; }
     }
 }

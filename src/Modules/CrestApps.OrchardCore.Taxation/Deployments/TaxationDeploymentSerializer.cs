@@ -37,6 +37,7 @@ internal static class TaxationDeploymentSerializer
         "ModifiedUtc",
         "OwnerId",
         "Author",
+        "Version",
     };
 
     /// <summary>

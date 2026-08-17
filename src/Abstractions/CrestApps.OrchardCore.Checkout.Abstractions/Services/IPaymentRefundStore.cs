@@ -20,6 +20,14 @@ public interface IPaymentRefundStore : ICatalog<PaymentRefund>
     Task<PaymentRefund> GetByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the refund recorded with the supplied provider refund reference, or <see langword="null"/> when
+    /// none exists. Used to correlate a refund observed at the gateway back to the local ledger entry.
+    /// </summary>
+    /// <param name="providerRefundReference">The provider's authoritative refund reference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<PaymentRefund> GetByProviderRefundReferenceAsync(string providerRefundReference, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets every refund recorded against the supplied original payment transaction id, so the total
     /// already-refunded amount can be enforced against the original charge.
     /// </summary>

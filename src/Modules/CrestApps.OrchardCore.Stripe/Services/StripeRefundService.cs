@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using Stripe;
@@ -41,6 +42,17 @@ public sealed class StripeRefundService : IStripeRefundService
         if (!string.IsNullOrEmpty(model.Reason))
         {
             refundOptions.Reason = model.Reason;
+        }
+
+        // Stamp the originating refund's idempotency key into the gateway metadata so an inbound webhook
+        // can correlate this refund back to its local ledger entry even before the provider reference was
+        // persisted, since Stripe does not echo the request idempotency key on the webhook payload.
+        if (!string.IsNullOrEmpty(model.IdempotencyKey))
+        {
+            refundOptions.Metadata = new Dictionary<string, string>
+            {
+                [CheckoutRefundMetadataKeys.IdempotencyKey] = model.IdempotencyKey,
+            };
         }
 
         var refund = await _refundService.CreateAsync(refundOptions, model.ToRequestOptions());

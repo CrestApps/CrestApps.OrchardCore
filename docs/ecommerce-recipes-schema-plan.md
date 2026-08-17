@@ -1,5 +1,10 @@
 # Commerce Recipes, Deployment & Part-Schema Coverage Plan
 
+> **Historical implementation record.** The current ecommerce roadmap is
+> [`docs/ecommerce-plan.md`](./ecommerce-plan.md). Use that document for the verified current
+> baseline and remaining recipe, deployment, and schema work. The findings below describe the
+> earlier recipe/schema effort and may contain superseded “missing” or “excluded” statements.
+
 This plan closes the **import/export and recipe-schema gaps** across the commerce modules added on
 the `ma/subscribtions` branch, so the modules are consistent with the solution-wide Orchard Core
 recipe/deployment conventions and are a clean foundation for the future e-commerce modules.

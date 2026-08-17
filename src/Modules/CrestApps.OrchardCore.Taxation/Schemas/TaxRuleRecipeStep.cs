@@ -58,6 +58,7 @@ public sealed class TaxRuleRecipeStep : IRecipeStep
                 ("TaxTableId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The identifier of the tax table the rule uses, when the method is table based.")),
                 ("IncludedInPrice", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the produced tax is included in the item price.")),
                 ("IsCompound", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the produced tax is compound (calculated on top of other taxes).")),
+                ("ReverseCharge", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the recipient accounts for the tax (reverse charge). Produces a zero-amount reverse-charge line when the customer matches.")),
                 ("AppliesToShipping", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the rule applies to shipping charges.")),
                 ("MinimumAmount", number.Description("The inclusive minimum taxable amount the rule applies to.")),
                 ("MaximumAmount", number.Description("The exclusive maximum taxable amount the rule applies to.")),

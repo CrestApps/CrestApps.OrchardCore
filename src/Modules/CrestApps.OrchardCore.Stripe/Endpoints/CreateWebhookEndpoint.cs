@@ -27,6 +27,14 @@ public static class CreateWebhookEndpoint
         EventTypes.InvoicePaymentSucceeded,
         EventTypes.CustomerSubscriptionCreated,
         EventTypes.PaymentIntentSucceeded,
+        EventTypes.PaymentIntentPaymentFailed,
+        EventTypes.PaymentIntentCanceled,
+        EventTypes.ChargeRefunded,
+        EventTypes.ChargeRefundUpdated,
+        EventTypes.RefundCreated,
+        EventTypes.RefundUpdated,
+        EventTypes.RefundFailed,
+        EventTypes.ChargeDisputeCreated,
     ];
 
     /// <summary>
@@ -275,8 +283,224 @@ public static class CreateWebhookEndpoint
 
                 break;
 
+            case EventTypes.PaymentIntentPaymentFailed:
+                if (stripeEvent.Data.Object is not PaymentIntent failedIntent)
+                {
+                    break;
+                }
+
+                var failedContext = new PaymentFailedContext()
+                {
+                    TransactionId = failedIntent.Id,
+                    GatewayMode = failedIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    Currency = failedIntent.Currency,
+                    Amount = StripeCurrency.FromMinorUnits(failedIntent.Amount, failedIntent.Currency),
+                    FailureCode = failedIntent.LastPaymentError?.Code,
+                    FailureReason = failedIntent.LastPaymentError?.Message,
+                };
+
+                foreach (var data in failedIntent.Metadata ?? [])
+                {
+                    failedContext.Data[data.Key] = data.Value;
+                }
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.PaymentFailedAsync(failedContext);
+                }
+
+                break;
+
+            case EventTypes.PaymentIntentCanceled:
+                if (stripeEvent.Data.Object is not PaymentIntent canceledIntent)
+                {
+                    break;
+                }
+
+                var canceledContext = new PaymentCanceledContext()
+                {
+                    TransactionId = canceledIntent.Id,
+                    GatewayMode = canceledIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    Currency = canceledIntent.Currency,
+                    Reason = canceledIntent.CancellationReason,
+                };
+
+                foreach (var data in canceledIntent.Metadata ?? [])
+                {
+                    canceledContext.Data[data.Key] = data.Value;
+                }
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.PaymentCanceledAsync(canceledContext);
+                }
+
+                break;
+
+            case EventTypes.ChargeRefunded:
+                if (stripeEvent.Data.Object is not Charge charge)
+                {
+                    break;
+                }
+
+                foreach (var refundContext in BuildRefundContexts(charge))
+                {
+                    foreach (var handler in paymentEvents)
+                    {
+                        await handler.PaymentRefundedAsync(refundContext);
+                    }
+                }
+
+                break;
+
+            case EventTypes.ChargeRefundUpdated:
+            case EventTypes.RefundCreated:
+            case EventTypes.RefundUpdated:
+            case EventTypes.RefundFailed:
+                if (stripeEvent.Data.Object is not Refund updatedRefund)
+                {
+                    break;
+                }
+
+                // The event's request idempotency key is the key of the API call that produced the event.
+                // It correlates a locally initiated refund only for the creation event; on an update or
+                // failure event the key belongs to that later request, not to the refund's creation, so the
+                // refund is correlated by its own provider reference and its own metadata instead.
+                var refundIdempotencyKey = stripeEvent.Type == EventTypes.RefundCreated
+                    ? stripeEvent.Request?.IdempotencyKey
+                    : null;
+
+                var updatedRefundContext = BuildRefundContext(
+                    updatedRefund,
+                    stripeEvent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    refundIdempotencyKey);
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.PaymentRefundedAsync(updatedRefundContext);
+                }
+
+                break;
+
+            case EventTypes.ChargeDisputeCreated:
+                if (stripeEvent.Data.Object is not Dispute dispute)
+                {
+                    break;
+                }
+
+                var disputeContext = new PaymentDisputeCreatedContext()
+                {
+                    OriginalTransactionId = dispute.PaymentIntentId ?? dispute.ChargeId,
+                    DisputeReference = dispute.Id,
+                    GatewayMode = dispute.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    Currency = dispute.Currency,
+                    Amount = StripeCurrency.FromMinorUnits(dispute.Amount, dispute.Currency),
+                    Reason = dispute.Reason,
+                    Status = dispute.Status,
+                };
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.PaymentDisputeCreatedAsync(disputeContext);
+                }
+
+                break;
+
             default:
                 break;
+        }
+    }
+
+    // Maps a Stripe charge.refunded event into one provider-neutral refund notification per refund on the
+    // charge, so every remote refund (including one issued from the Stripe dashboard) is reconciled against
+    // the durable refund ledger. When the charge carries no expanded refund detail, a single aggregate
+    // notification is emitted from the charge's refunded total so the refund is never silently dropped. Each
+    // expanded refund is correlated by its own provider reference and metadata, and the identity-less
+    // aggregate is correlated by a deterministic provider/mode/transaction/currency key, so the charge
+    // event's request idempotency key (which belongs to a single API call, not to the charge's whole refund
+    // history) is never forwarded here.
+    private static IEnumerable<PaymentRefundedContext> BuildRefundContexts(Charge charge)
+    {
+        var refunds = charge.Refunds?.Data;
+
+        if (refunds is not null && refunds.Count > 0)
+        {
+            foreach (var refund in refunds)
+            {
+                var context = new PaymentRefundedContext()
+                {
+                    OriginalTransactionId = refund.PaymentIntentId ?? charge.PaymentIntentId ?? charge.Id,
+                    ProviderRefundReference = refund.Id,
+                    GatewayMode = charge.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    Currency = refund.Currency ?? charge.Currency,
+                    RefundedAmount = StripeCurrency.FromMinorUnits(refund.Amount, refund.Currency ?? charge.Currency),
+                    RefundStatus = refund.Status,
+                    Reason = refund.Reason,
+                };
+
+                CopyMetadata(context, refund.Metadata);
+
+                yield return context;
+            }
+
+            yield break;
+        }
+
+        var aggregate = new PaymentRefundedContext()
+        {
+            OriginalTransactionId = charge.PaymentIntentId ?? charge.Id,
+            GatewayMode = charge.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+            GatewayId = StripeConstants.ProcessorKey,
+            Currency = charge.Currency,
+            RefundedAmount = StripeCurrency.FromMinorUnits(charge.AmountRefunded, charge.Currency),
+        };
+
+        CopyMetadata(aggregate, charge.Metadata);
+
+        yield return aggregate;
+    }
+
+    // Maps a single Stripe refund object (delivered by refund.created, refund.updated, refund.failed, or
+    // charge.refund.updated) into a provider-neutral refund notification, so an asynchronous refund that
+    // settles or fails after the initial charge.refunded event is reconciled to the durable ledger. The
+    // refund object does not carry its own live/test flag, so the owning event's mode is passed in, along
+    // with the event's idempotency key when the refund was created by this application.
+    private static PaymentRefundedContext BuildRefundContext(Refund refund, GatewayMode gatewayMode, string idempotencyKey)
+    {
+        var context = new PaymentRefundedContext()
+        {
+            OriginalTransactionId = refund.PaymentIntentId ?? refund.ChargeId,
+            ProviderRefundReference = refund.Id,
+            GatewayMode = gatewayMode,
+            GatewayId = StripeConstants.ProcessorKey,
+            Currency = refund.Currency,
+            RefundedAmount = StripeCurrency.FromMinorUnits(refund.Amount, refund.Currency),
+            RefundStatus = refund.Status,
+            Reason = refund.Reason,
+            IdempotencyKey = idempotencyKey,
+        };
+
+        CopyMetadata(context, refund.Metadata);
+
+        return context;
+    }
+
+    // Forwards gateway metadata verbatim onto the provider-neutral notification, so the checkout can
+    // correlate a remote refund by its own metadata keys without the provider adapter interpreting them.
+    private static void CopyMetadata(PaymentRefundedContext context, IDictionary<string, string> metadata)
+    {
+        if (metadata is null)
+        {
+            return;
+        }
+
+        foreach (var pair in metadata)
+        {
+            context.Data[pair.Key] = pair.Value;
         }
     }
 }

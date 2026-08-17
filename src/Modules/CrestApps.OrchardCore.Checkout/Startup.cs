@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.Tasks;
+using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -29,6 +30,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
         services.AddScoped<ICheckoutPaymentRefundProviderResolver, CheckoutPaymentRefundProviderResolver>();
         services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
+        services.AddScoped<ICheckoutRefundReconciliationService, DefaultCheckoutRefundReconciliationService>();
+        services.AddScoped<IPaymentEvent, RefundReconciliationPaymentEventHandler>();
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
         services.AddScoped<PaymentSessionCache>();
         services.AddScoped<ICheckoutHandler, PaymentCheckoutHandler>();

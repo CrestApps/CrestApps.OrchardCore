@@ -32,6 +32,21 @@ public interface ICheckoutSessionStore
     Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the most recently created session that matches the supplied reference. The order owns the
+    /// authoritative reverse link by storing its checkout session id, so this lookup is a recovery and
+    /// reconciliation path (for example when that stored id was lost, or when correlating an out-of-band
+    /// provider event) rather than the primary way an order finds its session. When
+    /// <paramref name="referenceVersionId"/> is supplied it is included in the match; otherwise sessions
+    /// are matched on reference type and id only. This does not enforce ownership, so callers that resume a
+    /// customer-facing flow must still authorize the caller against the returned session.
+    /// </summary>
+    /// <param name="referenceType">The reference type, for example <see cref="CheckoutReferenceTypes.Order"/>.</param>
+    /// <param name="referenceId">The identifier of the referenced thing (for an order, its item id).</param>
+    /// <param name="referenceVersionId">The optional draft or quote version identifier to match.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Persists changes to the session. New sessions created by <see cref="NewAsync"/> are untracked until
     /// this method is called, so it must be invoked to persist them; for sessions loaded through the query
     /// methods the call also makes the intent to persist explicit on the money-sensitive checkout path.

@@ -51,6 +51,18 @@ public sealed class TaxLine
     public decimal TaxAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets how the tax was treated. A value other than <see cref="TaxTreatment.Taxable"/>
+    /// indicates a zero-amount line kept for compliance (for example exempt or reverse charge).
+    /// </summary>
+    public TaxTreatment Treatment { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional human readable reason that explains the <see cref="Treatment"/>, shown
+    /// on invoices and receipts for zero-rated, exempt, and reverse-charge lines.
+    /// </summary>
+    public string TreatmentReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the calculation method that produced the amount.
     /// </summary>
     public string CalculationMethod { get; set; }

@@ -44,13 +44,15 @@ Each type includes a `TitlePart` (with the unique-title editor) for the display 
 | **CountyPart** | Holds the parent region selector and `Code` for a county. |
 | **CityPart** | Holds the parent region selector, optional county selector, and `Code` for a city. |
 | **DistrictPart** | Holds the parent city selector and `Code` for a district. |
-| **AddressPart** | A reusable, attachable part capturing street lines and postal code as text, and country, region, county, city, and district as content-item selectors. Attach it to any content type that needs a postal address. |
+| **AddressPart** | A reusable, attachable part capturing the recipient name, company, both street lines, phone, and postal code as text, and country, region, county, city, and district as content-item selectors. Attach it to any content type that needs a postal address. |
 
 Every geographic part standardizes on a money-safe `Code` field. The code is the value that flows into the flat `Address` model consumed by taxation and checkout; when a code is empty, the component's display name is used instead.
 
 ## Resolving an address
 
-Because the geographic components of an `AddressPart` are content-item selectors, the module ships an `IAddressResolver` that reduces the part to the flat, money-safe `Address` model. Each selector is loaded and reduced to its stable `Code` (falling back to its display name), and the postal code is copied verbatim. Taxation, Checkout, and Subscriptions therefore keep operating on the string-based `Address` contract and never store a content item id.
+Because the geographic components of an `AddressPart` are content-item selectors, the module ships an `IAddressResolver` that reduces the part to the flat, money-safe `Address` model. Each geographic selector is loaded and reduced to its stable `Code` (falling back to its display name); the recipient `Name`, `Company`, `AddressLine1`, `AddressLine2`, `Phone`, and `PostalCode` are captured as text. Taxation, Checkout, and Subscriptions therefore keep operating on the string-based `Address` contract and never store a content item id.
+
+The flat `Address` is a **money-safe value snapshot**: once it is captured on an order or shipment it is never mutated by a later edit to the customer-editable address content item it was resolved from. It carries the complete postal contract — the recipient/company lines, both street lines, the geographic codes, the postal code, and the delivery phone — so a downstream order billing/shipping snapshot needs no second lookup.
 
 ```csharp
 public interface IAddressResolver

@@ -76,6 +76,22 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
+    public Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(referenceType);
+        ArgumentException.ThrowIfNullOrEmpty(referenceId);
+
+        var query = _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.ReferenceType == referenceType && x.ReferenceId == referenceId);
+
+        if (!string.IsNullOrEmpty(referenceVersionId))
+        {
+            query = query.Where(x => x.ReferenceVersionId == referenceVersionId);
+        }
+
+        return query.OrderByDescending(x => x.CreatedUtc).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(referenceType);

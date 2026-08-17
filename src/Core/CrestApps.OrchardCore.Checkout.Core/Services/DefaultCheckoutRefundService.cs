@@ -104,8 +104,26 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
         {
             var priorRefunds = await _refundStore.GetByOriginalTransactionAsync(context.OriginalTransactionId, cancellationToken);
 
-            var alreadyRefunded = priorRefunds
+            var counted = priorRefunds
                 .Where(r => r.Status is RefundStatus.Requested or RefundStatus.Pending or RefundStatus.Succeeded or RefundStatus.PendingManualReview)
+                .ToList();
+
+            // An identity-less aggregate is a charge-level refunded total observed out of band (for example a
+            // refund issued from the provider dashboard with no per-refund detail). It overlaps the individual
+            // refunds by an unknown amount, so it can neither be summed with them (which would over-count and
+            // wrongly block a valid refund) nor be netted against them (which would under-count and risk an
+            // over-refund). While such an aggregate is unresolved it is not safe to compute a remaining
+            // balance, so a new automatic refund is refused until an operator reconciles it.
+            if (counted.Any(r => IsAggregateObservation(r) && r.Status == RefundStatus.PendingManualReview))
+            {
+                throw new InvalidOperationException($"Payment '{context.OriginalTransactionId}' has an out-of-band refund pending manual review. Resolve it before requesting a new refund.");
+            }
+
+            // Only distinct, identifiable refunds are summed against the refundable balance. A resolved
+            // aggregate has been reconciled by an operator into the identifiable records it covered, so it is
+            // never double-counted here.
+            var alreadyRefunded = counted
+                .Where(r => !IsAggregateObservation(r))
                 .Sum(r => r.RefundGrossAmount);
 
             var remaining = maxRefundableGross - alreadyRefunded;
@@ -303,4 +321,11 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
                 attempt.ProviderKey);
         }
     }
+
+    // Identifies a charge-level aggregate observation: a quarantined remote refund that carries no provider
+    // reference. Such a record is a cumulative charge total rather than a distinct refund, so it must not be
+    // summed alongside the individual refunds it already accounts for.
+    private static bool IsAggregateObservation(PaymentRefund refund)
+        => string.IsNullOrEmpty(refund.ProviderRefundReference) &&
+           string.Equals(refund.FailureCode, CheckoutRefundFailureCodes.RemoteRefundWithoutLocalRequest, StringComparison.Ordinal);
 }

@@ -96,4 +96,58 @@ public sealed class TaxationDeploymentSerializerTests
         Assert.Equal("Electronics", target.Name);
         Assert.Null(target.ParentCode);
     }
+
+    [Fact]
+    public void TaxTable_RoundTrips_RowsAndEffectiveDates()
+    {
+        var source = new TaxTable
+        {
+            ItemId = "tbl-1",
+            Name = "Luxury brackets",
+            EffectiveFromUtc = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            EffectiveToUtc = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc),
+            Rows =
+            [
+                new TaxTableRow { Minimum = 0m, Maximum = 100m, Rate = 0.05m },
+                new TaxTableRow { Minimum = 100m, Maximum = null, Rate = 0.07m, FixedAmount = 2m },
+            ],
+        };
+
+        var data = TaxationDeploymentSerializer.Export(source);
+
+        var target = new TaxTable { ItemId = "existing-id" };
+        TaxationDeploymentSerializer.Populate(target, data);
+
+        Assert.Equal("Luxury brackets", target.Name);
+        Assert.Equal(source.EffectiveFromUtc, target.EffectiveFromUtc);
+        Assert.Equal(source.EffectiveToUtc, target.EffectiveToUtc);
+        Assert.Equal(2, target.Rows.Count);
+        Assert.Equal(0m, target.Rows[0].Minimum);
+        Assert.Equal(100m, target.Rows[0].Maximum);
+        Assert.Equal(0.05m, target.Rows[0].Rate);
+        Assert.Null(target.Rows[1].Maximum);
+        Assert.Equal(2m, target.Rows[1].FixedAmount);
+        Assert.Equal("existing-id", target.ItemId);
+    }
+
+    [Fact]
+    public void TaxTable_Version_IsEnvironmentOwned_AndNeverImported()
+    {
+        var source = new TaxTable
+        {
+            ItemId = "tbl-1",
+            Name = "Rates",
+            Version = 9,
+        };
+
+        var data = TaxationDeploymentSerializer.Export(source);
+
+        Assert.False(data.ContainsKey("Version"));
+
+        var target = new TaxTable { ItemId = "existing-id", Version = 3 };
+        TaxationDeploymentSerializer.Populate(target, data);
+
+        // A recipe can never regress or reuse the authoritative version stamp.
+        Assert.Equal(3, target.Version);
+    }
 }

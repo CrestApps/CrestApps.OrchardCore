@@ -115,6 +115,10 @@
             <label asp-for="IsCompound" class="form-check-label">@T["Tax is compound (calculated on top of other taxes)"]</label>
         </div>
         <div class="form-check">
+            <input asp-for="ReverseCharge" class="form-check-input" type="checkbox" />
+            <label asp-for="ReverseCharge" class="form-check-label">@T["Reverse charge (the customer accounts for the tax)"]</label>
+        </div>
+        <div class="form-check">
             <input asp-for="AppliesToShipping" class="form-check-input" type="checkbox" />
             <label asp-for="AppliesToShipping" class="form-check-label">@T["Applies to shipping charges"]</label>
         </div>

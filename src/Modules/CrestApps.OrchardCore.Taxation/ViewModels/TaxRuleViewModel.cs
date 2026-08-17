@@ -71,6 +71,11 @@ public class TaxRuleViewModel
     public bool IsCompound { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the recipient accounts for the tax (reverse charge).
+    /// </summary>
+    public bool ReverseCharge { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the tax applies to shipping charges.
     /// </summary>
     public bool AppliesToShipping { get; set; }

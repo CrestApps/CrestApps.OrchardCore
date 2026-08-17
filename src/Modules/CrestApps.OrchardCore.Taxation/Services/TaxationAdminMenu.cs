@@ -45,6 +45,12 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
                         .Id("taxationRules")
                         .Action("Index", "TaxRules", "CrestApps.OrchardCore.Taxation")
                         .Permission(TaxationPermissions.ManageTaxation)
+                        .LocalNav())
+                    .Add(S["Tables"], S["Tables"].PrefixPosition(), tables => tables
+                        .AddClass("taxation-tables")
+                        .Id("taxationTables")
+                        .Action("Index", "TaxTables", "CrestApps.OrchardCore.Taxation")
+                        .Permission(TaxationPermissions.ManageTaxation)
                         .LocalNav())));
 
         return ValueTask.CompletedTask;

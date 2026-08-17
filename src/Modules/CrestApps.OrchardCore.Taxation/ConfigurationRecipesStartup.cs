@@ -18,5 +18,6 @@ public sealed class ConfigurationRecipesStartup : StartupBase
         services.AddRecipeExecutionStep<TaxTypeStep>();
         services.AddRecipeExecutionStep<TaxJurisdictionStep>();
         services.AddRecipeExecutionStep<TaxRuleStep>();
+        services.AddRecipeExecutionStep<TaxTableStep>();
     }
 }

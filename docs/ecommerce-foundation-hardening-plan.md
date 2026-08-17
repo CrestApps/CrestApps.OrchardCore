@@ -1,5 +1,11 @@
 # Commerce foundation hardening plan
 
+> **Historical implementation record.** The current ecommerce roadmap is
+> [`docs/ecommerce-plan.md`](./ecommerce-plan.md). Use that document for the verified current
+> baseline, remaining gaps, architecture decisions, and delivery sequence. Status statements in
+> this document describe the earlier foundation-hardening effort and are not a replacement for
+> the current roadmap.
+
 ## Purpose
 
 This plan operationalizes **Phase -1 (Foundation gap closure)** from `docs/ecommerce-plan.md`.

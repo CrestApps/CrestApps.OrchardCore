@@ -33,6 +33,16 @@ A **`CheckoutSession`** is the provider-agnostic unit of work for any purchase. 
 
 Sessions are persisted by **`ICheckoutSessionStore`**, which enforces ownership: an anonymous session is bound to its originating IP address and user agent so it cannot be resumed by a different visitor.
 
+#### The canonical order reference
+
+The reference triple is intentionally generic so any consumer can drive a checkout, but ecommerce orders use one stable relationship, published as the well-known constants in **`CheckoutReferenceTypes`**:
+
+- `ReferenceType` is `CheckoutReferenceTypes.Order` (`"Order"`);
+- `ReferenceId` is the owning order's stable item id;
+- `ReferenceVersionId` identifies the draft or quote version only when the order requires versioning, and is otherwise left empty.
+
+The order owns the reverse link by storing its checkout session id, and `ICheckoutSessionStore.GetByReferenceAsync(referenceType, referenceId, referenceVersionId)` resolves the most recent session for a reference when only the order is known. Payment attempts and refunds remain owned by Checkout and correlate through the session and provider transaction references. Because payment stays authoritative in the durable attempt ledger, **an order must never be marked paid from a session status alone**.
+
 ### Checkout flow and steps
 
 A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle mirrors the wizard: `Activating` → `Activated` → `Initializing`/`Initialized` → `Loading`/`Loaded` → `Completing` → `Completed`, with `Failed` on error.
@@ -95,6 +105,16 @@ A **`PaymentRefund`** is a durable, per-refund record persisted through **`IPaym
 5. **Reconciles the ledger against what the provider confirms**, storing the provider's authoritative refund reference and updating the status; a retried refund reuses the refund's idempotency key so the gateway never double-refunds.
 
 A gateway opts in to executable refunds by *also* implementing the additive **`ICheckoutPaymentRefundProvider`** contract. It is intentionally separate from `ICheckoutPaymentProvider` so a provider that cannot refund (for example an offline Pay Later commitment) is never forced to change, and so `Capabilities.SupportsRefunds` becomes a real, executable promise. When the owning provider has no executable refund operation, the refund is recorded as `PendingManualReview` for an operator to settle rather than being silently dropped.
+
+#### Reconciling a refund observed at the gateway
+
+Refunds also flow *inbound*: a gateway may report a refund the application never requested — most commonly one issued directly from the provider dashboard. **`ICheckoutRefundReconciliationService`** is the single authoritative path for applying such a notification. A provider adapter maps its webhook into a provider-neutral `ReconcileRemoteRefundContext` (the Stripe module does this for `charge.refunded`), and the reconciliation service, under the same per-payment distributed lock the refund service uses:
+
+1. **Correlates the remote refund to a local `PaymentRefund`** by the provider's refund reference first, then the idempotency key, then a still-open local request for the same transaction whose amount matches at currency minor-unit precision.
+2. **Adopts the gateway's authoritative reference and status** onto the correlated record — the gateway is the source of truth, so a pending local record advances to the confirmed terminal state the gateway reports.
+3. **Quarantines an unmatched remote refund** as `PendingManualReview` with the failure code `remote_refund_without_local_request`, so it is never lost and never silently accepted: an operator allocates its tax and attaches it to the owning order.
+
+A record already flagged `PendingManualReview` is never regressed by a later webhook, and a duplicate notification is idempotent because it re-correlates to the same record. As everywhere in the checkout, a refund result is only recorded when the gateway confirms it.
 
 ## Distributed safety
 

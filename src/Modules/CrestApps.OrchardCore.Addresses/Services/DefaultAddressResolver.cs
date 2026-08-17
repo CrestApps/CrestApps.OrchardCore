@@ -71,19 +71,24 @@ public sealed class DefaultAddressResolver : IAddressResolver
     /// Builds a money-safe <see cref="Address"/> from the supplied address part and the geographic area index
     /// rows that were already resolved.
     /// </summary>
-    /// <param name="addressPart">The JSON of the <c>AddressPart</c> to read the selectors and postal code from.</param>
+    /// <param name="addressPart">The JSON of the <c>AddressPart</c> to read the selectors, street lines, contact fields, and postal code from.</param>
     /// <param name="resolvedAreas">The resolved geographic areas keyed by their content item identifier.</param>
     /// <returns>The resolved money-safe address. Never <see langword="null"/>.</returns>
     internal static Address BuildAddress(JsonNode addressPart, IReadOnlyDictionary<string, GeographicAreaIndex> resolvedAreas)
     {
         return new Address
         {
-            Country = ResolveComponent(addressPart, "Country", resolvedAreas),
+            Name = ReadText(addressPart, "Name"),
+            Company = ReadText(addressPart, "Company"),
+            AddressLine1 = ReadText(addressPart, "AddressLine1"),
+            AddressLine2 = ReadText(addressPart, "AddressLine2"),
+            Country = NormalizeCountry(ResolveComponent(addressPart, "Country", resolvedAreas)),
             Region = ResolveComponent(addressPart, "Region", resolvedAreas),
             County = ResolveComponent(addressPart, "County", resolvedAreas),
             City = ResolveComponent(addressPart, "City", resolvedAreas),
             District = ResolveComponent(addressPart, "District", resolvedAreas),
             PostalCode = ReadText(addressPart, "PostalCode"),
+            Phone = ReadText(addressPart, "Phone"),
         };
     }
 
@@ -109,6 +114,21 @@ public sealed class DefaultAddressResolver : IAddressResolver
         return string.IsNullOrWhiteSpace(area.DisplayText)
             ? null
             : area.DisplayText.Trim();
+    }
+
+    // Country codes are normalized to upper case so a resolved snapshot always carries a canonical
+    // ISO-style code (for example "us" becomes "US"). A longer value (a display name used as a fallback
+    // when no code is configured) is left untouched so it is not mangled into upper case.
+    private static string NormalizeCountry(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        return value.Length <= 3
+            ? value.ToUpperInvariant()
+            : value;
     }
 
     private static string GetFirstReferencedId(JsonNode addressPart, string pickerField)

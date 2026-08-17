@@ -63,6 +63,7 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
             model.CustomerType = rule.CustomerType;
             model.IncludedInPrice = rule.IncludedInPrice;
             model.IsCompound = rule.IsCompound;
+            model.ReverseCharge = rule.ReverseCharge;
             model.AppliesToShipping = rule.AppliesToShipping;
             model.MinimumAmount = rule.MinimumAmount;
             model.MaximumAmount = rule.MaximumAmount;
@@ -133,6 +134,7 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
         rule.CustomerType = model.CustomerType;
         rule.IncludedInPrice = model.IncludedInPrice;
         rule.IsCompound = model.IsCompound;
+        rule.ReverseCharge = model.ReverseCharge;
         rule.AppliesToShipping = model.AppliesToShipping;
         rule.MinimumAmount = model.MinimumAmount;
         rule.MaximumAmount = model.MaximumAmount;

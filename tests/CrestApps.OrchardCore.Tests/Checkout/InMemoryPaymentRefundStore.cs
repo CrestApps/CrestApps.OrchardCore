@@ -60,6 +60,9 @@ internal sealed class InMemoryPaymentRefundStore : IPaymentRefundStore
     public Task<PaymentRefund> GetByIdempotencyKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
         => Task.FromResult(_refunds.Values.FirstOrDefault(r => r.IdempotencyKey == idempotencyKey));
 
+    public Task<PaymentRefund> GetByProviderRefundReferenceAsync(string providerRefundReference, CancellationToken cancellationToken = default)
+        => Task.FromResult(_refunds.Values.FirstOrDefault(r => r.ProviderRefundReference == providerRefundReference));
+
     public Task<IEnumerable<PaymentRefund>> GetByOriginalTransactionAsync(string originalTransactionId, CancellationToken cancellationToken = default)
         => Task.FromResult(_refunds.Values.Where(r => r.OriginalTransactionId == originalTransactionId));
 

@@ -18,6 +18,7 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, TaxTypeRecipeStep>();
         services.AddScoped<IRecipeStep, TaxJurisdictionRecipeStep>();
         services.AddScoped<IRecipeStep, TaxRuleRecipeStep>();
+        services.AddScoped<IRecipeStep, TaxTableRecipeStep>();
 
         services.AddScoped<IContentSchemaDefinition, TaxationPartSchemaDefinition>();
     }

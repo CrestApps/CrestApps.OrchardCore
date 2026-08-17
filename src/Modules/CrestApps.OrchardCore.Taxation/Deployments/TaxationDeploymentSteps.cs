@@ -24,4 +24,9 @@ public static class TaxationDeploymentSteps
     /// The recipe step that carries tax types.
     /// </summary>
     public const string TaxType = "TaxType";
+
+    /// <summary>
+    /// The recipe step that carries tax tables.
+    /// </summary>
+    public const string TaxTable = "TaxTable";
 }

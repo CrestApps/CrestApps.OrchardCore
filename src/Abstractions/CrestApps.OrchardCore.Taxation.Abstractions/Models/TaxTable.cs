@@ -17,8 +17,11 @@ public sealed class TaxTable : CatalogItem, INameAwareModel, IModifiedUtcAwareMo
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the version of the table. The version is captured on tax lines so historical
-    /// transactions can be reproduced.
+    /// Gets or sets the version of the table. The version increments on every update and is captured on tax
+    /// lines for audit. Because a table is updated in place rather than kept as immutable revisions, preserve
+    /// a historical calculation by publishing a new table with its own effective window (see
+    /// <see cref="EffectiveFromUtc"/> and <see cref="EffectiveToUtc"/>) instead of mutating a table that
+    /// dated transactions already used.
     /// </summary>
     public int Version { get; set; } = 1;
 
@@ -40,6 +43,21 @@ public sealed class TaxTable : CatalogItem, INameAwareModel, IModifiedUtcAwareMo
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC date the table was created.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the user that authored the table.
+    /// </summary>
+    public string Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user that owns the table.
+    /// </summary>
+    public string OwnerId { get; set; }
+
     /// <inheritdoc />
     public TaxTable Clone()
     {
@@ -52,6 +70,9 @@ public sealed class TaxTable : CatalogItem, INameAwareModel, IModifiedUtcAwareMo
             EffectiveToUtc = EffectiveToUtc,
             Rows = Rows.Select(row => row.Clone()).ToList(),
             ModifiedUtc = ModifiedUtc,
+            CreatedUtc = CreatedUtc,
+            Author = Author,
+            OwnerId = OwnerId,
         };
     }
 }

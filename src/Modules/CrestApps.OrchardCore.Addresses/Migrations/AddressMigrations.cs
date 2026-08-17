@@ -41,7 +41,7 @@ public sealed class AddressMigrations : DataMigration
         await DefineDistrictAsync();
         await DefineAddressPartAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -68,6 +68,19 @@ public sealed class AddressMigrations : DataMigration
         await DefineAddressPartAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the recipient name, company, and phone contact fields to the reusable address part so orders,
+    /// shipments, and customer address books can preserve the full recipient and contact information, not
+    /// only the geography and street lines.
+    /// </summary>
+    /// <returns>The next migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await DefineAddressPartAsync();
+
+        return 3;
     }
 
     private Task DefineCountryAsync()
@@ -255,20 +268,32 @@ public sealed class AddressMigrations : DataMigration
             .Reusable()
             .WithDisplayName("Address")
             .WithDescription("Captures a postal address with content-item selectors for every geographic component except the postal code.")
+            .WithField("Name", field => field
+                .OfType("TextField")
+                .WithDisplayName("Full name")
+                .WithDescription("The recipient the address is addressed to.")
+                .WithPosition("1")
+            )
+            .WithField("Company", field => field
+                .OfType("TextField")
+                .WithDisplayName("Company")
+                .WithDescription("The company or organization name, when the address belongs to a business.")
+                .WithPosition("2")
+            )
             .WithField("AddressLine1", field => field
                 .OfType("TextField")
                 .WithDisplayName("Line 1")
-                .WithPosition("1")
+                .WithPosition("3")
             )
             .WithField("AddressLine2", field => field
                 .OfType("TextField")
                 .WithDisplayName("Line 2")
-                .WithPosition("2")
+                .WithPosition("4")
             )
             .WithField("Country", field => field
                 .OfType("ContentPickerField")
                 .WithDisplayName("Country")
-                .WithPosition("3")
+                .WithPosition("5")
                 .WithSettings(new ContentPickerFieldSettings
                 {
                     Multiple = false,
@@ -278,7 +303,7 @@ public sealed class AddressMigrations : DataMigration
             .WithField("Region", field => field
                 .OfType("ContentPickerField")
                 .WithDisplayName("Region")
-                .WithPosition("4")
+                .WithPosition("6")
                 .WithSettings(new ContentPickerFieldSettings
                 {
                     Multiple = false,
@@ -288,7 +313,7 @@ public sealed class AddressMigrations : DataMigration
             .WithField("County", field => field
                 .OfType("ContentPickerField")
                 .WithDisplayName("County")
-                .WithPosition("5")
+                .WithPosition("7")
                 .WithSettings(new ContentPickerFieldSettings
                 {
                     Multiple = false,
@@ -298,7 +323,7 @@ public sealed class AddressMigrations : DataMigration
             .WithField("City", field => field
                 .OfType("ContentPickerField")
                 .WithDisplayName("City")
-                .WithPosition("6")
+                .WithPosition("8")
                 .WithSettings(new ContentPickerFieldSettings
                 {
                     Multiple = false,
@@ -308,7 +333,7 @@ public sealed class AddressMigrations : DataMigration
             .WithField("District", field => field
                 .OfType("ContentPickerField")
                 .WithDisplayName("District")
-                .WithPosition("7")
+                .WithPosition("9")
                 .WithSettings(new ContentPickerFieldSettings
                 {
                     Multiple = false,
@@ -318,7 +343,13 @@ public sealed class AddressMigrations : DataMigration
             .WithField("PostalCode", field => field
                 .OfType("TextField")
                 .WithDisplayName("Postal code")
-                .WithPosition("8")
+                .WithPosition("10")
+            )
+            .WithField("Phone", field => field
+                .OfType("TextField")
+                .WithDisplayName("Phone")
+                .WithDescription("The contact phone number used for delivery and fulfillment.")
+                .WithPosition("11")
             )
         );
     }

@@ -35,6 +35,20 @@ public sealed class MerchantTaxRegistration : CatalogItem, INameAwareModel, IMod
     public bool IsActive { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the economic-nexus threshold that must be reached before the merchant is obligated
+    /// to collect the tax in the jurisdiction. A <see langword="null"/> value means the obligation
+    /// applies as soon as the registration is active, regardless of sales volume.
+    /// </summary>
+    public decimal? ThresholdAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the accumulated sales into the jurisdiction, measured against
+    /// <see cref="ThresholdAmount"/>. The value is maintained by the host as sales are recorded, so the
+    /// framework can enforce economic nexus without owning a sales ledger.
+    /// </summary>
+    public decimal ThresholdAccumulatedAmount { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC date the registration was granted.
     /// </summary>
     public DateTime? RegistrationDateUtc { get; set; }
@@ -63,6 +77,8 @@ public sealed class MerchantTaxRegistration : CatalogItem, INameAwareModel, IMod
             TaxType = TaxType,
             RegistrationNumber = RegistrationNumber,
             IsActive = IsActive,
+            ThresholdAmount = ThresholdAmount,
+            ThresholdAccumulatedAmount = ThresholdAccumulatedAmount,
             RegistrationDateUtc = RegistrationDateUtc,
             EffectiveFromUtc = EffectiveFromUtc,
             EffectiveToUtc = EffectiveToUtc,

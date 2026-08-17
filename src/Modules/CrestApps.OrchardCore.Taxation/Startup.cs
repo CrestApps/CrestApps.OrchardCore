@@ -63,6 +63,10 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<TaxRule, TaxRuleMethodDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxRule>, TaxRuleHandler>();
 
+        services
+            .AddDisplayDriver<TaxTable, TaxTableDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxTable>, TaxTableHandler>();
+
         services.AddTransient<IConfigureOptions<TaxCalculationMethodOptions>, TaxCalculationMethodOptionsConfiguration>();
 
         services.AddNavigationProvider<TaxationAdminMenu>();

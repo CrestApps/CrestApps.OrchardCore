@@ -33,7 +33,11 @@ public sealed class TaxExemptionTests
         var context = TaxTestData.Context(100m, customer: new CustomerTaxProfile { IsTaxExempt = true }, categoryCode: "Electronics");
         var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.Lines);
+        var line = Assert.Single(result.Lines);
+
+        Assert.Equal(0m, line.TaxAmount);
+        Assert.Equal(TaxTreatment.Exempt, line.Treatment);
+        Assert.Equal(0m, result.TaxAmount);
     }
 
     [Fact]
@@ -55,7 +59,10 @@ public sealed class TaxExemptionTests
         var customer = new CustomerTaxProfile { ExemptionCertificateIds = [certificate.ItemId] };
         var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m, customer: customer, categoryCode: "Electronics"), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.Lines);
+        var line = Assert.Single(result.Lines);
+
+        Assert.Equal(0m, line.TaxAmount);
+        Assert.Equal(TaxTreatment.Exempt, line.Treatment);
     }
 
     [Fact]

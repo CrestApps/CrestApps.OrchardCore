@@ -100,6 +100,85 @@ public sealed class DefaultCheckoutRefundServiceTests
     }
 
     [Fact]
+    public async Task RequestRefundAsync_WhenUnresolvedAggregateExists_BlocksAutomaticRefund()
+    {
+        // Arrange - an identity-less charge-level aggregate (no provider reference) is pending manual review.
+        // It overlaps the individual refunds by an unknown amount, so no safe remaining balance can be
+        // computed and a new automatic refund must be refused until an operator reconciles it.
+        var refundStore = new InMemoryPaymentRefundStore();
+        await refundStore.CreateAsync(new PaymentRefund
+        {
+            ItemId = "aggregate-1",
+            OriginalTransactionId = TransactionId,
+            Currency = "usd",
+            RefundGrossAmount = 30m,
+            Status = RefundStatus.PendingManualReview,
+            FailureCode = CheckoutRefundFailureCodes.RemoteRefundWithoutLocalRequest,
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeCheckoutPaymentRefundProvider(
+            "Stripe",
+            ctx => PaymentRefundResult.Success("re_new", ctx.Amount, ctx.Currency, GatewayMode.Testing));
+
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RequestRefundAsync(new RequestPaymentRefundContext
+            {
+                SessionId = SessionId,
+                OriginalTransactionId = TransactionId,
+                Amount = 50m,
+            }, TestContext.Current.CancellationToken));
+
+        Assert.Empty(provider.Contexts);
+    }
+
+    [Fact]
+    public async Task RequestRefundAsync_CountsIdentifiableRemoteRefundsAgainstBalance()
+    {
+        // Arrange - a precise quarantined remote refund keeps its provider reference, so it is a distinct
+        // refund that must count against the refundable balance (unlike an identity-less aggregate).
+        var refundStore = new InMemoryPaymentRefundStore();
+        await refundStore.CreateAsync(new PaymentRefund
+        {
+            ItemId = "precise-1",
+            OriginalTransactionId = TransactionId,
+            ProviderRefundReference = "re_precise",
+            Currency = "usd",
+            RefundGrossAmount = 40m,
+            Status = RefundStatus.PendingManualReview,
+            FailureCode = CheckoutRefundFailureCodes.RemoteRefundWithoutLocalRequest,
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeCheckoutPaymentRefundProvider(
+            "Stripe",
+            ctx => PaymentRefundResult.Success("re_new", ctx.Amount, ctx.Currency, GatewayMode.Testing));
+
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator());
+
+        // Act - the remaining balance is 110 - 40 = 70, so a 70 refund is exactly the remainder.
+        var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
+        {
+            SessionId = SessionId,
+            OriginalTransactionId = TransactionId,
+            Amount = 70m,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert - a 71 refund would have exceeded the remaining balance and been rejected.
+        Assert.Equal(RefundStatus.Succeeded, refund.Status);
+        Assert.Equal(70m, refund.RefundGrossAmount);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RequestRefundAsync(new RequestPaymentRefundContext
+            {
+                SessionId = SessionId,
+                OriginalTransactionId = TransactionId,
+                Amount = 1m,
+            }, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task RequestRefundAsync_WhenNoRefundProvider_RecordsPendingManualReview()
     {
         // Arrange

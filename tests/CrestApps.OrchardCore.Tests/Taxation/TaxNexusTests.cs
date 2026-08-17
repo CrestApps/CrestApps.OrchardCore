@@ -93,4 +93,48 @@ public sealed class TaxNexusTests
 
         Assert.Empty(result.Lines);
     }
+
+    [Fact]
+    public async Task EconomicThresholdNotReached_DoesNotEstablishNexus()
+    {
+        var harness = CreateHarness();
+        var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "California", "US", "CA");
+        await SeedRuleAsync(harness, jurisdictionId);
+
+        await harness.Registrations.CreateAsync(new MerchantTaxRegistration
+        {
+            Name = "CA economic nexus",
+            JurisdictionId = jurisdictionId,
+            TaxType = TaxTypeNames.SalesTax,
+            IsActive = true,
+            ThresholdAmount = 100_000m,
+            ThresholdAccumulatedAmount = 40_000m,
+        }, TestContext.Current.CancellationToken);
+
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Lines);
+    }
+
+    [Fact]
+    public async Task EconomicThresholdReached_EstablishesNexus()
+    {
+        var harness = CreateHarness();
+        var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "California", "US", "CA");
+        await SeedRuleAsync(harness, jurisdictionId);
+
+        await harness.Registrations.CreateAsync(new MerchantTaxRegistration
+        {
+            Name = "CA economic nexus",
+            JurisdictionId = jurisdictionId,
+            TaxType = TaxTypeNames.SalesTax,
+            IsActive = true,
+            ThresholdAmount = 100_000m,
+            ThresholdAccumulatedAmount = 150_000m,
+        }, TestContext.Current.CancellationToken);
+
+        var result = await harness.TaxService.CalculateAsync(TaxTestData.Context(100m), TestContext.Current.CancellationToken);
+
+        Assert.Single(result.Lines);
+    }
 }

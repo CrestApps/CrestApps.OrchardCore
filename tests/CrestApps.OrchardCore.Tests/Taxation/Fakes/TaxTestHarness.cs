@@ -25,6 +25,7 @@ public sealed class TaxTestHarness
         var services = new ServiceCollection();
 
         services.AddLogging();
+        services.AddLocalization();
         services.AddOptions();
         services.AddSingleton<IClock>(clock);
 

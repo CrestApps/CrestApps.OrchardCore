@@ -21,10 +21,12 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
         services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep>();
         services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep>();
         services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep>();
+        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep>();
 
         services.AddDisplayDriver<DeploymentStep, TaxCategoryDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, TaxTypeDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, TaxJurisdictionDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, TaxRuleDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, TaxTableDeploymentStepDisplayDriver>();
     }
 }
