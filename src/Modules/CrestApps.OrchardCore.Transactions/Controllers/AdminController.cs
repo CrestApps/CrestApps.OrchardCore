@@ -462,54 +462,13 @@ public sealed class AdminController : Controller
             Source = options.Source,
         };
 
-        switch (options.Status)
-        {
-            case TransactionStatusFilter.All:
-                break;
-            case TransactionStatusFilter.Outstanding:
-                query.OutstandingOnly = true;
-                break;
-            case TransactionStatusFilter.Pending:
-                query.Status = TransactionStatus.Pending;
-                break;
-            case TransactionStatusFilter.PartiallyPaid:
-                query.Status = TransactionStatus.PartiallyPaid;
-                break;
-            case TransactionStatusFilter.Paid:
-                query.Status = TransactionStatus.Paid;
-                break;
-            case TransactionStatusFilter.Canceled:
-                query.Status = TransactionStatus.Canceled;
-                break;
-            case TransactionStatusFilter.Failed:
-                query.Status = TransactionStatus.Failed;
-                break;
-            case TransactionStatusFilter.Abandoned:
-                query.Status = TransactionStatus.Abandoned;
-                break;
-            case TransactionStatusFilter.Refunded:
-                query.Status = TransactionStatus.Refunded;
-                break;
-        }
+        options.Status.ApplyTo(query);
 
         return query;
     }
 
     private List<SelectListItem> BuildStatusFilterItems(TransactionStatusFilter selected)
-    {
-        return
-        [
-            new SelectListItem(S["All"], nameof(TransactionStatusFilter.All), selected == TransactionStatusFilter.All),
-            new SelectListItem(S["Outstanding"], nameof(TransactionStatusFilter.Outstanding), selected == TransactionStatusFilter.Outstanding),
-            new SelectListItem(S["Pending"], nameof(TransactionStatusFilter.Pending), selected == TransactionStatusFilter.Pending),
-            new SelectListItem(S["Partially paid"], nameof(TransactionStatusFilter.PartiallyPaid), selected == TransactionStatusFilter.PartiallyPaid),
-            new SelectListItem(S["Paid"], nameof(TransactionStatusFilter.Paid), selected == TransactionStatusFilter.Paid),
-            new SelectListItem(S["Canceled"], nameof(TransactionStatusFilter.Canceled), selected == TransactionStatusFilter.Canceled),
-            new SelectListItem(S["Failed"], nameof(TransactionStatusFilter.Failed), selected == TransactionStatusFilter.Failed),
-            new SelectListItem(S["Abandoned"], nameof(TransactionStatusFilter.Abandoned), selected == TransactionStatusFilter.Abandoned),
-            new SelectListItem(S["Refunded"], nameof(TransactionStatusFilter.Refunded), selected == TransactionStatusFilter.Refunded),
-        ];
-    }
+        => TransactionStatusFilterExtensions.BuildFilterItems(selected, S);
 
     private List<SelectListItem> BuildSourceFilterItems(string selected)
     {

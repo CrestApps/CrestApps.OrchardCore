@@ -3,20 +3,30 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["My Transactions"])</h1></zone>
 
-@if (Model.TotalOutstanding > 0m)
-{
-    <div class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
-        <span>@T["You have an outstanding balance."]</span>
-        <strong>@Model.Currency @Model.TotalOutstanding.ToString("0.00")</strong>
-    </div>
-}
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
 
-<div class="mb-3">
-    <div class="btn-group" role="group">
-        <a class="btn @(Model.OutstandingOnly ? "btn-outline-primary" : "btn-primary")" asp-action="Index">@T["All"]</a>
-        <a class="btn @(Model.OutstandingOnly ? "btn-primary" : "btn-outline-primary")" asp-action="Index" asp-route-outstandingOnly="true">@T["Outstanding only"]</a>
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by description"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+</form>
 
 @if (Model.Transactions.Count > 0)
 {

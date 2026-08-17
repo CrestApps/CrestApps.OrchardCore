@@ -25,7 +25,8 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 [Admin]
 public sealed class TransactionController : Controller
 {
-    private const string _outstandingOnly = "outstandingOnly";
+    private const string _optionsSearch = "Options.Search";
+    private const string _optionsStatus = "Options.Status";
 
     private readonly ITransactionManager _transactionManager;
     private readonly IAuthorizationService _authorizationService;
@@ -59,13 +60,13 @@ public sealed class TransactionController : Controller
     /// <summary>
     /// Displays the current customer's transactions.
     /// </summary>
-    /// <param name="outstandingOnly">Whether to show only outstanding transactions.</param>
+    /// <param name="options">The filter options.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     [Admin("my-transactions", "MyTransactions")]
     public async Task<IActionResult> Index(
-        bool outstandingOnly,
+        MyTransactionsOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -84,37 +85,68 @@ public sealed class TransactionController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _transactionManager.PageAsync(pager.Page, pager.PageSize, new TransactionQuery
+        var query = new TransactionQuery
         {
             OwnerId = userId,
-            OutstandingOnly = outstandingOnly,
-        });
+            Search = options.Search,
+        };
 
-        var outstandingResult = await _transactionManager.PageAsync(1, int.MaxValue, new TransactionQuery
-        {
-            OwnerId = userId,
-            OutstandingOnly = true,
-        });
+        options.Status.ApplyTo(query);
+
+        var result = await _transactionManager.PageAsync(pager.Page, pager.PageSize, query);
 
         var routeData = new RouteData();
 
-        if (outstandingOnly)
+        if (!string.IsNullOrEmpty(options.Search))
         {
-            routeData.Values.TryAdd(_outstandingOnly, true);
+            routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
+
+        if (options.Status != TransactionStatusFilter.All)
+        {
+            routeData.Values.TryAdd(_optionsStatus, options.Status);
+        }
+
+        options.Statuses = TransactionStatusFilterExtensions.BuildFilterItems(options.Status, S);
 
         var model = new MyTransactionsViewModel
         {
             Transactions = result.Entries,
-            OutstandingOnly = outstandingOnly,
-            TotalOutstanding = outstandingResult.Entries.Sum(x => x.OutstandingAmount),
-            Currency = outstandingResult.Entries.Select(x => x.Currency).Distinct().Count() == 1
-                ? outstandingResult.Entries.FirstOrDefault()?.Currency
-                : null,
+            Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Preserves the statement filter when the toolbar is submitted.
+    /// </summary>
+    /// <param name="options">The filter options.</param>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("my-transactions", "MyTransactions")]
+    public async Task<IActionResult> IndexFilterPost(MyTransactionsOptions options)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ViewOwnTransactions))
+        {
+            return Forbid();
+        }
+
+        var routeValues = new RouteValueDictionary();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            routeValues.TryAdd(_optionsSearch, options.Search);
+        }
+
+        if (options.Status != TransactionStatusFilter.All)
+        {
+            routeValues.TryAdd(_optionsStatus, options.Status);
+        }
+
+        return RedirectToAction(nameof(Index), routeValues);
     }
 
     /// <summary>

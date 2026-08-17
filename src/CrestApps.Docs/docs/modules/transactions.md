@@ -65,7 +65,7 @@ Reminders are gated behind the separate **Transaction Reminders** feature (`Cres
 
 ### Customer statement — "My Transactions"
 
-Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. It lists their transactions (with an *outstanding only* toggle), shows the total they owe, and lets them open a transaction and **Pay** an outstanding balance online.
+Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter dropdown (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
 
 ### Administrator report and console
 

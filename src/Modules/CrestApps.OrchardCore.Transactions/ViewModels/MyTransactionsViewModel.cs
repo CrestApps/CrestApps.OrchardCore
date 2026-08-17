@@ -13,22 +13,13 @@ public class MyTransactionsViewModel
     public IReadOnlyCollection<Transaction> Transactions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether only outstanding transactions are shown.
+    /// Gets or sets the filter options applied to the statement.
     /// </summary>
-    public bool OutstandingOnly { get; set; }
-
-    /// <summary>
-    /// Gets or sets the total amount the customer still owes across every outstanding transaction.
-    /// </summary>
-    public decimal TotalOutstanding { get; set; }
-
-    /// <summary>
-    /// Gets or sets the currency of <see cref="TotalOutstanding"/>, when a single currency applies.
-    /// </summary>
-    public string Currency { get; set; }
+    public MyTransactionsOptions Options { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the pager shape rendered under the statement.
     /// </summary>
     public dynamic Pager { get; set; }
 }
+
