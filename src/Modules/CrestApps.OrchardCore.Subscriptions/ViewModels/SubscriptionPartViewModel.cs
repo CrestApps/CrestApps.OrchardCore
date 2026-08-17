@@ -12,7 +12,7 @@ public class SubscriptionPartViewModel
     /// <summary>
     /// Gets or sets the one-time amount charged when the subscription starts.
     /// </summary>
-    public double? InitialAmount { get; set; }
+    public decimal? InitialAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the line item description for the initial one-time amount.

@@ -80,13 +80,6 @@ public static class StripeCurrency
     }
 
     /// <summary>
-    /// Converts an amount expressed in major units (carried as <see cref="double"/> in legacy models) to
-    /// integer minor units for the currency. Prefer the <see cref="decimal"/> overload for new code.
-    /// </summary>
-    public static long ToMinorUnits(double amount, string currency)
-        => ToMinorUnits((decimal)amount, currency);
-
-    /// <summary>
     /// Converts integer minor units received from Stripe back to a major-unit amount for the currency.
     /// </summary>
     public static decimal FromMinorUnits(long minorUnits, string currency)
@@ -95,13 +88,6 @@ public static class StripeCurrency
 
         return minorUnits / Pow10(decimals);
     }
-
-    /// <summary>
-    /// Converts integer minor units received from Stripe to a major-unit amount rounded to the currency's
-    /// precision and returned as a <see cref="double"/> for legacy models.
-    /// </summary>
-    public static double FromMinorUnitsToDouble(long minorUnits, string currency)
-        => (double)FromMinorUnits(minorUnits, currency);
 
     private static decimal Pow10(int exponent)
         => exponent switch

@@ -11,7 +11,7 @@ public class MoneyTests
     [InlineData(10, 10.00)]
     public void Round_RoundsToTwoDecimalsAwayFromZero(double amount, double expected)
     {
-        Assert.Equal(expected, Money.Round(amount));
+        Assert.Equal((decimal)expected, Money.Round((decimal)amount));
     }
 
     [Theory]
@@ -21,17 +21,15 @@ public class MoneyTests
     [InlineData(0.005, 1)]
     public void ToMinorUnits_ConvertsMajorUnitsToWholeMinorUnits(double amount, long expected)
     {
-        Assert.Equal(expected, Money.ToMinorUnits(amount));
+        Assert.Equal(expected, Money.ToMinorUnits((decimal)amount));
     }
 
     [Fact]
-    public void AreEqual_TreatsAccumulatedFloatingPointSumsAsEqual()
+    public void AreEqual_TreatsSubCentDifferencesAsEqual()
     {
-        // 19.99 + 10.00 is not guaranteed to be bit-identical to 29.99 in binary floating point.
-        // The default '==' operator can therefore report a valid payment as a mismatch; Money must not.
-        var summed = 19.99 + 10.00;
+        var summed = 19.99m + 10.00m;
 
-        Assert.True(Money.AreEqual(summed, 29.99));
+        Assert.True(Money.AreEqual(summed, 29.99m));
     }
 
     [Theory]
@@ -41,16 +39,16 @@ public class MoneyTests
     [InlineData(0.0, 0.0, true)]
     public void AreEqual_ComparesAtMinorUnitPrecision(double left, double right, bool expected)
     {
-        Assert.Equal(expected, Money.AreEqual(left, right));
+        Assert.Equal(expected, Money.AreEqual((decimal)left, (decimal)right));
     }
 
     [Fact]
     public void AreEqual_Nullable_IsFalseWhenEitherOperandIsNull()
     {
-        Assert.False(Money.AreEqual((double?)null, 10d));
-        Assert.False(Money.AreEqual(10d, (double?)null));
-        Assert.False(Money.AreEqual((double?)null, (double?)null));
-        Assert.True(Money.AreEqual((double?)10d, (double?)10d));
+        Assert.False(Money.AreEqual((decimal?)null, 10m));
+        Assert.False(Money.AreEqual(10m, (decimal?)null));
+        Assert.False(Money.AreEqual((decimal?)null, (decimal?)null));
+        Assert.True(Money.AreEqual((decimal?)10m, (decimal?)10m));
     }
 
     [Theory]
@@ -61,6 +59,6 @@ public class MoneyTests
     [InlineData(0.51, 0.50, true)]
     public void IsGreaterThan_ComparesAtMinorUnitPrecision(double amount, double threshold, bool expected)
     {
-        Assert.Equal(expected, Money.IsGreaterThan(amount, threshold));
+        Assert.Equal(expected, Money.IsGreaterThan((decimal)amount, (decimal)threshold));
     }
 }

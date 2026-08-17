@@ -27,7 +27,7 @@ public sealed class DefaultCheckoutRefundServiceTests
             "Stripe",
             ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
 
-        var service = CreateService(refundStore, provider, out _);
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator());
 
         // Act
         var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
@@ -53,7 +53,7 @@ public sealed class DefaultCheckoutRefundServiceTests
             "Stripe",
             ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
 
-        var service = CreateService(refundStore, provider, out _);
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator());
 
         await service.RequestRefundAsync(new RequestPaymentRefundContext
         {
@@ -80,7 +80,7 @@ public sealed class DefaultCheckoutRefundServiceTests
             "Stripe",
             ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
 
-        var service = CreateService(refundStore, provider, out _);
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator());
 
         await service.RequestRefundAsync(new RequestPaymentRefundContext
         {
@@ -105,8 +105,10 @@ public sealed class DefaultCheckoutRefundServiceTests
         // Arrange
         var refundStore = new InMemoryPaymentRefundStore();
 
-        // The resolver has no provider matching the attempt's provider key.
-        var service = CreateService(refundStore, refundProvider: null, out _);
+        // A calculator is present so tax can be allocated; the manual review here is caused purely by the
+        // resolver having no provider matching the attempt's provider key.
+        var calculator = new FakeTaxRefundCalculator();
+        var service = CreateService(refundStore, refundProvider: null, out _, calculator);
 
         // Act
         var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
@@ -118,6 +120,59 @@ public sealed class DefaultCheckoutRefundServiceTests
         // Assert
         Assert.Equal(RefundStatus.PendingManualReview, refund.Status);
         Assert.Equal(110m, refund.RefundGrossAmount);
+        Assert.Equal(10m, refund.RefundTaxAmount);
+    }
+
+    [Fact]
+    public async Task RequestRefundAsync_WhenTaxCollectedButNoCalculator_RecordsManualReviewAndDoesNotCallProvider()
+    {
+        // Arrange
+        var refundStore = new InMemoryPaymentRefundStore();
+        var provider = new FakeCheckoutPaymentRefundProvider(
+            "Stripe",
+            ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
+
+        // The original payment collected tax (ConfirmedTaxAmount = 10) but no tax refund calculator is
+        // registered, so the refunded tax cannot be allocated from the snapshot.
+        var service = CreateService(refundStore, provider, out _, taxRefundCalculator: null);
+
+        // Act
+        var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
+        {
+            SessionId = SessionId,
+            OriginalTransactionId = TransactionId,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(RefundStatus.PendingManualReview, refund.Status);
+        Assert.Equal("tax_allocation_unavailable", refund.FailureCode);
+        Assert.Equal(0m, refund.RefundTaxAmount);
+        Assert.Empty(provider.Contexts);
+    }
+
+    [Fact]
+    public async Task RequestRefundAsync_WhenNoTaxCollectedAndNoCalculator_RefundsWithoutTax()
+    {
+        // Arrange
+        var refundStore = new InMemoryPaymentRefundStore();
+        var provider = new FakeCheckoutPaymentRefundProvider(
+            "Stripe",
+            ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
+
+        // A payment that never collected tax has nothing to allocate, so a zero-tax refund is correct.
+        var service = CreateService(refundStore, provider, out _, taxRefundCalculator: null, taxable: false);
+
+        // Act
+        var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
+        {
+            SessionId = SessionId,
+            OriginalTransactionId = TransactionId,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(RefundStatus.Succeeded, refund.Status);
+        Assert.Equal(0m, refund.RefundTaxAmount);
+        Assert.Single(provider.Contexts);
     }
 
     [Fact]
@@ -140,23 +195,56 @@ public sealed class DefaultCheckoutRefundServiceTests
         }, TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.Equal(RefundStatus.Succeeded, refund.Status);
         Assert.Equal(10m, refund.RefundTaxAmount);
         Assert.Equal(100m, refund.RefundTaxableAmount);
+    }
+
+    [Fact]
+    public async Task RequestRefundAsync_WhenSnapshotTaxDisagreesWithConfirmedTax_RecordsManualReview()
+    {
+        // Arrange
+        var refundStore = new InMemoryPaymentRefundStore();
+        var provider = new FakeCheckoutPaymentRefundProvider(
+            "Stripe",
+            ctx => PaymentRefundResult.Success("re_1", ctx.Amount, ctx.Currency, GatewayMode.Testing));
+
+        // The snapshot claims 5 tax while the authoritative confirmed ledger recorded 10. The snapshot
+        // must not be trusted to allocate, so the refund goes to manual review instead of allocating a
+        // tax amount that was never confirmed as collected.
+        var service = CreateService(refundStore, provider, out _, new FakeTaxRefundCalculator(), snapshotTaxAmount: 5m);
+
+        // Act
+        var refund = await service.RequestRefundAsync(new RequestPaymentRefundContext
+        {
+            SessionId = SessionId,
+            OriginalTransactionId = TransactionId,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(RefundStatus.PendingManualReview, refund.Status);
+        Assert.Equal("tax_allocation_unavailable", refund.FailureCode);
+        Assert.Equal(0m, refund.RefundTaxAmount);
+        Assert.Empty(provider.Contexts);
     }
 
     private static DefaultCheckoutRefundService CreateService(
         InMemoryPaymentRefundStore refundStore,
         FakeCheckoutPaymentRefundProvider refundProvider,
         out InMemoryPaymentAttemptStore attemptStore,
-        ITaxRefundCalculator taxRefundCalculator = null)
+        ITaxRefundCalculator taxRefundCalculator = null,
+        bool taxable = true,
+        decimal? snapshotTaxAmount = null)
     {
-        var snapshot = new TaxSnapshot
-        {
-            Currency = "usd",
-            TaxableAmount = 100m,
-            TaxAmount = 10m,
-            TotalAmount = 110m,
-        };
+        var snapshot = taxable
+            ? new TaxSnapshot
+            {
+                Currency = "usd",
+                TaxableAmount = 100m,
+                TaxAmount = snapshotTaxAmount ?? 10m,
+                TotalAmount = 100m + (snapshotTaxAmount ?? 10m),
+            }
+            : null;
 
         var attempt = new PaymentAttempt
         {
@@ -168,7 +256,7 @@ public sealed class DefaultCheckoutRefundServiceTests
             ProviderReference = TransactionId,
             Currency = "usd",
             ConfirmedAmount = 100,
-            ConfirmedTaxAmount = 10,
+            ConfirmedTaxAmount = taxable ? 10 : 0,
             TaxSnapshot = snapshot,
             GatewayMode = GatewayMode.Testing,
         };

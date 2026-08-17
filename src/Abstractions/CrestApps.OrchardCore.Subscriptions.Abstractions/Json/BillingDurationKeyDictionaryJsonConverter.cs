@@ -7,7 +7,7 @@ namespace Json;
 /// <summary>
 /// Converts dictionaries keyed by <see cref="BillingDurationKey"/> to and from JSON objects.
 /// </summary>
-public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionary<BillingDurationKey, double>>
+public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionary<BillingDurationKey, decimal>>
 {
     /// <summary>
     /// Gets the shared converter instance.
@@ -21,9 +21,9 @@ public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionar
     /// <param name="typeToConvert">The dictionary type to convert.</param>
     /// <param name="options">The serializer options used while reading dictionary keys.</param>
     /// <returns>The dictionary represented by the JSON object.</returns>
-    public override Dictionary<BillingDurationKey, double> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Dictionary<BillingDurationKey, decimal> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var dictionary = new Dictionary<BillingDurationKey, double>();
+        var dictionary = new Dictionary<BillingDurationKey, decimal>();
 
         if (reader.TokenType != JsonTokenType.StartObject)
         {
@@ -42,7 +42,7 @@ public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionar
                 var keyString = reader.GetString();
                 var key = JsonSerializer.Deserialize<BillingDurationKey>(keyString, options);
                 reader.Read();
-                var value = reader.GetDouble();
+                var value = reader.GetDecimal();
                 dictionary.Add(key, value);
             }
         }
@@ -56,7 +56,7 @@ public class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionar
     /// <param name="writer">The JSON writer that receives the dictionary object.</param>
     /// <param name="dictionary">The dictionary to write.</param>
     /// <param name="options">The serializer options used while writing dictionary keys.</param>
-    public override void Write(Utf8JsonWriter writer, Dictionary<BillingDurationKey, double> dictionary, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Dictionary<BillingDurationKey, decimal> dictionary, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 

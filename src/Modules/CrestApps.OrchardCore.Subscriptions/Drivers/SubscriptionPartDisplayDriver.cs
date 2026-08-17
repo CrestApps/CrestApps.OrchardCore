@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;

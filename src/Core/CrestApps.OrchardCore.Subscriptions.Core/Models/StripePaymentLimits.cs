@@ -8,10 +8,10 @@ public class StripePaymentLimits
     /// <summary>
     /// Gets or sets the minimum payment amount allowed by Stripe.
     /// </summary>
-    public double? Minimum { get; set; }
+    public decimal? Minimum { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum payment amount allowed by Stripe.
     /// </summary>
-    public double? Maximum { get; set; }
+    public decimal? Maximum { get; set; }
 }

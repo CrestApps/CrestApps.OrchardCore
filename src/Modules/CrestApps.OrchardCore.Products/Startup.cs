@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Drivers;
 using CrestApps.OrchardCore.Products.Services;

@@ -16,7 +16,7 @@ public static class ViewLocalizerExtensions
     /// <param name="duration">The number of duration units in the billing period.</param>
     /// <param name="amount">The recurring amount to format as currency.</param>
     /// <returns>A localized HTML string that describes the recurring amount.</returns>
-    public static LocalizedHtmlString GetAmount(this IViewLocalizer T, DurationType type, int duration, double amount)
+    public static LocalizedHtmlString GetAmount(this IViewLocalizer T, DurationType type, int duration, decimal amount)
     {
         return type switch
         {

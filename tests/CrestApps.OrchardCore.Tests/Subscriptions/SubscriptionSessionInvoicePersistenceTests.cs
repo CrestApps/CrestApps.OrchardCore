@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -35,11 +35,11 @@ public class SubscriptionSessionInvoicePersistenceTests
         var handler = CreateHandler();
 
         // Act
-        var session = await CreateActivatedSessionAsync(handler, price: 20.00);
+        var session = await CreateActivatedSessionAsync(handler, price: 20.00m);
 
         // Assert
         Assert.True(session.TryGet<Invoice>(out var invoice));
-        Assert.Equal(20.00, invoice.GrandTotal, 2);
+        Assert.Equal(20.00m, invoice.GrandTotal, 2);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class SubscriptionSessionInvoicePersistenceTests
     {
         // Arrange
         var handler = CreateHandler();
-        var session = await CreateActivatedSessionAsync(handler, price: 20.00);
+        var session = await CreateActivatedSessionAsync(handler, price: 20.00m);
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
 
@@ -64,7 +64,7 @@ public class SubscriptionSessionInvoicePersistenceTests
         Assert.Equal(invoice.Currency, reloadedInvoice.Currency);
     }
 
-    private static async Task<SubscriptionSession> CreateActivatedSessionAsync(PaymentSubscriptionHandler handler, double price)
+    private static async Task<SubscriptionSession> CreateActivatedSessionAsync(PaymentSubscriptionHandler handler, decimal price)
     {
         var contentItem = new ContentItem { ContentType = "Plan" };
         contentItem.Weld(new ProductPart { Price = price });

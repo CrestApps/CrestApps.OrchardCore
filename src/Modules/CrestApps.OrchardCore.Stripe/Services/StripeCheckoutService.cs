@@ -89,7 +89,7 @@ public sealed class StripeCheckoutService : IStripeCheckoutService
             Currency = session.Currency,
             // Stripe reports amounts in the smallest currency unit; convert using the currency's precision.
             AmountTotal = session.AmountTotal.HasValue
-                ? StripeCurrency.FromMinorUnitsToDouble(session.AmountTotal.Value, session.Currency)
+                ? StripeCurrency.FromMinorUnits(session.AmountTotal.Value, session.Currency)
                 : 0,
             Livemode = session.Livemode,
         };

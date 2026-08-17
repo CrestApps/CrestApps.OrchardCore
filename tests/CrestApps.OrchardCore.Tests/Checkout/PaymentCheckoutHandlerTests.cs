@@ -29,8 +29,8 @@ public sealed class PaymentCheckoutHandlerTests
             Order = 1,
             BillingItems =
             [
-                new BillingItem { Id = "book", Description = "Book", Amount = 30d },
-                new BillingItem { Id = "plan", Description = "Membership", Amount = 10d, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new BillingItem { Id = "book", Description = "Book", Amount = 30m },
+                new BillingItem { Id = "plan", Description = "Membership", Amount = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
             ],
         });
 
@@ -42,13 +42,13 @@ public sealed class PaymentCheckoutHandlerTests
         // Assert
         Assert.True(session.TryGet<CheckoutInvoice>(out var invoice));
         Assert.Equal(Currency, invoice.Currency);
-        Assert.Equal(30d, invoice.InitialPaymentAmount);
-        Assert.Equal(10d, invoice.FirstRecurringPaymentAmount);
-        Assert.Equal(40d, invoice.DueNow);
+        Assert.Equal(30m, invoice.InitialPaymentAmount);
+        Assert.Equal(10m, invoice.FirstRecurringPaymentAmount);
+        Assert.Equal(40m, invoice.DueNow);
         Assert.Equal(2, invoice.LineItems.Length);
 
         // The grand total is the amount due now because the no-op tax service applies no tax.
-        Assert.Equal(40d, invoice.GrandTotal);
+        Assert.Equal(40m, invoice.GrandTotal);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class PaymentCheckoutHandlerTests
         };
         var handler = CreateHandler(reconciliation);
 
-        var session = BuildSessionWithInvoice(30d);
+        var session = BuildSessionWithInvoice(30m);
         var flow = new CheckoutFlow(session);
 
         // Act & Assert: no exception means completion succeeded.
@@ -81,7 +81,7 @@ public sealed class PaymentCheckoutHandlerTests
         var reconciliation = new StubReconciliationService { Result = result };
         var handler = CreateHandler(reconciliation);
 
-        var session = BuildSessionWithInvoice(30d);
+        var session = BuildSessionWithInvoice(30m);
         var flow = new CheckoutFlow(session);
 
         // Act & Assert
@@ -103,7 +103,7 @@ public sealed class PaymentCheckoutHandlerTests
             () => handler.CompletingAsync(new CheckoutFlowCompletingContext(flow)));
     }
 
-    private static CheckoutSession BuildSessionWithInvoice(double oneTimeAmount)
+    private static CheckoutSession BuildSessionWithInvoice(decimal oneTimeAmount)
     {
         var session = new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending };
         session.Put(new CheckoutInvoice

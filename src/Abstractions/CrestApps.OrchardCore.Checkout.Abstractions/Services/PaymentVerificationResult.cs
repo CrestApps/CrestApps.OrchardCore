@@ -31,12 +31,12 @@ public sealed class PaymentVerificationResult
     /// <summary>
     /// The amount the provider actually charged, in the invoice currency.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// The tax the provider actually collected, when it collects tax dynamically.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// The immutable tax determination the provider (or checkout) captured for the charge.

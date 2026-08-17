@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using Microsoft.Extensions.DependencyInjection;

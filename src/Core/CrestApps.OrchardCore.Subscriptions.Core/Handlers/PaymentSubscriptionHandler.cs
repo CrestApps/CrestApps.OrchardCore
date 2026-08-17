@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -339,7 +339,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         } while (true);
     }
 
-    private static double GetMinimumAllowed(string currency)
+    private static decimal GetMinimumAllowed(string currency)
     {
         if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
         {

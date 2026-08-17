@@ -142,6 +142,16 @@ When the [Reports](reports) feature is enabled, the Subscriptions module contrib
 | Tax collected | Tax collected in the period, with a monthly breakdown. |
 | Product performance | Revenue and tax grouped by product. |
 
+## Recipes and schema
+
+Subscription plans are content items, so they are defined and imported through Orchard Core's built-in `ContentDefinition` and `Content` recipe steps — no subscription-specific recipe step is required.
+
+When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for the module's content parts, giving editor validation and IntelliSense while authoring content-definition recipes:
+
+- **`SubscriptionPart`** — its billing payload (`InitialAmount`, `BillingDuration`, `DurationType`, `BillingCycleLimit`, `SubscriptionDayDelay`, `Sort`, and the initial-amount description) and the `SubscriptionPartSettings.ContentTypes` option.
+- **`SubscriptionSummaryPart`** — the dashboard-widget marker part.
+- **`TenantOnboardingPart`** — its `RecipeName` and `FeatureProfile` payload, contributed only when the **Tenant Onboarding** feature is also enabled.
+
 ## Installation
 
 ```bash

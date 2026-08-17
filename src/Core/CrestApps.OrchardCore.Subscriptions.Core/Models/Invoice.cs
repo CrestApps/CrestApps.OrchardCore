@@ -17,23 +17,23 @@ public class Invoice
     /// <summary>
     /// Gets or sets the one-time amount due at checkout before recurring subscription charges.
     /// </summary>
-    public double? InitialPaymentAmount { get; set; }
+    public decimal? InitialPaymentAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the first recurring subscription payment amount due at checkout.
     /// </summary>
-    public double? FirstSubscriptionPaymentAmount { get; set; }
+    public decimal? FirstSubscriptionPaymentAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the amount due immediately for the invoice before tax is included in the grand total.
     /// </summary>
-    public double DueNow { get; set; }
+    public decimal DueNow { get; set; }
 
     /// <summary>
     /// Gets or sets the tax charged on the amount due now, determined by the taxation framework. This is
     /// <c>0</c> when the Taxation feature is disabled.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the detailed tax lines that explain <see cref="TaxAmount"/>. Never collapse multiple tax
@@ -62,7 +62,7 @@ public class Invoice
     /// <summary>
     /// Gets or sets the full invoice amount including tax.
     /// </summary>
-    public double GrandTotal { get; set; }
+    public decimal GrandTotal { get; set; }
 
     /// <summary>
     /// Gets or sets the number of billing cycles represented by the invoice, when a limit applies.
@@ -73,7 +73,7 @@ public class Invoice
     /// Gets or sets subtotal amounts grouped by billing duration.
     /// </summary>
     [JsonConverter(typeof(BillingDurationKeyDictionaryJsonConverter))]
-    public Dictionary<BillingDurationKey, double> Subtotals { get; set; }
+    public Dictionary<BillingDurationKey, decimal> Subtotals { get; set; }
 
     /// <summary>
     /// Gets or sets the invoice line items.

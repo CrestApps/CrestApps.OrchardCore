@@ -25,7 +25,7 @@ Because the part is a normal Orchard Core content part, products participate in 
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `Price` | `double` | The price of the item, expressed in the site's configured currency. |
+| `Price` | `decimal` | The price of the item, expressed in the site's configured currency. |
 | `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
 
 The part's behavior is configured per content type through **`ProductPartSettings`**:
@@ -94,7 +94,13 @@ A price on a content item is not enough to sell it: a cart or order must capture
 - **`ISellableProduct`** is an immutable snapshot of a purchasable product — its content item id and version, content type, SKU, title, unit price (as `decimal`), currency, product type, and tax classification codes.
 - **`IProductSnapshotResolver`** resolves an `ISellableProduct` from a `ProductSnapshotContext` (the content item plus the requested currency, quantity, SKU, and variant). The default resolver reads the **Product** and **Taxation** parts and the `ProductPartSettings`.
 
-The snapshot deliberately carries money as `decimal`, the authoritative representation for stored financial records, even though the editable `ProductPart.Price` remains a `double` for backward compatibility. A consuming module (a future storefront, or the existing checkout) resolves a snapshot once and stores it, so the order of record is stable and self-contained.
+Both the editable `ProductPart.Price` and the snapshot's unit price are `decimal`, the authoritative representation for stored financial records, so a price never suffers binary floating-point drift between editing and settlement. A consuming module (a future storefront, or the existing checkout) resolves a snapshot once and stores it, so the order of record is stable and self-contained.
+
+## Recipes and schema
+
+The **Product** part is defined and imported through Orchard Core's built-in `ContentDefinition` recipe step, and product content items through the built-in `Content` step — no product-specific recipe step is required.
+
+When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for the `ProductPart` (its `Price` and `Sku` payload and the `ProductPartSettings.Type` option), giving editor validation and IntelliSense while authoring content-definition recipes.
 
 ## Installation
 

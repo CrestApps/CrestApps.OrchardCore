@@ -15,8 +15,8 @@ public class PaymentStepGuardTests
     {
         var invoice = new Invoice
         {
-            InitialPaymentAmount = initial,
-            FirstSubscriptionPaymentAmount = recurring,
+            InitialPaymentAmount = (decimal?)initial,
+            FirstSubscriptionPaymentAmount = (decimal?)recurring,
         };
 
         Assert.True(PaymentStepSubscriptionFlowDisplayDriver.PaymentIsRequired(invoice));
@@ -24,15 +24,15 @@ public class PaymentStepGuardTests
 
     [Theory]
     [InlineData(null, null)]
-    [InlineData(0d, 0d)]
-    [InlineData(0d, null)]
-    [InlineData(null, 0d)]
+    [InlineData(0.0, 0.0)]
+    [InlineData(0.0, null)]
+    [InlineData(null, 0.0)]
     public void PaymentIsRequired_WhenNothingIsDue_ReturnsFalse(double? initial, double? recurring)
     {
         var invoice = new Invoice
         {
-            InitialPaymentAmount = initial,
-            FirstSubscriptionPaymentAmount = recurring,
+            InitialPaymentAmount = (decimal?)initial,
+            FirstSubscriptionPaymentAmount = (decimal?)recurring,
         };
 
         Assert.False(PaymentStepSubscriptionFlowDisplayDriver.PaymentIsRequired(invoice));
@@ -43,7 +43,7 @@ public class PaymentStepGuardTests
     {
         var invoice = new Invoice
         {
-            InitialPaymentAmount = 19.99,
+            InitialPaymentAmount = 19.99m,
         };
 
         var options = new PaymentMethodOptions();
@@ -57,7 +57,7 @@ public class PaymentStepGuardTests
     {
         var invoice = new Invoice
         {
-            InitialPaymentAmount = 19.99,
+            InitialPaymentAmount = 19.99m,
         };
 
         var options = new PaymentMethodOptions();
@@ -75,7 +75,7 @@ public class PaymentStepGuardTests
     {
         var invoice = new Invoice
         {
-            FirstSubscriptionPaymentAmount = 10.00,
+            FirstSubscriptionPaymentAmount = 10.00m,
         };
 
         var options = new PaymentMethodOptions();

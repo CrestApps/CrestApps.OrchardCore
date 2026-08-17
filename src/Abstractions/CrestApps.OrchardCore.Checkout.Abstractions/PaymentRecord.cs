@@ -17,13 +17,13 @@ public sealed class PaymentRecord
     /// <summary>
     /// The amount that was charged, in major currency units.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// The tax portion of <see cref="Amount"/>, determined at the time the transaction was created. Zero
     /// when taxation is disabled.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// The immutable tax determination captured when this transaction was created.

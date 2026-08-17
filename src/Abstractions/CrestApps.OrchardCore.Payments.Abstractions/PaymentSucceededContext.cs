@@ -8,7 +8,7 @@ public sealed class PaymentSucceededContext : PaymentEventContextBase
     /// <summary>
     /// Gets or sets the amount paid for the successful payment.
     /// </summary>
-    public double AmountPaid { get; set; }
+    public decimal AmountPaid { get; set; }
 
     /// <summary>
     /// Gets or sets the currency used for the successful payment.

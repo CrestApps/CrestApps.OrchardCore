@@ -18,7 +18,7 @@ public class CreatePaymentIntentRequest : StripeWriteRequest
     /// <summary>
     /// Gets or sets the amount to charge in major currency units.
     /// </summary>
-    public double? Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO currency code for the PaymentIntent.

@@ -9,7 +9,7 @@
     var decimals = CurrencyScale.GetDecimalPlaces(Model.Currency);
     var amountFormat = "N" + decimals;
 
-    string Money(double value)
+    string Money(decimal value)
     {
         return string.IsNullOrEmpty(Model.Currency)
             ? value.ToString(amountFormat, culture)
@@ -96,7 +96,7 @@
                                     <span>&mdash; @line.JurisdictionName</span>
                                 }
                             </td>
-                            <td class="text-end text-muted">@Money((double)line.TaxAmount)</td>
+                            <td class="text-end text-muted">@Money(line.TaxAmount)</td>
                         </tr>
                     }
                 }

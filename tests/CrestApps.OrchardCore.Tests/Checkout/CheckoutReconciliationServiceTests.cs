@@ -25,7 +25,7 @@ public sealed class CheckoutReconciliationServiceTests
             Status = PaymentStatus.Succeeded,
             TransactionId = "txn-1",
             ReportsAuthoritativeAmount = true,
-            Amount = 42d,
+            Amount = 42m,
             Currency = "USD",
         });
 
@@ -42,7 +42,7 @@ public sealed class CheckoutReconciliationServiceTests
 
         Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
         Assert.True(metadata.Payments.ContainsKey("txn-1"));
-        Assert.Equal(42d, metadata.Payments["txn-1"].Amount);
+        Assert.Equal(42m, metadata.Payments["txn-1"].Amount);
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed class CheckoutReconciliationServiceTests
             Status = PaymentStatus.Succeeded,
             TransactionId = "txn-1",
             ReportsAuthoritativeAmount = true,
-            Amount = 1d,
+            Amount = 1m,
             Currency = "USD",
         });
 
@@ -194,7 +194,7 @@ public sealed class CheckoutReconciliationServiceTests
             Status = PaymentStatus.Succeeded,
             TransactionId = "txn-1",
             ReportsAuthoritativeAmount = true,
-            Amount = 42d,
+            Amount = 42m,
             Currency = "EUR",
         });
 
@@ -220,7 +220,7 @@ public sealed class CheckoutReconciliationServiceTests
         {
             Status = PaymentStatus.Succeeded,
             ReportsAuthoritativeAmount = true,
-            Amount = 42d,
+            Amount = 42m,
             Currency = "USD",
         });
 
@@ -261,7 +261,7 @@ public sealed class CheckoutReconciliationServiceTests
         Assert.Contains("obligation-1", result.SettledObligationIds);
 
         Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
-        Assert.Equal(42d, metadata.Payments["deferred-1"].Amount);
+        Assert.Equal(42m, metadata.Payments["deferred-1"].Amount);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public sealed class CheckoutReconciliationServiceTests
         // twice must not double-record or lose the confirmed payment.
         var attempt = NewAttempt("obligation-1", PaymentAttemptState.Succeeded);
         attempt.TransactionId = "txn-1";
-        attempt.ConfirmedAmount = 42d;
+        attempt.ConfirmedAmount = 42m;
         var store = new InMemoryPaymentAttemptStore(attempt);
 
         var provider = new FakeCheckoutPaymentProvider(ProviderKey, _ => new PaymentVerificationResult
@@ -361,7 +361,7 @@ public sealed class CheckoutReconciliationServiceTests
             ProviderKey = ProviderKey,
             ObligationId = obligationId,
             IdempotencyKey = "idem-" + obligationId,
-            ExpectedAmount = 42d,
+            ExpectedAmount = 42m,
             Currency = "USD",
             State = state,
         };

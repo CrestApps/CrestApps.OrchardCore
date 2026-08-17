@@ -13,7 +13,7 @@ public class ConfirmPaymentIntentResponse
     /// <summary>
     /// Gets or sets the confirmed amount in major currency units, when available.
     /// </summary>
-    public double? Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO currency code for the PaymentIntent.

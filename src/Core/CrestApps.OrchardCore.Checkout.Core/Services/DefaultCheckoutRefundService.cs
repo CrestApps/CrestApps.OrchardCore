@@ -22,6 +22,13 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
 {
     private const string RefundLockPrefix = "CHECKOUT_REFUND_";
 
+    /// <summary>
+    /// The failure code recorded on a refund that collected tax on the original payment but could not
+    /// allocate the refunded tax from an immutable snapshot, so it must be settled by an operator instead
+    /// of being refunded with a fabricated zero-tax allocation.
+    /// </summary>
+    private const string TaxAllocationUnavailableCode = "tax_allocation_unavailable";
+
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly IPaymentAttemptStore _attemptStore;
     private readonly IPaymentRefundStore _refundStore;
@@ -125,6 +132,23 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
             // Persist the refund BEFORE calling the provider so a crash can never strand a real refund.
             await _refundStore.CreateAsync(refund, cancellationToken);
 
+            if (refund.Status == RefundStatus.PendingManualReview)
+            {
+                // The original payment collected tax but the refunded tax could not be allocated from an
+                // immutable snapshot (for example the Taxation feature is disabled or the snapshot is
+                // missing). Do not refund with a fabricated zero-tax allocation, which would corrupt the
+                // tax ledger and audit trail. Leave it for an operator and never call the provider.
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(
+                        "Refund '{RefundId}' for transaction '{TransactionId}' collected tax but no tax allocation is available; recorded for manual review.",
+                        refund.Id,
+                        context.OriginalTransactionId);
+                }
+
+                return refund;
+            }
+
             var provider = _refundProviderResolver.GetProvider(attempt.ProviderKey);
 
             if (provider is null)
@@ -166,10 +190,21 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
         var refundTax = 0m;
         var refundTaxable = requestedGross;
         IList<TaxLine> lines = [];
+        var requiresManualTaxReview = false;
+
+        // The confirmed ledger amount is the authoritative record of tax actually collected. The tax
+        // snapshot may only be trusted to allocate the refund when it agrees with that authoritative
+        // amount at currency minor-unit precision; otherwise allocating from the snapshot could refund
+        // tax that was never collected (or the wrong amount).
+        var confirmedTaxMinor = CurrencyScale.ToMinorUnits((decimal)attempt.ConfirmedTaxAmount, attempt.Currency);
 
         var calculator = _taxRefundCalculators.FirstOrDefault();
+        var canAllocateTax = calculator is not null &&
+            attempt.TaxSnapshot is not null &&
+            attempt.TaxSnapshot.TaxAmount > 0m &&
+            CurrencyScale.ToMinorUnits(attempt.TaxSnapshot.TaxAmount, attempt.Currency) == confirmedTaxMinor;
 
-        if (calculator is not null && attempt.TaxSnapshot is not null && attempt.TaxSnapshot.TotalAmount > 0)
+        if (canAllocateTax)
         {
             // A full refund of the whole charge reuses the snapshot's captured amounts exactly; a partial
             // refund allocates proportionally. Either way the tax comes from the historical snapshot.
@@ -183,6 +218,15 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
             refundTax = taxResult.RefundedTaxAmount;
             refundTaxable = taxResult.RefundedTaxableAmount;
             lines = taxResult.Lines ?? [];
+        }
+        else if (confirmedTaxMinor > 0)
+        {
+            // The original payment provably collected tax (the confirmed ledger amount is positive) but it
+            // cannot be allocated from a trustworthy immutable snapshot (missing, disabled calculator, or a
+            // snapshot that disagrees with the confirmed amount). Refunding a fabricated zero tax would
+            // under-report the refunded tax liability, so route the refund to manual review instead.
+            requiresManualTaxReview = true;
+            refundTaxable = requestedGross;
         }
 
         var refund = new PaymentRefund
@@ -200,7 +244,11 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
             TaxLines = lines,
             Reason = context.Reason,
             GatewayMode = attempt.GatewayMode,
-            Status = RefundStatus.Requested,
+            Status = requiresManualTaxReview ? RefundStatus.PendingManualReview : RefundStatus.Requested,
+            FailureCode = requiresManualTaxReview ? TaxAllocationUnavailableCode : null,
+            FailureReason = requiresManualTaxReview
+                ? "The original payment collected tax but the refunded tax could not be allocated from an immutable tax snapshot."
+                : null,
         };
 
         // The refund id seeds the provider idempotency key so retrying the same refund record never

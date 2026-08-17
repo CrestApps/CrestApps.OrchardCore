@@ -32,9 +32,9 @@ public sealed class CheckoutTaxServiceTests
         var invoice = new CheckoutInvoice
         {
             Currency = Currency,
-            InitialPaymentAmount = 30d,
-            DueNow = 30d,
-            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 30d }],
+            InitialPaymentAmount = 30m,
+            DueNow = 30m,
+            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 30m }],
         };
 
         var flow = new CheckoutFlow(new CheckoutSession { SessionId = "s1", Status = CheckoutSessionStatus.Pending });
@@ -43,9 +43,9 @@ public sealed class CheckoutTaxServiceTests
         await service.ApplyTaxAsync(invoice, flow, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3d, invoice.TaxAmount);
-        Assert.Equal(33d, invoice.GrandTotal);
-        Assert.Equal(33d, invoice.InitialPaymentAmount);
+        Assert.Equal(3m, invoice.TaxAmount);
+        Assert.Equal(33m, invoice.GrandTotal);
+        Assert.Equal(33m, invoice.InitialPaymentAmount);
         Assert.NotNull(invoice.TaxSnapshot);
     }
 
@@ -65,9 +65,9 @@ public sealed class CheckoutTaxServiceTests
         var invoice = new CheckoutInvoice
         {
             Currency = Currency,
-            InitialPaymentAmount = 50d,
-            DueNow = 50d,
-            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 50d }],
+            InitialPaymentAmount = 50m,
+            DueNow = 50m,
+            LineItems = [new CheckoutLineItem { Id = "book", Quantity = 1, UnitPrice = 50m }],
         };
 
         var flow = new CheckoutFlow(new CheckoutSession { SessionId = "s1", Status = CheckoutSessionStatus.Pending });
@@ -76,8 +76,8 @@ public sealed class CheckoutTaxServiceTests
         await service.ApplyTaxAsync(invoice, flow, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(50d, invoice.GrandTotal);
-        Assert.Equal(50d, invoice.InitialPaymentAmount);
+        Assert.Equal(50m, invoice.GrandTotal);
+        Assert.Equal(50m, invoice.InitialPaymentAmount);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class CheckoutTaxServiceTests
         var invoice = new CheckoutInvoice
         {
             Currency = Currency,
-            DueNow = 0d,
+            DueNow = 0m,
             LineItems = [],
         };
 
@@ -101,7 +101,7 @@ public sealed class CheckoutTaxServiceTests
         await service.ApplyTaxAsync(invoice, flow, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0d, invoice.GrandTotal);
+        Assert.Equal(0m, invoice.GrandTotal);
         Assert.Equal(0, taxService.CallCount);
         Assert.Null(invoice.TaxSnapshot);
     }
@@ -120,14 +120,14 @@ public sealed class CheckoutTaxServiceTests
 
         var service = CreateService(taxService);
 
-        var payment = new PaymentRecord { Amount = 22d, Currency = Currency };
+        var payment = new PaymentRecord { Amount = 22m, Currency = Currency };
         var session = new CheckoutSession { SessionId = "s1", Status = CheckoutSessionStatus.Pending };
 
         // Act
         await service.ApplyRecurringTaxAsync(payment, session, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2d, payment.TaxAmount);
+        Assert.Equal(2m, payment.TaxAmount);
         Assert.NotNull(payment.TaxSnapshot);
     }
 

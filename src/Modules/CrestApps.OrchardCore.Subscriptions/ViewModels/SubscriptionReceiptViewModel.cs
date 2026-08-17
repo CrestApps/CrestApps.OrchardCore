@@ -47,12 +47,12 @@ public class SubscriptionReceiptViewModel
     /// <summary>
     /// Gets or sets the total amount captured by the transaction, including tax.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the tax portion of <see cref="Amount"/>.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the payment status of the transaction.

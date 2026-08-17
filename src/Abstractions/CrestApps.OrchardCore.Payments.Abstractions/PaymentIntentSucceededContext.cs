@@ -8,7 +8,7 @@ public sealed class PaymentIntentSucceededContext : PaymentEventContextBase
     /// <summary>
     /// Gets or sets the amount associated with the successful payment intent, when available.
     /// </summary>
-    public double? Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the currency used by the successful payment intent.

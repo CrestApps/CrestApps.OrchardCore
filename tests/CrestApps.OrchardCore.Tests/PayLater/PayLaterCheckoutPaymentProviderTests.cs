@@ -25,8 +25,8 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         {
             Id = "attempt-1",
             ProviderReference = "ref-1",
-            ExpectedAmount = 42d,
-            ExpectedTaxAmount = 2d,
+            ExpectedAmount = 42m,
+            ExpectedTaxAmount = 2m,
             Currency = "USD",
         };
 
@@ -39,7 +39,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         Assert.Equal(PaymentStatus.Succeeded, result.Status);
         Assert.False(result.ReportsAuthoritativeAmount);
         Assert.Equal("ref-1", result.TransactionId);
-        Assert.Equal(42d, result.Amount);
+        Assert.Equal(42m, result.Amount);
         Assert.Equal("USD", result.Currency);
         Assert.Equal(GatewayMode.Testing, result.GatewayMode);
     }
@@ -74,7 +74,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
             ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
             ObligationId = CheckoutObligations.OneTime,
             ProviderReference = "ref-1",
-            ExpectedAmount = 99d,
+            ExpectedAmount = 99m,
             Currency = "USD",
             State = PaymentAttemptState.Pending,
         };
@@ -93,7 +93,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         Assert.Equal(PaymentAttemptState.Succeeded, attempt.State);
         Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
         Assert.True(metadata.Payments.ContainsKey("ref-1"));
-        Assert.Equal(99d, metadata.Payments["ref-1"].Amount);
+        Assert.Equal(99m, metadata.Payments["ref-1"].Amount);
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public class SubscriptionPaymentHandlerWebhookTests
             sessionStore.Object,
             new NullSubscriptionTaxService());
 
-        var context = CreateContext(session.SessionId, subscriptionId: "sub_1", transactionId: "in_1", amount: 30.00);
+        var context = CreateContext(session.SessionId, subscriptionId: "sub_1", transactionId: "in_1", amount: 30.00m);
 
         // Simulate the same webhook being delivered twice.
         await handler.PaymentSucceededAsync(context);
@@ -63,7 +63,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         var payment = payments.Payments["sub_1"];
 
         // The amount must not be doubled by the second delivery.
-        Assert.Equal(30.00, payment.Amount, 2);
+        Assert.Equal(30.00m, payment.Amount, 2);
         Assert.Equal(PaymentStatus.Succeeded, payment.Status);
         Assert.Equal("in_1", payment.TransactionId);
         Assert.Equal(Currency, payment.Currency);
@@ -103,7 +103,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         {
             Reason = PaymentReason.SubscriptionCycle,
             TransactionId = "in_renew_1",
-            AmountPaid = 30.00,
+            AmountPaid = 30.00m,
             Currency = Currency,
             GatewayId = "stripe",
             Subscription = new SubscriptionPaymentInfo
@@ -120,7 +120,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         Assert.True(session.TryGet<PaymentsMetadata>(out var metadata));
         Assert.Single(metadata.Payments);
         Assert.True(metadata.Payments.ContainsKey("in_renew_1"));
-        Assert.Equal(30.00, metadata.Payments["in_renew_1"].Amount, 2);
+        Assert.Equal(30.00m, metadata.Payments["in_renew_1"].Amount, 2);
         Assert.Equal(PaymentStatus.Succeeded, metadata.Payments["in_renew_1"].Status);
         Assert.Equal("sub_1", metadata.Payments["in_renew_1"].SubscriptionId);
 
@@ -176,7 +176,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         {
             Reason = PaymentReason.SubscriptionCycle,
             TransactionId = "in_renew_tax_1",
-            AmountPaid = 108.00,
+            AmountPaid = 108.00m,
             Currency = Currency,
             GatewayId = "stripe",
             Subscription = new SubscriptionPaymentInfo
@@ -192,7 +192,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         var payment = metadata.Payments["in_renew_tax_1"];
 
         // The $108 charge is treated as tax-inclusive at 8%, so $8 is the embedded tax.
-        Assert.Equal(8.00, payment.TaxAmount, 2);
+        Assert.Equal(8.00m, payment.TaxAmount, 2);
         Assert.NotNull(payment.TaxSnapshot);
         Assert.Equal(8m, payment.TaxSnapshot.TaxAmount);
     }
@@ -216,7 +216,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         {
             Reason = PaymentReason.Manual,
             TransactionId = "in_manual_1",
-            AmountPaid = 10.00,
+            AmountPaid = 10.00m,
             Currency = Currency,
             GatewayId = "stripe",
         };
@@ -228,7 +228,7 @@ public class SubscriptionPaymentHandlerWebhookTests
         sessionStore.Verify(s => s.GetAsync(It.IsAny<string>()), Times.Never);
     }
 
-    private static PaymentSucceededContext CreateContext(string sessionId, string subscriptionId, string transactionId, double amount)
+    private static PaymentSucceededContext CreateContext(string sessionId, string subscriptionId, string transactionId, decimal amount)
     {
         var context = new PaymentSucceededContext
         {

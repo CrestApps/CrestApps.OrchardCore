@@ -14,7 +14,7 @@ public sealed class CheckoutObligationsTests
         var invoice = new CheckoutInvoice
         {
             Currency = "USD",
-            InitialPaymentAmount = 25d,
+            InitialPaymentAmount = 25m,
             LineItems = [],
         };
 
@@ -32,7 +32,7 @@ public sealed class CheckoutObligationsTests
         var invoice = new CheckoutInvoice
         {
             Currency = "USD",
-            InitialPaymentAmount = 0d,
+            InitialPaymentAmount = 0m,
             LineItems = [],
         };
 
@@ -56,9 +56,9 @@ public sealed class CheckoutObligationsTests
             Currency = "USD",
             LineItems =
             [
-                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10d, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "b", Quantity = 1, UnitPrice = 20d, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "c", Quantity = 1, UnitPrice = 30d, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "b", Quantity = 1, UnitPrice = 20m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "c", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
             ],
         };
 
@@ -78,10 +78,10 @@ public sealed class CheckoutObligationsTests
         var invoice = new CheckoutInvoice
         {
             Currency = "USD",
-            InitialPaymentAmount = 5d,
+            InitialPaymentAmount = 5m,
             LineItems =
             [
-                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10d, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "a", Quantity = 1, UnitPrice = 10m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
             ],
         };
 
@@ -103,8 +103,8 @@ public sealed class CheckoutObligationsTests
             Currency = "USD",
             LineItems =
             [
-                new CheckoutLineItem { Id = "free", Quantity = 1, UnitPrice = 0d, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
-                new CheckoutLineItem { Id = "paid", Quantity = 1, UnitPrice = 30d, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "free", Quantity = 1, UnitPrice = 0m, Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 } },
+                new CheckoutLineItem { Id = "paid", Quantity = 1, UnitPrice = 30m, Plan = new RecurringPlan { DurationType = DurationType.Year, BillingDuration = 1 } },
             ],
         };
 

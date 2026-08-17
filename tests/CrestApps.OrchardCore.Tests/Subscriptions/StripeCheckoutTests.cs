@@ -177,7 +177,7 @@ public class StripeCheckoutTests
         Assert.Equal(expected, details.IsPaid);
     }
 
-    private static InvoiceLineItem Subscription(string id, double unitPrice, DurationType durationType, int billingDuration)
+    private static InvoiceLineItem Subscription(string id, decimal unitPrice, DurationType durationType, int billingDuration)
         => new()
         {
             Id = id,

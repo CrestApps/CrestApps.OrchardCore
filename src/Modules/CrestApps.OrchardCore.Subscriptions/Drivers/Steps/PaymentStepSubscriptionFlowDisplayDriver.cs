@@ -105,5 +105,5 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
         => PaymentIsRequired(invoice) && options.PaymentMethods.Count == 0;
 
     internal static bool PaymentIsRequired(Invoice invoice)
-        => invoice.InitialPaymentAmount is > 0d || invoice.FirstSubscriptionPaymentAmount is > 0d;
+        => invoice.InitialPaymentAmount is > 0m || invoice.FirstSubscriptionPaymentAmount is > 0m;
 }

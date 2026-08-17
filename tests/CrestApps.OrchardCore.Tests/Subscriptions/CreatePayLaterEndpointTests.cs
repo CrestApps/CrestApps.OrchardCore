@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Payments;
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -34,7 +34,7 @@ public class CreatePayLaterEndpointTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = await CreatePendingSessionWithInvoiceAsync(handler, price: 30.00, initialAmount: null);
+        var session = await CreatePendingSessionWithInvoiceAsync(handler, price: 30.00m, initialAmount: null);
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
 
@@ -54,7 +54,7 @@ public class CreatePayLaterEndpointTests
 
         var subscriptionInfo = await paymentSession.GetSubscriptionPaymentInfoAsync(session.SessionId);
         Assert.NotNull(subscriptionInfo);
-        Assert.Equal(30.00, subscriptionInfo.Payments.Values.Sum(x => x.Amount), 2);
+        Assert.Equal(30.00m, subscriptionInfo.Payments.Values.Sum(x => x.Amount), 2);
         Assert.All(subscriptionInfo.Payments.Values, p => Assert.Equal(PaymentStatus.Succeeded, p.Status));
 
         // The session must carry the resulting subscription metadata attributed to the Pay Later gateway.
@@ -77,7 +77,7 @@ public class CreatePayLaterEndpointTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = await CreatePendingSessionWithInvoiceAsync(handler, price: 9.99, initialAmount: 50.00);
+        var session = await CreatePendingSessionWithInvoiceAsync(handler, price: 9.99m, initialAmount: 50.00m);
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
 
@@ -92,10 +92,10 @@ public class CreatePayLaterEndpointTests
 
         var initialInfo = await paymentSession.GetInitialPaymentInfoAsync(session.SessionId);
         Assert.NotNull(initialInfo);
-        Assert.Equal(50.00, initialInfo.Amount);
+        Assert.Equal(50.00m, initialInfo.Amount);
 
         var subscriptionInfo = await paymentSession.GetSubscriptionPaymentInfoAsync(session.SessionId);
-        Assert.Equal(9.99, subscriptionInfo.Payments.Values.Sum(x => x.Amount), 2);
+        Assert.Equal(9.99m, subscriptionInfo.Payments.Values.Sum(x => x.Amount), 2);
 
         var flow = new SubscriptionFlow(session, new ContentItem());
         await handler.CompletingAsync(new SubscriptionFlowCompletingContext(flow));
@@ -121,9 +121,9 @@ public class CreatePayLaterEndpointTests
         var invoice = new Invoice
         {
             Currency = Currency,
-            FirstSubscriptionPaymentAmount = 10.00,
-            DueNow = 10.00,
-            GrandTotal = 10.00,
+            FirstSubscriptionPaymentAmount = 10.00m,
+            DueNow = 10.00m,
+            GrandTotal = 10.00m,
             LineItems =
             [
                 new InvoiceLineItem
@@ -131,7 +131,7 @@ public class CreatePayLaterEndpointTests
                     Id = "plan",
                     Description = "plan",
                     Quantity = 1,
-                    UnitPrice = 10.00,
+                    UnitPrice = 10.00m,
                     Subscription = new SubscriptionPlan
                     {
                         BillingDuration = 0,
@@ -153,8 +153,8 @@ public class CreatePayLaterEndpointTests
 
     private static async Task<SubscriptionSession> CreatePendingSessionWithInvoiceAsync(
         PaymentSubscriptionHandler handler,
-        double price,
-        double? initialAmount)
+        decimal price,
+        decimal? initialAmount)
     {
         var contentItem = new ContentItem { ContentType = "Plan" };
         contentItem.Weld(new ProductPart { Price = price });

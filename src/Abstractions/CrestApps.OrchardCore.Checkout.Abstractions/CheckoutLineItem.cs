@@ -25,7 +25,7 @@ public sealed class CheckoutLineItem
     /// <summary>
     /// The price of each unit, expressed in major currency units.
     /// </summary>
-    public double UnitPrice { get; set; }
+    public decimal UnitPrice { get; set; }
 
     /// <summary>
     /// The recurring plan for this line item, or <see langword="null"/> for a one-time charge.
@@ -37,6 +37,6 @@ public sealed class CheckoutLineItem
     /// own scale keeps zero-decimal (for example JPY) and three-decimal (for example KWD) currencies exact.
     /// </summary>
     /// <param name="currency">The ISO-4217 currency code used to determine rounding precision.</param>
-    public double GetLineTotal(string currency = null)
+    public decimal GetLineTotal(string currency = null)
         => Money.Round(Quantity * UnitPrice, currency);
 }

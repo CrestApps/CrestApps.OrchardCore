@@ -189,7 +189,7 @@ public static class CreateSetupIntentEndpoint
         customerRequest.Metadata["userId"] = user.UserId;
     }
 
-    private static double GetMinimumAllowed(string currency)
+    private static decimal GetMinimumAllowed(string currency)
     {
         if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
         {

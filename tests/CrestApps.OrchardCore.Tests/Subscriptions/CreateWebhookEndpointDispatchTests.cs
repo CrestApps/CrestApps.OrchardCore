@@ -32,7 +32,7 @@ public class CreateWebhookEndpointDispatchTests
 
         Assert.NotNull(handler.PaymentIntentContext);
         Assert.Equal("pi_1", handler.PaymentIntentContext.TransactionId);
-        Assert.Equal(20.00, handler.PaymentIntentContext.Amount);
+        Assert.Equal(20.00m, handler.PaymentIntentContext.Amount);
         Assert.Equal("usd", handler.PaymentIntentContext.Currency);
         Assert.Equal(GatewayMode.Testing, handler.PaymentIntentContext.GatewayMode);
         Assert.Equal("42", handler.PaymentIntentContext.Data["order"]);
@@ -94,7 +94,7 @@ public class CreateWebhookEndpointDispatchTests
 
         Assert.NotNull(handler.PaymentSucceededContext);
         Assert.Equal(PaymentReason.SubscriptionCycle, handler.PaymentSucceededContext.Reason);
-        Assert.Equal(9.99, handler.PaymentSucceededContext.AmountPaid);
+        Assert.Equal(9.99m, handler.PaymentSucceededContext.AmountPaid);
         Assert.Equal("subscription_cycle", handler.PaymentSucceededContext.Data["billing_reason"]);
     }
 

@@ -65,7 +65,7 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
                 .Select(product => new ReportBar(
                     ProductLabel(product.ContentType),
                     FormatCurrency(product.GrossRevenue, currency),
-                    maxRevenue > 0 ? product.GrossRevenue / maxRevenue : 0))));
+                    maxRevenue > 0 ? (double)(product.GrossRevenue / maxRevenue) : 0))));
 
             var columns = new[]
             {

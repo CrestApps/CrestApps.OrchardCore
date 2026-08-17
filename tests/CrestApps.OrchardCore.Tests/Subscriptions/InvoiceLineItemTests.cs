@@ -14,9 +14,9 @@ public class InvoiceLineItemTests
         var lineItem = new InvoiceLineItem
         {
             Quantity = quantity,
-            UnitPrice = unitPrice,
+            UnitPrice = (decimal)unitPrice,
         };
 
-        Assert.Equal(expected, lineItem.GetLineTotal());
+        Assert.Equal((decimal)expected, lineItem.GetLineTotal());
     }
 }

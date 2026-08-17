@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Payments;
-using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -26,8 +26,8 @@ public class PaymentSubscriptionHandlerTests
         var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
 
         var session = CreateSession(
-            OneTimeStep("content", 19.99),
-            SubscriptionStep("plan", 10.00, dayDelay: 0));
+            OneTimeStep("content", 19.99m),
+            SubscriptionStep("plan", 10.00m, dayDelay: 0));
 
         var flow = new SubscriptionFlow(session, new ContentItem());
 
@@ -35,10 +35,10 @@ public class PaymentSubscriptionHandlerTests
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
         Assert.Equal(Currency, invoice.Currency);
-        Assert.Equal(19.99, invoice.InitialPaymentAmount);
-        Assert.Equal(10.00, invoice.FirstSubscriptionPaymentAmount);
-        Assert.Equal(29.99, invoice.DueNow);
-        Assert.Equal(29.99, invoice.GrandTotal);
+        Assert.Equal(19.99m, invoice.InitialPaymentAmount);
+        Assert.Equal(10.00m, invoice.FirstSubscriptionPaymentAmount);
+        Assert.Equal(29.99m, invoice.DueNow);
+        Assert.Equal(29.99m, invoice.GrandTotal);
         Assert.Equal(2, invoice.LineItems.Length);
     }
 
@@ -47,7 +47,7 @@ public class PaymentSubscriptionHandlerTests
     {
         var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
 
-        var contentItem = CreatePlanContentItem(price: 9.99, initialAmount: 50, initialDescription: "setup");
+        var contentItem = CreatePlanContentItem(price: 9.99m, initialAmount: 50, initialDescription: "setup");
 
         var session = new SubscriptionSession
         {
@@ -64,7 +64,7 @@ public class PaymentSubscriptionHandlerTests
         Assert.Equal(2, paymentStep.BillingItems.Length);
 
         var recurring = Assert.Single(paymentStep.BillingItems, b => b.Subscription != null);
-        Assert.Equal(9.99, recurring.BillingAmount);
+        Assert.Equal(9.99m, recurring.BillingAmount);
         Assert.Equal("plan-version-1", recurring.Id);
 
         var setupFee = Assert.Single(paymentStep.BillingItems, b => b.Subscription == null);
@@ -104,7 +104,7 @@ public class PaymentSubscriptionHandlerTests
         // the one-time setup fee rather than resolving to a $0.00 invoice.
         var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
 
-        var contentItem = CreatePlanContentItem(price: 9.99, initialAmount: 50, initialDescription: "setup");
+        var contentItem = CreatePlanContentItem(price: 9.99m, initialAmount: 50, initialDescription: "setup");
         contentItem.DisplayText = "Plan A 9.99/month + 50 setup fee";
 
         var session = new SubscriptionSession
@@ -122,9 +122,9 @@ public class PaymentSubscriptionHandlerTests
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
         Assert.Equal(50, invoice.InitialPaymentAmount);
-        Assert.Equal(9.99, invoice.FirstSubscriptionPaymentAmount);
-        Assert.Equal(59.99, invoice.DueNow);
-        Assert.Equal(59.99, invoice.GrandTotal);
+        Assert.Equal(9.99m, invoice.FirstSubscriptionPaymentAmount);
+        Assert.Equal(59.99m, invoice.DueNow);
+        Assert.Equal(59.99m, invoice.GrandTotal);
         Assert.Equal(2, invoice.LineItems.Length);
     }
 
@@ -134,18 +134,18 @@ public class PaymentSubscriptionHandlerTests
         var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession());
 
         var session = CreateSession(
-            OneTimeStep("content", 25.00),
-            SubscriptionStep("plan", 10.00, dayDelay: 30));
+            OneTimeStep("content", 25.00m),
+            SubscriptionStep("plan", 10.00m, dayDelay: 30));
 
         var flow = new SubscriptionFlow(session, new ContentItem());
 
         await handler.ActivatedAsync(new SubscriptionFlowActivatedContext(flow));
 
         Assert.True(session.TryGet<Invoice>(out var invoice));
-        Assert.Equal(25.00, invoice.InitialPaymentAmount);
+        Assert.Equal(25.00m, invoice.InitialPaymentAmount);
         // A delayed subscription is not collected on the first payment.
         Assert.Null(invoice.FirstSubscriptionPaymentAmount);
-        Assert.Equal(25.00, invoice.DueNow);
+        Assert.Equal(25.00m, invoice.DueNow);
     }
 
     [Fact]
@@ -154,15 +154,15 @@ public class PaymentSubscriptionHandlerTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = CreateSession(OneTimeStep("content", 19.99));
+        var session = CreateSession(OneTimeStep("content", 19.99m));
         session.SessionId = "session-1";
 
         session.Put(new Invoice
         {
             Currency = Currency,
-            InitialPaymentAmount = 19.99,
-            DueNow = 19.99,
-            GrandTotal = 19.99,
+            InitialPaymentAmount = 19.99m,
+            DueNow = 19.99m,
+            GrandTotal = 19.99m,
             LineItems = [],
         });
 
@@ -170,7 +170,7 @@ public class PaymentSubscriptionHandlerTests
         await paymentSession.SetAsync(session.SessionId, new InitialPaymentMetadata
         {
             TransactionId = "pi_1",
-            Amount = 10.00 + 9.99,
+            Amount = 10.00m + 9.99m,
             Currency = Currency,
             GatewayId = "stripe",
         });
@@ -182,7 +182,7 @@ public class PaymentSubscriptionHandlerTests
         Assert.True(session.TryGet<PaymentsMetadata>(out var payments));
         Assert.True(payments.Payments.ContainsKey("pi_1"));
         Assert.Equal(PaymentStatus.Succeeded, payments.Payments["pi_1"].Status);
-        Assert.Equal(19.99, payments.Payments["pi_1"].Amount, 2);
+        Assert.Equal(19.99m, payments.Payments["pi_1"].Amount, 2);
     }
 
     [Fact]
@@ -191,22 +191,22 @@ public class PaymentSubscriptionHandlerTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = CreateSession(OneTimeStep("content", 19.99));
+        var session = CreateSession(OneTimeStep("content", 19.99m));
         session.SessionId = "session-2";
 
         session.Put(new Invoice
         {
             Currency = Currency,
-            InitialPaymentAmount = 19.99,
-            DueNow = 19.99,
-            GrandTotal = 19.99,
+            InitialPaymentAmount = 19.99m,
+            DueNow = 19.99m,
+            GrandTotal = 19.99m,
             LineItems = [],
         });
 
         await paymentSession.SetAsync(session.SessionId, new InitialPaymentMetadata
         {
             TransactionId = "pi_2",
-            Amount = 18.00,
+            Amount = 18.00m,
             Currency = Currency,
             GatewayId = "stripe",
         });
@@ -223,15 +223,15 @@ public class PaymentSubscriptionHandlerTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = CreateSession(SubscriptionStep("plan", 30.00, dayDelay: 0));
+        var session = CreateSession(SubscriptionStep("plan", 30.00m, dayDelay: 0));
         session.SessionId = "session-3";
 
         session.Put(new Invoice
         {
             Currency = Currency,
-            FirstSubscriptionPaymentAmount = 30.00,
-            DueNow = 30.00,
-            GrandTotal = 30.00,
+            FirstSubscriptionPaymentAmount = 30.00m,
+            DueNow = 30.00m,
+            GrandTotal = 30.00m,
             LineItems = [],
         });
 
@@ -240,8 +240,8 @@ public class PaymentSubscriptionHandlerTests
         {
             Payments = new Dictionary<string, PaymentInfo>
             {
-                ["sub_a"] = new PaymentInfo { TransactionId = "in_a", Amount = 20.00, Status = PaymentStatus.Succeeded, Currency = Currency },
-                ["sub_b"] = new PaymentInfo { TransactionId = "in_b", Amount = 10.00, Status = PaymentStatus.Succeeded, Currency = Currency },
+                ["sub_a"] = new PaymentInfo { TransactionId = "in_a", Amount = 20.00m, Status = PaymentStatus.Succeeded, Currency = Currency },
+                ["sub_b"] = new PaymentInfo { TransactionId = "in_b", Amount = 10.00m, Status = PaymentStatus.Succeeded, Currency = Currency },
             },
         });
 
@@ -260,15 +260,15 @@ public class PaymentSubscriptionHandlerTests
         var paymentSession = PaymentTestHelpers.CreatePaymentSession();
         var handler = CreateHandler(paymentSession);
 
-        var session = CreateSession(SubscriptionStep("plan", 30.00, dayDelay: 0));
+        var session = CreateSession(SubscriptionStep("plan", 30.00m, dayDelay: 0));
         session.SessionId = "session-4";
 
         session.Put(new Invoice
         {
             Currency = Currency,
-            FirstSubscriptionPaymentAmount = 30.00,
-            DueNow = 30.00,
-            GrandTotal = 30.00,
+            FirstSubscriptionPaymentAmount = 30.00m,
+            DueNow = 30.00m,
+            GrandTotal = 30.00m,
             LineItems = [],
         });
 
@@ -276,7 +276,7 @@ public class PaymentSubscriptionHandlerTests
         {
             Payments = new Dictionary<string, PaymentInfo>
             {
-                ["sub_a"] = new PaymentInfo { TransactionId = "in_a", Amount = 20.00, Status = PaymentStatus.Succeeded, Currency = Currency },
+                ["sub_a"] = new PaymentInfo { TransactionId = "in_a", Amount = 20.00m, Status = PaymentStatus.Succeeded, Currency = Currency },
             },
         });
 
@@ -326,7 +326,7 @@ public class PaymentSubscriptionHandlerTests
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
     }
 
-    private static ContentItem CreatePlanContentItem(double price, double? initialAmount, string initialDescription)
+    private static ContentItem CreatePlanContentItem(decimal price, decimal? initialAmount, string initialDescription)
     {
         var contentItem = new ContentItem { ContentType = "Plan" };
 
@@ -358,7 +358,7 @@ public class PaymentSubscriptionHandlerTests
         return session;
     }
 
-    private static SubscriptionFlowStep OneTimeStep(string key, double amount)
+    private static SubscriptionFlowStep OneTimeStep(string key, decimal amount)
         => new()
         {
             Key = key,
@@ -375,7 +375,7 @@ public class PaymentSubscriptionHandlerTests
             ],
         };
 
-    private static SubscriptionFlowStep SubscriptionStep(string key, double amount, int dayDelay)
+    private static SubscriptionFlowStep SubscriptionStep(string key, decimal amount, int dayDelay)
         => new()
         {
             Key = key,

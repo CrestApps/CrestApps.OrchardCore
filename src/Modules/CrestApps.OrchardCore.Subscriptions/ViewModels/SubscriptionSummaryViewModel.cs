@@ -28,5 +28,5 @@ public class SubscriptionSummaryViewModel
     /// <summary>
     /// Gets or sets the total revenue amount from successful subscription payments.
     /// </summary>
-    public double TotalRevenue { get; set; }
+    public decimal TotalRevenue { get; set; }
 }

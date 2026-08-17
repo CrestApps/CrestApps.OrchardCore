@@ -22,7 +22,7 @@ public sealed class SubscriptionTransactionIndexMigrations : DataMigration
             .Column<string>("ContentItemId", column => column.WithLength(26))
             .Column<string>("SessionId", column => column.WithLength(26))
             .Column<string>("Status", column => column.WithLength(20))
-            .Column<double>("Amount")
+            .Column<decimal>("Amount")
             .Column<string>("ContentItemVersionId", column => column.WithLength(26))
             .Column<string>("GatewayId", column => column.WithLength(50))
             .Column<string>("GatewayMode", column => column.WithLength(50))
@@ -47,7 +47,7 @@ public sealed class SubscriptionTransactionIndexMigrations : DataMigration
     public async Task<int> UpdateFrom1Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<SubscriptionTransactionIndex>(table => table
-            .AddColumn<double>("TaxAmount")
+            .AddColumn<decimal>("TaxAmount")
         );
 
         return 2;

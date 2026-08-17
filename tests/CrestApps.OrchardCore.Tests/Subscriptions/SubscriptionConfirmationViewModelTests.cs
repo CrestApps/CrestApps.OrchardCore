@@ -19,8 +19,8 @@ public class SubscriptionConfirmationViewModelTests
         session.Put(new Invoice
         {
             Currency = "usd",
-            DueNow = 29.99,
-            GrandTotal = 59.98,
+            DueNow = 29.99m,
+            GrandTotal = 59.98m,
         });
         session.Put(new SubscriptionsMetadata
         {
@@ -38,7 +38,7 @@ public class SubscriptionConfirmationViewModelTests
         var model = SubscriptionConfirmationViewModel.Create(session, _options);
 
         Assert.NotNull(model.Invoice);
-        Assert.Equal(29.99, model.Invoice.DueNow, 2);
+        Assert.Equal(29.99m, model.Invoice.DueNow, 2);
         Assert.Single(model.Subscriptions);
         Assert.Equal("sub_1", model.Subscriptions[0].SubscriptionId);
     }

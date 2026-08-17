@@ -12,12 +12,12 @@ public sealed class SubscriptionTransactionIndex : MapIndex
     /// <summary>
     /// Gets or sets the amount captured for the transaction.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the tax portion of the transaction amount.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time associated with the transaction record.

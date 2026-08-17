@@ -1,16 +1,18 @@
 using OrchardCore.ContentManagement;
 
-namespace CrestApps.OrchardCore.Payments.Core.Models;
+namespace CrestApps.OrchardCore.Products.Core.Models;
 
 /// <summary>
-/// Represents product pricing data attached to an Orchard Core content item.
+/// Represents product pricing data attached to an Orchard Core content item. This part is owned by the
+/// Products domain; payment and checkout consume the resolved sellable snapshot rather than this part
+/// directly.
 /// </summary>
 public sealed class ProductPart : ContentPart
 {
     /// <summary>
     /// Gets or sets the product price.
     /// </summary>
-    public double Price { get; set; }
+    public decimal Price { get; set; }
 
     /// <summary>
     /// Gets or sets the stock-keeping unit that uniquely identifies the product for selling and

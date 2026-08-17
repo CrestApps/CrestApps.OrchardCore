@@ -73,7 +73,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         // Stripe charges a single gross amount; the checkout composed it from the taxable base plus the
         // tax it determined, so the intent is created for base + tax.
-        var grossAmount = (decimal)attempt.ExpectedAmount + (decimal)attempt.ExpectedTaxAmount;
+        var grossAmount = attempt.ExpectedAmount + attempt.ExpectedTaxAmount;
 
         try
         {
@@ -157,7 +157,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                 // Stripe collected minus that tax. This both settles the correct net/tax split and lets the
                 // framework reject a settlement whose gross fell short of what was expected.
                 var grossCharged = StripeCurrency.FromMinorUnits(intent.AmountReceived, intent.Currency);
-                var taxAmount = (decimal)attempt.ExpectedTaxAmount;
+                var taxAmount = attempt.ExpectedTaxAmount;
                 var netCharged = grossCharged - taxAmount;
 
                 return new PaymentVerificationResult
@@ -165,8 +165,8 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                     Status = PaymentStatus.Succeeded,
                     ReportsAuthoritativeAmount = true,
                     TransactionId = intent.Id,
-                    Amount = (double)netCharged,
-                    TaxAmount = (double)taxAmount,
+                    Amount = netCharged,
+                    TaxAmount = taxAmount,
                     TaxSnapshot = attempt.TaxSnapshot,
                     Currency = intent.Currency,
                     GatewayMode = gatewayMode,

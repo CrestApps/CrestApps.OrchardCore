@@ -8,7 +8,7 @@ public sealed class RevenueSummary
     /// <summary>
     /// Gets or sets the total gross revenue.
     /// </summary>
-    public double TotalRevenue { get; set; }
+    public decimal TotalRevenue { get; set; }
 
     /// <summary>
     /// Gets or sets the number of succeeded transactions.
@@ -18,12 +18,12 @@ public sealed class RevenueSummary
     /// <summary>
     /// Gets or sets the average value of a succeeded transaction.
     /// </summary>
-    public double AverageTransactionValue { get; set; }
+    public decimal AverageTransactionValue { get; set; }
 
     /// <summary>
     /// Gets or sets the total tax collected.
     /// </summary>
-    public double TotalTax { get; set; }
+    public decimal TotalTax { get; set; }
 }
 
 /// <summary>
@@ -39,12 +39,12 @@ public sealed class MonthlyRevenueBucket
     /// <summary>
     /// Gets or sets the gross revenue for the month.
     /// </summary>
-    public double Revenue { get; set; }
+    public decimal Revenue { get; set; }
 
     /// <summary>
     /// Gets or sets the tax collected for the month.
     /// </summary>
-    public double Tax { get; set; }
+    public decimal Tax { get; set; }
 
     /// <summary>
     /// Gets or sets the number of succeeded transactions for the month.
@@ -143,10 +143,10 @@ public sealed class ProductPerformanceRow
     /// <summary>
     /// Gets or sets the gross revenue for the product.
     /// </summary>
-    public double GrossRevenue { get; set; }
+    public decimal GrossRevenue { get; set; }
 
     /// <summary>
     /// Gets or sets the tax collected for the product.
     /// </summary>
-    public double Tax { get; set; }
+    public decimal Tax { get; set; }
 }

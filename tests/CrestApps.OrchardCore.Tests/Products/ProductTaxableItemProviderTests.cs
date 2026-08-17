@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Taxation.Models;
@@ -48,7 +47,7 @@ public class ProductTaxableItemProviderTests
     {
         var provider = CreateProvider(ProductType.Good);
         var contentItem = CreateProductContentItem(
-            price: 149.99,
+            price: 149.99m,
             taxationPart: new JsonObject
             {
                 ["Taxable"] = true,
@@ -126,7 +125,7 @@ public class ProductTaxableItemProviderTests
         return new ProductTaxableItemProvider(contentDefinitionManager.Object);
     }
 
-    private static ContentItem CreateProductContentItem(double price, JsonObject taxationPart)
+    private static ContentItem CreateProductContentItem(decimal price, JsonObject taxationPart)
     {
         var contentItem = new ContentItem
         {

@@ -42,12 +42,12 @@ public sealed class PaymentAttempt : Entity
     /// <summary>
     /// The amount the attempt is expected to charge, before tax, in the invoice currency.
     /// </summary>
-    public double ExpectedAmount { get; set; }
+    public decimal ExpectedAmount { get; set; }
 
     /// <summary>
     /// The tax expected to be charged with this attempt, in the invoice currency.
     /// </summary>
-    public double ExpectedTaxAmount { get; set; }
+    public decimal ExpectedTaxAmount { get; set; }
 
     /// <summary>
     /// The ISO-4217 currency code of the attempt.
@@ -81,12 +81,12 @@ public sealed class PaymentAttempt : Entity
     /// only when the provider's authoritative verification succeeds, so the confirmed payment can always
     /// be rebuilt from the durable ledger without trusting session metadata.
     /// </summary>
-    public double ConfirmedAmount { get; set; }
+    public decimal ConfirmedAmount { get; set; }
 
     /// <summary>
     /// The tax the provider confirmed it actually collected with this attempt, in the invoice currency.
     /// </summary>
-    public double ConfirmedTaxAmount { get; set; }
+    public decimal ConfirmedTaxAmount { get; set; }
 
     /// <summary>
     /// The immutable tax determination captured when the attempt was confirmed, persisted so historical

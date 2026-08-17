@@ -70,7 +70,7 @@ public abstract class SubscriptionReportBase : IReport
     /// <param name="value">The amount to format.</param>
     /// <param name="currency">The currency code.</param>
     /// <returns>The formatted amount (for example <c>USD 1,234.50</c>).</returns>
-    protected static string FormatCurrency(double value, string currency)
+    protected static string FormatCurrency(decimal value, string currency)
     {
         var amount = value.ToString("N2", CultureInfo.InvariantCulture);
 

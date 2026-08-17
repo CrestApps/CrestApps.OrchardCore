@@ -2,10 +2,12 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.ContentAccessControl.Schemas;
 using CrestApps.OrchardCore.Omnichannel.Managements.Schemas;
+using CrestApps.OrchardCore.Products.Schemas;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Parts;
 using CrestApps.OrchardCore.Roles.Schemas;
+using CrestApps.OrchardCore.Subscriptions.Schemas;
 using CrestApps.OrchardCore.Users.Schemas;
 using Moq;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -37,6 +39,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(RolePickerPartSchemaDefinition), "RolePickerPart")]
     [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition), "RolePickerPart")]
     [InlineData(typeof(UserFullNamePartSchemaDefinition), "UserFullNamePart")]
+    [InlineData(typeof(ProductPartSchemaDefinition), "ProductPart")]
+    [InlineData(typeof(SubscriptionPartSchemaDefinition), "SubscriptionPart")]
+    [InlineData(typeof(TenantOnboardingPartSchemaDefinition), "TenantOnboardingPart")]
+    [InlineData(typeof(SubscriptionSummaryPartSchemaDefinition), "SubscriptionSummaryPart")]
     public void Name_ReturnsExpectedValue(Type definitionType, string expectedName)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -66,6 +72,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(RolePickerPartSchemaDefinition))]
     [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
     [InlineData(typeof(UserFullNamePartSchemaDefinition))]
+    [InlineData(typeof(ProductPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionPartSchemaDefinition))]
+    [InlineData(typeof(TenantOnboardingPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionSummaryPartSchemaDefinition))]
     public void Type_AlwaysReturnsPart(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -95,6 +105,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(RolePickerPartSchemaDefinition))]
     [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
     [InlineData(typeof(UserFullNamePartSchemaDefinition))]
+    [InlineData(typeof(ProductPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionPartSchemaDefinition))]
+    [InlineData(typeof(TenantOnboardingPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionSummaryPartSchemaDefinition))]
     public async Task GetSettingsSchemaAsync_ReturnsNonNullSerializableSchema(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -130,6 +144,10 @@ public sealed class PartSchemaDefinitionTests
     [InlineData(typeof(RolePickerPartSchemaDefinition))]
     [InlineData(typeof(RolePickerPartContentAccessControlSchemaDefinition))]
     [InlineData(typeof(UserFullNamePartSchemaDefinition))]
+    [InlineData(typeof(ProductPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionPartSchemaDefinition))]
+    [InlineData(typeof(TenantOnboardingPartSchemaDefinition))]
+    [InlineData(typeof(SubscriptionSummaryPartSchemaDefinition))]
     public async Task GetSettingsSchemaAsync_CachesResult(Type definitionType)
     {
         var instance = (IContentSchemaDefinition)Activator.CreateInstance(definitionType);
@@ -322,6 +340,89 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("FirstName", fullNameJson);
         Assert.Contains("LastName", fullNameJson);
         Assert.Contains("MiddleName", fullNameJson);
+    }
+
+    [Fact]
+    public async Task ProductPartSchema_ContainsSettingsEnumAndPayloadFields()
+    {
+        var definition = new ProductPartSchemaDefinition();
+
+        var settingsSchema = await definition.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("ProductPartSettings", settingsJson);
+        Assert.Contains("Good", settingsJson);
+        Assert.Contains("Service", settingsJson);
+        Assert.Contains("Digital", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("Price", partJson);
+        Assert.Contains("Sku", partJson);
+        Assert.Contains("\"type\":\"number\"", partJson);
+    }
+
+    [Fact]
+    public async Task SubscriptionPartSchema_ContainsBillingFieldsWithNullableAndEnumTypes()
+    {
+        var definition = new SubscriptionPartSchemaDefinition();
+
+        var settingsSchema = await definition.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var settingsJson = settingsSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("SubscriptionPartSettings", settingsJson);
+        Assert.Contains("ContentTypes", settingsJson);
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("InitialAmount", partJson);
+        Assert.Contains("BillingDuration", partJson);
+        Assert.Contains("DurationType", partJson);
+        Assert.Contains("BillingCycleLimit", partJson);
+        Assert.Contains("SubscriptionDayDelay", partJson);
+
+        // DurationType enum values are present.
+        Assert.Contains("Month", partJson);
+        Assert.Contains("Year", partJson);
+
+        // Nullable numeric and integer fields accept null.
+        Assert.Contains("\"null\"", partJson);
+        Assert.Contains("number", partJson);
+        Assert.Contains("integer", partJson);
+    }
+
+    [Fact]
+    public async Task TenantOnboardingPartSchema_ContainsProvisioningPayloadFields()
+    {
+        var definition = new TenantOnboardingPartSchemaDefinition();
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("RecipeName", partJson);
+        Assert.Contains("FeatureProfile", partJson);
+    }
+
+    [Fact]
+    public async Task SubscriptionSummaryPartSchema_IsOpenObject()
+    {
+        var definition = new SubscriptionSummaryPartSchemaDefinition();
+
+        var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
+            CreatePartContext(definition.Name),
+            TestContext.Current.CancellationToken);
+        var partJson = partSchema.Build().Root.Source.GetRawText();
+
+        Assert.StartsWith("{", partJson);
+        Assert.Contains("object", partJson);
     }
 
     private static ContentPartSchemaContext CreatePartContext(string partDefinitionName, string partName = null)

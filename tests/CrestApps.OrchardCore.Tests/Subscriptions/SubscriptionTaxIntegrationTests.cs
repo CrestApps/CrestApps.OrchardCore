@@ -52,7 +52,7 @@ public sealed class SubscriptionTaxIntegrationTests
         return jurisdictionId;
     }
 
-    private static Invoice CreateInvoice(double dueNow, params InvoiceLineItem[] lineItems)
+    private static Invoice CreateInvoice(decimal dueNow, params InvoiceLineItem[] lineItems)
         => new()
         {
             Currency = "USD",
@@ -67,12 +67,12 @@ public sealed class SubscriptionTaxIntegrationTests
         var harness = CreateHarness();
         await SeedCaliforniaPercentageRuleAsync(harness, 0.075m);
 
-        var invoice = CreateInvoice(200d, new InvoiceLineItem
+        var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
             Id = "line-1",
             Description = "Setup fee",
             Quantity = 1,
-            UnitPrice = 200d,
+            UnitPrice = 200m,
         });
 
         var service = CreateService(harness, new SubscriptionTaxProfile
@@ -82,10 +82,10 @@ public sealed class SubscriptionTaxIntegrationTests
 
         await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
 
-        Assert.Equal(15d, invoice.TaxAmount);
-        Assert.Equal(215d, invoice.GrandTotal);
+        Assert.Equal(15m, invoice.TaxAmount);
+        Assert.Equal(215m, invoice.GrandTotal);
         // The exclusive tax must be folded into the amount the up-front PaymentIntent actually charges.
-        Assert.Equal(215d, invoice.InitialPaymentAmount);
+        Assert.Equal(215m, invoice.InitialPaymentAmount);
         Assert.NotNull(invoice.TaxSnapshot);
         Assert.Equal(15m, invoice.TaxSnapshot.TaxAmount);
         var line = Assert.Single(invoice.TaxLines);
@@ -96,36 +96,36 @@ public sealed class SubscriptionTaxIntegrationTests
     [Fact]
     public async Task ApplyTax_WhenTaxationDisabled_DoesNotChangeInitialPaymentAmount()
     {
-        var invoice = CreateInvoice(200d, new InvoiceLineItem
+        var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
             Id = "line-1",
             Quantity = 1,
-            UnitPrice = 200d,
+            UnitPrice = 200m,
         });
 
         var service = new NullSubscriptionTaxService();
 
         await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
 
-        Assert.Equal(200d, invoice.InitialPaymentAmount);
+        Assert.Equal(200m, invoice.InitialPaymentAmount);
     }
 
     [Fact]
     public async Task ApplyTax_WhenTaxationDisabled_LeavesGrandTotalEqualToDueNow()
     {
-        var invoice = CreateInvoice(200d, new InvoiceLineItem
+        var invoice = CreateInvoice(200m, new InvoiceLineItem
         {
             Id = "line-1",
             Quantity = 1,
-            UnitPrice = 200d,
+            UnitPrice = 200m,
         });
 
         var service = new NullSubscriptionTaxService();
 
         await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
 
-        Assert.Equal(0d, invoice.TaxAmount);
-        Assert.Equal(200d, invoice.GrandTotal);
+        Assert.Equal(0m, invoice.TaxAmount);
+        Assert.Equal(200m, invoice.GrandTotal);
         Assert.Null(invoice.TaxSnapshot);
         Assert.Null(invoice.TaxLines);
     }
@@ -136,11 +136,11 @@ public sealed class SubscriptionTaxIntegrationTests
         var harness = CreateHarness();
         await SeedCaliforniaPercentageRuleAsync(harness, 0.075m);
 
-        var invoice = CreateInvoice(215d, new InvoiceLineItem
+        var invoice = CreateInvoice(215m, new InvoiceLineItem
         {
             Id = "line-1",
             Quantity = 1,
-            UnitPrice = 215d,
+            UnitPrice = 215m,
         });
 
         var service = CreateService(harness, new SubscriptionTaxProfile
@@ -152,8 +152,8 @@ public sealed class SubscriptionTaxIntegrationTests
         await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
 
         // Tax is extracted from the inclusive price, so the grand total remains the amount due now.
-        Assert.Equal(215d, invoice.GrandTotal);
-        Assert.True(invoice.TaxAmount > 0d);
+        Assert.Equal(215m, invoice.GrandTotal);
+        Assert.True(invoice.TaxAmount > 0m);
         Assert.NotNull(invoice.TaxSnapshot);
     }
 
@@ -174,11 +174,11 @@ public sealed class SubscriptionTaxIntegrationTests
             Rate = 0.01m,
         });
 
-        var invoice = CreateInvoice(100d, new InvoiceLineItem
+        var invoice = CreateInvoice(100m, new InvoiceLineItem
         {
             Id = "line-1",
             Quantity = 1,
-            UnitPrice = 100d,
+            UnitPrice = 100m,
         });
 
         var service = CreateService(harness, new SubscriptionTaxProfile
@@ -189,8 +189,8 @@ public sealed class SubscriptionTaxIntegrationTests
         await service.ApplyTaxAsync(invoice, CreateFlow(), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, invoice.TaxLines.Count);
-        Assert.Equal(7d, invoice.TaxAmount);
-        Assert.Equal(107d, invoice.GrandTotal);
+        Assert.Equal(7m, invoice.TaxAmount);
+        Assert.Equal(107m, invoice.GrandTotal);
     }
 
     [Fact]
@@ -201,19 +201,19 @@ public sealed class SubscriptionTaxIntegrationTests
             Currency = "USD",
             LineItems =
             [
-                new InvoiceLineItem { Id = "initial", Quantity = 1, UnitPrice = 50d },
+                new InvoiceLineItem { Id = "initial", Quantity = 1, UnitPrice = 50m },
                 new InvoiceLineItem
                 {
                     Id = "now",
                     Quantity = 1,
-                    UnitPrice = 20d,
+                    UnitPrice = 20m,
                     Subscription = new SubscriptionPlan { SubscriptionDayDelay = 0 },
                 },
                 new InvoiceLineItem
                 {
                     Id = "delayed",
                     Quantity = 1,
-                    UnitPrice = 30d,
+                    UnitPrice = 30m,
                     Subscription = new SubscriptionPlan { SubscriptionDayDelay = 30 },
                 },
             ],
@@ -236,7 +236,7 @@ public sealed class SubscriptionTaxIntegrationTests
         {
             Id = "cycle",
             Quantity = 1,
-            UnitPrice = 100d,
+            UnitPrice = 100m,
             Subscription = new SubscriptionPlan(),
         };
 
@@ -275,10 +275,10 @@ public sealed class SubscriptionTaxIntegrationTests
 
         // The provider-charged amount is authoritative and treated as tax-inclusive: at 8% the $108
         // charge yields $8 of embedded tax on a $100 net.
-        var payment = new PaymentInfo { Currency = "USD", Amount = 108d };
+        var payment = new PaymentInfo { Currency = "USD", Amount = 108m };
         await service.ApplyRecurringTaxAsync(payment, session, TestContext.Current.CancellationToken);
 
-        Assert.Equal(8d, payment.TaxAmount);
+        Assert.Equal(8m, payment.TaxAmount);
         Assert.NotNull(payment.TaxSnapshot);
         Assert.Equal(8m, payment.TaxSnapshot.TaxAmount);
 
@@ -288,10 +288,10 @@ public sealed class SubscriptionTaxIntegrationTests
         await harness.Rules.UpdateAsync(rule, TestContext.Current.CancellationToken);
 
         var firstSnapshot = payment.TaxSnapshot;
-        var secondPayment = new PaymentInfo { Currency = "USD", Amount = 109d };
+        var secondPayment = new PaymentInfo { Currency = "USD", Amount = 109m };
         await service.ApplyRecurringTaxAsync(secondPayment, session, TestContext.Current.CancellationToken);
 
-        Assert.Equal(9d, secondPayment.TaxAmount);
+        Assert.Equal(9m, secondPayment.TaxAmount);
         Assert.Equal(8m, firstSnapshot.TaxAmount);
     }
 
@@ -325,13 +325,13 @@ public sealed class SubscriptionTaxIntegrationTests
     public async Task ApplyRecurringTax_WhenTaxationDisabled_RecordsNoTax()
     {
         var session = new SubscriptionSession();
-        var payment = new PaymentInfo { Currency = "USD", Amount = 100d };
+        var payment = new PaymentInfo { Currency = "USD", Amount = 100m };
 
         var service = new NullSubscriptionTaxService();
 
         await service.ApplyRecurringTaxAsync(payment, session, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0d, payment.TaxAmount);
+        Assert.Equal(0m, payment.TaxAmount);
         Assert.Null(payment.TaxSnapshot);
     }
 }

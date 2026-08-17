@@ -13,7 +13,7 @@ public sealed class CustomerSubscriptionCreatedContext : PaymentEventContextBase
     /// <summary>
     /// Gets or sets the amount charged by the subscription plan, when the gateway provides it.
     /// </summary>
-    public double? PlanAmount { get; set; }
+    public decimal? PlanAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the currency used by the subscription plan.

@@ -181,8 +181,8 @@ public sealed class SubscriptionReportAggregatorTests
     }
 
     private static SubscriptionTransactionIndex Transaction(
-        double amount,
-        double taxAmount,
+        decimal amount,
+        decimal taxAmount,
         PaymentStatus status,
         DateTime createdUtc,
         string contentType = "Subscription")

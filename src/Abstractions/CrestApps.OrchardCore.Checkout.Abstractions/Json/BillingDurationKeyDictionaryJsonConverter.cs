@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Checkout.Json;
 /// <summary>
 /// Serializes a dictionary keyed by <see cref="BillingDurationKey"/> by encoding the key as a JSON string.
 /// </summary>
-public sealed class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionary<BillingDurationKey, double>>
+public sealed class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Dictionary<BillingDurationKey, decimal>>
 {
     /// <summary>
     /// A shared instance of the converter.
@@ -14,9 +14,9 @@ public sealed class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Di
     public static readonly BillingDurationKeyDictionaryJsonConverter Instance = new();
 
     /// <inheritdoc/>
-    public override Dictionary<BillingDurationKey, double> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Dictionary<BillingDurationKey, decimal> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var dictionary = new Dictionary<BillingDurationKey, double>();
+        var dictionary = new Dictionary<BillingDurationKey, decimal>();
 
         if (reader.TokenType != JsonTokenType.StartObject)
         {
@@ -35,7 +35,7 @@ public sealed class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Di
                 var keyString = reader.GetString();
                 var key = JsonSerializer.Deserialize<BillingDurationKey>(keyString, options);
                 reader.Read();
-                var value = reader.GetDouble();
+                var value = reader.GetDecimal();
                 dictionary.Add(key, value);
             }
         }
@@ -44,7 +44,7 @@ public sealed class BillingDurationKeyDictionaryJsonConverter : JsonConverter<Di
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, Dictionary<BillingDurationKey, double> dictionary, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Dictionary<BillingDurationKey, decimal> dictionary, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 

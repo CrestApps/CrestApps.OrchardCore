@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 
 namespace CrestApps.OrchardCore.Tests.Products;
@@ -9,17 +8,18 @@ public sealed class ProductPartContractTests
     public void ProductPart_KeepsItsSerializationName()
     {
         // The content part name is the CLR type name, which is the key ProductPart content is stored under.
-        // Renaming or moving the type would silently orphan every existing product, so the name is a
-        // contract that must not change.
+        // Renaming the type would silently orphan every existing product, so the name is a contract that
+        // must not change. Moving the type across namespaces/assemblies is safe because YesSql keys the
+        // part by its type name, not its namespace.
         Assert.Equal("ProductPart", typeof(ProductPart).Name);
     }
 
     [Fact]
-    public void ProductPart_StaysInItsOriginalNamespace()
+    public void ProductPart_IsOwnedByTheProductsDomain()
     {
-        // Physically relocating the type across assemblies is a source-breaking change for downstream
-        // consumers. The sellable seam is added instead, so the namespace stays stable.
-        Assert.Equal("CrestApps.OrchardCore.Payments.Core.Models", typeof(ProductPart).Namespace);
+        // Catalog models are owned by the Products domain, not Payments. Payment and checkout consume the
+        // resolved sellable snapshot instead of this part, so the type lives in Products.Core.
+        Assert.Equal("CrestApps.OrchardCore.Products.Core.Models", typeof(ProductPart).Namespace);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public sealed class ProductPartContractTests
         // Arrange & Act
         var part = new ProductPart
         {
-            Price = 9.99,
+            Price = 9.99m,
             Sku = "SKU-1",
         };
 

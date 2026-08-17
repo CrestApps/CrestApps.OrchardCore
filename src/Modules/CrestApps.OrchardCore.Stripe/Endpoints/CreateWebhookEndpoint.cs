@@ -167,7 +167,7 @@ public static class CreateWebhookEndpoint
 
                 var successContext = new PaymentSucceededContext()
                 {
-                    AmountPaid = StripeCurrency.FromMinorUnitsToDouble(invoice.AmountPaid, invoice.Currency),
+                    AmountPaid = StripeCurrency.FromMinorUnits(invoice.AmountPaid, invoice.Currency),
                     Currency = invoice.Currency,
                     TransactionId = invoice.Id,
                     GatewayMode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
@@ -235,7 +235,7 @@ public static class CreateWebhookEndpoint
                     var plan = subscription.Items.Data[0].Plan;
                     if (plan.Amount.HasValue)
                     {
-                        createdContext.PlanAmount = StripeCurrency.FromMinorUnitsToDouble(plan.Amount.Value, plan.Currency);
+                        createdContext.PlanAmount = StripeCurrency.FromMinorUnits(plan.Amount.Value, plan.Currency);
                     }
                     createdContext.PlanCurrency = subscription.Items.Data[0].Plan.Currency;
                     createdContext.PlanInterval = subscription.Items.Data[0].Plan.Interval;
@@ -260,7 +260,7 @@ public static class CreateWebhookEndpoint
                     GatewayMode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     GatewayId = StripeConstants.ProcessorKey,
                     Currency = paymentIntent.Currency,
-                    Amount = StripeCurrency.FromMinorUnitsToDouble(paymentIntent.Amount, paymentIntent.Currency),
+                    Amount = StripeCurrency.FromMinorUnits(paymentIntent.Amount, paymentIntent.Currency),
                 };
 
                 foreach (var data in paymentIntent.Metadata)

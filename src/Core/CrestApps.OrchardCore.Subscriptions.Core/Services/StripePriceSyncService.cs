@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;

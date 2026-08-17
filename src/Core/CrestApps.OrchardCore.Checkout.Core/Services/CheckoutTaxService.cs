@@ -73,18 +73,18 @@ public sealed class CheckoutTaxService : ICheckoutTaxService
         var decimals = CurrencyScale.GetDecimalPlaces(invoice.Currency);
         var roundedAddedTax = decimal.Round(addedTax, decimals, MidpointRounding.AwayFromZero);
 
-        invoice.TaxAmount = (double)decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
+        invoice.TaxAmount = decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
         invoice.TaxLines = result.Lines;
         invoice.TaxSnapshot = _snapshotFactory.Create(context, result);
-        invoice.GrandTotal = Math.Round(invoice.DueNow + (double)roundedAddedTax, decimals, MidpointRounding.AwayFromZero);
+        invoice.GrandTotal = decimal.Round(invoice.DueNow + roundedAddedTax, decimals, MidpointRounding.AwayFromZero);
 
         // The up-front charge collects the amount due now. Fold the exclusive tax into it so the customer
         // is actually charged the tax the checkout determined; otherwise tax would be displayed but never
         // collected. Tax already included in the price is not added again here.
         if (roundedAddedTax > 0m)
         {
-            invoice.InitialPaymentAmount = Math.Round(
-                (invoice.InitialPaymentAmount ?? 0d) + (double)roundedAddedTax,
+            invoice.InitialPaymentAmount = decimal.Round(
+                (invoice.InitialPaymentAmount ?? 0m) + roundedAddedTax,
                 decimals,
                 MidpointRounding.AwayFromZero);
         }
@@ -103,7 +103,7 @@ public sealed class CheckoutTaxService : ICheckoutTaxService
         // their own historical snapshots. The charged amount is treated as tax-inclusive so tax is never
         // claimed beyond what the customer was actually billed.
         var context = CheckoutTaxContextFactory.CreateForRecurringCharge(
-            (decimal)payment.Amount,
+            payment.Amount,
             payment.Currency,
             profile,
             _clock.UtcNow);
@@ -117,7 +117,7 @@ public sealed class CheckoutTaxService : ICheckoutTaxService
 
         var decimals = CurrencyScale.GetDecimalPlaces(payment.Currency);
 
-        payment.TaxAmount = (double)decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
+        payment.TaxAmount = decimal.Round(result.TaxAmount, decimals, MidpointRounding.AwayFromZero);
         payment.TaxSnapshot = _snapshotFactory.Create(context, result);
     }
 }

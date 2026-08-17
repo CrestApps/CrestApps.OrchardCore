@@ -10,7 +10,7 @@ public class DisplaySubscriptionViewModel
     /// <summary>
     /// Gets or sets the recurring subscription price.
     /// </summary>
-    public double Price { get; set; }
+    public decimal Price { get; set; }
 
     /// <summary>
     /// Gets or sets the display text that describes the initial amount.
@@ -20,7 +20,7 @@ public class DisplaySubscriptionViewModel
     /// <summary>
     /// Gets or sets the optional amount charged when the subscription starts.
     /// </summary>
-    public double? InitialAmount { get; set; }
+    public decimal? InitialAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the number of duration units between recurring charges.

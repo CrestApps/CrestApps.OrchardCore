@@ -41,17 +41,17 @@ public sealed class SubscriptionSummaryAdminViewModel
     /// <summary>
     /// Gets or sets the amount currently due for the subscription session.
     /// </summary>
-    public double DueNow { get; set; }
+    public decimal DueNow { get; set; }
 
     /// <summary>
     /// Gets or sets the one-time amount charged when the subscription starts.
     /// </summary>
-    public double? InitialAmount { get; set; }
+    public decimal? InitialAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the recurring amount charged for each billing cycle.
     /// </summary>
-    public double? RecurringAmount { get; set; }
+    public decimal? RecurringAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the number of <see cref="DurationType"/> units in one billing cycle.

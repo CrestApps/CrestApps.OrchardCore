@@ -35,7 +35,7 @@ public sealed class CheckoutSessionDetails
     /// <summary>
     /// The total amount collected, expressed in the major currency unit (for example dollars, not cents).
     /// </summary>
-    public double AmountTotal { get; set; }
+    public decimal AmountTotal { get; set; }
 
     public bool Livemode { get; set; }
 

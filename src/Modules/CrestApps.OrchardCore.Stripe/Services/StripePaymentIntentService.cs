@@ -27,6 +27,9 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
     /// <returns>The confirmed payment intent details returned by Stripe.</returns>
     public async Task<ConfirmPaymentIntentResponse> ConfirmAsync(ConfirmPaymentIntentRequest model)
     {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.PaymentIntentId);
+
         var confirmOptions = new PaymentIntentConfirmOptions();
 
         if (!string.IsNullOrEmpty(model.PaymentMethodId))
@@ -34,7 +37,22 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             confirmOptions.PaymentMethod = model.PaymentMethodId;
         }
 
-        var result = await _paymentIntentService.ConfirmAsync(model.PaymentIntentId, confirmOptions, model.ToRequestOptions());
+        PaymentIntent result;
+
+        try
+        {
+            result = await _paymentIntentService.ConfirmAsync(model.PaymentIntentId, confirmOptions, model.ToRequestOptions());
+        }
+        catch (StripeException ex) when (ex.StripeError?.Code == "payment_intent_unexpected_state")
+        {
+            // Confirmation must be idempotent. By the time this runs, the PaymentIntent may already
+            // have reached a terminal state through client-side confirmation (Payment Elements),
+            // Stripe's automatic subscription collection, or an earlier at-least-once webhook delivery.
+            // Stripe rejects re-confirming such an intent with 'payment_intent_unexpected_state'. Treat
+            // that as success by returning the authoritative current state instead of throwing, which
+            // would fail the webhook and make Stripe retry a permanently failing request forever.
+            result = await _paymentIntentService.GetAsync(model.PaymentIntentId, options: null, model.ToRequestOptions());
+        }
 
         return new ConfirmPaymentIntentResponse
         {

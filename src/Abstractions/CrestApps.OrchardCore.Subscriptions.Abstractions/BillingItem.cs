@@ -18,7 +18,7 @@ public class BillingItem
     /// <summary>
     /// Gets or sets the amount to collect for each billing cycle.
     /// </summary>
-    public double BillingAmount { get; set; }
+    public decimal BillingAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the subscription plan that defines the recurring billing schedule for the item.

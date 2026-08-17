@@ -16,13 +16,13 @@ public class PaymentInfo
     /// <summary>
     /// Gets or sets the payment amount.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// Gets or sets the tax portion of <see cref="Amount"/> for this transaction, determined by the taxation
     /// framework at the time the transaction was created. Zero when taxation is disabled.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// Gets or sets the immutable tax determination captured when this transaction was created. Recurring charges

@@ -23,7 +23,7 @@ public class InvoiceLineItem
     /// <summary>
     /// Gets or sets the price of each unit.
     /// </summary>
-    public double UnitPrice { get; set; }
+    public decimal UnitPrice { get; set; }
 
     /// <summary>
     /// Gets or sets the subscription billing plan when the line item recurs.
@@ -34,6 +34,6 @@ public class InvoiceLineItem
     /// Calculates the total amount for the line item.
     /// </summary>
     /// <returns>The rounded line total based on quantity and unit price.</returns>
-    public double GetLineTotal()
+    public decimal GetLineTotal()
         => Math.Round(Quantity * UnitPrice, 2);
 }

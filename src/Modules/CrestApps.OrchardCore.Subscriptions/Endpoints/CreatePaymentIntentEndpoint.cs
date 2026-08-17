@@ -151,7 +151,7 @@ public static class CreatePaymentIntentEndpoint
             !string.IsNullOrWhiteSpace(model.CustomerId);
     }
 
-    private static double GetMinimumAllowed(string currency)
+    private static decimal GetMinimumAllowed(string currency)
     {
         if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
         {

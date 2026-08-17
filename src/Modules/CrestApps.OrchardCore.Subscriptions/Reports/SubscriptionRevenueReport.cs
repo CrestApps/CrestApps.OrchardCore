@@ -72,7 +72,7 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
                 Labels = [.. monthly.Select(bucket => bucket.MonthStart.ToString("yyyy-MM", CultureInfo.InvariantCulture))],
                 Datasets =
                 [
-                    new ReportChartDataset(S["Revenue"].Value, monthly.Select(bucket => bucket.Revenue)),
+                    new ReportChartDataset(S["Revenue"].Value, monthly.Select(bucket => (double)bucket.Revenue)),
                 ],
             };
 

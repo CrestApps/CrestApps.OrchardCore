@@ -45,8 +45,8 @@ public static class SubscriptionReportAggregator
         ArgumentNullException.ThrowIfNull(transactions);
 
         var count = 0;
-        var totalRevenue = 0d;
-        var totalTax = 0d;
+        var totalRevenue = 0m;
+        var totalTax = 0m;
 
         foreach (var transaction in transactions)
         {
@@ -60,7 +60,7 @@ public static class SubscriptionReportAggregator
             TotalRevenue = totalRevenue,
             TransactionCount = count,
             TotalTax = totalTax,
-            AverageTransactionValue = count == 0 ? 0d : totalRevenue / count,
+            AverageTransactionValue = count == 0 ? 0m : totalRevenue / count,
         };
     }
 

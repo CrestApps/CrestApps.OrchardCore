@@ -20,23 +20,23 @@ public sealed class CheckoutInvoice
     /// <summary>
     /// The one-time amount due now (setup fees, one-off goods), before tax.
     /// </summary>
-    public double? InitialPaymentAmount { get; set; }
+    public decimal? InitialPaymentAmount { get; set; }
 
     /// <summary>
     /// The amount of the first recurring cycle charged now, before tax.
     /// </summary>
-    public double? FirstRecurringPaymentAmount { get; set; }
+    public decimal? FirstRecurringPaymentAmount { get; set; }
 
     /// <summary>
     /// The total amount collected now, before tax.
     /// </summary>
-    public double DueNow { get; set; }
+    public decimal DueNow { get; set; }
 
     /// <summary>
     /// The tax charged on the amount due now, determined by the taxation framework. This is <c>0</c> when
     /// the Taxation feature is disabled.
     /// </summary>
-    public double TaxAmount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     /// <summary>
     /// The detailed tax lines that explain <see cref="TaxAmount"/>. Each jurisdiction/tax is preserved.
@@ -62,13 +62,13 @@ public sealed class CheckoutInvoice
     /// <summary>
     /// The grand total collected now, including tax.
     /// </summary>
-    public double GrandTotal { get; set; }
+    public decimal GrandTotal { get; set; }
 
     /// <summary>
     /// The per-interval subtotals for the recurring obligations, before tax.
     /// </summary>
     [JsonConverter(typeof(BillingDurationKeyDictionaryJsonConverter))]
-    public Dictionary<BillingDurationKey, double> Subtotals { get; set; }
+    public Dictionary<BillingDurationKey, decimal> Subtotals { get; set; }
 
     /// <summary>
     /// Every priced line on the invoice.

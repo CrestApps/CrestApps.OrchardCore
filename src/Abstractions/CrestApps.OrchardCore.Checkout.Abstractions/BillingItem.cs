@@ -19,7 +19,7 @@ public sealed class BillingItem
     /// <summary>
     /// The amount to charge. For a recurring item this is the amount charged every billing cycle.
     /// </summary>
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     /// <summary>
     /// The recurring plan for this item, or <see langword="null"/> for a one-time charge.
