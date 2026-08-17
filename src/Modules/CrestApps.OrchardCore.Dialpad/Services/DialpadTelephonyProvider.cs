@@ -739,22 +739,19 @@ public sealed class DialpadTelephonyProvider :
 
     private static string BuildScope(string configuredScopes)
     {
-        var scopes = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(configuredScopes))
+        if (string.IsNullOrWhiteSpace(configuredScopes))
         {
-            foreach (var scope in configuredScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (!scopes.Contains(scope, StringComparer.OrdinalIgnoreCase))
-                {
-                    scopes.Add(scope);
-                }
-            }
+            return null;
         }
 
-        if (!scopes.Contains(DialpadConstants.OfflineAccessScope, StringComparer.OrdinalIgnoreCase))
+        var scopes = new List<string>();
+
+        foreach (var scope in configuredScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            scopes.Add(DialpadConstants.OfflineAccessScope);
+            if (!scopes.Contains(scope, StringComparer.OrdinalIgnoreCase))
+            {
+                scopes.Add(scope);
+            }
         }
 
         return string.Join(' ', scopes);

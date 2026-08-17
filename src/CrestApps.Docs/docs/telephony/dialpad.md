@@ -52,7 +52,7 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | **Outbound caller id** | The phone number presented to recipients on outbound calls. Include a country code, for example `+1`. |
 | **OAuth client id** | The OAuth client id issued by Dialpad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by Dialpad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
-| **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. The `offline_access` scope is always added automatically so access tokens can be refreshed. |
+| **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. Every scope — including `offline_access` — must be approved for your Dialpad OAuth app, so only the scopes you enter here are requested. Add `offline_access` to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. |
 | **Webhook signing secret** | Required when Dialpad Contact Center Voice is enabled. The secret Dialpad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. See [Where to obtain the webhook signing secret](#where-to-obtain-the-webhook-signing-secret). |
 
 Dialpad API calls default to the active environment's REST endpoint (`https://dialpad.com/api/v2/` for production or
@@ -101,9 +101,11 @@ provider follows Dialpad's documented requirements:
 - **PKCE** ([RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636)) is always used. A per-request
   code verifier is generated, its `S256` challenge is sent on the authorization request, and the verifier
   is supplied when the authorization code is exchanged for tokens.
-- The **`offline_access`** scope is always requested so Dialpad issues a refresh token. The user's access
-  and refresh tokens are stored **encrypted on the user's account**, and outbound calls are placed with the
-  connected user's access token. Tokens are refreshed automatically when they expire.
+- The **`offline_access`** scope is requested only when you add it to the configured **OAuth scopes**, and
+  it must be approved for your Dialpad OAuth app. When granted, Dialpad issues a refresh token so access
+  tokens are renewed automatically when they expire; without it, users reconnect once the access token
+  expires. The user's access and refresh tokens are stored **encrypted on the user's account**, and
+  outbound calls are placed with the connected user's access token.
 - The **active environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
   endpoints. When the environment **Host** is set, the OAuth endpoints follow that host instead.
@@ -119,6 +121,13 @@ provider follows Dialpad's documented requirements:
   revocation, the disconnect still succeeds locally but is logged as an incomplete remote revocation and the
   disconnect response reports `remoteRevocationConfirmed: false` so operators know the grant may still be
   active at the provider.
+
+:::note
+If the connect step fails with an error such as `Invalid scopes: offline_access`, the requested scope is
+not approved for your Dialpad OAuth app. Dialpad requires every scope to be approved per application (email
+`api@dialpad.com`). Remove the unapproved scope from **OAuth scopes**, or have Dialpad approve it. This is
+not caused by selecting the wrong environment.
+:::
 
 ## Capabilities
 

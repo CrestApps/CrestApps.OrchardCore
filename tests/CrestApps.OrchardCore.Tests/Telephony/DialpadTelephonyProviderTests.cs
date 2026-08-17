@@ -336,7 +336,40 @@ public sealed class DialpadTelephonyProviderTests
         Assert.Contains("response_type=code", url);
         Assert.Contains("state=xyz", url);
         Assert.Contains("scope=calls", url);
+        Assert.DoesNotContain("offline_access", url);
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenOfflineAccessConfigured_IncludesOfflineAccessScope()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler, scopes: "calls:list offline_access");
+
+        // Act
+        var url = await provider.GetAuthorizationUrlAsync(
+            new TelephonyAuthorizationContext { RedirectUri = "https://site.test/cb", State = "xyz" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
         Assert.Contains("offline_access", url);
+    }
+
+    [Fact]
+    public async Task GetAuthorizationUrlAsync_WhenScopesNotConfigured_OmitsScopeParameter()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK);
+        var provider = CreateOAuthProvider(handler, scopes: null);
+
+        // Act
+        var url = await provider.GetAuthorizationUrlAsync(
+            new TelephonyAuthorizationContext { RedirectUri = "https://site.test/cb", State = "xyz" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain("scope=", url);
+        Assert.DoesNotContain("offline_access", url);
     }
 
     [Fact]
@@ -595,7 +628,7 @@ public sealed class DialpadTelephonyProviderTests
         Assert.False(requiresUserAuthentication);
     }
 
-    private static DialpadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialpadEnvironment environment = DialpadEnvironment.Production, DialpadAuthenticationType authenticationType = DialpadAuthenticationType.OAuth2, string host = null)
+    private static DialpadTelephonyProvider CreateOAuthProvider(StubHttpMessageHandler handler, DialpadEnvironment environment = DialpadEnvironment.Production, DialpadAuthenticationType authenticationType = DialpadAuthenticationType.OAuth2, string host = null, string scopes = "calls")
     {
         var dataProtectionProvider = new EphemeralDataProtectionProvider();
 
@@ -608,7 +641,7 @@ public sealed class DialpadTelephonyProviderTests
             AuthenticationType = authenticationType,
             ClientId = "client-id",
             ClientSecret = protectedSecret,
-            Scopes = "calls",
+            Scopes = scopes,
             ApiBaseUrl = BaseUrl,
             Host = host,
         };

@@ -29,7 +29,9 @@ public static class DialpadConstants
 
     /// <summary>
     /// The Dialpad OAuth scope that allows access to a refresh token so access tokens can be renewed
-    /// without prompting the user to reconnect.
+    /// without prompting the user to reconnect. Dialpad requires every scope, including this one, to be
+    /// approved for the OAuth application, so it is only requested when an administrator adds it to the
+    /// configured scopes.
     /// </summary>
     public const string OfflineAccessScope = "offline_access";
 

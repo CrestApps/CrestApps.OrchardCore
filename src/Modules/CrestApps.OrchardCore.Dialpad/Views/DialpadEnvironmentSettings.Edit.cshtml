@@ -90,7 +90,7 @@
             <div class="ocat-end">
                 <input asp-for="Scopes" class="form-control" />
                 <span asp-validation-for="Scopes"></span>
-                <span class="hint">@T["Optional. Space-separated OAuth scopes requested during authorization. The offline_access scope is always requested so access tokens can be refreshed automatically. PKCE is always used to protect the authorization code exchange."]</span>
+                <span class="hint">@T["Optional. Space-separated OAuth scopes requested during authorization. Every scope must be approved for your Dialpad OAuth app. Add offline_access to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. PKCE is always used to protect the authorization code exchange."]</span>
             </div>
         </div>
     </div>
