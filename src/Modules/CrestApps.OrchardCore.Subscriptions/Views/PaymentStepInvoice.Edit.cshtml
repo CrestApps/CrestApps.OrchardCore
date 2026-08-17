@@ -3,26 +3,24 @@
 
 @model ShapeViewModel<Invoice>
 
-<div class="mb-3 rounded">
-
-    <ul class="list-group">
-        <li class="list-group-item list-group-item-dark">
-            <div class="row">
-                <div class="col-12 col-md-5 col-xxl-6">@T["Item"]</div>
-                <div class="text-center col-3 col-md-2 col-xxl-1">@T["Quantity"]</div>
-                <div class="text-center col-3 col-md-2 col-xxl-1">@T["Unit Price"]</div>
-                <div class="text-center col-6 col-md-3 col-xxl-4">@T["Total"]</div>
-            </div>
-        </li>
-
-        @foreach (var lineItem in Model.Value.LineItems)
-        {
-            <li class="list-group-item">
-                <div class="row">
-                    <div class="col-12 col-md-5 col-xxl-6">@lineItem.Description</div>
-                    <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.Quantity</div>
-                    <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.UnitPrice.ToString("C")</div>
-                    <div class="text-center col-6 col-md-3 col-xxl-4">
+<div class="table-responsive mb-3">
+    <table class="table table-striped align-middle mb-0">
+        <thead>
+            <tr class="table-light">
+                <th scope="col">@T["Item"]</th>
+                <th scope="col" class="text-center">@T["Quantity"]</th>
+                <th scope="col" class="text-end">@T["Unit Price"]</th>
+                <th scope="col" class="text-end">@T["Total"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var lineItem in Model.Value.LineItems)
+            {
+                <tr>
+                    <td>@lineItem.Description</td>
+                    <td class="text-center">@lineItem.Quantity</td>
+                    <td class="text-end">@lineItem.UnitPrice.ToString("C")</td>
+                    <td class="text-end">
                         @if (lineItem.Subscription != null)
                         {
                             @T.GetAmount(lineItem.Subscription.DurationType, lineItem.Subscription.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)
@@ -31,39 +29,28 @@
                         {
                             @(lineItem.GetLineTotal().ToString("C"))
                         }
-                    </div>
-                </div>
-            </li>
-        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="table-secondary">
+                <th scope="row" colspan="3" class="text-end">@T["Due Now"]</th>
+                <td class="text-end">@Model.Value.DueNow.ToString("C")</td>
+            </tr>
 
-        <li class="list-group-item list-group-item-secondary">
-            <div class="row">
-                <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Due Now"]</div>
-                <div class="text-center col-6 col-md-3 col-xxl-4">
-                    @Model.Value.DueNow.ToString("C")
-                </div>
-            </div>
-        </li>
+            @foreach (var subtotal in Model.Value.Subtotals)
+            {
+                <tr>
+                    <th scope="row" colspan="3" class="text-end fw-normal text-body-secondary">@T["Subtotal"]</th>
+                    <td class="text-end text-body-secondary">@T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)</td>
+                </tr>
+            }
 
-        @foreach (var subtotal in Model.Value.Subtotals)
-        {
-            <li class="list-group-item list-group-item-secondary">
-                <div class="row">
-                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Subtotal"]</div>
-                    <div class="text-center col-6 col-md-3 col-xxl-4">
-                        @T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)
-                    </div>
-                </div>
-            </li>
-        }
-
-        <li class="list-group-item list-group-item-dark">
-            <div class="row">
-                <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Total"]</div>
-                <div class="text-center col-6 col-md-3 col-xxl-4">
-                    @Model.Value.GrandTotal.ToString("C")
-                </div>
-            </div>
-        </li>
-    </ul>
+            <tr class="table-active">
+                <th scope="row" colspan="3" class="text-end">@T["Total"]</th>
+                <td class="text-end fw-bold">@Model.Value.GrandTotal.ToString("C")</td>
+            </tr>
+        </tfoot>
+    </table>
 </div>
