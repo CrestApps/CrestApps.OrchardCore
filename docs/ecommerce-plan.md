@@ -4,7 +4,7 @@
 
 Planning only. This document is a verified gap baseline for the current branch; it does not implement code or alter runtime behavior.
 
-This plan evaluates whether the current branch can support a complete ecommerce solution and defines the implementation path. It is based on the current branch state, the existing Products, Checkout, Payments/Stripe, Taxation, Addresses, Subscriptions, Reports, Recipes, and Orchard Core module patterns.
+This plan evaluates whether the current branch can support a complete ecommerce solution and defines the implementation path. It is based on the current branch state, including the latest Products, Checkout, Payments/Stripe, Taxation, Addresses, Subscriptions, Reports, Recipes, and Orchard Core module changes.
 
 The requested scope is:
 
@@ -46,21 +46,21 @@ The following capabilities are effectively greenfield:
 - Customer-facing refund workflows, refund-event reconciliation, and order-linked refund history.
 - Coupons, discounts, promotions, reviews, storefront pages, account pages, and commerce reports.
 
-The correct strategy is an Orchard Core commerce solution made of independently enableable features, not one large class library. Before creating that solution, the branch needs a foundation-gap closure pass for money ownership, catalog layering, refund reconciliation, and generic payment behavior. The solution should then add the Commerce domain above the existing frameworks and keep Subscriptions as a consumer of the shared checkout/payment infrastructure.
+The correct strategy is an Orchard Core commerce solution made of independently enableable features, not one large class library. The branch has closed the money representation and catalog ownership gaps, but still needs a foundation-gap closure pass for refund reconciliation, typed order/checkout integration, baseline verification, and dependency enforcement. The solution should then add the Commerce domain above the existing frameworks and keep Subscriptions as a consumer of the shared checkout/payment infrastructure.
 
 ## Verified branch baseline
 
-This section supersedes stale statements from the original plan. It is based on the current source tree and current uncommitted branch changes, not only on module documentation.
+This section supersedes stale statements from the original plan. It is based on the current source tree and latest branch commits, not only on module documentation.
 
 | Capability | Current status | Evidence and consequence |
 | --- | --- | --- |
 | Product SKU | **Implemented, partial** | `ProductPart` now has `Sku`; contract tests protect the existing namespace. This is a foundation, not a complete catalog. |
 | Sellable product snapshot | **Implemented, partial** | `ISellableProduct`, `SellableProduct`, and `DefaultProductSnapshotResolver` provide a checkout-facing seam. It still lacks variant identity, schedule/visibility rules, and full fulfillment metadata. |
-| Product ownership/layering | **Gap** | `ProductPart` remains under `Payments.Core.Models`. A compatibility-safe move or façade is still required before the catalog grows. |
+| Product ownership/layering | **Implemented** | `ProductPart` is now owned by `Products.Core`; boundary tests prevent Products from referencing Payments or Checkout. The remaining catalog work is variants, attributes, visibility, and fulfillment metadata. |
 | Checkout sessions and payment attempts | **Implemented** | Durable sessions, attempts, stores, reconciliation, tax application, background sweep, idempotency, and provider verification are reusable. They are not orders or carts. |
 | Generic Stripe checkout provider | **Implemented, partial** | `StripeCheckoutPaymentProvider` is registered and supports embedded one-time payment-intent flows. Hosted checkout and recurring-payment capabilities remain false. |
-| Refund ledger and provider contract | **Implemented, partial** | `PaymentRefund`, status, store/indexes/migrations, resolver, lock-based orchestration, Stripe refund service, and tax allocation exist. Order-linked UI, refund-event reconciliation, and complete customer/admin workflows do not. |
-| Taxation | **Implemented foundation** | Tax categories, jurisdictions, rules, sourcing, exemptions, snapshots, and refund calculation are reusable. Commerce still needs to supply order and shipping taxable items. |
+| Refund ledger and provider contract | **Implemented, partial** | `PaymentRefund`, status, DocumentCatalog-backed stores, `ItemId` identifiers, indexes/migrations, resolver, lock-based orchestration, Stripe refund service, and tax allocation exist. Order-linked UI, refund-event reconciliation, and complete customer/admin workflows do not. |
+| Taxation | **Implemented foundation** | Tax types are now user-managed with recipe/deployment coverage, alongside tax categories, jurisdictions, rules, sourcing, exemptions, snapshots, and refund calculation. Commerce still needs to supply order and shipping taxable items. |
 | Addresses | **Implemented foundation** | Content-backed country/geographic hierarchy, unified `GeographicAreaIndex`, and `IAddressResolver` exist. Customer address books and immutable order address snapshots do not. |
 | Reports and receipts | **Implemented foundation, partial** | Reports grouping, printable subscription receipts, and extensible tax rules exist. Commerce order, inventory, refund, promotion, and product reports do not. |
 | Subscriptions | **Implemented consumer** | Subscription checkout, tax, Stripe, invoices, reports, and UI are active examples. Subscription-specific routes must not become the generic commerce API. |
@@ -77,58 +77,58 @@ This section supersedes stale statements from the original plan. It is based on 
 
 These items should be completed and verified before starting Commerce-specific features. They remove structural ambiguity and prevent the new module from inheriting current inconsistencies.
 
-### Foundation gap F1 — Unify money and amount boundaries
+### Foundation gap F1 — Unify money and amount boundaries — **Closed in code; documentation cleanup remains**
 
-- Choose the authoritative persisted representation for product, checkout, payment-attempt, tax, order, and refund amounts.
-- Remove `double` from new commerce boundaries and define the compatibility migration for existing `ProductPart.Price`, `CheckoutInvoice`, `CheckoutLineItem`, and `PaymentAttempt` values.
+- The current branch now uses the approved decimal-based money boundaries for Products, Checkout, payment attempts, refunds, Stripe limits, and subscription billing.
+- Keep the remaining compatibility/documentation cleanup explicit; one stale XML comment in `Subscriptions.Core/Money.cs` still describes the old floating-point representation.
 - Keep provider minor-unit conversion inside Stripe/provider adapters.
-- Add zero-, two-, and three-decimal currency tests, serialization tests, rounding tests, and migration tests.
-- Update the Products, Checkout, Payments, Stripe, Taxation, and documentation contracts together.
+- Preserve the added zero-, two-, and three-decimal currency, serialization, rounding, and money-type contract tests.
+- Keep the Products, Checkout, Payments, Stripe, Taxation, and documentation contracts synchronized.
 
-**Exit gate:** No new commerce contract accepts floating-point money, and every existing conversion boundary is explicit and tested.
+**Exit gate:** Substantively met. Before Commerce implementation, remove the stale documentation claim and retain the money regression tests.
 
-### Foundation gap F2 — Correct catalog ownership without breaking compatibility
+### Foundation gap F2 — Correct catalog ownership without breaking compatibility — **Closed**
 
-- Move catalog-owned types out of `Payments.Core.Models` or introduce a deliberate compatibility façade with a deprecation path.
-- Keep Products/Core independent from payment-provider implementation details.
-- Preserve existing content-part storage and existing tenants during migration.
+- `ProductPart` now lives in `Products.Core.Models`, and `ISellableProduct`/`IProductSnapshotResolver` are owned by Products.Core.
+- Products remains independent from payment-provider implementation details, with boundary tests protecting that direction.
+- Preserve the existing content-part storage and tenant data while extending the catalog.
 - Make the sellable snapshot contract the only input consumed by checkout and future order pricing.
 
-**Exit gate:** Product code owns product models, payment code consumes sellable snapshots, and the existing ProductPart contract tests pass through the migration.
+**Exit gate:** Met in the current branch. Future catalog changes must not reintroduce payment ownership.
 
-### Foundation gap F3 — Finish generic payment/refund plumbing
+### Foundation gap F3 — Finish generic payment/refund plumbing — **Partial**
 
 - Document and test the current Stripe decision: embedded one-time PaymentIntent checkout is the first generic flow; hosted checkout is not assumed unless explicitly added.
 - Add provider capability tests so unsupported hosted/recurring operations fail clearly rather than appearing available.
-- Dispatch and reconcile Stripe refund events, not only payment/subscription success events.
+- Dispatch and reconcile Stripe refund events, not only payment/subscription success events. `charge.refunded` is currently not dispatched into the refund ledger and is a no-op in the existing webhook dispatch tests.
 - Make tax-refund calculator registration mandatory for refundable taxable payments, or return an explicit failure/manual-review state instead of silently producing zero tax.
-- Add provider integration tests beyond currency helpers: create/retrieve/cancel/refund, idempotency, webhook signatures, duplicate events, timeout, and retry behavior.
+- Add provider integration tests beyond currency helpers: create/retrieve/cancel/refund, idempotency, webhook signatures, duplicate events, timeout, refund reconciliation, and retry behavior.
 
 **Exit gate:** Generic one-time payment and refund behavior is truthful, observable, idempotent, and independently testable before Commerce starts using it.
 
-### Foundation gap F4 — Stabilize shared address and checkout contracts
+### Foundation gap F4 — Stabilize shared address and checkout contracts — **Partial**
 
 - Keep the new geographic content hierarchy and `IAddressResolver` as the source for selectable country/region data.
 - Define serialization and normalization rules for billing/shipping address snapshots.
-- Define the typed relationship between a future Order and `CheckoutSession`, including ownership, guest access, and lifecycle references.
+- Define the typed relationship between a future Order and `CheckoutSession`, including ownership, guest access, and lifecycle references. The current `ReferenceType`, `ReferenceId`, and `ReferenceVersionId` fields are generic strings, not yet an order contract.
 - Ensure generic checkout services do not depend on subscription-specific route or view models.
 
 **Exit gate:** Commerce can consume stable address and checkout contracts without reaching into subscription implementations.
 
-### Foundation gap F5 — Complete baseline verification and documentation
+### Foundation gap F5 — Complete baseline verification and documentation — **Partial**
 
 - Add regression tests for the current Product snapshot, Stripe provider, refund service, address resolver, taxation, and subscription paths.
-- Verify migrations, indexes, recipes, feature dependencies, permissions, and tenant isolation for the changed foundations.
+- Verify migrations, indexes, recipes/schema definitions, feature dependencies, permissions, provider behavior, and tenant isolation for the changed foundations. The branch now has useful money, product-boundary, schema, and subscription dependency coverage, but checkout/Stripe migration, index, permission, and provider lifecycle coverage remains incomplete.
 - Keep module documentation and the changelog aligned with the actual embedded Stripe and refund behavior.
 
 **Exit gate:** The foundation build/test/documentation baseline is green in a network-capable environment and the current branch has no known foundation-level ambiguity.
 
-### Foundation gap F6 — Enforce reusable module boundaries
+### Foundation gap F6 — Enforce reusable module boundaries — **Open**
 
 - Approve the dependency graph in this plan as an architecture constraint.
-- Separate Customers from Users, Products, Addresses, Orders, Carts, Checkout, Payments, Taxation, Reports, and Commerce in project references and feature manifests.
+- Create and separate Customers, Orders, Carts, and Commerce from Users, Products, Addresses, Checkout, Payments, Taxation, Reports, and provider projects in project references and feature manifests. No Customers, Orders, Carts, or Commerce projects exist in the current branch.
 - Define which contracts are reusable abstractions and which implementations are optional Orchard features.
-- Add dependency/build checks that prevent reusable modules from referencing Commerce Storefront/Admin or provider-specific projects.
+- Add dependency/build checks that prevent reusable modules from referencing Commerce Storefront/Admin or provider-specific projects. The current audit found no project-reference cycles among existing projects, but the proposed graph is not yet implemented or enforced.
 - Require every new module to have its own manifest, startup registration, migrations/indexes, permissions, tests, and documentation.
 
 **Exit gate:** The planned module graph has no cycles, reusable modules can be enabled without Storefront, and the dependency direction is enforced by project references and feature tests.
@@ -161,9 +161,9 @@ The following are intentionally not reusable-foundation work. They are the reaso
 
 | Area | Existing evidence | Planned use |
 | --- | --- | --- |
-| Product integration | `src/Modules/CrestApps.OrchardCore.Products`, `ProductPart`, `ISellableProduct`, `DefaultProductSnapshotResolver`, `ProductTaxableItemProvider` | Extend the existing SKU/snapshot seam into a real catalog while preserving attachable content-part behavior. |
+| Product integration | `src/Modules/CrestApps.OrchardCore.Products`, `Products.Core.Models.ProductPart`, `ISellableProduct`, `DefaultProductSnapshotResolver`, `ProductTaxableItemProvider` | Extend the existing SKU/snapshot seam into a real catalog while preserving attachable content-part behavior. Product ownership is no longer a Payments layering gap. |
 | Checkout | `src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions`, `src/Core/CrestApps.OrchardCore.Checkout.Core`, `CheckoutSessionStore`, `PaymentCheckoutHandler` | Use as the payment-safe checkout orchestration layer. Add commerce flow handlers and storefront endpoints. |
-| Payments | `src/Abstractions/CrestApps.OrchardCore.Payments.Abstractions`, `Money`, `CurrencyScale`, `PaymentMethod` | Use for all amount normalization and provider-neutral payment contracts. |
+| Payments | `src/Abstractions/CrestApps.OrchardCore.Payments.Abstractions`, `src/Core/CrestApps.OrchardCore.Payments.Core`, `Money`, `CurrencyScale`, `PaymentMethod` | Treat Payments as reusable contract/core infrastructure, not as a standalone enableable Orchard feature. Use it for amount normalization and provider-neutral payment contracts. |
 | Stripe | `src/Modules/CrestApps.OrchardCore.Stripe`, `src/Core/CrestApps.OrchardCore.Stripe.Core`, `StripeCheckoutPaymentProvider`, `StripeRefundService` | Reuse the now-registered embedded one-time provider, PaymentIntent, refund, webhook, idempotency, and currency conversion services. Close refund-event and capability gaps before Commerce integration. |
 | Taxation | `src/Modules/CrestApps.OrchardCore.Taxation`, `src/Core/CrestApps.OrchardCore.Taxation.Core` | Use for product, shipping, discount, exemption, and order tax determination. Persist its snapshots on orders and refunds. |
 | Addresses | `src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions`, `IAddressResolver`, content-backed geographic hierarchy, `GeographicAreaIndex` | Use the existing normalized geographic data and resolver; add customer address books and immutable order address snapshots in Commerce. |
@@ -173,18 +173,20 @@ The following are intentionally not reusable-foundation work. They are the reaso
 
 ### Important gaps and design constraints
 
-1. `ProductPart` now contains `Sku` and `double Price`, and a sellable-product snapshot resolver exists. It still has no variants, attributes, stock, product visibility, sale schedule, shipping data, or downloadable asset model.
-2. `ProductPart` currently lives in `CrestApps.OrchardCore.Payments.Core.Models`, which is a layering smell. Catalog models must not be owned by Payments.
+1. `ProductPart` now contains `Sku` and decimal-based pricing in Products.Core, and a sellable-product snapshot resolver exists. It still has no variants, attributes, stock, product visibility, sale schedule, shipping data, or downloadable asset model.
+2. Product ownership is now correctly separated from Payments. The remaining catalog gap is domain completeness, not ownership migration.
 3. `CheckoutSession` and `CheckoutInvoice` are durable checkout records, not a customer-facing order-of-record. They do not provide order numbers, fulfillment states, order history, or returns.
 4. The Checkout module is still a framework surface. It has no general storefront controller, cart, order UI, or customer account UI. Existing checkout UI and routes remain primarily subscription-specific.
 5. A durable refund ledger, resolver, tax allocation, provider contract, and Stripe refund service now exist. Customer/admin refund workflows, order-linked refund history, refund-event reconciliation, and complete refund UI are still absent.
 6. `StripeCheckoutPaymentProvider` now implements the generic provider seam, but it is embedded-card and one-time only. Hosted checkout and recurring capabilities are explicitly unsupported and must not be presented as available.
-7. Stripe webhook handling covers payment/subscription success paths but does not yet complete refund-event dispatch and reconciliation.
+7. Stripe webhook handling covers payment/subscription success paths but does not yet dispatch and reconcile `charge.refunded` into the refund ledger.
 8. Inventory, stock reservations, shipping, fulfillment, coupons, discounts, reviews, wishlists, and product order history are absent as commerce domains.
-9. Money crosses the current system as `double` in product/checkout/payment-attempt models while refunds and tax calculations use `decimal`. This must be resolved before durable commerce totals are introduced.
-10. The refund service can fall back to zero tax when no tax-refund calculator is registered. Refundable taxable payments must fail explicitly or enter manual review instead.
+9. Money boundaries are now substantially decimal-based and covered by currency/type tests. A stale XML comment remains, and future order totals must continue the approved representation without reintroducing floating point.
+10. The refund service must not silently produce a zero-tax refund when no tax-refund calculator is registered. Refundable taxable payments must fail explicitly or enter manual review instead.
 11. Multi-instance safety is already a design requirement. Future inventory reservations, order transitions, payment mutation, webhook processing, and refunds must use durable records, distributed locks where needed, and idempotent commands.
-12. The single-merchant decision removes marketplace payouts, seller settlement, and order splitting from the first scope. Vendor/supplier references may remain as future extension points and internal cost metadata, but must not shape the first order model.
+12. The current branch has improved recipe/schema coverage for Products and Subscriptions and user-managed Tax Types with recipe/deployment support. Future Customers, Orders, Carts, Commerce, Inventory, Shipping, Promotions, Reviews, and Storefront features still require equivalent migrations, schemas/recipes, permissions, deployment support, tests, and documentation.
+13. The single-merchant decision removes marketplace payouts, seller settlement, and order splitting from the first scope. Vendor/supplier references may remain as future extension points and internal cost metadata, but must not shape the first order model.
+14. The current target bundle and test project include existing modules only. Every future reusable and Commerce feature must be added to the targets bundle, startup/package composition, and appropriate test coverage.
 
 ## Target architecture
 
@@ -330,19 +332,18 @@ Each phase has a goal, workstreams, dependencies, and an exit gate. The phases a
 
 **Relative effort:** XL
 
-**Goal:** Complete F1–F6 so Commerce-specific features start with stable money, catalog ownership, payment/refund, address, checkout, and module-boundary contracts.
+**Goal:** Close the remaining F3–F6 gaps so Commerce-specific features start with stable payment/refund, address, checkout, verification, and module-boundary contracts. F1 and F2 are already closed in the current branch.
 
 Work:
 
-- Complete and verify Foundation gaps F1–F6.
-- Record the approved money representation and compatibility migrations.
-- Resolve the `Payments.Core.Models.ProductPart` ownership issue without breaking existing content or tests.
+- Verify the completed F1 money migration and remove its remaining stale documentation claim.
+- Preserve and verify the completed F2 Product ownership migration without breaking existing content or tests.
 - Make the embedded one-time Stripe capability explicit and remove any misleading hosted-checkout assumptions.
 - Add refund-event reconciliation and explicit missing-tax-calculator behavior.
 - Establish the typed order-to-checkout relationship and address snapshot contract.
-- Run the foundation regression suite and update the affected module documentation before introducing Commerce-specific projects.
+- Complete the missing migration/index/permission/provider lifecycle coverage, then run the foundation regression suite and update the affected module documentation before introducing Commerce-specific projects.
 
-**Exit gate:** F1–F6 are closed, all foundation tests pass, and the remaining gaps are intentionally reusable-block or Commerce-domain work listed in this plan.
+**Exit gate:** F3–F6 are closed, all foundation tests pass, and the remaining gaps are intentionally reusable-block or Commerce-domain work listed in this plan.
 
 ### Phase 0 — Architecture decisions and compatibility baseline
 
@@ -681,7 +682,7 @@ Work:
 | Money precision mismatch | Approve one domain representation before order persistence; add conversion tests before migrating fields. |
 | Stripe provider capabilities are overstated | Treat the current provider as embedded one-time PaymentIntent checkout; add hosted or recurring support only through explicit capability and test changes. |
 | Refund ledger exists but is not fully reconciled | Add refund-event webhook dispatch, order linkage, UI, and retry tests before exposing refunds to customers. |
-| Catalog/payment layering remains coupled | Close the compatibility-safe ProductPart ownership migration before adding variants and pricing rules. |
+| Module boundaries are only conceptual | Add Customers, Orders, Carts, and Commerce as separate projects/features, include them in the targets bundle, and enforce the dependency graph with boundary tests. |
 | Refund tax can silently become zero | Require a registered tax-refund calculator or transition the refund to explicit manual review. |
 | Charging without a durable fulfillment record | Create a draft order and frozen quote before payment attempts. |
 | Overselling under multiple nodes | Durable reservations, distributed locks, atomic transitions, and concurrency tests. |
@@ -709,10 +710,12 @@ The original design reviews agreed that:
 
 - Refund infrastructure is no longer absent. `PaymentRefund`, `RefundStatus`, refund abstractions, YesSql persistence/indexes/migrations, resolver, lock-based orchestration, Stripe refund service, and tax allocation are implemented.
 - Generic Stripe checkout is no longer absent. `StripeCheckoutPaymentProvider` is registered and supports embedded one-time PaymentIntent checkout, but hosted and recurring capabilities are explicitly unsupported.
-- Product SKU and the sellable snapshot seam are no longer absent. `ProductPart.Sku`, `ISellableProduct`, `SellableProduct`, and `DefaultProductSnapshotResolver` are implemented.
+- Product ownership, SKU, decimal pricing, and the sellable snapshot seam are now implemented. `ProductPart` is owned by Products.Core, and `ISellableProduct`, `SellableProduct`, and `DefaultProductSnapshotResolver` are present.
 - Addresses now include a content-backed geographic hierarchy, `GeographicAreaIndex`, and `IAddressResolver`. Customer address books and immutable order snapshots remain Commerce work.
 - The remaining greenfield domains are cart, order, inventory, shipping, promotions, reviews, generic storefront/API, and commerce-specific reports.
-- The new foundation gaps are money unification, catalog/payment layering, refund-event reconciliation, explicit refund-tax failure behavior, and capability-truthful Stripe integration.
+- F1 money unification and F2 catalog ownership are closed. The remaining foundation gaps are refund-event reconciliation, explicit refund-tax failure behavior, the typed Order-to-Checkout contract, incomplete baseline verification, and enforcement of the reusable module graph.
+- Payment and refund stores now use the shared DocumentCatalog persistence convention and business `ItemId` naming. This is reusable payment infrastructure, not an Order ledger; Orders still needs its own durable aggregate.
+- Product and Subscription recipe/schema coverage and user-managed Tax Type recipe/deployment support have improved, but every future module still needs equivalent setup, migration, deployment, and test coverage.
 
 - The architecture review identified the mature horizontal safety engine and required durable, tenant-scoped inventory and order mutations.
 - The domain review ranked catalog, addresses, orders, cart, refunds, receipts, inventory, variants, shipping, promotions, reports, reviews, and marketplace concerns by dependency. The single-merchant decision removes marketplace work from the first scope.
@@ -728,20 +731,21 @@ The reviewers and current source audit support the same final direction: close t
 
 ## Final readiness checklist before implementation
 
-- [ ] Close Foundation gap F1: unify money and amount boundaries.
-- [ ] Close Foundation gap F2: correct catalog ownership and preserve compatibility.
+- [x] Close Foundation gap F1 in code: unify money and amount boundaries.
+- [ ] Complete the remaining F1 documentation cleanup in `Subscriptions.Core/Money.cs`.
+- [x] Close Foundation gap F2: correct catalog ownership and preserve compatibility.
 - [ ] Close Foundation gap F3: finish generic Stripe/refund lifecycle and capability tests.
 - [ ] Close Foundation gap F4: stabilize address snapshots and the order-to-checkout contract.
 - [ ] Close Foundation gap F5: complete baseline verification and documentation.
 - [ ] Close Foundation gap F6: enforce reusable module boundaries and dependency direction.
-- [ ] Approve the money representation and migration strategy.
+- [x] Confirm the approved money representation and migration strategy.
 - [ ] Approve the Order and checkout state machines.
 - [ ] Approve the feature/project dependency graph.
 - [ ] Approve guest cart ownership, merge, and order lookup rules.
 - [ ] Approve inventory reservation timing, expiry, and backorder policy.
-- [ ] Approve the additive refund-provider contract.
+- [x] Confirm the additive refund-provider contract.
 - [ ] Approve the single-merchant boundary and defer marketplace features.
 - [ ] Approve the storefront/API boundary and supported delivery channels.
 - [ ] Approve the phase gates and acceptance tests.
 
-The plan is not ready to begin Commerce-specific implementation until F1–F6 are closed. Customers, Products, Orders, and Carts may be implemented as reusable blocks before the Commerce feature set, but their boundaries and contracts must be approved first.
+The plan is not ready to begin Commerce-specific implementation until the remaining F3–F6 work is closed. Customers, Orders, and Carts do not exist yet and may be implemented as reusable blocks only after their boundaries and contracts are approved; Products is the only one of these reusable blocks currently present.
