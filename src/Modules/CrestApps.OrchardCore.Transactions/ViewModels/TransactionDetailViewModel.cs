@@ -22,4 +22,10 @@ public class TransactionDetailViewModel
     /// record payments, and cancel it).
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether payment reminders can be sent. This is <c>true</c> only when
+    /// the Transaction Reminders feature is enabled.
+    /// </summary>
+    public bool CanSendReminder { get; set; }
 }

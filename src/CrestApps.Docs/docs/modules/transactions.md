@@ -9,9 +9,11 @@ description: A provider-agnostic ledger that tracks, reports, and settles outsta
 | --- | --- |
 | **Feature Name** | Transactions |
 | **Feature ID** | `CrestApps.OrchardCore.Transactions` |
+| **Reminders Feature** | `CrestApps.OrchardCore.Transactions.Notification` |
 | **Abstractions** | `CrestApps.OrchardCore.Transactions.Abstractions` |
 | **Core** | `CrestApps.OrchardCore.Transactions.Core` |
 | **Category** | Commerce |
+| **Depends on** | [Commerce](commerce) |
 
 The **Transactions** module is a provider-agnostic ledger of *money owed*. It answers a single question for the whole tenant — **"what has not been paid yet?"** — no matter which payment provider or purchase flow created the obligation. A transaction is created whenever a purchase is committed without being settled immediately (for example an offline [Pay Later](pay-later) commitment), and it is updated as reminders are sent and payments are recorded until it reaches a terminal state.
 
@@ -22,8 +24,8 @@ Because the ledger is generic, one report, one customer statement, and one remin
 - Records outstanding obligations as durable **`Transaction`** ledger entries, persisted in the tenant database so they survive cache eviction and node failure.
 - Gives every customer a **"My Transactions"** statement to view what they owe and to pay an outstanding balance online.
 - Gives administrators a **report and management console** to see everything outstanding, record payments, mark obligations paid, cancel them, add notes, and send reminders.
-- Sends **payment reminders through the [notification system](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)**, so each reminder honors the owner's preferred channel (email, and any other channel method they have enabled) rather than assuming email only.
-- Runs a **scheduled reminder sweep** on a cadence you configure in settings.
+- Sends **payment reminders through the [notification system](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)**, so each reminder honors the owner's preferred channel (email, and any other channel method they have enabled) rather than assuming email only. Reminders are an **opt-in feature** (see below).
+- Runs a **scheduled reminder sweep** on a cadence you configure in settings, when the reminders feature is enabled.
 
 ## Concepts
 
@@ -57,6 +59,8 @@ Online settlement is only available when the **[Checkout](checkout)** feature is
 
 Reminders are delivered by `ITransactionReminderService` through OrchardCore's **`INotificationService`**, so a reminder reaches the owner on whichever channel they have configured. A reminder is recorded on the transaction timeline and increments its reminder count. Managers can send a reminder manually from the admin console, and a background task sweeps outstanding transactions and sends reminders automatically on the configured cadence.
 
+Reminders are gated behind the separate **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`), which depends on the OrchardCore **Notifications** feature. The core Transactions ledger, report, statements, and settlement work without it; enable the reminders feature only when you want manual and scheduled reminders. When it is disabled, the *Send reminder* action and the reminder settings are not shown.
+
 ## Using the module
 
 ### Customer statement — "My Transactions"
@@ -67,7 +71,7 @@ Authenticated users with the **View own transactions** permission get a **My Tra
 
 Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It filters by status (including an *outstanding* view), searches by title, and shows the total outstanding across the tenant. Opening a transaction reveals its full timeline and the management actions:
 
-- **Send reminder** — deliver a payment reminder now.
+- **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
 - **Record payment** — record a full or partial payment received offline.
 - **Mark paid** — settle the remaining balance offline.
 - **Cancel** — cancel an uncollectable obligation.
@@ -77,7 +81,7 @@ Because the report is provider-agnostic, an administrator can see and manage an 
 
 ## Configuring reminders
 
-Under **Settings → Commerce → Transactions** (requires the **Manage transaction settings** permission) you can configure the scheduled reminder sweep:
+Reminder settings appear only when the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`) is enabled. Under **Settings → Commerce → Transactions** (requires the **Manage transaction settings** permission) you can configure the scheduled reminder sweep:
 
 | Setting | Purpose | Default |
 | --- | --- | --- |
@@ -104,10 +108,13 @@ Add the package to your Orchard Core project:
 dotnet add package CrestApps.OrchardCore.Transactions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online, and enable the **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature so reminders can be delivered.
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce](commerce)** feature it depends on, which owns the shared Commerce admin menu and icon.
+
+Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online. To send manual and scheduled payment reminders, enable the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`); it depends on the OrchardCore **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature, which is enabled automatically as a dependency.
 
 ## Related modules
 
+- [Commerce](commerce) — owns the shared Commerce admin menu and icon this module contributes to.
 - [Pay Later](pay-later) — records offline commitments as outstanding transactions in this ledger.
 - [Checkout](checkout) — the provider-agnostic checkout framework used to settle outstanding transactions online.
 - [Subscriptions](subscriptions) — a consumer of checkout that can leave balances a transaction tracks.

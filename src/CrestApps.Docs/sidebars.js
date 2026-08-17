@@ -117,6 +117,7 @@ const sidebars = {
                 'modules/products',
                 'modules/checkout',
                 'modules/payments',
+                'modules/commerce',
                 'modules/pay-later',
                 'modules/transactions',
                 'modules/subscriptions',

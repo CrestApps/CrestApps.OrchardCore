@@ -24,6 +24,12 @@ public static class TransactionsConstants
         /// The main Transactions feature that tracks, reports, and settles financial obligations.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Transactions";
+
+        /// <summary>
+        /// The opt-in feature that delivers outstanding-payment reminders through the notification system.
+        /// It depends on <c>OrchardCore.Notifications</c> so reminders honor each owner's channel preference.
+        /// </summary>
+        public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
     }
 
     /// <summary>

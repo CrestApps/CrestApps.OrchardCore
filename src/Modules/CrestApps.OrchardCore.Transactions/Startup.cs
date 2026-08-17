@@ -19,27 +19,23 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Transactions;
 
 /// <summary>
-/// Registers the provider-agnostic transaction ledger, its report and settings screens, permissions, and
-/// the scheduled reminder sweep.
+/// Registers the provider-agnostic transaction ledger, its report and management screens, and permissions.
 /// </summary>
 public sealed class Startup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TransactionsConstants.CollectionName));
+
         services
             .AddTransactionsCore()
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 
-        services.AddScoped<ITransactionReminderService, DefaultTransactionReminderService>();
-
         services
-            .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
-
-        services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
     }
 }
 
@@ -53,5 +49,25 @@ public sealed class CheckoutStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
+    }
+}
+
+/// <summary>
+/// Registers the opt-in reminder pipeline that delivers outstanding-payment reminders through the
+/// notification system so each reminder honors the owner's channel preference rather than assuming email.
+/// </summary>
+[Feature(TransactionsConstants.Features.Notification)]
+public sealed class NotificationStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ITransactionReminderService, DefaultTransactionReminderService>();
+
+        services
+            .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
+            .AddNavigationProvider<TransactionReminderSettingsAdminMenu>();
+
+        services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
     }
 }

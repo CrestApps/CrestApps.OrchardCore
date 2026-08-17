@@ -24,12 +24,6 @@ public sealed class TransactionsAdminMenu : AdminNavigationProvider
         { "action", "Index" },
     };
 
-    private static readonly RouteValueDictionary _settingsRouteValues = new()
-    {
-        { "area", "OrchardCore.Settings" },
-        { "groupId", TransactionsConstants.SettingsGroupId },
-    };
-
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -59,19 +53,6 @@ public sealed class TransactionsAdminMenu : AdminNavigationProvider
                     .Action("Index", "Transaction", _myTransactionsRouteValues)
                     .Permission(TransactionsPermissions.ViewOwnTransactions)
                     .LocalNav()
-                )
-            );
-
-        builder
-            .Add(S["Settings"], settings => settings
-                .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
-                    .Add(S["Transactions"], S["Transactions"].PrefixPosition(), transactions => transactions
-                        .AddClass("transactions-settings")
-                        .Id("transactionsSettings")
-                        .Action("Index", "Admin", _settingsRouteValues)
-                        .Permission(TransactionsPermissions.ManageTransactionSettings)
-                        .LocalNav()
-                    )
                 )
             );
 

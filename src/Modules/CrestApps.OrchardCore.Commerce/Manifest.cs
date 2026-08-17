@@ -1,22 +1,18 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
-using CrestApps.OrchardCore.Taxation;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "Taxation",
+    Name = "Commerce",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
 )]
 
 [assembly: Feature(
-    Id = TaxationConstants.Feature.Taxation,
-    Name = "Taxation",
-    Description = "Provides a provider-agnostic, extensible taxation framework and the TaxationPart.",
+    Name = "Commerce",
+    Id = CommerceConstants.Features.Area,
+    Description = "Registers the shared Commerce admin menu and its icon for commerce-related modules.",
     Category = "Commerce",
-    Dependencies =
-    [
-        CommerceConstants.Features.Area,
-    ]
+    EnabledByDependencyOnly = true
 )]

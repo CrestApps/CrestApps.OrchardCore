@@ -46,7 +46,6 @@ public sealed class AdminController : Controller
     /// Initializes a new instance of the <see cref="AdminController"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
-    /// <param name="reminderService">The reminder service.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="userService">The user service used to resolve transaction owners.</param>
     /// <param name="displayNameProvider">The display name provider used to describe owners.</param>
@@ -54,16 +53,17 @@ public sealed class AdminController : Controller
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="reminderService">The optional reminder service, available only when the Transaction Reminders feature is enabled.</param>
     public AdminController(
         ITransactionManager transactionManager,
-        ITransactionReminderService reminderService,
         IAuthorizationService authorizationService,
         IUserService userService,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         INotifier notifier,
         IHtmlLocalizer<AdminController> htmlLocalizer,
-        IStringLocalizer<AdminController> stringLocalizer)
+        IStringLocalizer<AdminController> stringLocalizer,
+        ITransactionReminderService reminderService = null)
     {
         _transactionManager = transactionManager;
         _reminderService = reminderService;
@@ -209,6 +209,7 @@ public sealed class AdminController : Controller
             Transaction = transaction,
             OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
             CanManage = true,
+            CanSendReminder = _reminderService is not null,
         };
 
         return View(model);
@@ -224,6 +225,13 @@ public sealed class AdminController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
         {
             return Forbid();
+        }
+
+        if (_reminderService is null)
+        {
+            await _notifier.WarningAsync(H["Reminders are unavailable. Enable the Transaction Reminders feature to send reminders."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
         }
 
         var transaction = await _transactionManager.FindByIdAsync(itemId);

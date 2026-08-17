@@ -88,16 +88,19 @@
     <div class="col-lg-5">
         @if (Model.CanManage)
         {
-            <div class="card mb-3">
-                <div class="card-header">@T["Send a reminder"]</div>
-                <div class="card-body">
-                    <p class="text-muted">@T["Notify the owner about the outstanding balance through their preferred notification channel."]</p>
-                    <form asp-action="SendReminder" method="post">
-                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
-                        <button type="submit" class="btn btn-primary" disabled="@(!canSettle)">@T["Send reminder"]</button>
-                    </form>
+            @if (Model.CanSendReminder)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">@T["Send a reminder"]</div>
+                    <div class="card-body">
+                        <p class="text-muted">@T["Notify the owner about the outstanding balance through their preferred notification channel."]</p>
+                        <form asp-action="SendReminder" method="post">
+                            <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                            <button type="submit" class="btn btn-primary" disabled="@(!canSettle)">@T["Send reminder"]</button>
+                        </form>
+                    </div>
                 </div>
-            </div>
+            }
 
             <div class="card mb-3">
                 <div class="card-header">@T["Record an offline payment"]</div>
