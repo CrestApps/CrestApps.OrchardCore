@@ -133,15 +133,9 @@ not caused by selecting the wrong environment.
 
 ### Connecting closes the window without connecting
 
-The **Connect to provider** button opens Dialpad in a new browser window. After you approve access, that
-window posts the result back to the soft phone and closes automatically — so the window closing is normal
-and does **not** by itself mean the connection failed. If the soft phone still shows **Not connected**
-afterward, the token exchange on the callback did not succeed. The soft phone now shows the reason inline in
-the connect panel, and the server log records the exact detail, for
-example:
+The **Connect to provider** button opens Dialpad in a new browser window. After you approve access, that window posts the result back to the soft phone and closes automatically — so the window closing is normal and does **not** by itself mean the connection failed. If the soft phone still shows **Not connected** afterward, the token exchange on the callback did not succeed. The soft phone now shows a safe reason inline in the connect panel, and the server log records the failure category without writing provider-supplied callback text, for example:
 
-- **`The telephony provider returned an error during the OAuth authorization callback`** — Dialpad reported
-  an error (for example the user denied access).
+- **`The telephony provider returned an error during the OAuth authorization callback`** — Dialpad reported an error, such as the user denying access. The provider-supplied callback text is not written to the log.
 - **`Dialpad rejected an OAuth token request with status code ... Response: ...`** — Dialpad refused to
   exchange the authorization code. The logged response contains the specific reason, such as a
   `redirect_uri` mismatch or an unapproved scope. Confirm the callback URL registered on the Dialpad OAuth

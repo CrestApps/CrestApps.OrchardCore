@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.Core.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -118,7 +117,7 @@ public sealed class TelephonyOAuthController : Controller
                     {
                         failureReason = "The telephony provider reported that access was not granted.";
 
-                        _logger.LogWarning("The telephony provider returned an error during the OAuth authorization callback: {Error}", error.SanitizeLogValue());
+                        _logger.LogWarning("The telephony provider returned an error during the OAuth authorization callback.");
                     }
                     else if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(storedState) || !string.Equals(storedState, state, StringComparison.Ordinal))
                     {
@@ -137,7 +136,7 @@ public sealed class TelephonyOAuthController : Controller
                                 ? "The telephony provider did not complete the connection."
                                 : result.Error;
 
-                            _logger.LogWarning("The telephony OAuth token exchange did not succeed. Reason: {Reason}", result.Error);
+                            _logger.LogWarning("The telephony OAuth token exchange did not succeed.");
                         }
                     }
                 }
