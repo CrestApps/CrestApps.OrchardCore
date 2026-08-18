@@ -172,6 +172,8 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         model.HasUnreadableClientSecret = !string.IsNullOrEmpty(environment.ClientSecret) &&
             !CanUnprotect(environment.ClientSecret, DialpadConstants.OAuthProtectorName);
         model.HasWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret);
+        model.HasUnreadableWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret) &&
+            !CanUnprotect(environment.WebhookSigningSecret, DialpadConstants.WebhookProtectorName);
     }
 
     private bool UpdateEnvironment(
@@ -278,6 +280,16 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             {
                 context.Updater.ModelState.AddModelError(Prefix, $"{prefix}.{nameof(model.UserId)}", S["Enter the Dialpad user id that places outbound calls."]);
             }
+        }
+
+        if ((string.IsNullOrEmpty(environment.WebhookSigningSecret) ||
+            !CanUnprotect(environment.WebhookSigningSecret, DialpadConstants.WebhookProtectorName)) &&
+            string.IsNullOrWhiteSpace(model.WebhookSigningSecret))
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                $"{prefix}.{nameof(model.WebhookSigningSecret)}",
+                S["Enter the Dialpad webhook signing secret for the active environment. Dialpad call-event webhooks use this secret so the soft phone can receive call-state updates."]);
         }
     }
 

@@ -107,7 +107,14 @@
         <div class="ocat-end">
             <input asp-for="WebhookSigningSecret" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookSigningSecret ? T["A secret is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter the Dialpad webhook signing secret."])" />
             <span asp-validation-for="WebhookSigningSecret"></span>
-            <span class="hint">@T["Used to validate inbound Dialpad call-event webhooks posted to /api/dialpad/webhook/call. Create the webhook in the Dialpad developer portal (or via POST /api/v2/webhooks) and set its signing secret to this value so inbound calls create Contact Center activities and route to agents."]</span>
+            @if (Model.HasWebhookSigningSecret && Model.HasUnreadableWebhookSigningSecret)
+            {
+                <span class="hint text-danger">@T["The saved webhook signing secret cannot be decrypted with the current application data-protection keys. Re-enter the webhook signing secret and save the settings."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Required. Used to validate Dialpad call-event webhooks posted to /api/dialpad/webhook/call. Create the webhook in the Dialpad developer portal (or via POST /api/v2/webhooks) and set its signing secret to this value so the soft phone receives call-state updates and inbound calls can route to agents."]</span>
+            }
         </div>
     </div>
 </div>

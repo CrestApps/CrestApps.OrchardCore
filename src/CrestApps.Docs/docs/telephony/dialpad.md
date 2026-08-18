@@ -53,7 +53,7 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | **OAuth client id** | The OAuth client id issued by Dialpad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by Dialpad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. Every scope — including `offline_access` — must be approved for your Dialpad OAuth app, so only the scopes you enter here are requested. Add `offline_access` to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. |
-| **Webhook signing secret** | Required when Dialpad Contact Center Voice is enabled. The secret Dialpad uses to sign inbound call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` for the Contact Center inbound flow. See [Where to obtain the webhook signing secret](#where-to-obtain-the-webhook-signing-secret). |
+| **Webhook signing secret** | Required for the active Dialpad environment. The shared secret Dialpad uses to sign call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` so the soft phone receives call-state updates and inbound calls can route through Contact Center. See [Required Dialpad call-event subscription](#required-dialpad-call-event-subscription). |
 
 Dialpad API calls default to the active environment's REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox). Set the environment **Host** when you need to target an alternate
@@ -68,10 +68,29 @@ Secrets (the API key and the OAuth client secret) are encrypted before they are 
 secret has already been saved the field is left empty; enter a new value only when you want to
 replace the stored secret.
 
-The settings editor validates the **active** environment before saving. API key authentication
-requires both the API key and the Dialpad user id. OAuth 2.0 requires the client id and client
-secret. Missing values are reported next to the matching fields so administrators know exactly what
-must be provided. The non-active environment is saved as entered without blocking validation.
+The settings editor validates the **active** environment before saving. API key authentication requires both the API key and the Dialpad user id. OAuth 2.0 requires the client id and client secret. The active environment also requires a webhook signing secret so signed Dialpad call events can update the soft phone and inbound routing. Missing values are reported next to the matching fields so administrators know exactly what must be provided. The non-active environment is saved as entered without blocking validation.
+
+## Required Dialpad call-event subscription
+
+Dialpad does not push call-state changes to this module automatically when the provider is enabled. You must create a Dialpad call-event subscription that sends signed events to the tenant endpoint:
+
+```text
+https://<tenant-host>/api/dialpad/webhook/call
+```
+
+This event subscription is required for the supported real-time integration. Outbound calls are still submitted through the Dialpad REST API, but call-state changes such as `calling`, `ringing`, `connected`, and `hangup` arrive through Dialpad events. Without the event subscription, the soft phone can only use periodic REST lookups as a fallback and may lag behind the provider state.
+
+Dialpad supports event delivery through its event-subscription system. This module currently supports the **webhook** target (`POST /api/v2/webhooks` plus `POST /api/v2/subscriptions/call`). It does not currently register or consume a Dialpad websocket/SSE event target automatically.
+
+To configure the event subscription:
+
+1. Generate a high-entropy signing secret.
+2. Enter that value in the active environment's **Webhook signing secret** field and save the Dialpad settings.
+3. In Dialpad, create a webhook for `https://<tenant-host>/api/dialpad/webhook/call` using the same signing secret.
+4. Create a call-event subscription that targets the webhook id and includes the call states you need, such as `calling`, `preanswer`, `ringing`, `connected`, `hold`, `hangup`, `missed`, `voicemail`, and `recording`.
+5. Place a test call and confirm the application log shows `/api/dialpad/webhook/call` accepting signed deliveries.
+
+For the assigned beta sandbox host, use `https://dialpadbeta.com/api/v2/webhooks` and `https://dialpadbeta.com/api/v2/subscriptions/call`.
 
 ### Authenticating with an API key
 
@@ -160,7 +179,7 @@ the Dialpad REST API on the server. For example, a dial request issues an authen
 `call` endpoint with the destination number, caller id, and numeric user id; subsequent operations target
 the `call/{id}/{action}` endpoints. Dialpad treats this as an **initiate via ring** request: Dialpad first rings the connected user's active Dialpad devices, and the outbound leg completes only after that user answers in Dialpad. The Orchard Core soft phone is a control surface for Dialpad call control; it is not a Dialpad media client and it does not receive Dialpad audio in the browser.
 
-For outbound testing, make sure the user whose OAuth token is connected, or the configured API-key **User id**, has at least one active Dialpad device. Dialpad documents active web, desktop, mobile, CTI, or physical desk phone devices for the `/api/v2/call` flow. If Dialpad accepts the request but no device answers, the call can quickly move to `hangup` and the destination phone will not ring. A Dialpad call-event webhook is not required to start outbound calls; configure the webhook only when you need inbound call routing or asynchronous state updates.
+For outbound testing, make sure the user whose OAuth token is connected, or the configured API-key **User id**, has at least one active Dialpad device. Dialpad documents active web, desktop, mobile, CTI, or physical desk phone devices for the `/api/v2/call` flow. If Dialpad accepts the request but no device answers, the call can quickly move to `hangup` and the destination phone will not ring. A Dialpad call-event webhook is not needed to submit the outbound REST request, but it is required for the supported integration so the soft phone receives provider state changes without relying only on fallback polling.
 
 API key authentication uses the configured **User id**. OAuth authentication resolves the connected user's id through `users/me`. Because all control happens server-side, the API key never reaches the browser.
 
@@ -184,7 +203,7 @@ Create the call-event webhook subscription in the Dialpad administration portal 
 
 ### Registering the inbound call-event webhook
 
-Inbound routing and asynchronous call-state updates require a Dialpad call-event subscription. Outbound dial requests do not require this webhook, but without it the soft phone can only learn provider state by polling the Dialpad REST API.
+Inbound routing and asynchronous call-state updates require a Dialpad call-event subscription. Outbound dial requests are submitted through REST, but without the event subscription the soft phone can only learn provider state by polling the Dialpad REST API.
 
 To register the webhook:
 

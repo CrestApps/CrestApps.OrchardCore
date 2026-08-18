@@ -80,4 +80,11 @@ public class DialpadEnvironmentSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasWebhookSigningSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the saved webhook signing secret cannot be decrypted with
+    /// the current data-protection keys.
+    /// </summary>
+    [BindNever]
+    public bool HasUnreadableWebhookSigningSecret { get; set; }
 }
