@@ -17,7 +17,7 @@ public sealed class DefaultCustomerContactResolverTests
         var resolver = new DefaultCustomerContactResolver(new Mock<IUserService>(MockBehavior.Strict).Object);
 
         // Act
-        var contact = await resolver.ResolveAsync(null, null);
+        var contact = await resolver.ResolveAsync(null, null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(contact);
@@ -31,7 +31,7 @@ public sealed class DefaultCustomerContactResolverTests
         var guest = new CustomerContact { DisplayName = "Guest", Email = "guest@example.com" };
 
         // Act
-        var contact = await resolver.ResolveAsync(CustomerOwner.ForGuest("guest-1"), guest);
+        var contact = await resolver.ResolveAsync(CustomerOwner.ForGuest("guest-1"), guest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(guest, contact);
@@ -49,7 +49,7 @@ public sealed class DefaultCustomerContactResolverTests
         var resolver = new DefaultCustomerContactResolver(userService.Object);
 
         // Act
-        var contact = await resolver.ResolveAsync(CustomerOwner.ForUser("user-1"), null);
+        var contact = await resolver.ResolveAsync(CustomerOwner.ForUser("user-1"), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(contact);
@@ -69,7 +69,7 @@ public sealed class DefaultCustomerContactResolverTests
         var resolver = new DefaultCustomerContactResolver(userService.Object);
 
         // Act
-        var contact = await resolver.ResolveAsync(CustomerOwner.ForUser("user-1"), null);
+        var contact = await resolver.ResolveAsync(CustomerOwner.ForUser("user-1"), null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(contact);

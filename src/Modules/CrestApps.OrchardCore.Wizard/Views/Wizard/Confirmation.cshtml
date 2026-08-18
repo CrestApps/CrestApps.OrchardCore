@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Wizard.ViewModels
+
+@model WizardViewModel
+
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}

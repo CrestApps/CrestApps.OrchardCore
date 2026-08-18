@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.Wizard
+@using CrestApps.OrchardCore.Wizard.ViewModels
+
+@model WizardFlowNavigation
+
+@{
+    var hasNext = !string.IsNullOrEmpty(Model.NextStep);
+}
+
+<div class="d-flex justify-content-between flex-row-reverse mt-3">
+
+    <button type="submit" class="btn btn-success" id="Wizard_Next_Button">
+        @if (hasNext)
+        {
+            @T["Next"]
+        }
+        else
+        {
+            @T["Finish"]
+        }
+    </button>
+
+    <div></div>
+
+    @if (!string.IsNullOrEmpty(Model.PreviousStep))
+    {
+        <a class="btn btn-info" asp-route="@WizardConstants.RouteNames.Step" asp-route-sessionId="@Model.SessionId" asp-route-step="@Model.PreviousStep" id="Wizard_Previous_Button">@T["Previous"]</a>
+    }
+    else
+    {
+        <div></div>
+    }
+
+</div>

@@ -132,6 +132,7 @@ const sidebars = {
                 'modules/addresses',
                 'modules/time-zones',
                 'modules/users',
+                'modules/wizard',
             ],
         },
         {
