@@ -29,6 +29,7 @@ using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Handlers;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -399,6 +400,12 @@ public sealed class ToolInstancesStartup : StartupBase
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
 
+        services.TryAddEnumerable(
+        [
+            ServiceDescriptor.Transient<IAIToolInstanceHandler, AlgoliaDocumentationToolInstanceExportHandler>(),
+            ServiceDescriptor.Transient<IAIToolInstanceHandler, HttpApiRequestToolInstanceExportHandler>(),
+        ]);
+
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
@@ -410,5 +417,31 @@ public sealed class ToolInstancesStartup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
             .AddNavigationProvider<AIToolInstanceAdminMenu>()
             .AddPermissionProvider<AIToolInstancePermissionsProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe execution step for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class ToolInstancesRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIToolInstanceStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step for the ToolInstances feature.
+/// </summary>
+[Feature(AIConstants.Feature.ToolInstances)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ToolInstancesOCDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
     }
 }

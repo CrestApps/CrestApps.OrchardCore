@@ -1843,6 +1843,18 @@ public sealed class AIDataSourcesRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI tool instances recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.ToolInstances")]
+public sealed class AIToolInstancesRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AIToolInstanceRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the MCP connection recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]
