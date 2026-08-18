@@ -60,8 +60,8 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             ContentType = contentItem.ContentType,
             Sku = productPart.Sku,
             Title = contentItem.DisplayText,
-            UnitPrice = (decimal)productPart.Price,
-            Currency = context.Currency,
+            UnitPrice = productPart.Price,
+            Currency = await ResolveCurrencyAsync(contentItem, productPart),
             ProductType = await ResolveTypeAsync(contentItem),
             TaxCategoryCode = taxationPart?["TaxCategoryCode"]?.GetValue<string>(),
             TaxClassificationCode = taxationPart?["TaxClassificationCode"]?.GetValue<string>(),
@@ -69,13 +69,35 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
         };
     }
 
+    private async ValueTask<string> ResolveCurrencyAsync(ContentItem contentItem, ProductPart productPart)
+    {
+        if (!string.IsNullOrEmpty(productPart.Currency))
+        {
+            return productPart.Currency.Trim().ToUpperInvariant();
+        }
+
+        var settings = await GetPartSettingsAsync(contentItem);
+        var defaultCurrency = settings?.DefaultCurrency;
+
+        return string.IsNullOrEmpty(defaultCurrency)
+            ? null
+            : defaultCurrency.Trim().ToUpperInvariant();
+    }
+
     private async ValueTask<ProductType> ResolveTypeAsync(ContentItem contentItem)
+    {
+        var settings = await GetPartSettingsAsync(contentItem);
+
+        return settings?.Type ?? ProductType.Undefined;
+    }
+
+    private async ValueTask<ProductPartSettings> GetPartSettingsAsync(ContentItem contentItem)
     {
         var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
 
         var partDefinition = definition?.Parts
             .FirstOrDefault(part => part.PartDefinition.Name == nameof(ProductPart));
 
-        return partDefinition?.GetSettings<ProductPartSettings>().Type ?? ProductType.Undefined;
+        return partDefinition?.GetSettings<ProductPartSettings>();
     }
 }

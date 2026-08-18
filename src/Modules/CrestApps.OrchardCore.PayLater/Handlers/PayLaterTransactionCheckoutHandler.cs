@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Transactions;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -91,6 +93,31 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             ? now.AddDays(settings.NetTermDays)
             : null;
 
+        // An authenticated buyer owns the debt by user id. A guest buyer has no user account, so the debt is
+        // owned by a stable, tenant-scoped guest customer id derived from the checkout session id. Deriving
+        // it from the durable session id (rather than generating a fresh id) keeps the same guest owner
+        // across every retry and every obligation of this checkout, so a guest obligation is never orphaned
+        // or split across two identities. A durable, cross-checkout guest credential is deferred foundation
+        // hardening; here the guest identity is per checkout.
+        var isGuest = string.IsNullOrEmpty(session.OwnerId);
+        var ownerKind = isGuest ? CustomerOwnerKind.Guest : CustomerOwnerKind.Authenticated;
+        var ownerId = isGuest ? session.SessionId : session.OwnerId;
+
+        // A guest cannot sign in to view or be notified about the debt, so a provider-neutral contact
+        // snapshot captured on the checkout is the only way to reach them. It is copied onto each guest
+        // transaction so the reminder path can email them.
+        CheckoutContactInfo guestContact = null;
+
+        if (isGuest && session.TryGet<CheckoutContactInfo>(out var contact))
+        {
+            guestContact = contact;
+        }
+
+        if (isGuest && string.IsNullOrEmpty(guestContact?.Email))
+        {
+            _logger.LogWarning("Checkout session '{SessionId}' completed a guest Pay Later purchase without a contact email; the outstanding balance is recorded but cannot be reminded automatically until a storefront collects guest contact details.", session.SessionId);
+        }
+
         foreach (var attempt in payLaterAttempts)
         {
             var existing = await _transactionManager.GetByObligationAsync(session.SessionId, attempt.ObligationId);
@@ -106,7 +133,15 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
 
             transaction.Title = title;
             transaction.Source = PayLaterCheckoutPaymentProvider.ProcessorKey;
-            transaction.OwnerId = session.OwnerId;
+            transaction.OwnerId = ownerId;
+            transaction.OwnerKind = ownerKind;
+
+            if (isGuest && guestContact is not null)
+            {
+                transaction.GuestContactName = guestContact.DisplayName;
+                transaction.GuestContactEmail = guestContact.Email;
+            }
+
             transaction.ReferenceType = session.ReferenceType;
             transaction.ReferenceId = session.ReferenceId;
             transaction.ReferenceVersionId = session.ReferenceVersionId;

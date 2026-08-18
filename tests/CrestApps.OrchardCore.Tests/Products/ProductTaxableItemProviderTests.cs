@@ -61,10 +61,21 @@ public class ProductTaxableItemProviderTests
         Assert.NotNull(item);
         Assert.Equal(contentItem.ContentItemId, item.Id);
         Assert.Equal(149.99m, item.UnitPrice);
+        Assert.Equal("USD", item.Currency);
         Assert.Equal(1m, item.Quantity);
         Assert.Equal("Electronics", item.TaxCategoryCode);
         Assert.Equal("Television", item.TaxClassificationCode);
         Assert.Equal("EX-100", item.ExternalTaxCode);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Throws_WhenProductHasNoCurrency()
+    {
+        var provider = CreateProvider(ProductType.Good, defaultCurrency: null);
+        var contentItem = CreateProductContentItem(price: 100, taxationPart: new JsonObject { ["Taxable"] = true });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await provider.CreateAsync(contentItem, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -102,11 +113,11 @@ public class ProductTaxableItemProviderTests
         Assert.True(provider.Order < 0);
     }
 
-    private static ProductTaxableItemProvider CreateProvider(ProductType productType)
+    private static ProductTaxableItemProvider CreateProvider(ProductType productType, string defaultCurrency = "USD")
     {
         var settings = new JsonObject
         {
-            [nameof(ProductPartSettings)] = JsonSerializer.SerializeToNode(new ProductPartSettings { Type = productType }),
+            [nameof(ProductPartSettings)] = JsonSerializer.SerializeToNode(new ProductPartSettings { Type = productType, DefaultCurrency = defaultCurrency }),
         };
 
         var partDefinition = new ContentTypePartDefinition(
@@ -122,7 +133,7 @@ public class ProductTaxableItemProviderTests
             .Setup(x => x.GetTypeDefinitionAsync(It.IsAny<string>()))
             .ReturnsAsync(typeDefinition);
 
-        return new ProductTaxableItemProvider(contentDefinitionManager.Object);
+        return new ProductTaxableItemProvider(new DefaultProductSnapshotResolver(contentDefinitionManager.Object));
     }
 
     private static ContentItem CreateProductContentItem(decimal price, JsonObject taxationPart)

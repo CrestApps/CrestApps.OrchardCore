@@ -23,6 +23,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
 
         services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
+        services.AddScoped<IPriceResolver, DefaultPriceResolver>();
 
         services.AddDataMigration<ProductPartMigrations>();
     }

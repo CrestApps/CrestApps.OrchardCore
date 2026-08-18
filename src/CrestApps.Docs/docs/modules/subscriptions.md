@@ -56,6 +56,8 @@ Subscribing runs through an extensible, server-driven **subscription flow** comp
 
 Each step is a display driver against the `SubscriptionFlow`, and the server tracks progress in a `SubscriptionSession` persisted through `ISubscriptionSessionStore`. Amounts are always derived from the server-side invoice, never from client-submitted values.
 
+The invoice currency comes from the subscribed product itself: the flow resolves the product through `IProductSnapshotResolver` and bills in the product-owned currency. A product that declares no currency at all (neither its own nor its content type's default) is not sellable, so the flow fails closed rather than billing it in a guessed currency; the site subscription currency applies only when the flow content item is not a product. Prices are never converted between currencies — when Stripe price synchronization is asked for a currency that differs from the product's own currency, that price is skipped and a warning is logged rather than silently relabeled.
+
 ### Payment methods at checkout
 
 The **Payment** step renders the payment methods advertised in `PaymentMethodOptions`. Enabling the **Stripe** module adds the *Stripe* method (with a real processor), and enabling the **Pay Later** module adds a *Pay Later* method (no processor). The site owner picks the default under the subscription settings; developers add more options (for example PayPal) by registering a payment method and a checkout display driver — see [Adding another payment provider](payments#adding-another-payment-provider).

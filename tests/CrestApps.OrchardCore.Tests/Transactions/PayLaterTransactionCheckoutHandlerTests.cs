@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.PayLater.Handlers;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using OrchardCore.Entities;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -135,6 +137,80 @@ public sealed class PayLaterTransactionCheckoutHandlerTests
         Assert.Empty(store.Transactions);
     }
 
+    [Fact]
+    public async Task CompletedAsync_RecordsGuestTransactionWithStableOwnerAndContact()
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+        var attempt = new PaymentAttempt
+        {
+            SessionId = "guest-session-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            ObligationId = "ob-1",
+            State = PaymentAttemptState.Succeeded,
+            ExpectedAmount = 100m,
+            ExpectedTaxAmount = 8m,
+            Currency = "USD",
+        };
+
+        var handler = CreateHandler(store, attempt, netTermDays: 30);
+        var context = CreateGuestCompletedContext("guest-session-1", obligationId: "ob-1", new CheckoutContactInfo
+        {
+            DisplayName = "Jane Guest",
+            Email = "jane@example.com",
+        });
+
+        // Act
+        await handler.CompletedAsync(context);
+
+        // Assert
+        var transaction = Assert.Single(store.Transactions);
+        Assert.Equal(CustomerOwnerKind.Guest, transaction.OwnerKind);
+        Assert.Equal("guest-session-1", transaction.OwnerId);
+        Assert.Equal("Jane Guest", transaction.GuestContactName);
+        Assert.Equal("jane@example.com", transaction.GuestContactEmail);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_ReusesTheSameGuestOwnerAcrossRetries()
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+
+        var first = new PaymentAttempt
+        {
+            SessionId = "guest-session-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            ObligationId = "ob-1",
+            State = PaymentAttemptState.Succeeded,
+            ExpectedAmount = 40m,
+            Currency = "USD",
+        };
+
+        var second = new PaymentAttempt
+        {
+            SessionId = "guest-session-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            ObligationId = "ob-2",
+            State = PaymentAttemptState.Succeeded,
+            ExpectedAmount = 60m,
+            Currency = "USD",
+        };
+
+        var handler = CreateHandler(store, netTermDays: 0, first, second);
+        var context = CreateGuestCompletedContext("guest-session-1", obligationId: "ob-1", guestContact: null);
+
+        // Act
+        await handler.CompletedAsync(context);
+
+        // Assert
+        Assert.Equal(2, store.Transactions.Count);
+        var ownerIds = store.Transactions.Select(t => t.OwnerId).Distinct().ToArray();
+        Assert.Single(ownerIds);
+        Assert.Equal("guest-session-1", ownerIds[0]);
+        Assert.All(store.Transactions, t => Assert.Equal(CustomerOwnerKind.Guest, t.OwnerKind));
+    }
+
     private static PayLaterTransactionCheckoutHandler CreateHandler(FakeTransactionStore store, int netTermDays, params PaymentAttempt[] attempts)
     {
         var attemptStore = new InMemoryPaymentAttemptStore(attempts);
@@ -174,6 +250,36 @@ public sealed class PayLaterTransactionCheckoutHandlerTests
                 new BillingItem { ItemId = obligationId, Description = "Book", Amount = 100m },
             ],
         });
+
+        return new CheckoutFlowCompletedContext(new CheckoutFlow(session));
+    }
+
+    private static CheckoutFlowCompletedContext CreateGuestCompletedContext(string sessionId, string obligationId, CheckoutContactInfo guestContact)
+    {
+        var session = new CheckoutSession
+        {
+            SessionId = sessionId,
+            OwnerId = null,
+            ReferenceType = "order",
+            ReferenceId = "ref-1",
+            Currency = "USD",
+            Status = CheckoutSessionStatus.Pending,
+        };
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = "goods",
+            Order = 1,
+            BillingItems =
+            [
+                new BillingItem { ItemId = obligationId, Description = "Book", Amount = 100m },
+            ],
+        });
+
+        if (guestContact is not null)
+        {
+            session.Put(guestContact);
+        }
 
         return new CheckoutFlowCompletedContext(new CheckoutFlow(session));
     }

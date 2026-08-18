@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Customers.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Models;
 
@@ -28,9 +29,29 @@ public sealed class Transaction : CatalogItem
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the user that owns the obligation.
+    /// Gets or sets the identifier of the user that owns the obligation. For a guest obligation this is the
+    /// stable, tenant-scoped guest customer id rather than a user id.
     /// </summary>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the owner is an authenticated user or a guest. Defaults to
+    /// <see cref="CustomerOwnerKind.Authenticated"/> so obligations created before guest ownership existed
+    /// keep their authenticated meaning.
+    /// </summary>
+    public CustomerOwnerKind OwnerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name captured for a guest owner at purchase time, so the obligation can be
+    /// addressed for reminders without a user account. Ignored for authenticated owners.
+    /// </summary>
+    public string GuestContactName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email address captured for a guest owner at purchase time, so the obligation can be
+    /// reached for reminders without a user account. Ignored for authenticated owners.
+    /// </summary>
+    public string GuestContactEmail { get; set; }
 
     /// <summary>
     /// Gets or sets the kind of thing the transaction is for (for example an order or a subscription).
@@ -57,6 +78,13 @@ public sealed class Transaction : CatalogItem
     /// checkout, when applicable. Combined with <see cref="CheckoutSessionId"/> it makes creation idempotent.
     /// </summary>
     public string ObligationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the confirmed payment attempt that settled (or last paid down) the
+    /// transaction, when applicable. This is the canonical link from a settled obligation back to the
+    /// durable payment ledger, so a settlement can always be reconciled against the gateway.
+    /// </summary>
+    public string PaymentAttemptId { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO-4217 currency code of the amounts recorded on the transaction.

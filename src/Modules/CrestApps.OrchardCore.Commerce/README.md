@@ -36,6 +36,23 @@ builder
     );
 ```
 
+## Architectural boundary — Commerce is a thin orchestrator
+
+Commerce is a **composition and orchestration shell**, not a domain. It owns the shared admin menu and
+may later host cross-domain orchestration (feature profiles, shared policies, and commands that span
+several domains), but it must never own domain data:
+
+- Commerce **must not** define persistence: no YesSql indexes, index providers, data migrations, or
+  domain stores.
+- Commerce **must not** own the order, cart, customer, payment, tax, receipt, or report data models.
+  Those belong to their reusable domain modules (Orders, Carts, Customers, Transactions, Taxation,
+  Checkout, Receipts, Reports).
+- Reusable domain commands live in their owning module. Commerce only **composes** them. Storefront and
+  Admin surfaces are adapters over those contracts, never a place to put domain logic.
+
+This boundary is enforced by `CommerceModuleBoundaryTests`, which fail the build if the Commerce assembly
+references a domain persistence assembly (or YesSql) or defines a migration, index, or index provider.
+
 ## License
 
 This project is licensed under the MIT License.

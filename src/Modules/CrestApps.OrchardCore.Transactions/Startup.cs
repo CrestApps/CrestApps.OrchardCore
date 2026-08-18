@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddTransactionsCore()
+            .AddCustomersCore()
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 

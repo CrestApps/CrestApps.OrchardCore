@@ -33,6 +33,8 @@ Because the ledger is generic, one report, one customer statement, and one remin
 
 A **`Transaction`** is the customer- and administrator-facing record of a single financial obligation. It carries the amounts (`Amount`, `TaxAmount`, `TotalAmount`, `AmountPaid`, and the computed `OutstandingAmount`), the owner, an optional due date, the provider-neutral origin (`Source`), and a neutral `ReferenceType` / `ReferenceId` / `ReferenceVersionId` triple that points back to whatever the obligation is for (an order, a subscription, and so on). It also keeps an audit timeline of **`TransactionEvent`** entries.
 
+The owner is described by an `OwnerId` and an `OwnerKind` (`Authenticated` or `Guest`). A purchase made by a signed-in user is owned by that user's id; a purchase made without an account is owned by a stable, tenant-scoped **guest customer id** — so a guest obligation is attributable and queryable instead of being orphaned under a null owner. A guest transaction also carries the contact (name and email) captured at purchase time, used to reach the guest for reminders.
+
 A transaction moves through a `TransactionStatus` lifecycle:
 
 | Status | Meaning |
@@ -50,14 +52,14 @@ A transaction moves through a `TransactionStatus` lifecycle:
 
 An outstanding transaction can be settled two ways:
 
-- **Online** — the customer chooses *Pay* on an outstanding transaction. The module starts a [Checkout](checkout) session that references the transaction (`ReferenceType` = `Transaction`), contributes the outstanding balance as a one-time billing item, and marks the transaction **Paid** when the checkout completes at a real gateway. This reuses the exact durable ledger and reconciliation the Checkout framework already provides, so a settlement is never recorded as paid unless the gateway confirms it.
+- **Online** — the customer chooses *Pay* on an outstanding transaction. The module starts a [Checkout](checkout) session that references the transaction (`ReferenceType` = `Transaction`), contributes the outstanding balance as a one-time billing item, and settles the transaction when the checkout completes at a real gateway. Settlement is applied against the amount the payment provider **actually confirmed** (read from the durable payment-attempt ledger), never the amount the checkout requested, and the attempt currency must match the transaction currency — a mismatch is rejected rather than converted. A confirmed amount that covers the full balance marks the transaction **Paid**; a smaller confirmed amount marks it **Partially paid** and leaves the remainder outstanding. Settlement is **idempotent** (re-completing the same checkout never double-applies a payment) and records the settling `PaymentAttemptId` so a payment can always be reconciled against the gateway. Concurrent writes are guarded by optimistic concurrency, so two nodes settling the same transaction can never silently overwrite each other. This reuses the exact durable ledger and reconciliation the Checkout framework already provides, so a settlement is never recorded as paid unless the gateway confirms it.
 - **Offline** — a manager records a payment or marks the transaction paid from the admin console (for example after receiving a bank transfer or cash). The settlement is recorded with an *offline* method and an audit event.
 
 Online settlement is only available when the **[Checkout](checkout)** feature is enabled; the customer *Pay* action degrades gracefully (with a message) when it is not.
 
 ### Reminders
 
-Reminders are delivered by `ITransactionReminderService` through OrchardCore's **`INotificationService`**, so a reminder reaches the owner on whichever channel they have configured. A reminder is recorded on the transaction timeline and increments its reminder count. Managers can send a reminder manually from the admin console, and a background task sweeps outstanding transactions and sends reminders automatically on the configured cadence.
+Reminders are delivered by `ITransactionReminderService`. An **authenticated** owner is reminded through OrchardCore's **`INotificationService`**, so the reminder reaches them on whichever channel they have configured. A **guest** owner (who has no account) is reminded by **email** through the optional email service, using the contact captured at purchase time; when no email service is registered or no guest contact is available, the guest reminder is skipped gracefully. A reminder is recorded on the transaction timeline and increments its reminder count. Managers can send a reminder manually from the admin console, and a background task sweeps outstanding transactions and sends reminders automatically on the configured cadence.
 
 Reminders are gated behind the separate **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`), which depends on the OrchardCore **Notifications** feature. The core Transactions ledger, report, statements, and settlement work without it; enable the reminders feature only when you want manual and scheduled reminders. When it is disabled, the *Send reminder* action and the reminder settings are not shown.
 

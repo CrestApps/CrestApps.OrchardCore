@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Models;
 using YesSql.Indexes;
 
@@ -26,6 +27,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 Title = transaction.Title,
                 Source = transaction.Source,
                 OwnerId = transaction.OwnerId,
+                OwnerKind = transaction.OwnerKind,
                 ReferenceType = transaction.ReferenceType,
                 ReferenceId = transaction.ReferenceId,
                 CheckoutSessionId = transaction.CheckoutSessionId,
@@ -33,6 +35,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 Currency = transaction.Currency,
                 TotalAmount = transaction.TotalAmount,
                 AmountPaid = transaction.AmountPaid,
+                OutstandingAmount = CurrencyScale.Round(Math.Max(0m, transaction.TotalAmount - transaction.AmountPaid), transaction.Currency),
                 Status = transaction.Status,
                 DueUtc = transaction.DueUtc,
                 CreatedUtc = transaction.CreatedUtc,

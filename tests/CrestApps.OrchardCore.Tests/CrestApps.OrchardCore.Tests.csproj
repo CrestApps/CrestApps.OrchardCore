@@ -25,13 +25,17 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Commerce.Abstractions/CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Transactions/CrestApps.OrchardCore.Transactions.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />

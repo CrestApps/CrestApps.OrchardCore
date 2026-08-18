@@ -56,6 +56,29 @@ To add screens under the Commerce menu from another module:
 
 `CommerceConstants.Features.Area` is exposed by `CrestApps.OrchardCore.Abstractions`, which commerce modules already reference.
 
+## Architectural boundary — Commerce is a thin orchestrator
+
+Commerce is a **composition and orchestration shell**, not a domain. It owns the shared admin menu and may later host cross-domain orchestration (feature profiles, shared policies, and commands that span several domains), but it must never own domain data:
+
+- Commerce **must not** define persistence: no YesSql indexes, index providers, data migrations, or domain stores.
+- Commerce **must not** own the order, cart, customer, payment, tax, receipt, or report data models. Those belong to their reusable domain modules (Orders, Carts, Customers, Transactions, Taxation, Checkout, Receipts, Reports).
+- Reusable domain commands live in their owning module. Commerce only **composes** them; Storefront and Admin surfaces are adapters over those contracts, never a place to put domain logic.
+
+This boundary is enforced by `CommerceModuleBoundaryTests`, which fail the build if the Commerce assembly references a domain persistence assembly (or YesSql) or defines a migration, index, or index provider.
+
+## The financial-document policy seam
+
+Money events (a settled payment, a partial payment, a refund, a chargeback, or a write-off) may need to issue different financial documents depending on the business: a simple **receipt** today, or a persisted, numbered **invoice**, **credit note**, or **refund document** once an ordering domain exists. So the modules that move money (Checkout, Payments, Transactions) must not hard-code that decision.
+
+The provider-neutral **`CrestApps.OrchardCore.Commerce.Abstractions`** project owns this seam. It contains only contracts and takes no package or project references:
+
+- **`IFinancialDocumentPolicy`** decides, for a `FinancialDocumentContext` (the documented record's reference, the currency, and the `FinancialDocumentReason`), which documents to issue and whether each is persisted as an immutable copy and requires a formal number — returned as an immutable `FinancialDocumentPolicyResult`.
+- **`IFinancialDocumentNumberGenerator`** issues a `FinancialDocumentNumber` that pairs a tenant-scoped monotonic sequence (for internal ordering and gap detection) with a non-sequential public token (safe to show a customer without leaking document volume).
+
+The shipped default, **`ReceiptsOnlyFinancialDocumentPolicy`**, issues a receipt only — it never persists an immutable copy and never requires a formal number — so behavior is unchanged and the existing [Receipts](receipts) service stays the only runtime dependency.
+
+`IFinancialDocumentNumberGenerator` ships with **no default implementation on purpose**. Correct, node-safe legal numbering needs durable persistence that only exists once an Orders domain owns it, and a speculative generator would risk duplicate or reused numbers. Because the receipts-only default never requires a number, nothing resolves the generator at runtime. A future Orders domain can register a replacement policy (and a real generator) that persists numbered invoices and credit notes **without changing any caller**. `CommerceModuleBoundaryTests` also asserts that `Commerce.Abstractions` references no domain persistence or providers, keeping it a pure cross-domain contract.
+
 ## Enabling the feature
 
 You do not enable **Commerce** directly. Enable a module that depends on it — for example [Transactions](transactions) or [Taxation](taxation) — and Commerce is enabled automatically.

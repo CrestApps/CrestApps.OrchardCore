@@ -1,21 +1,21 @@
-using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Products.Services;
 
 /// <summary>
 /// Converts a product content item (one that has a <see cref="ProductPart"/> and an opted-in
 /// <c>TaxationPart</c>) into an <see cref="ITaxableItem"/>. Unlike the generic content-item provider,
-/// this one maps the configured <see cref="ProductType"/> to the appropriate <see cref="TaxableItemKind"/>
-/// and reads the price from the strongly typed part. It never calculates tax; it only exposes the
-/// tax-relevant information so the taxation framework can determine the applicable tax.
+/// this one resolves the product through the sellable snapshot seam, so the taxable item carries the
+/// product-owned currency, unit price, and product-type–derived <see cref="TaxableItemKind"/>. It never
+/// calculates tax; it only exposes the tax-relevant information so the taxation framework can determine the
+/// applicable tax.
 /// </summary>
 /// <remarks>
 /// The <c>TaxationPart</c> is read via its JSON projection (rather than the strongly typed part) so the
@@ -24,11 +24,15 @@ namespace CrestApps.OrchardCore.Products.Services;
 /// </remarks>
 public sealed class ProductTaxableItemProvider : ITaxableItemProvider
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IProductSnapshotResolver _snapshotResolver;
 
-    public ProductTaxableItemProvider(IContentDefinitionManager contentDefinitionManager)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProductTaxableItemProvider"/> class.
+    /// </summary>
+    /// <param name="snapshotResolver">The resolver that projects a product content item into a sellable snapshot.</param>
+    public ProductTaxableItemProvider(IProductSnapshotResolver snapshotResolver)
     {
-        _contentDefinitionManager = contentDefinitionManager;
+        _snapshotResolver = snapshotResolver;
     }
 
     // Runs before the generic content-item provider so products get the richer, product-aware mapping.
@@ -61,18 +65,27 @@ public sealed class ProductTaxableItemProvider : ITaxableItemProvider
             return null;
         }
 
-        var productPart = contentItem.Get<ProductPart>(nameof(ProductPart));
+        var snapshot = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem), cancellationToken);
 
-        if (productPart is null)
+        if (snapshot is null)
         {
             return null;
+        }
+
+        // A product owns the currency it is sold in. A product with no currency (neither its own nor its
+        // content type's default) is not sellable, so it must not be silently taxed in the calculation
+        // context currency; fail closed rather than fall through to the currency-agnostic generic provider.
+        if (string.IsNullOrEmpty(snapshot.Currency))
+        {
+            throw new InvalidOperationException($"Product '{contentItem.ContentItemId}' declares no currency (set its Currency or the content type's Default currency); it cannot be taxed without one.");
         }
 
         var item = new TaxableItem
         {
             Id = contentItem.ContentItemId,
-            Kind = await ResolveKindAsync(contentItem),
-            UnitPrice = (decimal)productPart.Price,
+            Kind = MapKind(snapshot.ProductType),
+            UnitPrice = snapshot.UnitPrice,
+            Currency = snapshot.Currency,
             Quantity = 1m,
             TaxCategoryCode = taxationPart["TaxCategoryCode"]?.GetValue<string>(),
             TaxClassificationCode = taxationPart["TaxClassificationCode"]?.GetValue<string>(),
@@ -84,21 +97,12 @@ public sealed class ProductTaxableItemProvider : ITaxableItemProvider
         return item;
     }
 
-    private async ValueTask<TaxableItemKind> ResolveKindAsync(ContentItem contentItem)
-    {
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-        var partDefinition = definition?.Parts
-            .FirstOrDefault(part => part.PartDefinition.Name == nameof(ProductPart));
-
-        var type = partDefinition?.GetSettings<ProductPartSettings>().Type ?? ProductType.Undefined;
-
-        return type switch
+    private static TaxableItemKind MapKind(ProductType type)
+        => type switch
         {
             ProductType.Good => TaxableItemKind.Physical,
             ProductType.Service => TaxableItemKind.Service,
             ProductType.Digital => TaxableItemKind.Digital,
             _ => TaxableItemKind.Physical,
         };
-    }
 }

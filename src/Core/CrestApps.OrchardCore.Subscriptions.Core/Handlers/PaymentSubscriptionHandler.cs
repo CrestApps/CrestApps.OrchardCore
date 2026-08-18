@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -25,6 +26,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
     private readonly ISiteService _siteService;
     private readonly ISubscriptionTaxService _subscriptionTaxService;
+    private readonly IProductSnapshotResolver _snapshotResolver;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -35,18 +37,21 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     /// <param name="subscriptionPaymentSession">The cache that stores payment provider metadata during the flow.</param>
     /// <param name="siteService">The site service used to read subscription settings.</param>
     /// <param name="subscriptionTaxService">The service that applies tax to the subscription invoice.</param>
+    /// <param name="snapshotResolver">The resolver that projects the subscription product into a sellable snapshot to read its product-owned currency.</param>
     /// <param name="logger">The logger used to record delayed payment confirmation attempts.</param>
     /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public PaymentSubscriptionHandler(
         SubscriptionPaymentSession subscriptionPaymentSession,
         ISiteService siteService,
         ISubscriptionTaxService subscriptionTaxService,
+        IProductSnapshotResolver snapshotResolver,
         ILogger<PaymentSubscriptionHandler> logger,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
         _subscriptionPaymentSession = subscriptionPaymentSession;
         _siteService = siteService;
         _subscriptionTaxService = subscriptionTaxService;
+        _snapshotResolver = snapshotResolver;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -55,7 +60,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     /// Adds the payment step and attaches the subscription plan billing items to it.
     /// </summary>
     /// <param name="context">The context for the subscription flow that is being activated.</param>
-    public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
+    public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
         {
@@ -68,16 +73,24 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             // authoritative and always attached to the payment step, so it is charged exactly once
             // regardless of how many data-collection steps (content, tenant onboarding, ...) the flow
             // contains. Other handlers may still add their own billing items to their own steps.
-            BillingItems = BuildPlanBillingItems(context),
+            BillingItems = await BuildPlanBillingItemsAsync(context),
         });
-
-        return Task.CompletedTask;
     }
 
-    private static BillingItem[] BuildPlanBillingItems(SubscriptionFlowActivatingContext context)
+    private async Task<BillingItem[]> BuildPlanBillingItemsAsync(SubscriptionFlowActivatingContext context)
     {
         if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
-            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
+            !context.SubscriptionContentItem.Has<ProductPart>())
+        {
+            return null;
+        }
+
+        // The recurring plan price is sourced from the pricing seam rather than read from the raw
+        // ProductPart, so a future pricing engine (price schedules, quantity breaks, customer-specific
+        // pricing) changes the charged amount without touching this handler.
+        var snapshot = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(context.SubscriptionContentItem));
+
+        if (snapshot is null)
         {
             return null;
         }
@@ -88,7 +101,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             {
                 ItemId = context.Session.ContentItemVersionId,
                 Description = context.SubscriptionContentItem.DisplayText,
-                BillingAmount = productPart.Price,
+                BillingAmount = snapshot.UnitPrice,
                 Subscription = new SubscriptionPlan()
                 {
                     SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
@@ -160,7 +173,22 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         }
 
         var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
-        invoice.Currency = settings.Currency;
+
+        // A subscription product owns the currency it is billed in, so the invoice currency comes from the
+        // product snapshot; the site subscription currency is only a fallback when the flow content item is
+        // not a product at all. A product that declares no currency (neither its own nor its type default) is
+        // not sellable, so it fails closed here rather than being billed in a guessed site currency. This
+        // keeps the invoice currency consistent with the Stripe price and the taxable-item currency.
+        var snapshot = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(context.Flow.ContentItem));
+
+        if (snapshot is not null && string.IsNullOrEmpty(snapshot.Currency))
+        {
+            throw new InvalidOperationException($"Subscription product '{context.Flow.ContentItem.ContentItemId}' declares no currency (set its Currency or the content type's Default currency); it cannot be billed without one.");
+        }
+
+        invoice.Currency = snapshot is not null
+            ? snapshot.Currency
+            : settings.Currency;
         invoice.LineItems = lineItems.ToArray();
         invoice.Subtotals = lineItems.Where(x => x.Subscription != null)
             .GroupBy(x => new BillingDurationKey(x.Subscription.DurationType, x.Subscription.BillingDuration))

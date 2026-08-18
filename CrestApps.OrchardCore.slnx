@@ -19,6 +19,8 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions/CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Commerce.Abstractions/CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Customers.Abstractions/CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions/CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
@@ -38,6 +40,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Payments.Core/CrestApps.OrchardCore.Payments.Core.csproj" />

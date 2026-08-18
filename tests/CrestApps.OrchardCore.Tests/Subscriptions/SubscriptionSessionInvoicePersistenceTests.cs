@@ -102,6 +102,7 @@ public class SubscriptionSessionInvoicePersistenceTests
             PaymentTestHelpers.CreatePaymentSession(),
             siteService.Object,
             new NullSubscriptionTaxService(),
+            PaymentTestHelpers.CreateProductSnapshotResolver(),
             NullLogger<PaymentSubscriptionHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
     }

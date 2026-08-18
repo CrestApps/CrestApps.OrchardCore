@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
@@ -12,6 +13,12 @@ public sealed class TransactionQuery
     /// Gets or sets the owner whose transactions are returned.
     /// </summary>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner kind to filter by, so authenticated and guest obligations can be listed
+    /// separately.
+    /// </summary>
+    public CustomerOwnerKind? OwnerKind { get; set; }
 
     /// <summary>
     /// Gets or sets the exact status to filter by.

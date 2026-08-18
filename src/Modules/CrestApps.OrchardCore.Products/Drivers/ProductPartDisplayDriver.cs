@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -22,6 +23,9 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
         return Initialize<ProductPartViewModel>(GetEditorShapeType(context), model =>
         {
             model.Price = context.IsNew ? null : part.Price;
+            model.Currency = string.IsNullOrEmpty(part.Currency)
+                ? context.TypePartDefinition.GetSettings<ProductPartSettings>().DefaultCurrency
+                : part.Currency;
             model.Sku = part.Sku;
         });
     }
@@ -46,6 +50,9 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             part.Price = model.Price.Value;
         }
 
+        part.Currency = string.IsNullOrWhiteSpace(model.Currency)
+            ? null
+            : model.Currency.Trim().ToUpperInvariant();
         part.Sku = model.Sku?.Trim();
 
         return Edit(part, context);

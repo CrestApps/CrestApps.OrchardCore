@@ -23,7 +23,10 @@ public sealed class ProductPartSchemaDefinition : PartSchemaDefinitionBase
                         ("Type", new JsonSchemaBuilder()
                             .Type(SchemaValueType.String)
                             .Enum("Undefined", "Good", "Service", "Digital")
-                            .Description("The kind of product the part represents.")))
+                            .Description("The kind of product the part represents.")),
+                        ("DefaultCurrency", new JsonSchemaBuilder()
+                            .Type(SchemaValueType.String)
+                            .Description("The ISO-4217 currency code applied to products of this type when an item does not set its own currency.")))
                     .AdditionalProperties(false)))
             .AdditionalProperties(true);
 
@@ -35,6 +38,9 @@ public sealed class ProductPartSchemaDefinition : PartSchemaDefinitionBase
                 ("Price", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Number)
                     .Description("The product price expressed in major currency units.")),
+                ("Currency", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Description("The ISO-4217 currency code the price is sold in. When empty, the content type's default currency applies.")),
                 ("Sku", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Description("The optional stock-keeping unit that uniquely identifies the product.")))

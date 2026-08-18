@@ -31,14 +31,17 @@
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Transactions.Abstractions\CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Customers.Core\CrestApps.OrchardCore.Customers.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Transactions.Core\CrestApps.OrchardCore.Transactions.Core.csproj" />
   </ItemGroup>
 

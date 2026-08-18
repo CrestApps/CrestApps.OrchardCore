@@ -31,4 +31,11 @@ public sealed class TransactionEvent
     /// Gets or sets the display name of the user that caused the event, when applicable.
     /// </summary>
     public string ActorName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the confirmed payment attempt this event recorded, when the event is
+    /// a recorded payment. It makes settlement idempotent: an attempt already present on the timeline is
+    /// never applied to the balance again, even across separate checkout sessions or a replayed webhook.
+    /// </summary>
+    public string PaymentAttemptId { get; set; }
 }

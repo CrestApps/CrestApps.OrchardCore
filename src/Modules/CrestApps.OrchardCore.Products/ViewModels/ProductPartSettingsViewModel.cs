@@ -8,6 +8,8 @@ public class ProductPartSettingsViewModel
 {
     public ProductType Type { get; set; }
 
+    public string DefaultCurrency { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Types { get; set; }
 }

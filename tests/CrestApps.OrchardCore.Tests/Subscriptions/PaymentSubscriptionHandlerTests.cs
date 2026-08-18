@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -40,6 +41,31 @@ public class PaymentSubscriptionHandlerTests
         Assert.Equal(29.99m, invoice.DueNow);
         Assert.Equal(29.99m, invoice.GrandTotal);
         Assert.Equal(2, invoice.LineItems.Length);
+    }
+
+    [Fact]
+    public async Task ActivatedAsync_UsesProductOwnedCurrency_OverSiteSetting()
+    {
+        // Arrange
+        var snapshotResolver = new Mock<IProductSnapshotResolver>();
+        snapshotResolver
+            .Setup(r => r.ResolveAsync(It.IsAny<ProductSnapshotContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SellableProduct { Currency = "CAD" });
+
+        var handler = CreateHandler(PaymentTestHelpers.CreatePaymentSession(), snapshotResolver.Object);
+
+        var session = CreateSession(
+            OneTimeStep("content", 19.99m),
+            SubscriptionStep("plan", 10.00m, dayDelay: 0));
+
+        var flow = new SubscriptionFlow(session, new ContentItem());
+
+        // Act
+        await handler.ActivatedAsync(new SubscriptionFlowActivatedContext(flow));
+
+        // Assert
+        Assert.True(session.TryGet<Invoice>(out var invoice));
+        Assert.Equal("CAD", invoice.Currency);
     }
 
     [Fact]
@@ -311,6 +337,11 @@ public class PaymentSubscriptionHandlerTests
     }
 
     private static PaymentSubscriptionHandler CreateHandler(SubscriptionPaymentSession paymentSession)
+        => CreateHandler(paymentSession, PaymentTestHelpers.CreateProductSnapshotResolver());
+
+    private static PaymentSubscriptionHandler CreateHandler(
+        SubscriptionPaymentSession paymentSession,
+        IProductSnapshotResolver snapshotResolver)
     {
         var siteService = new Mock<ISiteService>();
         var site = new Mock<ISite>();
@@ -322,6 +353,7 @@ public class PaymentSubscriptionHandlerTests
             paymentSession,
             siteService.Object,
             new NullSubscriptionTaxService(),
+            snapshotResolver,
             NullLogger<PaymentSubscriptionHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
     }

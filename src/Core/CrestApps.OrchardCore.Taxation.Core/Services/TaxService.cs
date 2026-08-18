@@ -86,6 +86,25 @@ public sealed class TaxService : ITaxService
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // Tax is always rounded and reported in the calculation context currency, so the context must carry
+        // one. Fail closed rather than round and report money against a blank currency.
+        if (string.IsNullOrEmpty(context.Currency))
+        {
+            throw new InvalidOperationException("A tax calculation context must specify the currency the amounts are expressed in.");
+        }
+
+        // Validate currency consistency before dispatching to any determination provider, so no code path
+        // (a built-in calculation or an external whole-context provider) can ever tax an item priced in a
+        // currency that differs from the context. Currency conversion is never applied.
+        foreach (var item in context.Items)
+        {
+            if (!string.IsNullOrEmpty(item.Currency) &&
+                !string.Equals(item.Currency, context.Currency, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Taxable item '{item.Id}' is priced in '{item.Currency}' but the tax calculation context currency is '{context.Currency}'. Currency conversion is not applied.");
+            }
+        }
+
         foreach (var provider in _determinationProviders)
         {
             if (provider.CanHandle(context))

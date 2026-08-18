@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -88,6 +89,7 @@ public sealed class TransactionController : Controller
         var query = new TransactionQuery
         {
             OwnerId = userId,
+            OwnerKind = CustomerOwnerKind.Authenticated,
             Search = options.Search,
         };
 
@@ -236,7 +238,9 @@ public sealed class TransactionController : Controller
 
         var transaction = await _transactionManager.FindByIdAsync(itemId);
 
-        if (transaction is null || !string.Equals(transaction.OwnerId, userId, StringComparison.Ordinal))
+        if (transaction is null ||
+            transaction.OwnerKind != CustomerOwnerKind.Authenticated ||
+            !string.Equals(transaction.OwnerId, userId, StringComparison.Ordinal))
         {
             return null;
         }

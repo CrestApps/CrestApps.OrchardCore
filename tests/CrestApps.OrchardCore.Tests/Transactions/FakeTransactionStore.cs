@@ -113,6 +113,11 @@ internal sealed class FakeTransactionStore : ITransactionStore
             return false;
         }
 
+        if (query.OwnerKind.HasValue && transaction.OwnerKind != query.OwnerKind.Value)
+        {
+            return false;
+        }
+
         if (query.OutstandingOnly)
         {
             if (transaction.OutstandingAmount <= 0m)

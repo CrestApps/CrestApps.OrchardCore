@@ -25,6 +25,7 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
             var settings = contentTypePartDefinition.GetSettings<ProductPartSettings>();
 
             model.Type = settings.Type;
+            model.DefaultCurrency = settings.DefaultCurrency;
             model.Types =
             [
                 new SelectListItem(S["Undefined"], nameof(ProductType.Undefined)),
@@ -44,6 +45,9 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
         context.Builder.WithSettings(new ProductPartSettings()
         {
             Type = model.Type,
+            DefaultCurrency = string.IsNullOrWhiteSpace(model.DefaultCurrency)
+                ? null
+                : model.DefaultCurrency.Trim().ToUpperInvariant(),
         });
 
         return Edit(contentTypePartDefinition, context);

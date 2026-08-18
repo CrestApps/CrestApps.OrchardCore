@@ -17,6 +17,13 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     private readonly IClock _clock;
 
     /// <summary>
+    /// Enables YesSql document-version concurrency checks so two nodes settling or updating the same
+    /// transaction can never silently overwrite each other; a conflicting write fails instead of losing an
+    /// update.
+    /// </summary>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="TransactionStore"/> class.
     /// </summary>
     /// <param name="session">The tenant YesSql session.</param>
@@ -40,6 +47,11 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
         if (!string.IsNullOrEmpty(query.OwnerId))
         {
             records = records.Where(x => x.OwnerId == query.OwnerId);
+        }
+
+        if (query.OwnerKind.HasValue)
+        {
+            records = records.Where(x => x.OwnerKind == query.OwnerKind.Value);
         }
 
         if (!string.IsNullOrEmpty(query.Source))

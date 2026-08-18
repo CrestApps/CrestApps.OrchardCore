@@ -59,6 +59,35 @@ public sealed class TaxProviderExtensibilityTests
         Assert.Equal(42m, result.TaxAmount);
     }
 
+    [Fact]
+    public async Task CurrencyMismatch_FailsClosed_BeforeExternalDeterminationProviderRuns()
+    {
+        var harness = new TaxTestHarness(
+            new TestClock(TaxTestData.TransactionDate),
+            services => services.AddTaxDeterminationProvider<StubExternalTaxProvider>());
+
+        var context = new TaxCalculationContext
+        {
+            Currency = "USD",
+            TransactionDateUtc = TaxTestData.TransactionDate,
+            Destination = TaxTestData.California(),
+            Items =
+            [
+                new TaxableItem
+                {
+                    Id = "item-1",
+                    Kind = TaxableItemKind.Physical,
+                    Quantity = 1m,
+                    UnitPrice = 100m,
+                    Currency = "EUR",
+                },
+            ],
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken));
+    }
+
     private sealed class FlatTenTaxCalculationMethod : ITaxCalculationMethod
     {
         public const string MethodName = "FlatTen";

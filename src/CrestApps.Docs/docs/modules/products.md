@@ -15,24 +15,26 @@ The **Products** module turns any Orchard Core content type into a purchasable p
 
 ## Overview
 
-Once enabled, the module registers an attachable content part named **Product** (`ProductPart`). Attach it to a content type and every content item of that type gains a **Price** value, plus a design-time **Type** setting that classifies the product as a *Good*, *Service*, or *Plan*.
+Once enabled, the module registers an attachable content part named **Product** (`ProductPart`). Attach it to a content type and every content item of that type gains a **Price** value and the **Currency** that price is sold in, plus a design-time **Type** setting that classifies the product as a *Good*, *Service*, or *Digital* item and a **Default currency** applied when an item does not set its own.
 
 Because the part is a normal Orchard Core content part, products participate in the full CMS pipeline: they can be listed, queried, localized, versioned, indexed for search, and secured with the same permissions and workflows as any other content item.
 
 ## The Product part
 
-`ProductPart` exposes a single content-item value:
+`ProductPart` exposes these content-item values:
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `Price` | `decimal` | The price of the item, expressed in the site's configured currency. |
+| `Price` | `decimal` | The price of the item, expressed in the product's own `Currency`. |
+| `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency; prices are never converted between currencies. |
 | `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
 
 The part's behavior is configured per content type through **`ProductPartSettings`**:
 
 | Setting | Type | Description |
 | --- | --- | --- |
-| `Type` | `ProductType` | Classifies the product. One of `Undefined`, `Good`, `Service`, or `Planet`. |
+| `Type` | `ProductType` | Classifies the product. One of `Undefined`, `Good`, `Service`, or `Digital`. |
+| `DefaultCurrency` | `string` | The ISO-4217 currency code applied to products of this type when an item does not set its own `Currency`. |
 
 ## Attaching the Product part
 
@@ -96,11 +98,20 @@ A price on a content item is not enough to sell it: a cart or order must capture
 
 Both the editable `ProductPart.Price` and the snapshot's unit price are `decimal`, the authoritative representation for stored financial records, so a price never suffers binary floating-point drift between editing and settlement. A consuming module (a future storefront, or the existing checkout) resolves a snapshot once and stores it, so the order of record is stable and self-contained.
 
+## Resolving a price
+
+Reading `ProductPart.Price` directly couples a caller to today's flat, per-item pricing. To keep checkout, payment, and future ordering flows stable while pricing rules evolve, resolve prices through a seam instead:
+
+- **`PriceResult`** is an immutable value that always pairs an amount with the currency it is expressed in — its `UnitPrice`, `Currency`, `Quantity`, and computed `Subtotal`. A price is never passed around without its currency.
+- **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. It never converts between currencies: when the context requests a currency that differs from the product's currency it returns `null` and logs a warning, so a price is never charged in the wrong currency.
+
+A future pricing engine (price schedules, quantity breaks, or customer-specific pricing) can replace `IPriceResolver` to produce the same `PriceResult` without changing any consumer.
+
 ## Recipes and schema
 
 The **Product** part is defined and imported through Orchard Core's built-in `ContentDefinition` recipe step, and product content items through the built-in `Content` step — no product-specific recipe step is required.
 
-When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for the `ProductPart` (its `Price` and `Sku` payload and the `ProductPartSettings.Type` option), giving editor validation and IntelliSense while authoring content-definition recipes.
+When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is contributed for the `ProductPart` (its `Price`, `Currency`, and `Sku` payload and the `ProductPartSettings.Type` and `DefaultCurrency` options), giving editor validation and IntelliSense while authoring content-definition recipes.
 
 ## Installation
 

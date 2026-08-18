@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -29,36 +31,40 @@ public sealed class StripePriceSyncService
 
     private const string _syncLockKey = "STRIPE_PRICE_SYNC_LOCK";
 
-    private readonly ISiteService _siteService;
     private readonly IStripeProductService _stripeProductService;
     private readonly IStripePriceService _stripePriceService;
     private readonly ISession _session;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDistributedLock _distributedLock;
+    private readonly IProductSnapshotResolver _snapshotResolver;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StripePriceSyncService"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to load subscription settings.</param>
     /// <param name="stripeProductService">The Stripe product service used to read and create products.</param>
     /// <param name="stripePriceService">The Stripe price service used to read, create, and update prices.</param>
     /// <param name="session">The YesSql session used to query content item indexes.</param>
     /// <param name="contentDefinitionManager">The content definition manager used to load subscription content type definitions.</param>
     /// <param name="distributedLock">The distributed lock service used to serialize full price synchronization.</param>
+    /// <param name="snapshotResolver">The resolver that projects a product content item into a sellable snapshot to read its product-owned currency.</param>
+    /// <param name="logger">The logger.</param>
     public StripePriceSyncService(
-        ISiteService siteService,
         IStripeProductService stripeProductService,
         IStripePriceService stripePriceService,
         ISession session,
         IContentDefinitionManager contentDefinitionManager,
-        IDistributedLock distributedLock)
+        IDistributedLock distributedLock,
+        IProductSnapshotResolver snapshotResolver,
+        ILogger<StripePriceSyncService> logger)
     {
-        _siteService = siteService;
         _stripeProductService = stripeProductService;
         _stripePriceService = stripePriceService;
         _session = session;
         _contentDefinitionManager = contentDefinitionManager;
         _distributedLock = distributedLock;
+        _snapshotResolver = snapshotResolver;
+        _logger = logger;
     }
 
     /// <summary>
@@ -94,7 +100,7 @@ public sealed class StripePriceSyncService
 
         if (!definition.StereotypeEquals(SubscriptionConstants.Stereotype) ||
             !contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
-            !contentItem.TryGet<ProductPart>(out var productPart))
+            !contentItem.Has<ProductPart>())
         {
             return;
         }
@@ -112,26 +118,60 @@ public sealed class StripePriceSyncService
             return;
         }
 
-        var product = await CreateProductIfNotExistsAsync(definition);
+        var resolved = await ResolveProductPriceAsync(contentItem, currency);
 
-        if (string.IsNullOrEmpty(currency))
+        if (resolved is null)
         {
-            var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
-            currency = settings.Currency;
+            return;
         }
+
+        var product = await CreateProductIfNotExistsAsync(definition);
 
         var priceRequest = new CreatePriceRequest()
         {
             LookupKey = contentItem.ContentItemVersionId,
             ProductId = product.Id,
             Title = contentItem.DisplayText,
-            Amount = productPart.Price,
-            Currency = currency,
+            Amount = resolved.Value.Amount,
+            Currency = resolved.Value.Currency,
             IntervalCount = subscriptionPart.BillingDuration,
             Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
         };
 
         await _stripePriceService.CreateAsync(priceRequest);
+    }
+
+    // Resolves the currency a subscription product is billed in. A product owns its currency, so the product's
+    // own currency wins and a requested currency that differs is rejected (skip + log) rather than converted.
+    // A product that declares no currency (neither its own nor a type default) is not sellable, so it is skipped
+    // and logged rather than billed in a guessed currency — no site currency is ever stamped onto a product.
+    private async Task<(string Currency, decimal Amount)?> ResolveProductPriceAsync(ContentItem contentItem, string requestedCurrency)
+    {
+        var snapshot = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem));
+
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        var currency = snapshot.Currency;
+
+        if (string.IsNullOrEmpty(currency))
+        {
+            _logger.LogWarning("Skipping Stripe price sync for '{ContentItemVersionId}': the product declares no currency (set its Currency or the content type's Default currency); it is not billed in a guessed currency.", contentItem.ContentItemVersionId);
+
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(requestedCurrency) &&
+            !string.Equals(requestedCurrency, currency, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Skipping Stripe price sync for '{ContentItemVersionId}': the product is sold in '{ProductCurrency}' but '{RequestedCurrency}' was requested and no conversion is applied.", contentItem.ContentItemVersionId, currency, requestedCurrency);
+
+            return null;
+        }
+
+        return (currency, snapshot.UnitPrice);
     }
 
     /// <summary>
@@ -252,12 +292,6 @@ public sealed class StripePriceSyncService
 
     private async Task CreateMissingPriceItemsAsync(string[] existingLookupIds, string[] contentTypes, string currency)
     {
-        if (string.IsNullOrEmpty(currency))
-        {
-            var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
-            currency = settings.Currency;
-        }
-
         var batchCount = 0;
 
         while (true)
@@ -274,27 +308,36 @@ public sealed class StripePriceSyncService
                 break;
             }
 
-            var priceItems = new List<(ContentItem ContentItem, SubscriptionPart Subscription, ProductPart Product)>();
+            var priceRequests = new List<CreatePriceRequest>();
 
             foreach (var contentItem in contentItems)
             {
-                if (contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) &&
-                    contentItem.TryGet<ProductPart>(out var productPart))
+                if (!contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+                    !contentItem.Has<ProductPart>())
                 {
-                    priceItems.Add((contentItem, subscriptionPart, productPart));
+                    continue;
                 }
+
+                var resolved = await ResolveProductPriceAsync(contentItem, currency);
+
+                if (resolved is null)
+                {
+                    continue;
+                }
+
+                priceRequests.Add(new CreatePriceRequest()
+                {
+                    LookupKey = contentItem.ContentItemVersionId,
+                    ProductId = contentItem.ContentType,
+                    Title = contentItem.DisplayText,
+                    Amount = resolved.Value.Amount,
+                    Currency = resolved.Value.Currency,
+                    IntervalCount = subscriptionPart.BillingDuration,
+                    Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
+                });
             }
 
-            await RunBoundedAsync(priceItems, item => _stripePriceService.CreateAsync(new CreatePriceRequest()
-            {
-                LookupKey = item.ContentItem.ContentItemVersionId,
-                ProductId = item.ContentItem.ContentType,
-                Title = item.ContentItem.DisplayText,
-                Amount = item.Product.Price,
-                Currency = currency,
-                IntervalCount = item.Subscription.BillingDuration,
-                Interval = item.Subscription.DurationType.ToString().ToLowerInvariant(),
-            }));
+            await RunBoundedAsync(priceRequests, request => _stripePriceService.CreateAsync(request));
         }
     }
 

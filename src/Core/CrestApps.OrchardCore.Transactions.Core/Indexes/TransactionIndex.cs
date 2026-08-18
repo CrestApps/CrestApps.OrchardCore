@@ -1,4 +1,5 @@
 using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Core.Indexes;
@@ -22,6 +23,11 @@ public sealed class TransactionIndex : CatalogItemIndex
     /// The owner of the obligation.
     /// </summary>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Whether the owner is an authenticated user or a guest.
+    /// </summary>
+    public CustomerOwnerKind OwnerKind { get; set; }
 
     /// <summary>
     /// The reference type the transaction is for.
@@ -57,6 +63,12 @@ public sealed class TransactionIndex : CatalogItemIndex
     /// The amount paid so far.
     /// </summary>
     public decimal AmountPaid { get; set; }
+
+    /// <summary>
+    /// The amount still owed, normalized to the currency's precision and never negative. Mapped as a real
+    /// column so a report can query and sort by what is outstanding without loading every document.
+    /// </summary>
+    public decimal OutstandingAmount { get; set; }
 
     /// <summary>
     /// The current lifecycle state of the transaction.
