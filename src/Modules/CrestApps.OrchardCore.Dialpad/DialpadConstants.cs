@@ -28,6 +28,12 @@ public static class DialpadConstants
     public const string WebhookProtectorName = "Dialpad.Webhook";
 
     /// <summary>
+    /// The name of the data protector used to protect the Dialpad Admin API key used for webhook
+    /// registration.
+    /// </summary>
+    public const string WebhookRegistrationProtectorName = "Dialpad.WebhookRegistration";
+
+    /// <summary>
     /// The Dialpad OAuth scope that allows access to a refresh token so access tokens can be renewed
     /// without prompting the user to reconnect. Dialpad requires every scope, including this one, to be
     /// approved for the OAuth application, so it is only requested when an administrator adds it to the

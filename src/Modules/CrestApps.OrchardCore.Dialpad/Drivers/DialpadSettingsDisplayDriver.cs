@@ -167,6 +167,8 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         model.Scopes = environment.Scopes;
         model.UserId = environment.UserId;
         model.OutboundCallerId = environment.OutboundCallerId;
+        model.WebhookId = environment.WebhookId;
+        model.CallEventSubscriptionId = environment.CallEventSubscriptionId;
         model.HasApiToken = !string.IsNullOrEmpty(environment.ApiToken);
         model.HasClientSecret = !string.IsNullOrEmpty(environment.ClientSecret);
         model.HasUnreadableClientSecret = !string.IsNullOrEmpty(environment.ClientSecret) &&
@@ -174,6 +176,9 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         model.HasWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret);
         model.HasUnreadableWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret) &&
             !CanUnprotect(environment.WebhookSigningSecret, DialpadConstants.WebhookProtectorName);
+        model.HasWebhookRegistrationApiToken = !string.IsNullOrEmpty(environment.WebhookRegistrationApiToken);
+        model.HasUnreadableWebhookRegistrationApiToken = !string.IsNullOrEmpty(environment.WebhookRegistrationApiToken) &&
+            !CanUnprotect(environment.WebhookRegistrationApiToken, DialpadConstants.WebhookRegistrationProtectorName);
     }
 
     private bool UpdateEnvironment(
@@ -231,6 +236,16 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             environment.WebhookSigningSecret = protectedWebhookSecret;
         }
 
+        if (!string.IsNullOrWhiteSpace(model.WebhookRegistrationApiToken))
+        {
+            var protector = _dataProtectionProvider.CreateProtector(DialpadConstants.WebhookRegistrationProtectorName);
+            var protectedWebhookRegistrationApiToken = protector.Protect(model.WebhookRegistrationApiToken);
+
+            hasChanges |= environment.WebhookRegistrationApiToken != protectedWebhookRegistrationApiToken;
+
+            environment.WebhookRegistrationApiToken = protectedWebhookRegistrationApiToken;
+        }
+
         if (isActive)
         {
             ValidateActiveEnvironment(environment, model, prefix, context);
@@ -282,14 +297,23 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             }
         }
 
-        if ((string.IsNullOrEmpty(environment.WebhookSigningSecret) ||
+        var hasSavedWebhookRegistrationApiToken = !string.IsNullOrEmpty(environment.WebhookRegistrationApiToken) &&
+            CanUnprotect(environment.WebhookRegistrationApiToken, DialpadConstants.WebhookRegistrationProtectorName);
+        var hasSavedApiToken = !string.IsNullOrEmpty(environment.ApiToken) &&
+            CanUnprotect(environment.ApiToken, DialpadConstants.ProtectorName);
+        var canRegisterWebhook = !string.IsNullOrWhiteSpace(model.WebhookRegistrationApiToken) ||
+            hasSavedWebhookRegistrationApiToken ||
+            hasSavedApiToken;
+
+        if (!canRegisterWebhook &&
+            (string.IsNullOrEmpty(environment.WebhookSigningSecret) ||
             !CanUnprotect(environment.WebhookSigningSecret, DialpadConstants.WebhookProtectorName)) &&
             string.IsNullOrWhiteSpace(model.WebhookSigningSecret))
         {
             context.Updater.ModelState.AddModelError(
                 Prefix,
                 $"{prefix}.{nameof(model.WebhookSigningSecret)}",
-                S["Enter the Dialpad webhook signing secret for the active environment. Dialpad call-event webhooks use this secret so the soft phone can receive call-state updates."]);
+                S["Enter the Dialpad webhook signing secret for the active environment, or save a webhook registration API key and use Register webhook. Dialpad call-event webhooks use this secret so the soft phone can receive call-state updates."]);
         }
     }
 

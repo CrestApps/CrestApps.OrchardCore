@@ -60,6 +60,23 @@ public sealed class DialpadEnvironmentSettings
     public string WebhookSigningSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the protected Dialpad Admin API key used only to register or repair call-event
+    /// webhooks and subscriptions. The value is stored encrypted using the data protection provider.
+    /// </summary>
+    public string WebhookRegistrationApiToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Dialpad webhook identifier returned when the app registers the call-event webhook.
+    /// </summary>
+    public string WebhookId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Dialpad call-event subscription identifier returned when the app registers the
+    /// subscription.
+    /// </summary>
+    public string CallEventSubscriptionId { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional internal override for the Dialpad REST API base address. When empty the
     /// default endpoint for the environment is used.
     /// </summary>

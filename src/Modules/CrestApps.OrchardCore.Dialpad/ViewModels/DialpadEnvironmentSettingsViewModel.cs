@@ -55,6 +55,23 @@ public class DialpadEnvironmentSettingsViewModel
     public string WebhookSigningSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the Dialpad Admin API key used only to register call-event webhooks and subscriptions.
+    /// </summary>
+    public string WebhookRegistrationApiToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved Dialpad webhook identifier.
+    /// </summary>
+    [BindNever]
+    public string WebhookId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved Dialpad call-event subscription identifier.
+    /// </summary>
+    [BindNever]
+    public string CallEventSubscriptionId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether an API key has already been saved for this environment.
     /// </summary>
     [BindNever]
@@ -80,6 +97,19 @@ public class DialpadEnvironmentSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasWebhookSigningSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a webhook registration API key has already been saved.
+    /// </summary>
+    [BindNever]
+    public bool HasWebhookRegistrationApiToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the saved webhook registration API key cannot be decrypted
+    /// with the current data-protection keys.
+    /// </summary>
+    [BindNever]
+    public bool HasUnreadableWebhookRegistrationApiToken { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the saved webhook signing secret cannot be decrypted with
