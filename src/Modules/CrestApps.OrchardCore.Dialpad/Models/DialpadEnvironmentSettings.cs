@@ -60,6 +60,11 @@ public sealed class DialpadEnvironmentSettings
     public string WebhookSigningSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the authentication method used when registering the Dialpad call-event webhook.
+    /// </summary>
+    public DialpadWebhookRegistrationAuthenticationType WebhookRegistrationAuthenticationType { get; set; }
+
+    /// <summary>
     /// Gets or sets the protected Dialpad Admin API key used only to register or repair call-event
     /// webhooks and subscriptions. The value is stored encrypted using the data protection provider.
     /// </summary>

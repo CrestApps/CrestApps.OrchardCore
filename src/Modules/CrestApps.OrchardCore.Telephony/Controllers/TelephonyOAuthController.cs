@@ -47,7 +47,7 @@ public sealed class TelephonyOAuthController : Controller
     /// <returns>A redirect to the provider authorization endpoint, or a completion page on failure.</returns>
     public async Task<IActionResult> Connect(string returnUrl = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
@@ -89,7 +89,7 @@ public sealed class TelephonyOAuthController : Controller
     /// <returns>A completion page that closes the popup or redirects back.</returns>
     public async Task<IActionResult> Callback(string code = null, string state = null, string error = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
@@ -177,7 +177,7 @@ public sealed class TelephonyOAuthController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Disconnect()
     {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))
+        if (!await CanConnectAsync())
         {
             return Forbid();
         }
@@ -195,6 +195,10 @@ public sealed class TelephonyOAuthController : Controller
             message = result.Error,
         });
     }
+
+    private async Task<bool> CanConnectAsync()
+        => await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone) ||
+            await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.ManageTelephonySettings);
 
     private ContentResult BuildCompletionPage(bool success, string returnUrl, string errorMessage = null)
     {

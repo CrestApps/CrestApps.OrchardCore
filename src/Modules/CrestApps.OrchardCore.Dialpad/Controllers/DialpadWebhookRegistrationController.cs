@@ -38,6 +38,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
     ];
 
     private readonly IAuthorizationService _authorizationService;
+    private readonly ITelephonyAuthenticationService _authenticationService;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -50,6 +51,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
     /// Initializes a new instance of the <see cref="DialpadWebhookRegistrationController"/> class.
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="authenticationService">The telephony authentication service.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
@@ -58,6 +60,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialpadWebhookRegistrationController(
         IAuthorizationService authorizationService,
+        ITelephonyAuthenticationService authenticationService,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IHttpClientFactory httpClientFactory,
@@ -66,6 +69,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
         IStringLocalizer<DialpadWebhookRegistrationController> stringLocalizer)
     {
         _authorizationService = authorizationService;
+        _authenticationService = authenticationService;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _httpClientFactory = httpClientFactory;
@@ -114,14 +118,14 @@ public sealed class DialpadWebhookRegistrationController : Controller
             });
         }
 
-        var apiToken = GetWebhookRegistrationApiToken(environment);
+        var apiToken = await GetWebhookRegistrationBearerTokenAsync(environment, cancellationToken);
 
         if (string.IsNullOrEmpty(apiToken))
         {
             return BadRequest(new
             {
                 success = false,
-                message = S["Automatic webhook registration requires a Dialpad Admin API key saved in the active environment. OAuth client id and client secret cannot create company webhooks by themselves."].Value,
+                message = S["Automatic webhook registration requires either a saved Dialpad Admin API key or a connected Dialpad admin OAuth account for the current user."].Value,
             });
         }
 
@@ -183,16 +187,31 @@ public sealed class DialpadWebhookRegistrationController : Controller
         });
     }
 
+    private async Task<string> GetWebhookRegistrationBearerTokenAsync(
+        DialpadEnvironmentSettings environment,
+        CancellationToken cancellationToken)
+    {
+        var authenticationType = GetEffectiveWebhookRegistrationAuthenticationType(environment);
+
+        if (authenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2)
+        {
+            var tokens = await _authenticationService.GetValidTokensAsync(DialpadConstants.ProviderTechnicalName, cancellationToken);
+
+            return tokens?.AccessToken;
+        }
+
+        if (authenticationType == DialpadWebhookRegistrationAuthenticationType.ApiKey)
+        {
+            return GetWebhookRegistrationApiToken(environment);
+        }
+
+        return null;
+    }
+
     private string GetWebhookRegistrationApiToken(DialpadEnvironmentSettings environment)
     {
         var protectedToken = environment.WebhookRegistrationApiToken;
         var protectorName = DialpadConstants.WebhookRegistrationProtectorName;
-
-        if (string.IsNullOrEmpty(protectedToken))
-        {
-            protectedToken = environment.ApiToken;
-            protectorName = DialpadConstants.ProtectorName;
-        }
 
         if (string.IsNullOrEmpty(protectedToken))
         {
@@ -209,6 +228,26 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
             return null;
         }
+    }
+
+    private static DialpadWebhookRegistrationAuthenticationType GetEffectiveWebhookRegistrationAuthenticationType(DialpadEnvironmentSettings environment)
+    {
+        if (environment.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.NotConfigured)
+        {
+            return environment.WebhookRegistrationAuthenticationType;
+        }
+
+        if (environment.GetEffectiveAuthenticationType() == DialpadAuthenticationType.OAuth2)
+        {
+            return DialpadWebhookRegistrationAuthenticationType.OAuth2;
+        }
+
+        if (!string.IsNullOrEmpty(environment.WebhookRegistrationApiToken))
+        {
+            return DialpadWebhookRegistrationAuthenticationType.ApiKey;
+        }
+
+        return DialpadWebhookRegistrationAuthenticationType.NotConfigured;
     }
 
     private string BuildWebhookUrl(ISite site)

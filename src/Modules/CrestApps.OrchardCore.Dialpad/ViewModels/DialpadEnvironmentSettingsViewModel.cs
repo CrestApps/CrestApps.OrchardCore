@@ -55,9 +55,21 @@ public class DialpadEnvironmentSettingsViewModel
     public string WebhookSigningSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the authentication method used when registering the Dialpad call-event webhook.
+    /// </summary>
+    public DialpadWebhookRegistrationAuthenticationType WebhookRegistrationAuthenticationType { get; set; }
+
+    /// <summary>
     /// Gets or sets the Dialpad Admin API key used only to register call-event webhooks and subscriptions.
     /// </summary>
     public string WebhookRegistrationApiToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether OAuth credentials are saved and readable for webhook
+    /// registration.
+    /// </summary>
+    [BindNever]
+    public bool CanUseOAuthWebhookRegistration { get; set; }
 
     /// <summary>
     /// Gets or sets the saved Dialpad webhook identifier.

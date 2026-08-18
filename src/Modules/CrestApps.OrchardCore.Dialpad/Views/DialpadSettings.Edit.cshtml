@@ -64,6 +64,20 @@
 
             selector.addEventListener('change', updateAuthenticationSections);
             updateAuthenticationSections();
+
+            var webhookRegistrationSelector = environment.querySelector('[data-dialpad-webhook-registration-authentication-type]');
+            var webhookRegistrationSections = Array.prototype.slice.call(environment.querySelectorAll('[data-dialpad-webhook-registration-authentication-section]'));
+
+            function updateWebhookRegistrationSections() {
+                webhookRegistrationSections.forEach(function (section) {
+                    section.hidden = section.getAttribute('data-dialpad-webhook-registration-authentication-section') !== webhookRegistrationSelector.value;
+                });
+            }
+
+            if (webhookRegistrationSelector) {
+                webhookRegistrationSelector.addEventListener('change', updateWebhookRegistrationSections);
+                updateWebhookRegistrationSections();
+            }
         });
 
         function getStatusElement(container) {

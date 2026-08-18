@@ -167,12 +167,16 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         model.Scopes = environment.Scopes;
         model.UserId = environment.UserId;
         model.OutboundCallerId = environment.OutboundCallerId;
+        model.WebhookRegistrationAuthenticationType = GetEffectiveWebhookRegistrationAuthenticationType(environment);
         model.WebhookId = environment.WebhookId;
         model.CallEventSubscriptionId = environment.CallEventSubscriptionId;
         model.HasApiToken = !string.IsNullOrEmpty(environment.ApiToken);
         model.HasClientSecret = !string.IsNullOrEmpty(environment.ClientSecret);
         model.HasUnreadableClientSecret = !string.IsNullOrEmpty(environment.ClientSecret) &&
             !CanUnprotect(environment.ClientSecret, DialpadConstants.OAuthProtectorName);
+        model.CanUseOAuthWebhookRegistration = !string.IsNullOrWhiteSpace(environment.ClientId) &&
+            !string.IsNullOrEmpty(environment.ClientSecret) &&
+            !model.HasUnreadableClientSecret;
         model.HasWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret);
         model.HasUnreadableWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret) &&
             !CanUnprotect(environment.WebhookSigningSecret, DialpadConstants.WebhookProtectorName);
@@ -199,12 +203,14 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         hasChanges |= environment.OutboundCallerId != model.OutboundCallerId;
         hasChanges |= environment.ClientId != model.ClientId;
         hasChanges |= environment.Scopes != model.Scopes;
+        hasChanges |= environment.WebhookRegistrationAuthenticationType != model.WebhookRegistrationAuthenticationType;
         environment.AuthenticationType = model.AuthenticationType;
         environment.Host = host;
         environment.UserId = model.UserId;
         environment.OutboundCallerId = model.OutboundCallerId;
         environment.ClientId = model.ClientId;
         environment.Scopes = model.Scopes;
+        environment.WebhookRegistrationAuthenticationType = model.WebhookRegistrationAuthenticationType;
 
         if (!string.IsNullOrWhiteSpace(model.ApiToken))
         {
@@ -297,13 +303,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             }
         }
 
-        var hasSavedWebhookRegistrationApiToken = !string.IsNullOrEmpty(environment.WebhookRegistrationApiToken) &&
-            CanUnprotect(environment.WebhookRegistrationApiToken, DialpadConstants.WebhookRegistrationProtectorName);
-        var hasSavedApiToken = !string.IsNullOrEmpty(environment.ApiToken) &&
-            CanUnprotect(environment.ApiToken, DialpadConstants.ProtectorName);
-        var canRegisterWebhook = !string.IsNullOrWhiteSpace(model.WebhookRegistrationApiToken) ||
-            hasSavedWebhookRegistrationApiToken ||
-            hasSavedApiToken;
+        var canRegisterWebhook = CanRegisterWebhook(environment, model);
 
         if (!canRegisterWebhook &&
             (string.IsNullOrEmpty(environment.WebhookSigningSecret) ||
@@ -313,8 +313,52 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             context.Updater.ModelState.AddModelError(
                 Prefix,
                 $"{prefix}.{nameof(model.WebhookSigningSecret)}",
-                S["Enter the Dialpad webhook signing secret for the active environment, or save a webhook registration API key and use Register webhook. Dialpad call-event webhooks use this secret so the soft phone can receive call-state updates."]);
+                S["Register the Dialpad webhook for the active environment, or choose a registration method and save the settings so Register webhook can create it. Dialpad call-event webhooks use the generated signing secret so the soft phone can receive call-state updates."]);
         }
+    }
+
+    private bool CanRegisterWebhook(DialpadEnvironmentSettings environment, DialpadEnvironmentSettingsViewModel model)
+    {
+        var registrationAuthenticationType = model.WebhookRegistrationAuthenticationType == DialpadWebhookRegistrationAuthenticationType.NotConfigured
+            ? GetEffectiveWebhookRegistrationAuthenticationType(environment)
+            : model.WebhookRegistrationAuthenticationType;
+
+        if (registrationAuthenticationType == DialpadWebhookRegistrationAuthenticationType.ApiKey)
+        {
+            return !string.IsNullOrWhiteSpace(model.WebhookRegistrationApiToken) ||
+                (!string.IsNullOrEmpty(environment.WebhookRegistrationApiToken) &&
+                    CanUnprotect(environment.WebhookRegistrationApiToken, DialpadConstants.WebhookRegistrationProtectorName));
+        }
+
+        if (registrationAuthenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2)
+        {
+            return !string.IsNullOrWhiteSpace(model.ClientId) &&
+                (!string.IsNullOrWhiteSpace(model.ClientSecret) ||
+                    (!string.IsNullOrEmpty(environment.ClientSecret) &&
+                        CanUnprotect(environment.ClientSecret, DialpadConstants.OAuthProtectorName)));
+        }
+
+        return false;
+    }
+
+    private static DialpadWebhookRegistrationAuthenticationType GetEffectiveWebhookRegistrationAuthenticationType(DialpadEnvironmentSettings environment)
+    {
+        if (environment.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.NotConfigured)
+        {
+            return environment.WebhookRegistrationAuthenticationType;
+        }
+
+        if (environment.GetEffectiveAuthenticationType() == DialpadAuthenticationType.OAuth2)
+        {
+            return DialpadWebhookRegistrationAuthenticationType.OAuth2;
+        }
+
+        if (!string.IsNullOrEmpty(environment.WebhookRegistrationApiToken))
+        {
+            return DialpadWebhookRegistrationAuthenticationType.ApiKey;
+        }
+
+        return DialpadWebhookRegistrationAuthenticationType.NotConfigured;
     }
 
     private bool CanUnprotect(string value, string protectorName)
