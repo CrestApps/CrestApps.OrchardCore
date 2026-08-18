@@ -1,4 +1,3 @@
-using CrestApps.Core;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
@@ -87,7 +86,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                 [
                     new SelectListItem(S["OpenID Connect"], nameof(McpServerAuthenticationType.OpenId)),
                     new SelectListItem(S["API key"], nameof(McpServerAuthenticationType.ApiKey)),
-                    new SelectListItem(S["None (development only)"], nameof(McpServerAuthenticationType.None)),
+                    new SelectListItem(S["None (Anonymous access)"], nameof(McpServerAuthenticationType.None)),
                 ];
             }).Location("Content:1%MCP Server;1")
             .OnGroup(SettingsGroupId),
