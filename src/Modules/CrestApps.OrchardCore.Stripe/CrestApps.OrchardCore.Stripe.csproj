@@ -28,6 +28,8 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="Stripe.net" />
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Navigation.Core" />

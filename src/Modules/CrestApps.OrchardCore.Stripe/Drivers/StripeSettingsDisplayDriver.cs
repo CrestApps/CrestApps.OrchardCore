@@ -87,9 +87,11 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
             model.LivePublishableKey = settings.LivePublishableKey;
             model.HasLivePrivateSecret = !string.IsNullOrEmpty(settings.LivePrivateSecret);
             model.HasLiveWebhookSecret = !string.IsNullOrEmpty(settings.LiveWebhookSecret);
+            model.LiveAccountId = settings.LiveAccountId;
             model.TestPublishableKey = settings.TestPublishableKey;
             model.HasTestPrivateSecret = !string.IsNullOrEmpty(settings.TestPrivateSecret);
             model.HasTestWebhookSecret = !string.IsNullOrEmpty(settings.TestWebhookSecret);
+            model.TestAccountId = settings.TestAccountId;
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
     }
@@ -114,120 +116,107 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectionPurpose);
 
-        _shellReleaseManager.RequestRelease();
+        // IsLive and CheckoutMode are projected into the runtime StripeOptions, so a change to either must
+        // reload the tenant even when no secret value changed.
+        var changed =
+            settings.IsLive != model.IsLive ||
+            settings.CheckoutMode != model.CheckoutMode;
 
         settings.IsLive = model.IsLive;
         settings.CheckoutMode = model.CheckoutMode;
 
-        if (model.IsLive)
-        {
-            var liveUpdated = settings.LivePublishableKey != model.LivePublishableKey;
+        changed |= UpdateEnvironment(settings, model, context, protector, isLive: true);
+        changed |= UpdateEnvironment(settings, model, context, protector, isLive: false);
 
-            if (string.IsNullOrWhiteSpace(model.LivePublishableKey))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePublishableKey), S["Production publishable key is required."]);
-            }
-            else if (!model.LivePublishableKey.StartsWith("pk_live_", StringComparison.Ordinal))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePublishableKey), S["Production publishable key must start with: {0}", "pk_live_"]);
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.LivePrivateSecret))
-            {
-                if (!model.LivePrivateSecret.StartsWith("sk_live_", StringComparison.Ordinal))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePrivateSecret), S["Production secret key must start with: {0}", "sk_live_"]);
-                }
-                else
-                {
-                    settings.LivePrivateSecret = protector.Protect(model.LivePrivateSecret);
-                    liveUpdated = true;
-                }
-            }
-            else if (string.IsNullOrEmpty(settings.LivePrivateSecret))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePrivateSecret), S["Production secret key is required."]);
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.LiveWebhookSecret))
-            {
-                if (!model.LiveWebhookSecret.StartsWith("whsec_", StringComparison.Ordinal))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.LiveWebhookSecret), S["Production Webhooks secret must start with: {0}", "whsec_"]);
-                }
-                else
-                {
-                    settings.LiveWebhookSecret = protector.Protect(model.LiveWebhookSecret);
-                    liveUpdated = true;
-                }
-            }
-            else if (string.IsNullOrEmpty(settings.LiveWebhookSecret))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LiveWebhookSecret), S["Production Webhooks secret is required."]);
-            }
-
-            settings.LivePublishableKey = model.LivePublishableKey;
-
-            if (liveUpdated)
-            {
-                _shellReleaseManager.RequestRelease();
-            }
-
-            return await EditAsync(site, settings, context);
-        }
-
-        var testingUpdated = settings.TestPublishableKey != model.TestPublishableKey;
-
-        if (string.IsNullOrWhiteSpace(model.TestPublishableKey))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestPublishableKey), S["Test publishable key is required."]);
-        }
-        else if (!model.TestPublishableKey.StartsWith("pk_test_", StringComparison.Ordinal))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestPublishableKey), S["Test publishable key must start with: {0}", "pk_test_"]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.TestPrivateSecret))
-        {
-            if (!model.TestPrivateSecret.StartsWith("sk_test_", StringComparison.Ordinal))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestPrivateSecret), S["Test secret key must start with: {0}", "sk_test_"]);
-            }
-            else
-            {
-                settings.TestPrivateSecret = protector.Protect(model.TestPrivateSecret);
-                testingUpdated = true;
-            }
-        }
-        else if (string.IsNullOrEmpty(settings.TestPrivateSecret))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestPrivateSecret), S["Test Private secret key is required."]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.TestWebhookSecret))
-        {
-            if (!model.TestWebhookSecret.StartsWith("whsec_", StringComparison.Ordinal))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestWebhookSecret), S["Test Webhooks secret must start with: {0}", "whsec_"]);
-            }
-            else
-            {
-                settings.TestWebhookSecret = protector.Protect(model.TestWebhookSecret);
-                testingUpdated = true;
-            }
-        }
-        else if (string.IsNullOrEmpty(settings.TestWebhookSecret))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestWebhookSecret), S["Test Webhooks secret is required."]);
-        }
-
-        settings.TestPublishableKey = model.TestPublishableKey;
-
-        if (testingUpdated)
+        if (changed)
         {
             _shellReleaseManager.RequestRelease();
         }
 
         return await EditAsync(site, settings, context);
+    }
+
+    private bool UpdateEnvironment(
+        StripeSettings settings,
+        StripeSettingsViewModel model,
+        UpdateEditorContext context,
+        IDataProtector protector,
+        bool isLive)
+    {
+        var publishable = (isLive ? model.LivePublishableKey : model.TestPublishableKey)?.Trim();
+        var secret = (isLive ? model.LivePrivateSecret : model.TestPrivateSecret)?.Trim();
+        var webhook = (isLive ? model.LiveWebhookSecret : model.TestWebhookSecret)?.Trim();
+
+        var publishablePrefix = isLive ? "pk_live_" : "pk_test_";
+        var secretPrefix = isLive ? "sk_live_" : "sk_test_";
+        var storedPublishable = isLive ? settings.LivePublishableKey : settings.TestPublishableKey;
+
+        var changed = false;
+
+        if (!string.IsNullOrEmpty(publishable) && !publishable.StartsWith(publishablePrefix, StringComparison.Ordinal))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, isLive ? nameof(model.LivePublishableKey) : nameof(model.TestPublishableKey), S["The publishable key must start with: {0}", publishablePrefix]);
+        }
+        else if (!string.Equals(storedPublishable, publishable, StringComparison.Ordinal))
+        {
+            if (isLive)
+            {
+                settings.LivePublishableKey = publishable;
+            }
+            else
+            {
+                settings.TestPublishableKey = publishable;
+            }
+
+            changed = true;
+        }
+
+        if (!string.IsNullOrEmpty(secret))
+        {
+            if (!secret.StartsWith(secretPrefix, StringComparison.Ordinal))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, isLive ? nameof(model.LivePrivateSecret) : nameof(model.TestPrivateSecret), S["The secret key must start with: {0}", secretPrefix]);
+            }
+            else
+            {
+                var protectedSecret = protector.Protect(secret);
+
+                if (isLive)
+                {
+                    settings.LivePrivateSecret = protectedSecret;
+                }
+                else
+                {
+                    settings.TestPrivateSecret = protectedSecret;
+                }
+
+                changed = true;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(webhook))
+        {
+            if (!webhook.StartsWith("whsec_", StringComparison.Ordinal))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, isLive ? nameof(model.LiveWebhookSecret) : nameof(model.TestWebhookSecret), S["The webhook signing secret must start with: {0}", "whsec_"]);
+            }
+            else
+            {
+                var protectedWebhook = protector.Protect(webhook);
+
+                if (isLive)
+                {
+                    settings.LiveWebhookSecret = protectedWebhook;
+                }
+                else
+                {
+                    settings.TestWebhookSecret = protectedWebhook;
+                }
+
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 }

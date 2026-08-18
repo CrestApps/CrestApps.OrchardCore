@@ -30,4 +30,10 @@ public sealed class StripeOptions
     /// <see cref="StripeCheckoutMode.PaymentElements"/> for backward compatibility.
     /// </summary>
     public StripeCheckoutMode CheckoutMode { get; set; } = StripeCheckoutMode.PaymentElements;
+
+    /// <summary>
+    /// Gets a value indicating whether the integration has resolved a usable Stripe secret key.
+    /// </summary>
+    public bool IsConfigured
+        => !string.IsNullOrEmpty(ApiKey);
 }

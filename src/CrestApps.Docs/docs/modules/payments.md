@@ -48,6 +48,18 @@ Each context carries normalized values — transaction id, amount, currency, gat
 
 The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings → Stripe**.
 
+### Connecting an account
+
+Configure the connection at the top of the settings page. Choose the environment with **Enable Production** (off = test), then connect that environment.
+
+1. Open your [Stripe API keys](https://dashboard.stripe.com/apikeys) (use the *Test mode* switch to pick test or live keys).
+2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout.
+3. Click **Connect**. The app verifies the key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
+
+The connection status is shown for the active environment, including the resolved Stripe account id. To unlink, click **Disconnect** and confirm; the app deletes the provisioned webhook and clears the stored credentials.
+
+If the site is not publicly reachable (for example on `localhost`), Stripe cannot create the webhook. The key and account are still saved, and a warning explains how to receive events during development: forward them with the Stripe CLI and paste the printed signing secret into the optional **Webhook signing secret** field under *Advanced*. See [Local development](#local-development).
+
 ### Settings
 
 | Setting | Description |
@@ -55,9 +67,11 @@ The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Provid
 | `IsLive` | Switches between the live and test key sets. |
 | `CheckoutMode` | The Stripe integration model to use (see below). |
 | `LivePublishableKey` / `LivePrivateSecret` / `LiveWebhookSecret` | Live-mode credentials. |
+| `LiveAccountId` / `LiveWebhookId` | The resolved live account id and the id of the auto-provisioned live webhook endpoint. |
 | `TestPublishableKey` / `TestPrivateSecret` / `TestWebhookSecret` | Test-mode credentials. |
+| `TestAccountId` / `TestWebhookId` | The resolved test account id and the id of the auto-provisioned test webhook endpoint. |
 
-Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`.
+Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
 
 ### Checkout modes
 
@@ -72,7 +86,7 @@ Both modes flow through the same server-side session so the collected amount is 
 
 ### Webhooks
 
-Stripe delivers events to `POST /stripe/webhook`. Set the endpoint's signing secret in the matching *WebhookSecret* setting. The endpoint is engineered for Stripe's at-least-once delivery guarantee:
+Stripe delivers events to `POST /stripe/webhook`. Clicking **Connect** provisions this endpoint and stores its signing secret automatically; for local development you can set it by hand in the matching *WebhookSecret* setting. The endpoint is engineered for Stripe's at-least-once delivery guarantee:
 
 - The request signature is verified against the configured webhook secret before anything is deserialized.
 - Each event is processed under a per-event distributed lock and recorded in a processed-event index, so a replayed or duplicated delivery is acknowledged with `200` without being handled twice.
@@ -80,6 +94,25 @@ Stripe delivers events to `POST /stripe/webhook`. Set the endpoint's signing sec
 - When a handler throws, pending changes are discarded and the endpoint returns `500` so Stripe retries; a lock contention returns `409`.
 
 The dispatcher maps each supported Stripe event to a provider-neutral `IPaymentEvent` call: `invoice.payment_succeeded`, `customer.subscription.created`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, and `charge.dispute.created`. A `charge.refunded` event raises one `PaymentRefundedAsync` per refund on the charge (falling back to a single aggregate notification from the charge's refunded total), so a refund issued from the Stripe dashboard is reconciled against the durable ledger and never dropped.
+
+### Workflow events
+
+When the **Workflows** feature (`OrchardCore.Workflows`) is enabled alongside Stripe, the module contributes workflow events so you can react to Stripe activity with custom workflows — for example, emailing a receipt on payment or alerting an administrator when Stripe stops responding. The events are an independent extension: with Workflows disabled the Stripe integration behaves exactly as before, and nothing is triggered.
+
+Under the **Stripe** category you can start a workflow from any of these events:
+
+| Event | Raised when |
+| --- | --- |
+| **Stripe Payment Received** | An invoice payment succeeds (including subscription cycles). |
+| **Stripe Subscription Created** | A Stripe subscription is created. |
+| **Stripe Payment Intent Succeeded** | A payment intent succeeds. |
+| **Stripe Payment Failed** | A payment fails at the gateway. |
+| **Stripe Payment Canceled** | A payment is canceled at the gateway. |
+| **Stripe Payment Refunded** | A refund is observed at the gateway. |
+| **Stripe Dispute Created** | A dispute or chargeback is opened. |
+| **Stripe Request Failed** | A request to Stripe fails, typically due to an authentication or connectivity problem. |
+
+The lifecycle events (everything except *Request Failed*) are raised from the provider-neutral payment events, so they carry the same normalized values — transaction id, amount, currency, and gateway mode — as workflow input. The **Stripe Request Failed** event is raised when an outgoing Stripe API call returns `401`/`403` or cannot connect, and also when key verification or webhook provisioning fails while connecting; it is throttled to avoid flooding when many calls fail together. Use it to notify an administrator that an account's credentials or connectivity need attention.
 
 ### Local development
 
@@ -101,7 +134,7 @@ To exercise the webhook pipeline on your machine, forward Stripe events to your 
    ```
 
    `--skip-verify` is required when forwarding to an HTTPS address that uses the ASP.NET Core development certificate; alternatively, forward to the plain HTTP endpoint (`http://localhost:your-port/stripe/webhook`) and omit the flag.
-5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhooks Secret** field under **Settings → Stripe**, with **Enable Production** left off.
+5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhook Signing Secret** field (under *Advanced*) on **Settings → Stripe**, with **Enable Production** left off, and **Save**.
 6. Trigger a sample event to confirm the pipeline end to end:
 
    ```sh

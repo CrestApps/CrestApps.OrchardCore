@@ -1,11 +1,16 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
+using CrestApps.OrchardCore.Stripe.Handlers;
 using CrestApps.OrchardCore.Stripe.Indexes;
 using CrestApps.OrchardCore.Stripe.Migrations;
 using CrestApps.OrchardCore.Stripe.Services;
+using CrestApps.OrchardCore.Stripe.Workflows;
+using CrestApps.OrchardCore.Stripe.Workflows.Drivers;
+using CrestApps.OrchardCore.Stripe.Workflows.Events;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +23,7 @@ using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using OrchardCore.Workflows.Helpers;
 using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe;
@@ -39,6 +45,13 @@ public class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
         services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
 
+        services.AddScoped<IStripeConnectService, StripeConnectService>();
+        services.AddScoped<StripeWorkflowNotifier>();
+        services.AddTransient<StripeApiFailureHandler>();
+        services
+            .AddHttpClient(StripeConstants.HttpClientName)
+            .AddHttpMessageHandler<StripeApiFailureHandler>();
+
         services.AddDataMigration<StripeWebhookMigrations>();
         services.AddIndexProvider<ProcessedStripeWebhookEventIndexProvider>();
 
@@ -54,12 +67,17 @@ public class Startup : StartupBase
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<StripeOptions>>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
+            // Route Stripe API calls through a named HttpClient so a delegating handler can observe
+            // authentication and connectivity failures and raise the Stripe "request failed" workflow event.
             // Enable Stripe.net's built-in exponential-backoff retries for transient failures and rate
             // limiting (HTTP 409/429/5xx). This keeps bulk price synchronization resilient to Stripe's
             // per-second request limits. Stripe.net reuses the idempotency key across automatic retries,
             // so retried create calls do not produce duplicate objects.
-            var httpClient = new SystemNetHttpClient(maxNetworkRetries: 3);
+            var httpClient = new SystemNetHttpClient(
+                httpClientFactory.CreateClient(StripeConstants.HttpClientName),
+                maxNetworkRetries: 3);
 
             return new StripeClient(options.Value.ApiKey, httpClient: httpClient);
         });
@@ -95,5 +113,31 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<StripeCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
+    }
+}
+
+/// <summary>
+/// Registers the Stripe workflow events and the payment-event bridge that raises them, so operators can
+/// react to Stripe payment lifecycle events and connection failures with custom workflows.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class StripeWorkflowsStartup : StartupBase
+{
+    /// <summary>
+    /// Registers the Stripe workflow event activities and the payment-event to workflow-event bridge.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IPaymentEvent, StripeWorkflowPaymentEventHandler>();
+
+        services.AddActivity<StripePaymentReceivedEvent, StripeEventActivityDisplayDriver<StripePaymentReceivedEvent>>();
+        services.AddActivity<StripeSubscriptionCreatedEvent, StripeEventActivityDisplayDriver<StripeSubscriptionCreatedEvent>>();
+        services.AddActivity<StripePaymentIntentSucceededEvent, StripeEventActivityDisplayDriver<StripePaymentIntentSucceededEvent>>();
+        services.AddActivity<StripePaymentFailedEvent, StripeEventActivityDisplayDriver<StripePaymentFailedEvent>>();
+        services.AddActivity<StripePaymentCanceledEvent, StripeEventActivityDisplayDriver<StripePaymentCanceledEvent>>();
+        services.AddActivity<StripePaymentRefundedEvent, StripeEventActivityDisplayDriver<StripePaymentRefundedEvent>>();
+        services.AddActivity<StripeDisputeCreatedEvent, StripeEventActivityDisplayDriver<StripeDisputeCreatedEvent>>();
+        services.AddActivity<StripeRequestFailedEvent, StripeEventActivityDisplayDriver<StripeRequestFailedEvent>>();
     }
 }

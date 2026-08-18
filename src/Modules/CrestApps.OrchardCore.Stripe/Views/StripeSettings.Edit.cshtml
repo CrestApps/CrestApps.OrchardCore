@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.Stripe.Core
-@using CrestApps.OrchardCore.Stripe.Endpoints
 @using CrestApps.OrchardCore.Stripe.ViewModels
 @using Microsoft.AspNetCore.Routing
 
@@ -7,40 +6,12 @@
 @model StripeSettingsViewModel
 @{
     var webhookUrl = LinkGenerator.GetUriByName(ViewContext.HttpContext, StripeConstants.RouteName.CreateWebhookEndpoint);
+    var connectUrl = LinkGenerator.GetPathByName(ViewContext.HttpContext, StripeConstants.RouteName.Connect);
+    var disconnectUrl = LinkGenerator.GetPathByName(ViewContext.HttpContext, StripeConstants.RouteName.Disconnect);
+
+    var liveConnected = !string.IsNullOrEmpty(Model.LiveAccountId);
+    var testConnected = !string.IsNullOrEmpty(Model.TestAccountId);
 }
-<div class="alert alert-info" role="alert">
-    <p>
-        @T["<strong>Step 1 — Get your API keys.</strong> Sign in to the <a href=\"https://dashboard.stripe.com/\" target=\"_blank\" rel=\"noopener\">Stripe Dashboard</a>. Use the <code>Test mode</code> switch (top-right) to choose test or live keys, then open <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\" rel=\"noopener\">Developers &rarr; API keys</a>. Copy the <code>Publishable key</code> and the <code>Secret key</code> into the fields below."]
-    </p>
-    <p class="mb-1">
-        @T["<strong>Step 2 — Add a webhook</strong> so Stripe can notify this site when a payment succeeds. Use one of the options below, then copy the resulting signing secret (it starts with <code>whsec_</code>) into the matching <em>Webhooks Secret</em> field below."]
-    </p>
-    <ul>
-        <li>
-            @T["<strong>Public or production site:</strong> open <a href=\"https://dashboard.stripe.com/webhooks/create\" target=\"_blank\" rel=\"noopener\">Developers &rarr; Webhooks &rarr; Add endpoint</a> and set the <code>Endpoint URL</code> to:"]
-            <div>
-                <code>@webhookUrl</code>
-            </div>
-            @T["After the endpoint is created, open it and reveal its <code>Signing secret</code>."]
-        </li>
-        <li>
-            @T["<strong>Local development:</strong> Stripe cannot reach a private address, so forward events with the <a href=\"https://docs.stripe.com/stripe-cli\" target=\"_blank\" rel=\"noopener\">Stripe CLI</a> instead. The signing secret is printed when <code>stripe listen</code> starts:"]
-            <pre class="mb-0"><code>stripe login
-stripe listen --forward-to @webhookUrl</code></pre>
-        </li>
-        <li>
-            @T["Subscribe the endpoint to these events:"]
-            <ul>
-                @foreach (var eventName in CreateWebhookEndpoint.SupportedEvents)
-                {
-                    <li>
-                        <code>@eventName</code>
-                    </li>
-                }
-            </ul>
-        </li>
-    </ul>
-</div>
 
 <div class="ocat-wrapper" asp-validation-class-for="IsLive">
     <div class="ocat-end-offset">
@@ -48,6 +19,7 @@ stripe listen --forward-to @webhookUrl</code></pre>
             <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
             <label class="form-check-label" asp-for="IsLive">@T["Enable Production"]</label>
         </div>
+        <span class="hint">@T["When enabled, the production (live) environment is used. Otherwise the test environment is used."]</span>
     </div>
 </div>
 
@@ -61,67 +33,132 @@ stripe listen --forward-to @webhookUrl</code></pre>
     </div>
 </div>
 
-<div class="live-stripe-settings@(Model.IsLive ? string.Empty : " d-none")">
+<div class="alert alert-info" role="alert">
+    <p class="mb-1">
+        @T["Paste your Stripe secret key and click <strong>Connect</strong>. The key is verified and the webhook is created for you automatically \u2014 no dashboard setup required. Get your keys from <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\" rel=\"noopener\">Developers &rarr; API keys</a> (use the <code>Test mode</code> switch to choose test or live keys)."]
+    </p>
+    <p class="mb-0">
+        @T["<strong>Local development.</strong> When this site is not publicly reachable, Stripe cannot create the webhook. Forward events with the <a href=\"https://docs.stripe.com/stripe-cli\" target=\"_blank\" rel=\"noopener\">Stripe CLI</a> and paste the printed signing secret into the optional <em>Webhook signing secret</em> field below:"]
+        <span class="d-block"><code>stripe listen --forward-to @webhookUrl</code></span>
+    </p>
+</div>
+
+@* ------------------------------ Production environment ------------------------------ *@
+<div class="live-stripe-settings@(Model.IsLive ? string.Empty : " d-none")" data-stripe-environment>
 
     <div class="ocat-wrapper" asp-validation-class-for="LivePublishableKey">
         <label asp-for="LivePublishableKey" class="ocat-label">@T["Production Publishable Key"]</label>
         <div class="ocat-end">
-            <input asp-for="LivePublishableKey" class="form-control" type="text" />
+            <input asp-for="LivePublishableKey" class="form-control" type="text" placeholder="pk_live_..." data-stripe-publishable />
             <span asp-validation-for="LivePublishableKey"></span>
+            <span class="hint">@T["Required for Payment Elements checkout; optional for Hosted Checkout."]</span>
         </div>
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="LivePrivateSecret">
         <label asp-for="LivePrivateSecret" class="ocat-label">@T["Production Secret Key"]</label>
         <div class="ocat-end">
-            <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_live_...")" data-stripe-secret />
             <span asp-validation-for="LivePrivateSecret"></span>
         </div>
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="LiveWebhookSecret">
-        <label asp-for="LiveWebhookSecret" class="ocat-label">@T["Production Webhooks Secret"]</label>
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Status"]</label>
         <div class="ocat-end">
-            <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-            <span asp-validation-for="LiveWebhookSecret"></span>
+            @if (liveConnected)
+            {
+                <div class="alert alert-success mb-2" role="alert">
+                    @T["Connected to the production Stripe account <code>{0}</code>.", Model.LiveAccountId]
+                </div>
+                <button type="button" class="btn btn-danger stripe-disconnect" data-url="@disconnectUrl" data-live="true">@T["Disconnect"]</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="true">@T["Connect"]</button>
+                <span class="hint">@T["Verifies the key and creates the webhook automatically."]</span>
+            }
         </div>
     </div>
 
+    <details class="mb-2">
+        <summary>@T["Advanced \u2014 webhook signing secret"]</summary>
+        <div class="ocat-wrapper mt-2" asp-validation-class-for="LiveWebhookSecret">
+            <label asp-for="LiveWebhookSecret" class="ocat-label">@T["Production Webhook Signing Secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                <span asp-validation-for="LiveWebhookSecret"></span>
+                <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+            </div>
+        </div>
+    </details>
+
 </div>
 
-<div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)">
+@* ------------------------------ Test environment ------------------------------ *@
+<div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)" data-stripe-environment>
 
     <div class="ocat-wrapper" asp-validation-class-for="TestPublishableKey">
         <label asp-for="TestPublishableKey" class="ocat-label">@T["Test Publishable Key"]</label>
         <div class="ocat-end">
-            <input asp-for="TestPublishableKey" class="form-control" type="text" />
+            <input asp-for="TestPublishableKey" class="form-control" type="text" placeholder="pk_test_..." data-stripe-publishable />
             <span asp-validation-for="TestPublishableKey"></span>
+            <span class="hint">@T["Required for Payment Elements checkout; optional for Hosted Checkout."]</span>
         </div>
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="TestPrivateSecret">
         <label asp-for="TestPrivateSecret" class="ocat-label">@T["Test Secret Key"]</label>
         <div class="ocat-end">
-            <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+            <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
             <span asp-validation-for="TestPrivateSecret"></span>
         </div>
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="TestWebhookSecret">
-        <label asp-for="TestWebhookSecret" class="ocat-label">@T["Test Webhooks Secret"]</label>
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Status"]</label>
         <div class="ocat-end">
-            <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-            <span asp-validation-for="TestWebhookSecret"></span>
+            @if (testConnected)
+            {
+                <div class="alert alert-success mb-2" role="alert">
+                    @T["Connected to the test Stripe account <code>{0}</code>.", Model.TestAccountId]
+                </div>
+                <button type="button" class="btn btn-danger stripe-disconnect" data-url="@disconnectUrl" data-live="false">@T["Disconnect"]</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="false">@T["Connect"]</button>
+                <span class="hint">@T["Verifies the key and creates the webhook automatically."]</span>
+            }
         </div>
     </div>
 
+    <details class="mb-2">
+        <summary>@T["Advanced \u2014 webhook signing secret"]</summary>
+        <div class="ocat-wrapper mt-2" asp-validation-class-for="TestWebhookSecret">
+            <label asp-for="TestWebhookSecret" class="ocat-label">@T["Test Webhook Signing Secret"]</label>
+            <div class="ocat-end">
+                <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                <span asp-validation-for="TestWebhookSecret"></span>
+                <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+            </div>
+        </div>
+    </details>
+
 </div>
 
-<script>
+<script data-disconnect-confirm="@T["Are you sure you want to disconnect this Stripe account? The app will stop processing Stripe payments and the provisioned webhook will be removed."]">
+    const stripeSettingsScript = document.currentScript;
+
     document.addEventListener('DOMContentLoaded', () => {
         const isLiveElement = document.getElementById('@Html.IdFor(m => m.IsLive)');
         const liveElements = document.querySelectorAll('.live-stripe-settings');
         const testingElements = document.querySelectorAll('.testing-stripe-settings');
+        const confirmMessage = stripeSettingsScript ? stripeSettingsScript.getAttribute('data-disconnect-confirm') : '';
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        const connectButtons = document.querySelectorAll('.stripe-connect');
+        const disconnectButtons = document.querySelectorAll('.stripe-disconnect');
+
         const toggleElements = (elements, show) => {
             for (let i = 0; i < elements.length; i++) {
                 if (show) {
@@ -130,16 +167,67 @@ stripe listen --forward-to @webhookUrl</code></pre>
                     elements[i].classList.add('d-none');
                 }
             }
-        }
+        };
 
         isLiveElement.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                toggleElements(liveElements, true);
-                toggleElements(testingElements, false);
+            const live = e.target.checked;
+            toggleElements(liveElements, live);
+            toggleElements(testingElements, !live);
+        });
+
+        const post = async (url, params) => {
+            const body = new URLSearchParams(params);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token ? token.value : '',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: body.toString()
+            });
+
+            if (response.redirected) {
+                window.location.href = response.url;
             } else {
-                toggleElements(liveElements, false);
-                toggleElements(testingElements, true);
+                window.location.reload();
             }
-        })
+        };
+
+        for (let i = 0; i < connectButtons.length; i++) {
+            connectButtons[i].addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                const button = e.currentTarget;
+                const container = button.closest('[data-stripe-environment]');
+                const secretInput = container ? container.querySelector('[data-stripe-secret]') : null;
+                const publishableInput = container ? container.querySelector('[data-stripe-publishable]') : null;
+
+                button.disabled = true;
+
+                await post(button.getAttribute('data-url'), {
+                    live: button.getAttribute('data-live'),
+                    secretKey: secretInput ? secretInput.value : '',
+                    publishableKey: publishableInput ? publishableInput.value : ''
+                });
+            });
+        }
+
+        for (let i = 0; i < disconnectButtons.length; i++) {
+            disconnectButtons[i].addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                if (!window.confirm(confirmMessage)) {
+                    return;
+                }
+
+                const button = e.currentTarget;
+
+                button.disabled = true;
+
+                await post(button.getAttribute('data-url'), {
+                    live: button.getAttribute('data-live')
+                });
+            });
+        }
     });
 </script>

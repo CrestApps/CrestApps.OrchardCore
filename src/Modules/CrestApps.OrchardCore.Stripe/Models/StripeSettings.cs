@@ -33,6 +33,16 @@ public sealed class StripeSettings
     public string LiveWebhookSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the live Stripe account resolved when the live secret key was verified.
+    /// </summary>
+    public string LiveAccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the live webhook endpoint provisioned automatically when connecting.
+    /// </summary>
+    public string LiveWebhookId { get; set; }
+
+    /// <summary>
     /// Gets or sets the test Stripe publishable key.
     /// </summary>
     public string TestPublishableKey { get; set; }
@@ -46,4 +56,14 @@ public sealed class StripeSettings
     /// Gets or sets the protected test Stripe webhook signing secret.
     /// </summary>
     public string TestWebhookSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the test Stripe account resolved when the test secret key was verified.
+    /// </summary>
+    public string TestAccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the test webhook endpoint provisioned automatically when connecting.
+    /// </summary>
+    public string TestWebhookId { get; set; }
 }

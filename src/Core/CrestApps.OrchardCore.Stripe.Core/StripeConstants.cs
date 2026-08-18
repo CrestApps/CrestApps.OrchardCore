@@ -11,6 +11,11 @@ public static class StripeConstants
     public const string ProcessorKey = "Stripe";
 
     /// <summary>
+    /// The name of the named <see cref="System.Net.Http.HttpClient"/> used for Stripe API calls.
+    /// </summary>
+    public const string HttpClientName = "Stripe";
+
+    /// <summary>
     /// Defines endpoint route names used by the Stripe module.
     /// </summary>
     public static class RouteName
@@ -34,6 +39,16 @@ public static class StripeConstants
         /// The route name for the endpoint that creates Stripe subscriptions.
         /// </summary>
         public const string CreateSubscriptionEndpoint = "StripeCreateSubscription";
+
+        /// <summary>
+        /// The route name for the action that verifies the Stripe secret key and provisions the webhook.
+        /// </summary>
+        public const string Connect = "StripeConnect";
+
+        /// <summary>
+        /// The route name for the action that disconnects the configured Stripe account.
+        /// </summary>
+        public const string Disconnect = "StripeDisconnect";
     }
 
     /// <summary>
