@@ -39,20 +39,17 @@ internal sealed class DialpadResolvedOptionsConfigurations : IConfigureOptions<D
         var apiTokenProtector = _dataProtectionProvider.CreateProtector(DialpadConstants.ProtectorName);
         var clientSecretProtector = _dataProtectionProvider.CreateProtector(DialpadConstants.OAuthProtectorName);
 
-        options.Settings = new DialpadResolvedSettings
-        {
-            IsEnabled = settings.IsEnabled,
-            Environment = settings.Environment,
-            Host = environment.Host,
-            ApiBaseUrl = environment.ApiBaseUrl,
-            UserId = environment.UserId,
-            OutboundCallerId = environment.OutboundCallerId,
-            ApiToken = string.IsNullOrEmpty(environment.ApiToken) ? null : Unprotect(apiTokenProtector, environment.ApiToken),
-            AuthenticationType = environment.AuthenticationType,
-            ClientId = environment.ClientId,
-            ClientSecret = string.IsNullOrEmpty(environment.ClientSecret) ? null : Unprotect(clientSecretProtector, environment.ClientSecret),
-            Scopes = environment.Scopes,
-        };
+        options.IsEnabled = settings.IsEnabled;
+        options.Environment = settings.Environment;
+        options.Host = environment.Host;
+        options.ApiBaseUrl = environment.ApiBaseUrl;
+        options.UserId = environment.UserId;
+        options.OutboundCallerId = environment.OutboundCallerId;
+        options.ApiToken = string.IsNullOrEmpty(environment.ApiToken) ? null : Unprotect(apiTokenProtector, environment.ApiToken);
+        options.AuthenticationType = environment.AuthenticationType;
+        options.ClientId = environment.ClientId;
+        options.ClientSecret = string.IsNullOrEmpty(environment.ClientSecret) ? null : Unprotect(clientSecretProtector, environment.ClientSecret);
+        options.Scopes = environment.Scopes;
     }
 
     private string Unprotect(IDataProtector protector, string value)

@@ -13,13 +13,9 @@ public sealed class DialpadProviderOptionsConfigurationsTests
     public void Configure_RegistersDialpadProvider_WithEnabledStateFromResolvedSettings(bool enabled)
     {
         // Arrange
-        var resolvedSettings = new DialpadResolvedSettings
-        {
-            IsEnabled = enabled,
-        };
         var resolvedOptions = Options.Create(new DialpadResolvedOptions
         {
-            Settings = resolvedSettings,
+            IsEnabled = enabled,
         });
         var configuration = new DialpadProviderOptionsConfigurations(resolvedOptions);
         var options = new TelephonyProviderOptions();

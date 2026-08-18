@@ -41,7 +41,7 @@ public sealed class DialpadTelephonyProvider :
     private readonly ITelephonyAuthenticationService _authenticationService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-    private readonly DialpadResolvedSettings _settings;
+    private readonly DialpadResolvedOptions _settings;
 
     internal readonly IStringLocalizer S;
 
@@ -66,7 +66,7 @@ public sealed class DialpadTelephonyProvider :
         _authenticationService = authenticationService;
         _clock = clock;
         _logger = logger;
-        _settings = resolvedOptions.Value.Settings;
+        _settings = resolvedOptions.Value;
         S = stringLocalizer;
     }
 
@@ -771,7 +771,7 @@ public sealed class DialpadTelephonyProvider :
     private async Task<TelephonyUserTokens> RequestTokensAsync(
         Dictionary<string, string> form,
         string existingRefreshToken,
-        DialpadResolvedSettings settings,
+        DialpadResolvedOptions settings,
         CancellationToken cancellationToken)
     {
         try
@@ -864,7 +864,7 @@ public sealed class DialpadTelephonyProvider :
         return tokens;
     }
 
-    private async Task<string> GetBearerTokenAsync(DialpadResolvedSettings settings, CancellationToken cancellationToken)
+    private async Task<string> GetBearerTokenAsync(DialpadResolvedOptions settings, CancellationToken cancellationToken)
     {
         if (settings.GetEffectiveAuthenticationType() == DialpadAuthenticationType.OAuth2)
         {
@@ -877,7 +877,7 @@ public sealed class DialpadTelephonyProvider :
     }
 
     private async Task<long?> GetDialpadUserIdAsync(
-        DialpadResolvedSettings settings,
+        DialpadResolvedOptions settings,
         string bearerToken,
         CancellationToken cancellationToken)
     {
@@ -1011,7 +1011,7 @@ public sealed class DialpadTelephonyProvider :
     private TelephonyResult NotConnected()
         => TelephonyResult.Failed(S["Connect your account to Dialpad to place calls."].Value);
 
-    private static bool IsConfigured(DialpadResolvedSettings settings)
+    private static bool IsConfigured(DialpadResolvedOptions settings)
     {
         if (settings is null || !settings.IsEnabled)
         {
@@ -1164,7 +1164,7 @@ public sealed class DialpadTelephonyProvider :
         return Guid.NewGuid().ToString("N");
     }
 
-    private HttpClient CreateClient(DialpadResolvedSettings settings, string bearerToken)
+    private HttpClient CreateClient(DialpadResolvedOptions settings, string bearerToken)
     {
         var client = _httpClientFactory.CreateClient(DialpadConstants.ProviderTechnicalName);
 

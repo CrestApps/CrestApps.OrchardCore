@@ -26,7 +26,7 @@ public sealed class DialpadProviderOptionsConfigurations : IConfigureOptions<Tel
     {
         var typeOptions = new TelephonyProviderTypeOptions(typeof(DialpadTelephonyProvider))
         {
-            IsEnabled = _resolvedOptions.Value.Settings.IsEnabled,
+            IsEnabled = _resolvedOptions.Value.IsEnabled,
         };
 
         options.TryAddProvider(DialpadConstants.ProviderTechnicalName, typeOptions);
