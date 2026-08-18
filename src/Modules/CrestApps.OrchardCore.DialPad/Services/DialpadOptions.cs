@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Dialpad.Services;
 /// Provides the active Dialpad settings resolved once for the current tenant shell, with protected values
 /// already resolved.
 /// </summary>
-public sealed class DialpadResolvedOptions
+public sealed class DialpadOptions
 {
     /// <summary>
     /// Gets or sets a value indicating whether the Dialpad provider is enabled.

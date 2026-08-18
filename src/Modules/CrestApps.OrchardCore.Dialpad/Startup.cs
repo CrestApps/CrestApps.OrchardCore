@@ -45,9 +45,9 @@ public sealed class Startup : StartupBase
             });
 
         services
-            .AddOptions<DialpadResolvedOptions>()
+            .AddOptions<DialpadOptions>()
             .Services
-            .AddTransient<IConfigureOptions<DialpadResolvedOptions>, DialpadResolvedOptionsConfigurations>()
+            .AddTransient<IConfigureOptions<DialpadOptions>, DialpadOptionsConfigurations>()
             .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
     }

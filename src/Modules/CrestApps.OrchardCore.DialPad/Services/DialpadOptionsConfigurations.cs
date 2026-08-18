@@ -9,22 +9,22 @@ namespace CrestApps.OrchardCore.Dialpad.Services;
 /// <summary>
 /// Resolves the active Dialpad environment and its protected secrets when the tenant options are first loaded.
 /// </summary>
-internal sealed class DialpadResolvedOptionsConfigurations : IConfigureOptions<DialpadResolvedOptions>
+internal sealed class DialpadOptionsConfigurations : IConfigureOptions<DialpadOptions>
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DialpadResolvedOptionsConfigurations"/> class.
+    /// Initializes a new instance of the <see cref="DialpadOptionsConfigurations"/> class.
     /// </summary>
     /// <param name="siteService">The site service used to read Dialpad settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to unprotect secrets.</param>
     /// <param name="logger">The logger.</param>
-    public DialpadResolvedOptionsConfigurations(
+    public DialpadOptionsConfigurations(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        ILogger<DialpadResolvedOptionsConfigurations> logger)
+        ILogger<DialpadOptionsConfigurations> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -32,7 +32,7 @@ internal sealed class DialpadResolvedOptionsConfigurations : IConfigureOptions<D
     }
 
     /// <inheritdoc/>
-    public void Configure(DialpadResolvedOptions options)
+    public void Configure(DialpadOptions options)
     {
         var settings = _siteService.GetSettings<DialpadSettings>();
         var environment = settings.GetActiveEnvironmentSettings();

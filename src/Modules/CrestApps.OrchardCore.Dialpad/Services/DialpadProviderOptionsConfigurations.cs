@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Options;
 
@@ -10,15 +9,15 @@ namespace CrestApps.OrchardCore.Dialpad.Services;
 /// </summary>
 public sealed class DialpadProviderOptionsConfigurations : IConfigureOptions<TelephonyProviderOptions>
 {
-    private readonly IOptions<DialpadResolvedOptions> _resolvedOptions;
+    private readonly IOptions<DialpadOptions> _dialpadOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialpadProviderOptionsConfigurations"/> class.
     /// </summary>
-    /// <param name="resolvedOptions">The active Dialpad settings resolved for the tenant shell.</param>
-    public DialpadProviderOptionsConfigurations(IOptions<DialpadResolvedOptions> resolvedOptions)
+    /// <param name="dialpadOptions">The active Dialpad settings resolved for the tenant shell.</param>
+    public DialpadProviderOptionsConfigurations(IOptions<DialpadOptions> dialpadOptions)
     {
-        _resolvedOptions = resolvedOptions;
+        _dialpadOptions = dialpadOptions;
     }
 
     /// <inheritdoc/>
@@ -26,7 +25,7 @@ public sealed class DialpadProviderOptionsConfigurations : IConfigureOptions<Tel
     {
         var typeOptions = new TelephonyProviderTypeOptions(typeof(DialpadTelephonyProvider))
         {
-            IsEnabled = _resolvedOptions.Value.IsEnabled,
+            IsEnabled = _dialpadOptions.Value.IsEnabled,
         };
 
         options.TryAddProvider(DialpadConstants.ProviderTechnicalName, typeOptions);

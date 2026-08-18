@@ -718,15 +718,15 @@ public sealed class DialpadTelephonyProviderTests
             CreateResolvedOptions(settings, dataProtectionProvider));
     }
 
-    private static IOptions<DialpadResolvedOptions> CreateResolvedOptions(
+    private static IOptions<DialpadOptions> CreateResolvedOptions(
         DialpadSettings settings,
         IDataProtectionProvider dataProtectionProvider)
     {
-        var options = new DialpadResolvedOptions();
-        var configuration = new DialpadResolvedOptionsConfigurations(
+        var options = new DialpadOptions();
+        var configuration = new DialpadOptionsConfigurations(
             SiteServiceFactory.Create(settings),
             dataProtectionProvider,
-            NullLogger<DialpadResolvedOptionsConfigurations>.Instance);
+            NullLogger<DialpadOptionsConfigurations>.Instance);
 
         configuration.Configure(options);
 
