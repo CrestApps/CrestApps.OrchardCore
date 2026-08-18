@@ -41,6 +41,7 @@ Select Dialpad as the default telephony provider only after the Dialpad feature 
 
 - Application and Contact Center code interacts with Dialpad only through the shared `ITelephonyService` / Contact Center voice abstractions; the provider is not called directly.
 - The provider advertises exactly the `TelephonyCapabilities` it implements, so the soft phone and Contact Center flows enable only the supported operations.
+- Outbound dial requests use Dialpad's initiate-via-ring flow. Dialpad first rings the acting user's active Dialpad devices, and the destination is useful only after the user answers in Dialpad. The Orchard Core soft phone controls the call but does not carry Dialpad audio in the browser.
 - Host and shutdown cancellation propagate as `OperationCanceledException` rather than being reported as provider failures.
 
 ## Dependencies

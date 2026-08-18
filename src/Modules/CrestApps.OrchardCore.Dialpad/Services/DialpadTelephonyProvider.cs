@@ -181,6 +181,16 @@ public sealed class DialpadTelephonyProvider :
                 requestMessage.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
             }
 
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Submitting Dialpad outbound call initiation through the {Environment} environment at {ApiBaseUrl}. AuthenticationType={AuthenticationType}, HasOutboundCallerId={HasOutboundCallerId}. Dialpad will ring the user's active devices before completing the outbound leg.",
+                    settings.Environment,
+                    settings.ApiBaseUrl,
+                    settings.GetEffectiveAuthenticationType(),
+                    !string.IsNullOrWhiteSpace(callerId));
+            }
+
             using var response = await client.SendAsync(requestMessage, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
@@ -212,6 +222,16 @@ public sealed class DialpadTelephonyProvider :
                 ProviderName = DialpadConstants.ProviderTechnicalName,
                 StartedUtc = _clock.UtcNow,
             };
+            call.Metadata["dialpadInitiationMode"] = "RingAllDevices";
+            call.Metadata["requiresActiveDialpadDevice"] = true;
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Dialpad accepted outbound call initiation. CallId={CallId}, InitialState={CallState}.",
+                    callId.SanitizeLogValue(),
+                    call.State);
+            }
 
             return TelephonyResult.Success(call);
         }

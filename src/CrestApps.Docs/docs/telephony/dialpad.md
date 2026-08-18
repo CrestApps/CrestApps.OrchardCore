@@ -158,9 +158,11 @@ The Dialpad provider advertises support for dialing, hang up, hold, resume, mute
 The soft phone sends a request to the `TelephonyHub`, which resolves the Dialpad provider and calls
 the Dialpad REST API on the server. For example, a dial request issues an authenticated `POST` to the
 `call` endpoint with the destination number, caller id, and numeric user id; subsequent operations target
-the `call/{id}/{action}` endpoints. API key authentication uses the configured **User id**. OAuth
-authentication resolves the connected user's id through `users/me`. Because all control happens
-server-side, the API key never reaches the browser.
+the `call/{id}/{action}` endpoints. Dialpad treats this as an **initiate via ring** request: Dialpad first rings the connected user's active Dialpad devices, and the outbound leg completes only after that user answers in Dialpad. The Orchard Core soft phone is a control surface for Dialpad call control; it is not a Dialpad media client and it does not receive Dialpad audio in the browser.
+
+For outbound testing, make sure the user whose OAuth token is connected, or the configured API-key **User id**, has at least one active Dialpad device. Dialpad documents active web, desktop, mobile, CTI, or physical desk phone devices for the `/api/v2/call` flow. If Dialpad accepts the request but no device answers, the call can quickly move to `hangup` and the destination phone will not ring. A Dialpad call-event webhook is not required to start outbound calls; configure the webhook only when you need inbound call routing or asynchronous state updates.
+
+API key authentication uses the configured **User id**. OAuth authentication resolves the connected user's id through `users/me`. Because all control happens server-side, the API key never reaches the browser.
 
 The active environment and its protected API and OAuth client secrets are resolved once when the
 tenant shell loads and reused by the provider. Saving Dialpad settings requests a shell release, so
