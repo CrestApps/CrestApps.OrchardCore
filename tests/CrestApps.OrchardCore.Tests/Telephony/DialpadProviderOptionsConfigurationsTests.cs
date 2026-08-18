@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.Dialpad;
-using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -11,11 +10,18 @@ public sealed class DialpadProviderOptionsConfigurationsTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Configure_RegistersDialpadProvider_WithEnabledStateFromSettings(bool enabled)
+    public void Configure_RegistersDialpadProvider_WithEnabledStateFromResolvedSettings(bool enabled)
     {
         // Arrange
-        var siteService = SiteServiceFactory.Create(new DialpadSettings { IsEnabled = enabled });
-        var configuration = new DialpadProviderOptionsConfigurations(siteService);
+        var resolvedSettings = new DialpadResolvedSettings
+        {
+            IsEnabled = enabled,
+        };
+        var resolvedOptions = Options.Create(new DialpadResolvedOptions
+        {
+            Settings = resolvedSettings,
+        });
+        var configuration = new DialpadProviderOptionsConfigurations(resolvedOptions);
         var options = new TelephonyProviderOptions();
 
         // Act

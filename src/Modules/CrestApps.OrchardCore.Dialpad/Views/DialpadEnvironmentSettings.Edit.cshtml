@@ -76,7 +76,14 @@
                 <span asp-validation-for="ClientSecret"></span>
                 @if (Model.HasClientSecret)
                 {
-                    <span class="hint">@T["An encrypted client secret is already saved. Leave this empty to keep the existing value, or enter a new client secret to replace it."]</span>
+                    @if (Model.HasUnreadableClientSecret)
+                    {
+                        <span class="hint text-danger">@T["The saved client secret cannot be decrypted with the current application data-protection keys. Re-enter the client secret and save the settings."]</span>
+                    }
+                    else
+                    {
+                        <span class="hint">@T["An encrypted client secret is already saved. Leave this empty to keep the existing value, or enter a new client secret to replace it."]</span>
+                    }
                 }
                 else
                 {

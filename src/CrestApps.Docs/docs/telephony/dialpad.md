@@ -105,7 +105,9 @@ provider follows Dialpad's documented requirements:
   it must be approved for your Dialpad OAuth app. When granted, Dialpad issues a refresh token so access
   tokens are renewed automatically when they expire; without it, users reconnect once the access token
   expires. The user's access and refresh tokens are stored **encrypted on the user's account**, and
-  outbound calls are placed with the connected user's access token.
+  outbound calls are placed with the connected user's access token. Before placing an outbound call, the
+  provider resolves the connected Dialpad user's numeric id through `users/me`, because Dialpad requires
+  that id in the call request. The **User id** setting is used only by API key authentication.
 - The **active environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
   endpoints. When the environment **Host** is set, the OAuth endpoints follow that host instead.
@@ -129,6 +131,30 @@ not approved for your Dialpad OAuth app. Dialpad requires every scope to be appr
 not caused by selecting the wrong environment.
 :::
 
+### Connecting closes the window without connecting
+
+The **Connect to provider** button opens Dialpad in a new browser window. After you approve access, that
+window posts the result back to the soft phone and closes automatically — so the window closing is normal
+and does **not** by itself mean the connection failed. If the soft phone still shows **Not connected**
+afterward, the token exchange on the callback did not succeed. The soft phone now shows the reason inline in
+the connect panel, and the server log records the exact detail, for
+example:
+
+- **`The telephony provider returned an error during the OAuth authorization callback`** — Dialpad reported
+  an error (for example the user denied access).
+- **`Dialpad rejected an OAuth token request with status code ... Response: ...`** — Dialpad refused to
+  exchange the authorization code. The logged response contains the specific reason, such as a
+  `redirect_uri` mismatch or an unapproved scope. Confirm the callback URL registered on the Dialpad OAuth
+  app **exactly** matches `{scheme}://{host}/Telephony/Connect/Callback` (including the tenant prefix).
+- **`Cannot complete the Dialpad OAuth code exchange because the OAuth client id or client secret is unavailable`**
+  — the stored client secret could not be decrypted. This happens when the application's data protection
+  keys are not persisted across restarts or instances (common behind a reverse proxy or in containers), so a
+  secret encrypted earlier can no longer be read. Persist the data protection keys (for example to a shared
+  file share, blob storage, or Redis), then re-enter the **Client secret** under **Settings → Communication → Telephony → Dialpad** and save.
+- **`The telephony OAuth state cookie was not present on the authorization callback`** — the short-lived
+  state cookie was blocked or lost. Ensure the site is reached over HTTPS end to end and that the reverse
+  proxy forwards the original scheme and host.
+
 ## Capabilities
 
 The Dialpad provider advertises support for dialing, hang up, hold, resume, mute, transfer, merge, sending DTMF digits, receiving inbound calls, and provider-directory lookup. The soft phone UI uses these capabilities to decide which controls to display. Multi-party conference requests are executed as sequential Dialpad merge operations that merge every additional selected call into the primary call. Transfer directory lookup calls Dialpad's paginated company-users endpoint, displays the user's name, and prefers the internal extension before falling back to the assigned phone number.
@@ -137,9 +163,14 @@ The Dialpad provider advertises support for dialing, hang up, hold, resume, mute
 
 The soft phone sends a request to the `TelephonyHub`, which resolves the Dialpad provider and calls
 the Dialpad REST API on the server. For example, a dial request issues an authenticated `POST` to the
-`call` endpoint with the destination number, caller id, and user id; subsequent operations target the
-`call/{id}/{action}` endpoints. Because all control happens server-side, the API key never reaches
-the browser.
+`call` endpoint with the destination number, caller id, and numeric user id; subsequent operations target
+the `call/{id}/{action}` endpoints. API key authentication uses the configured **User id**. OAuth
+authentication resolves the connected user's id through `users/me`. Because all control happens
+server-side, the API key never reaches the browser.
+
+The active environment and its protected API and OAuth client secrets are resolved once when the
+tenant shell loads and reused by the provider. Saving Dialpad settings requests a shell release, so
+the cached values are refreshed after the new shell is loaded.
 
 ## Contact Center integration
 

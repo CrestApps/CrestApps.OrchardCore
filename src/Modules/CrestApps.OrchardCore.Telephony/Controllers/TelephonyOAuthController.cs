@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -96,6 +97,7 @@ public sealed class TelephonyOAuthController : Controller
 
         var success = false;
         string returnUrl = null;
+        string failureReason = null;
 
         if (Request.Cookies.TryGetValue(StateCookieName, out var payload))
         {
@@ -112,23 +114,55 @@ public sealed class TelephonyOAuthController : Controller
                     returnUrl = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
                     var codeVerifier = string.IsNullOrEmpty(parts[3]) ? null : parts[3];
 
-                    if (string.IsNullOrEmpty(error) &&
-                        !string.IsNullOrEmpty(code) &&
-                        !string.IsNullOrEmpty(storedState) &&
-                        string.Equals(storedState, state, StringComparison.Ordinal))
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        failureReason = "The telephony provider reported that access was not granted.";
+
+                        _logger.LogWarning("The telephony provider returned an error during the OAuth authorization callback: {Error}", error.SanitizeLogValue());
+                    }
+                    else if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(storedState) || !string.Equals(storedState, state, StringComparison.Ordinal))
+                    {
+                        failureReason = "The authorization response could not be validated. Please try connecting again.";
+
+                        _logger.LogWarning("The telephony OAuth callback could not be validated because the authorization code or state was missing or did not match the value that started the flow.");
+                    }
+                    else
                     {
                         var result = await _authenticationService.CompleteAuthorizationAsync(code, redirectUri, codeVerifier, HttpContext.RequestAborted);
                         success = result.Succeeded;
+
+                        if (!success)
+                        {
+                            failureReason = string.IsNullOrEmpty(result.Error)
+                                ? "The telephony provider did not complete the connection."
+                                : result.Error;
+
+                            _logger.LogWarning("The telephony OAuth token exchange did not succeed. Reason: {Reason}", result.Error);
+                        }
                     }
+                }
+                else
+                {
+                    failureReason = "The authorization session could not be validated. Please try connecting again.";
+
+                    _logger.LogWarning("The telephony OAuth state cookie payload was malformed, so the authorization callback could not be validated.");
                 }
             }
             catch (Exception ex)
             {
+                failureReason = "The connection could not be completed because of an unexpected error.";
+
                 _logger.LogError(ex, "Failed to complete the telephony OAuth authorization flow.");
             }
         }
+        else
+        {
+            failureReason = "The connection session expired or was blocked by the browser. Please try connecting again.";
 
-        return BuildCompletionPage(success, returnUrl);
+            _logger.LogWarning("The telephony OAuth state cookie was not present on the authorization callback, so the flow could not be validated. This usually indicates the cookie was blocked, expired, or the callback was reached without starting the flow.");
+        }
+
+        return BuildCompletionPage(success, returnUrl, failureReason);
     }
 
     /// <summary>
@@ -163,12 +197,18 @@ public sealed class TelephonyOAuthController : Controller
         });
     }
 
-    private ContentResult BuildCompletionPage(bool success, string returnUrl)
+    private ContentResult BuildCompletionPage(bool success, string returnUrl, string errorMessage = null)
     {
         var safeReturnUrl = !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/";
         var successLiteral = success ? "true" : "false";
         var returnUrlJson = JsonSerializer.Serialize(safeReturnUrl);
-        var message = success ? "You are connected. You can close this window." : "The connection could not be completed. You can close this window.";
+        var resolvedError = success
+            ? null
+            : string.IsNullOrEmpty(errorMessage) ? "The connection could not be completed." : errorMessage;
+        var errorJson = JsonSerializer.Serialize(resolvedError);
+        var message = success
+            ? "You are connected. You can close this window."
+            : $"{resolvedError} You can close this window.";
 
         var html = $$"""
         <!DOCTYPE html>
@@ -179,9 +219,10 @@ public sealed class TelephonyOAuthController : Controller
             <script>
                 (function () {
                     var success = {{successLiteral}};
+                    var error = {{errorJson}};
                     try {
                         if (window.opener) {
-                            window.opener.postMessage({ type: 'telephony-oauth', success: success }, window.location.origin);
+                            window.opener.postMessage({ type: 'telephony-oauth', success: success, error: error }, window.location.origin);
                         }
                     } catch (e) { }
                     if (window.opener) {

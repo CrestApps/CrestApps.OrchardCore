@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -44,6 +45,9 @@ public sealed class Startup : StartupBase
             });
 
         services
+            .AddOptions<DialpadResolvedOptions>()
+            .Services
+            .AddTransient<IConfigureOptions<DialpadResolvedOptions>, DialpadResolvedOptionsConfigurations>()
             .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
     }

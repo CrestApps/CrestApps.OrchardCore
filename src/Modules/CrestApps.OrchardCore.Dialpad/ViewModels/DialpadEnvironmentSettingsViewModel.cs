@@ -68,6 +68,13 @@ public class DialpadEnvironmentSettingsViewModel
     public bool HasClientSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the saved OAuth client secret cannot be decrypted with the
+    /// current data-protection keys.
+    /// </summary>
+    [BindNever]
+    public bool HasUnreadableClientSecret { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether a webhook signing secret has already been saved for this
     /// environment.
     /// </summary>

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Dialpad.ViewModels;
 using CrestApps.OrchardCore.Telephony;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Notify;
@@ -27,6 +29,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly INotifier _notifier;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -44,6 +47,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger.</param>
     public DialpadSettingsDisplayDriver(
         IShellReleaseManager shellReleaseManager,
         IHttpContextAccessor httpContextAccessor,
@@ -51,13 +55,15 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         IDataProtectionProvider dataProtectionProvider,
         INotifier notifier,
         IHtmlLocalizer<DialpadSettingsDisplayDriver> htmlLocalizer,
-        IStringLocalizer<DialpadSettingsDisplayDriver> stringLocalizer)
+        IStringLocalizer<DialpadSettingsDisplayDriver> stringLocalizer,
+        ILogger<DialpadSettingsDisplayDriver> logger)
     {
         _shellReleaseManager = shellReleaseManager;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _notifier = notifier;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -153,7 +159,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         return Edit(site, settings, context);
     }
 
-    private static void MapEnvironmentToViewModel(DialpadEnvironmentSettings environment, DialpadEnvironmentSettingsViewModel model)
+    private void MapEnvironmentToViewModel(DialpadEnvironmentSettings environment, DialpadEnvironmentSettingsViewModel model)
     {
         model.AuthenticationType = environment.GetEffectiveAuthenticationType();
         model.Host = environment.Host;
@@ -163,6 +169,8 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         model.OutboundCallerId = environment.OutboundCallerId;
         model.HasApiToken = !string.IsNullOrEmpty(environment.ApiToken);
         model.HasClientSecret = !string.IsNullOrEmpty(environment.ClientSecret);
+        model.HasUnreadableClientSecret = !string.IsNullOrEmpty(environment.ClientSecret) &&
+            !CanUnprotect(environment.ClientSecret, DialpadConstants.OAuthProtectorName);
         model.HasWebhookSigningSecret = !string.IsNullOrEmpty(environment.WebhookSigningSecret);
     }
 
@@ -249,9 +257,14 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
                 context.Updater.ModelState.AddModelError(Prefix, $"{prefix}.{nameof(model.ClientId)}", S["Enter the OAuth client id issued by Dialpad."]);
             }
 
-            if (string.IsNullOrEmpty(environment.ClientSecret) && string.IsNullOrWhiteSpace(model.ClientSecret))
+            if ((string.IsNullOrEmpty(environment.ClientSecret) ||
+                !CanUnprotect(environment.ClientSecret, DialpadConstants.OAuthProtectorName)) &&
+                string.IsNullOrWhiteSpace(model.ClientSecret))
             {
-                context.Updater.ModelState.AddModelError(Prefix, $"{prefix}.{nameof(model.ClientSecret)}", S["Enter the OAuth client secret issued by Dialpad."]);
+                context.Updater.ModelState.AddModelError(
+                    Prefix,
+                    $"{prefix}.{nameof(model.ClientSecret)}",
+                    S["The saved OAuth client secret cannot be decrypted with the current data-protection keys. Re-enter the client secret."]);
             }
         }
         else if (model.AuthenticationType == DialpadAuthenticationType.ApiKey)
@@ -265,6 +278,20 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
             {
                 context.Updater.ModelState.AddModelError(Prefix, $"{prefix}.{nameof(model.UserId)}", S["Enter the Dialpad user id that places outbound calls."]);
             }
+        }
+    }
+
+    private bool CanUnprotect(string value, string protectorName)
+    {
+        try
+        {
+            return !string.IsNullOrEmpty(_dataProtectionProvider.CreateProtector(protectorName).Unprotect(value));
+        }
+        catch (CryptographicException exception)
+        {
+            _logger.LogWarning(exception, "A saved Dialpad secret cannot be decrypted with the current data-protection keys.");
+
+            return false;
         }
     }
 }

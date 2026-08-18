@@ -2575,6 +2575,8 @@
             if (event.data.success) {
                 showConnectError(null);
                 refreshConnectionStatus();
+            } else {
+                showConnectError(event.data.error || strings.connectFailed || 'The connection could not be completed. Please try again.');
             }
         }
 
