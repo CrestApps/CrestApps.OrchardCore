@@ -182,6 +182,55 @@ dialing and call transfer.
 
 Create the call-event webhook subscription in the Dialpad administration portal and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the Dialpad subscription automatically, so operators should monitor subscription status and delivery failures in Dialpad.
 
+### Registering the inbound call-event webhook
+
+Inbound routing and asynchronous call-state updates require a Dialpad call-event subscription. Outbound dial requests do not require this webhook, but without it the soft phone can only learn provider state by polling the Dialpad REST API.
+
+To register the webhook:
+
+1. Generate a high-entropy signing secret and enter it in the active environment's **Webhook signing secret** field under **Settings → Communication → Telephony → Dialpad**.
+2. Create a Dialpad webhook whose URL is the tenant endpoint: `https://<tenant-host>/api/dialpad/webhook/call`. Include the tenant URL prefix if the tenant uses one.
+3. Use the same signing secret when creating the Dialpad webhook. Dialpad signs call events as JWT payloads with this shared secret, and Orchard rejects unsigned or incorrectly signed deliveries.
+4. Create a **call event** subscription that targets the webhook. Choose the same Dialpad environment host the tenant uses: `https://dialpad.com` for production, `https://sandbox.dialpad.com` for the default sandbox, or the assigned alternate host such as `https://dialpadbeta.com`.
+5. Place an inbound test call and confirm the application log shows the `/api/dialpad/webhook/call` endpoint accepting a signed delivery. If Dialpad shows delivery failures, verify the public URL, TLS certificate, tenant prefix, and signing secret.
+
+Example API flow for the beta sandbox host:
+
+```bash
+curl --request POST \
+  --url 'https://dialpadbeta.com/api/v2/webhooks' \
+  --header 'Authorization: Bearer <dialpad-api-token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "hook_url": "https://dialpad-dev.crestapps.online/api/dialpad/webhook/call",
+    "secret": "<shared-webhook-signing-secret>"
+  }'
+```
+
+After Dialpad returns the webhook id, create a call-event subscription for the webhook through the Dialpad developer portal or the call-event subscription API. Keep the subscription scoped no wider than needed, for example the relevant company, office, call center, or user.
+
+```bash
+curl --request POST \
+  --url 'https://dialpadbeta.com/api/v2/subscriptions/call' \
+  --header 'Authorization: Bearer <dialpad-api-token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "endpoint_id": <webhook-id>,
+    "enabled": true,
+    "call_states": [
+      "calling",
+      "preanswer",
+      "ringing",
+      "connected",
+      "hold",
+      "hangup",
+      "missed",
+      "voicemail",
+      "recording"
+    ]
+  }'
+```
+
 ### Where to obtain the webhook signing secret
 
 The **Webhook signing secret** is a value **you choose and register with Dialpad** when you create the

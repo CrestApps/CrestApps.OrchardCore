@@ -749,6 +749,7 @@
         var authenticationScheme = null;
         var activeTab = 'keypad';
         var activeCommand = null;
+        var activeCallsRefreshTimer = null;
         var suppressToggleClick = false;
         var browserAudioPromise = null;
         var browserAudioSession = null;
@@ -852,8 +853,16 @@
                 return;
             }
 
-            // This shows the active call's number in the disabled field for display only, so it is
-            // formatted for readability rather than routed through the intl-tel-input editor.
+            if (value && telInput && typeof telInput.setNumber === 'function') {
+                var normalized = normalizeDialNumber(value);
+
+                if (normalized.charAt(0) === '+') {
+                    telInput.setNumber(normalized);
+
+                    return;
+                }
+            }
+
             dom.number.value = value ? formatPhoneNumber(value) : '';
         }
 
@@ -1138,6 +1147,11 @@
         function statusTextForCall(call) {
             if (metadataBoolean(call, 'isConference')) {
                 return strings.inConference || 'In conference';
+            }
+
+            if (normalizeState(call && call.state) === 'Connecting' &&
+                metadataBoolean(call, 'requiresActiveDialpadDevice')) {
+                return strings.answerOnDialpadDevice || 'Answer on your Dialpad device...';
             }
 
             return statusTextForState(normalizeState(call && call.state));
@@ -1801,6 +1815,7 @@
                 upsertActiveCall(result.call, true);
                 render();
                 notifyBrowserAudio(currentCall);
+                scheduleActiveCallsRefresh();
             }
 
             return true;
@@ -1838,6 +1853,8 @@
                 releaseBrowserAudio();
             }
 
+            scheduleActiveCallsRefresh();
+
             return currentCall;
         }
 
@@ -1851,6 +1868,32 @@
             return connection.invoke('GetActiveCalls').then(function (result) {
                 return applyActiveCallsLookup(result, expectedRevision);
             });
+        }
+
+        function clearActiveCallsRefresh() {
+            if (!activeCallsRefreshTimer) {
+                return;
+            }
+
+            window.clearTimeout(activeCallsRefreshTimer);
+            activeCallsRefreshTimer = null;
+        }
+
+        function scheduleActiveCallsRefresh() {
+            clearActiveCallsRefresh();
+
+            if (!connection || !getActiveCalls().length) {
+                return;
+            }
+
+            activeCallsRefreshTimer = window.setTimeout(function () {
+                activeCallsRefreshTimer = null;
+
+                refreshActiveCalls().catch(function (error) {
+                    showError(error && error.message ? error.message : String(error));
+                    scheduleActiveCallsRefresh();
+                });
+            }, config.activeCallRefreshInterval || 5000);
         }
 
         function invoke(method, payload) {
@@ -2719,6 +2762,9 @@
 
                     if (!getActiveCalls().length) {
                         releaseBrowserAudio();
+                        clearActiveCallsRefresh();
+                    } else {
+                        scheduleActiveCallsRefresh();
                     }
 
                     return;
@@ -2727,6 +2773,7 @@
                 upsertActiveCall(call, true);
                 render();
                 notifyBrowserAudio(call);
+                scheduleActiveCallsRefresh();
             });
 
             connection.on('IncomingCall', function (call, context) {
@@ -2741,6 +2788,7 @@
 
             connection.onclose(function () {
                 setStatus(strings.disconnectedHub || 'Disconnected');
+                clearActiveCallsRefresh();
                 releaseBrowserAudio();
             });
 

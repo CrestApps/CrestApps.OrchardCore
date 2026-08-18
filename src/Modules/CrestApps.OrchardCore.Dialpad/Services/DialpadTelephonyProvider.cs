@@ -332,6 +332,15 @@ public sealed class DialpadTelephonyProvider :
             call.StartedUtc = ReadDateTimeOffset(root, "date_started") ?? ReadDateTimeOffset(root, "date_connected");
             call.Metadata["dialPadStatus"] = stateText ?? string.Empty;
 
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Dialpad call-state lookup returned status {DialpadStatus} for call {CallId}; mapped state {CallState}.",
+                    stateText?.SanitizeLogValue() ?? "(null)",
+                    callId.SanitizeLogValue(),
+                    call.State);
+            }
+
             return new TelephonyCallLookupResult
             {
                 Succeeded = true,
