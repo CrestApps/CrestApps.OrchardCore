@@ -75,7 +75,9 @@ public sealed class ContentWizardHandler : WizardHandlerBase
 
             step.Data[WizardConstants.ContentTypeDataKey] = stepItem.ContentType;
             step.Data[WizardConstants.DefinitionContentItemIdDataKey] = stepItem.ContentItemId;
-            step.Data[WizardConstants.StepTemplateDataKey] = stepItem.Content?.ToJsonString();
+            step.Data[WizardConstants.StepTemplateDataKey] = stepItem.Content is null
+                ? null
+                : JsonSerializer.Serialize(stepItem.Content, _documentJsonSerializerOptions.SerializerOptions);
 
             session.Steps.Add(step);
         }
