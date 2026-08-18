@@ -1797,6 +1797,12 @@
 
             showError(null);
 
+            if (result.call) {
+                upsertActiveCall(result.call, true);
+                render();
+                notifyBrowserAudio(currentCall);
+            }
+
             return true;
         }
 

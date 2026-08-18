@@ -1452,6 +1452,11 @@
         return false;
       }
       showError(null);
+      if (result.call) {
+        upsertActiveCall(result.call, true);
+        render();
+        notifyBrowserAudio(currentCall);
+      }
       return true;
     }
     function applyActiveCallsLookup(result, expectedRevision) {
