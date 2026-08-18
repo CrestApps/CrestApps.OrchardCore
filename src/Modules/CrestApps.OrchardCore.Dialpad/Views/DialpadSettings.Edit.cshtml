@@ -1,3 +1,4 @@
+@using System.Text.Json
 @model DialpadSettingsViewModel
 
 <div class="ocat-wrapper">
@@ -38,6 +39,14 @@
 
 <script at="Foot">
     (function () {
+        var messages = {
+            noCrypto: @Html.Raw(JsonSerializer.Serialize(T["This browser cannot generate cryptographically secure random values. Use a different browser or generate the secret with a secure password manager."].Value)),
+            copyEmpty: @Html.Raw(JsonSerializer.Serialize(T["Generate or enter a webhook signing secret before copying it."].Value)),
+            copyFailed: @Html.Raw(JsonSerializer.Serialize(T["The browser could not copy the webhook signing secret. Select the field value and copy it manually."].Value)),
+            copied: @Html.Raw(JsonSerializer.Serialize(T["Copied the webhook signing secret to the clipboard."].Value)),
+            generatedCopied: @Html.Raw(JsonSerializer.Serialize(T["Generated a 32-byte webhook signing secret and copied it to the clipboard. Save this page, then use the same value when creating the Dialpad webhook."].Value))
+        };
+
         var environments = Array.prototype.slice.call(document.querySelectorAll('[data-dialpad-environment-section]'));
 
         environments.forEach(function (environment) {
@@ -57,6 +66,119 @@
 
             selector.addEventListener('change', updateAuthenticationSections);
             updateAuthenticationSections();
+        });
+
+        function getStatusElement(container) {
+            return container.parentElement.querySelector('[data-dialpad-webhook-secret-status]');
+        }
+
+        function setStatus(container, message, isError) {
+            var status = getStatusElement(container);
+
+            if (!status) {
+                return;
+            }
+
+            status.textContent = message;
+            status.classList.toggle('text-danger', isError);
+            status.classList.toggle('text-success', !isError && !!message);
+        }
+
+        function generateSecret() {
+            if (!window.crypto || !window.crypto.getRandomValues) {
+                return null;
+            }
+
+            var bytes = new Uint8Array(32);
+            window.crypto.getRandomValues(bytes);
+
+            var value = '';
+
+            bytes.forEach(function (byte) {
+                value += String.fromCharCode(byte);
+            });
+
+            return window.btoa(value)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/g, '');
+        }
+
+        function copyToClipboard(value) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(value);
+            }
+
+            var textArea = document.createElement('textarea');
+            textArea.value = value;
+            textArea.setAttribute('readonly', 'readonly');
+            textArea.style.position = 'fixed';
+            textArea.style.top = '-1000px';
+            document.body.appendChild(textArea);
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+
+                return Promise.resolve();
+            } catch (error) {
+                return Promise.reject(error);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+
+        document.addEventListener('click', function (event) {
+            var generateButton = event.target.closest('[data-dialpad-generate-webhook-secret]');
+            var copyButton = event.target.closest('[data-dialpad-copy-webhook-secret]');
+
+            if (!generateButton && !copyButton) {
+                return;
+            }
+
+            var container = event.target.closest('[data-dialpad-webhook-secret]');
+            var input = container ? container.querySelector('[data-dialpad-webhook-secret-input]') : null;
+
+            if (!container || !input) {
+                return;
+            }
+
+            if (generateButton) {
+                var secret = generateSecret();
+
+                if (!secret) {
+                    setStatus(container, messages.noCrypto, true);
+
+                    return;
+                }
+
+                input.value = secret;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+
+                copyToClipboard(secret)
+                    .then(function () {
+                        setStatus(container, messages.generatedCopied, false);
+                    })
+                    .catch(function () {
+                        setStatus(container, messages.copyFailed, true);
+                    });
+
+                return;
+            }
+
+            if (!input.value) {
+                setStatus(container, messages.copyEmpty, true);
+
+                return;
+            }
+
+            copyToClipboard(input.value)
+                .then(function () {
+                    setStatus(container, messages.copied, false);
+                })
+                .catch(function () {
+                    setStatus(container, messages.copyFailed, true);
+                });
         });
     })();
 </script>

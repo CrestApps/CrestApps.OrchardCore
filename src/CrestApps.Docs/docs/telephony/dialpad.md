@@ -53,7 +53,7 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | **OAuth client id** | The OAuth client id issued by Dialpad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by Dialpad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. Every scope — including `offline_access` — must be approved for your Dialpad OAuth app, so only the scopes you enter here are requested. Add `offline_access` to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. |
-| **Webhook signing secret** | Required for the active Dialpad environment. The shared secret Dialpad uses to sign call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Used to validate webhooks posted to `/api/dialpad/webhook/call` so the soft phone receives call-state updates and inbound calls can route through Contact Center. See [Required Dialpad call-event subscription](#required-dialpad-call-event-subscription). |
+| **Webhook signing secret** | Required for the active Dialpad environment. The shared random secret Dialpad uses to sign call-event webhooks (HS256 JWT). Stored encrypted with the data protection provider. Use **Generate** on the settings page to create a 32-byte secret, then use the same value when creating the Dialpad webhook. Used to validate webhooks posted to `/api/dialpad/webhook/call` so the soft phone receives call-state updates and inbound calls can route through Contact Center. See [Required Dialpad call-event subscription](#required-dialpad-call-event-subscription). |
 
 Dialpad API calls default to the active environment's REST endpoint (`https://dialpad.com/api/v2/` for production or
 `https://sandbox.dialpad.com/api/v2/` for sandbox). Set the environment **Host** when you need to target an alternate
@@ -84,11 +84,12 @@ Dialpad supports event delivery through its event-subscription system. This modu
 
 To configure the event subscription:
 
-1. Generate a high-entropy signing secret.
-2. Enter that value in the active environment's **Webhook signing secret** field and save the Dialpad settings.
-3. In Dialpad, create a webhook for `https://<tenant-host>/api/dialpad/webhook/call` using the same signing secret.
-4. Create a call-event subscription that targets the webhook id and includes the call states you need, such as `calling`, `preanswer`, `ringing`, `connected`, `hold`, `hangup`, `missed`, `voicemail`, and `recording`.
-5. Place a test call and confirm the application log shows `/api/dialpad/webhook/call` accepting signed deliveries.
+1. In the Dialpad settings page, click **Generate** next to **Webhook signing secret**. The browser creates a 32-byte random Base64URL secret and copies it to the clipboard.
+2. Save the Dialpad settings, then keep the copied secret available only long enough to create the Dialpad webhook. The field is intentionally blank after saving and cannot show the encrypted saved value again.
+3. In Dialpad, obtain a company API key from the admin web portal (**Settings → API Keys → Create New API Key**, or the equivalent API key page available to your Dialpad administrator).
+4. Create the webhook with `POST https://<dialpad-host>/api/v2/webhooks`. Set `hook_url` to `https://<tenant-host>/api/dialpad/webhook/call` and set `secret` to the same value generated in Orchard.
+5. Create a call-event subscription with `POST https://<dialpad-host>/api/v2/subscriptions/call`. Set `endpoint_id` to the webhook id returned by the webhook create call and include the call states you need, such as `calling`, `preanswer`, `ringing`, `connected`, `hold`, `hangup`, `missed`, `voicemail`, and `recording`.
+6. Place a test call and confirm the application log shows `/api/dialpad/webhook/call` accepting signed deliveries.
 
 For the assigned beta sandbox host, use `https://dialpadbeta.com/api/v2/webhooks` and `https://dialpadbeta.com/api/v2/subscriptions/call`.
 
@@ -199,7 +200,7 @@ dialing and call transfer.
   phone.
 - **Inbound** — configure a Dialpad webhook to `POST` call events to `/api/dialpad/webhook/call`. The webhook is authenticated by the **Webhook signing secret** configured on the Dialpad settings screen (Dialpad signs the payload as an HS256 JWT). New inbound calls create a CRM activity and a voice interaction, are queued through the matching entry point, and are offered to an available agent; later events (answered, held, muted, recording/conference changes, ended) update the interaction and call session. Missing signing secrets are rejected, and a configured secret that cannot be decrypted returns a service-unavailable response instead of downgrading to unsigned acceptance. Webhook request bodies are limited to 1 MiB, oversized deliveries return HTTP 413, and accepted state-changing processing is not canceled when the sending client disconnects.
 
-Create the call-event webhook subscription in the Dialpad administration portal and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the Dialpad subscription automatically, so operators should monitor subscription status and delivery failures in Dialpad.
+Create the call-event webhook subscription with the Dialpad Admin API and point it at the tenant's public HTTPS URL. Orchard validates and processes deliveries but does not currently create or health-check the Dialpad subscription automatically, so operators should monitor subscription status and delivery failures in Dialpad.
 
 ### Registering the inbound call-event webhook
 
@@ -207,10 +208,10 @@ Inbound routing and asynchronous call-state updates require a Dialpad call-event
 
 To register the webhook:
 
-1. Generate a high-entropy signing secret and enter it in the active environment's **Webhook signing secret** field under **Settings → Communication → Telephony → Dialpad**.
-2. Create a Dialpad webhook whose URL is the tenant endpoint: `https://<tenant-host>/api/dialpad/webhook/call`. Include the tenant URL prefix if the tenant uses one.
-3. Use the same signing secret when creating the Dialpad webhook. Dialpad signs call events as JWT payloads with this shared secret, and Orchard rejects unsigned or incorrectly signed deliveries.
-4. Create a **call event** subscription that targets the webhook. Choose the same Dialpad environment host the tenant uses: `https://dialpad.com` for production, `https://sandbox.dialpad.com` for the default sandbox, or the assigned alternate host such as `https://dialpadbeta.com`.
+1. In Orchard, go to **Settings → Communication → Telephony → Dialpad**, click **Generate** next to the active environment's **Webhook signing secret**, save the settings, and keep the copied value available for the next API call.
+2. In Dialpad, create or obtain a company API key from the admin web portal (**Settings → API Keys → Create New API Key**, or the equivalent API key page available to your Dialpad administrator). Dialpad documents Admin API authentication as a bearer token in the `Authorization` header.
+3. Create a Dialpad webhook with the Admin API. Set `hook_url` to the tenant endpoint, `https://<tenant-host>/api/dialpad/webhook/call`, including the tenant URL prefix if the tenant uses one. Set `secret` to the same generated value saved in Orchard.
+4. Create a **call event** subscription with the Admin API. Set `endpoint_id` to the webhook id returned by the webhook create call. Choose the same Dialpad environment host the tenant uses: `https://dialpad.com` for production, `https://sandbox.dialpad.com` for the default sandbox, or the assigned alternate host such as `https://dialpadbeta.com`.
 5. Place an inbound test call and confirm the application log shows the `/api/dialpad/webhook/call` endpoint accepting a signed delivery. If Dialpad shows delivery failures, verify the public URL, TLS certificate, tenant prefix, and signing secret.
 
 Example API flow for the beta sandbox host:
@@ -226,7 +227,7 @@ curl --request POST \
   }'
 ```
 
-After Dialpad returns the webhook id, create a call-event subscription for the webhook through the Dialpad developer portal or the call-event subscription API. Keep the subscription scoped no wider than needed, for example the relevant company, office, call center, or user.
+After Dialpad returns the webhook id, create a call-event subscription for the webhook. Keep the subscription scoped no wider than needed, for example the relevant company, office, call center, or user.
 
 ```bash
 curl --request POST \
@@ -252,23 +253,9 @@ curl --request POST \
 
 ### Where to obtain the webhook signing secret
 
-The **Webhook signing secret** is a value **you choose and register with Dialpad** when you create the
-call-event webhook — it is not issued by Dialpad. Dialpad then uses it to sign every webhook payload it
-delivers (as an HS256 JWT), and this module validates inbound deliveries to `/api/dialpad/webhook/call`
-against the same value.
+The **Webhook signing secret** is a value **you choose and register with Dialpad** when you create the call-event webhook — it is not issued by Dialpad. Dialpad then uses it to sign every webhook payload it delivers (as an HS256 JWT), and this module validates inbound deliveries to `/api/dialpad/webhook/call` against the same value.
 
-Create the webhook and set its secret using either method, then paste the same secret into the active
-environment's **Webhook signing secret** field:
-
-- **Dialpad developer portal** — in [developers.dialpad.com](https://developers.dialpad.com/), create a
-  webhook subscription for call events and set its **secret** to a strong random value that you generate.
-- **Dialpad API** — `POST https://dialpad.com/api/v2/webhooks` (or the sandbox host) with a JSON body that
-  includes the `hook_url` (your tenant's `https://<host>/api/dialpad/webhook/call` endpoint) and a `secret`
-  field set to the value you generate, then subscribe that webhook to the call events.
-
-Use a high-entropy random string (for example a 32-byte value) as the secret, keep production and sandbox
-secrets distinct, and rotate them if they are ever exposed. Leaving the field blank after saving keeps the
-previously stored secret unchanged.
+Use the **Generate** button in the Dialpad settings page to create a high-entropy 32-byte random secret. Save that value in the active environment, then use the same value in the `secret` field of `POST https://<dialpad-host>/api/v2/webhooks`. Keep production and sandbox secrets distinct, and rotate them if they are ever exposed. Leaving the field blank after saving keeps the previously stored secret unchanged.
 
 The provider is registered by the module's startup with a named HTTP client that uses the standard
 ASP.NET Core resiliency pipeline, plus the tenant-aware provider options configuration:

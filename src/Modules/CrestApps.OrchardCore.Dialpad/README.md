@@ -35,7 +35,7 @@ The **Telephony** feature (and, for Contact Center voice, the **Contact Center V
 
 Configure the Dialpad connection under **Settings → Communication → Telephony → Dialpad**: the target environment (Production or Sandbox), the authentication type and its credentials (an API token, or OAuth client id/secret and scopes), the outbound caller ID, the acting user id, and the required webhook signing secret. Credentials and per-user tokens are stored server-side and protected by the tenant's data-protection configuration.
 
-Create a Dialpad call-event webhook and subscription that posts signed events to `/api/dialpad/webhook/call` using the same signing secret. Dialpad event delivery is required for synchronized soft-phone call state and inbound routing; REST polling is only a fallback when provider events are delayed or unavailable.
+Use the **Generate** button to create the webhook signing secret, save it, then create a Dialpad call-event webhook through `POST /api/v2/webhooks` using that same `secret` value. Create a call-event subscription through `POST /api/v2/subscriptions/call` that posts signed events to `/api/dialpad/webhook/call`. Dialpad event delivery is required for synchronized soft-phone call state and inbound routing; REST polling is only a fallback when provider events are delayed or unavailable.
 
 Select Dialpad as the default telephony provider only after the Dialpad feature is enabled and configured.
 
