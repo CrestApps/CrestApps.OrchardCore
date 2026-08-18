@@ -40,6 +40,8 @@
 <script at="Foot">
     (function () {
         var messages = {
+            disconnectFailed: @Html.Raw(JsonSerializer.Serialize(T["Dialpad webhook disconnect failed."].Value)),
+            disconnectInProgress: @Html.Raw(JsonSerializer.Serialize(T["Disconnecting the Dialpad webhook..."].Value)),
             registrationFailed: @Html.Raw(JsonSerializer.Serialize(T["Dialpad webhook registration failed."].Value)),
             registrationInProgress: @Html.Raw(JsonSerializer.Serialize(T["Registering the Dialpad webhook..."].Value)),
             saveSettingsFirst: @Html.Raw(JsonSerializer.Serialize(T["Save the Dialpad settings before registering the webhook."].Value))
@@ -104,7 +106,7 @@
             }
 
             var container = event.target.closest('[data-dialpad-webhook-registration]');
-            var registrationUrl = container ? container.getAttribute('data-url') : null;
+            var registrationUrl = container ? container.getAttribute('data-register-url') : null;
             var token = document.querySelector('input[name="__RequestVerificationToken"]');
 
             if (!container || !registrationUrl || !token) {
@@ -132,6 +134,12 @@
                             message: messages.registrationFailed
                         };
                     }).then(function (body) {
+                        if (body.authorizationUrl) {
+                            window.location.href = body.authorizationUrl;
+
+                            return body;
+                        }
+
                         if (!response.ok || !body.success) {
                             throw new Error(body.message || messages.registrationFailed);
                         }
@@ -140,7 +148,12 @@
                     });
                 })
                 .then(function (body) {
+                    if (body.authorizationUrl) {
+                        return;
+                    }
+
                     setStatus(container, body.message, false);
+                    window.location.reload();
                 })
                 .catch(function (error) {
                     setStatus(container, error.message || messages.registrationFailed, true);
@@ -149,5 +162,93 @@
                     registerButton.disabled = false;
                 });
         });
+
+        document.addEventListener('click', function (event) {
+            var disconnectButton = event.target.closest('[data-dialpad-disconnect-webhook]');
+
+            if (!disconnectButton) {
+                return;
+            }
+
+            var confirmationMessage = disconnectButton.getAttribute('data-confirm-message');
+
+            if (confirmationMessage && !window.confirm(confirmationMessage)) {
+                return;
+            }
+
+            var container = event.target.closest('[data-dialpad-webhook-registration]');
+            var disconnectUrl = container ? container.getAttribute('data-disconnect-url') : null;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+
+            if (!container || !disconnectUrl || !token) {
+                if (container) {
+                    setStatus(container, messages.saveSettingsFirst, true);
+                }
+
+                return;
+            }
+
+            disconnectButton.disabled = true;
+            setStatus(container, messages.disconnectInProgress, false);
+
+            fetch(disconnectUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': token.value
+                }
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        return {
+                            message: messages.disconnectFailed
+                        };
+                    }).then(function (body) {
+                        if (body.authorizationUrl) {
+                            window.location.href = body.authorizationUrl;
+
+                            return body;
+                        }
+
+                        if (!response.ok || !body.success) {
+                            throw new Error(body.message || messages.disconnectFailed);
+                        }
+
+                        return body;
+                    });
+                })
+                .then(function (body) {
+                    if (body.authorizationUrl) {
+                        return;
+                    }
+
+                    setStatus(container, body.message, false);
+                    window.location.reload();
+                })
+                .catch(function (error) {
+                    setStatus(container, error.message || messages.disconnectFailed, true);
+                })
+                .finally(function () {
+                    disconnectButton.disabled = false;
+                });
+        });
+
+        var query = new URLSearchParams(window.location.search);
+
+        if (query.get('dialpadRegisterWebhook') === '1') {
+            var registerButton = document.querySelector('[data-dialpad-register-webhook]');
+
+            query.delete('dialpadRegisterWebhook');
+
+            var queryString = query.toString();
+            var newUrl = window.location.pathname + (queryString ? '?' + queryString : '') + window.location.hash;
+
+            window.history.replaceState({}, document.title, newUrl);
+
+            if (registerButton) {
+                registerButton.click();
+            }
+        }
     })();
 </script>

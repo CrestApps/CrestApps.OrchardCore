@@ -1,13 +1,4 @@
 @model DialpadEnvironmentSettingsViewModel
-@{
-    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
-    var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect, new { returnUrl });
-
-    if (string.IsNullOrEmpty(connectUrl))
-    {
-        connectUrl = $"{Context.Request.PathBase}/Telephony/Connect?returnUrl={Uri.EscapeDataString(returnUrl)}";
-    }
-}
 
 <div data-dialpad-environment-section>
     <div class="ocat-wrapper" asp-validation-class-for="Host">
@@ -147,37 +138,58 @@
             <div class="ocat-end-offset">
                 @if (Model.CanUseOAuthWebhookRegistration)
                 {
-                    <a class="btn btn-outline-secondary" href="@connectUrl" target="_blank" rel="noopener noreferrer">@T["Connect admin account"]</a>
-                    <span class="hint d-block">@T["Connect with a Dialpad company administrator account, then return here and click Register webhook. The same OAuth client id and client secret configured above are used for this login."]</span>
+                    <span class="hint d-block">@T["Register webhook will use the current user's connected Dialpad OAuth account. If no usable admin token is saved yet, the button starts the OAuth flow. Sign in with a Dialpad company administrator account."]</span>
                 }
                 else
                 {
-                    <span class="hint text-warning">@T["Save the OAuth client id and client secret before connecting an admin account for webhook registration."]</span>
+                    <span class="hint text-warning">@T["Save the OAuth client id and client secret before registering the webhook with an admin OAuth account."]</span>
                 }
             </div>
         </div>
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
-        <label class="ocat-label">@T["Webhook registration"]</label>
-        <div class="ocat-end">
-            <div class="input-group" data-dialpad-webhook-registration data-url="@Url.RouteUrl("DialpadWebhookRegister")">
-                <button class="btn btn-outline-secondary" type="button" data-dialpad-register-webhook>@T["Register webhook"]</button>
+    @if (Model.IsActive)
+    {
+        var isWebhookRegistered = Model.HasWebhookSigningSecret &&
+            !Model.HasUnreadableWebhookSigningSecret &&
+            !string.IsNullOrEmpty(Model.WebhookId) &&
+            !string.IsNullOrEmpty(Model.CallEventSubscriptionId);
+
+        <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
+            <label class="ocat-label">@T["Webhook registration"]</label>
+            <div class="ocat-end">
+                <div class="alert @(isWebhookRegistered ? "alert-success" : "alert-danger") mb-2" role="alert">
+                    @if (isWebhookRegistered)
+                    {
+                        <strong>@T["Dialpad webhook is registered."]</strong>
+                        <span>@T["Webhook id: {0}. Call-event subscription id: {1}.", Model.WebhookId, Model.CallEventSubscriptionId]</span>
+                    }
+                    else if (Model.HasWebhookSigningSecret && Model.HasUnreadableWebhookSigningSecret)
+                    {
+                        <strong>@T["Dialpad webhook signing secret cannot be read."]</strong>
+                        <span>@T["Register the webhook again so the app can save a new signing secret with the current data-protection keys."]</span>
+                    }
+                    else
+                    {
+                        <strong>@T["Dialpad webhook is not registered for the active environment."]</strong>
+                        <span>@T["Register the webhook before using Dialpad so call-state events can update the soft phone and route inbound calls."]</span>
+                    }
+                </div>
+
+                <div class="btn-group" role="group" data-dialpad-webhook-registration data-register-url="@Url.RouteUrl("DialpadWebhookRegister")" data-disconnect-url="@Url.RouteUrl("DialpadWebhookDisconnect")">
+                    @if (!isWebhookRegistered)
+                    {
+                        <button class="btn btn-outline-secondary" type="button" data-dialpad-register-webhook>@T["Register webhook"]</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-danger" type="button" data-dialpad-disconnect-webhook data-confirm-message="@T["Disconnect the Dialpad webhook for this environment? This deletes the Dialpad call-event subscription and webhook when Dialpad accepts the request, then clears the local signing secret."]">@T["Disconnect webhook"]</button>
+                    }
+                </div>
+                <span asp-validation-for="WebhookSigningSecret"></span>
+                <span class="hint d-block mt-1" data-dialpad-webhook-registration-status aria-live="polite"></span>
+                <span class="hint">@T["The app generates and stores the signing secret on the server. It is never shown in the browser."]</span>
             </div>
-            <span asp-validation-for="WebhookSigningSecret"></span>
-            <span class="hint d-block mt-1" data-dialpad-webhook-registration-status aria-live="polite"></span>
-            @if (Model.HasWebhookSigningSecret && Model.HasUnreadableWebhookSigningSecret)
-            {
-                <span class="hint text-danger">@T["The saved webhook signing secret cannot be decrypted with the current application data-protection keys. Re-enter the webhook signing secret and save the settings."]</span>
-            }
-            else
-            {
-                <span class="hint">@T["Required. Register webhook generates and saves the signing secret on the server, creates the Dialpad company webhook, and creates the call-event subscription. The generated signing secret is never shown in the browser."]</span>
-            }
-            @if (!string.IsNullOrEmpty(Model.WebhookId) && !string.IsNullOrEmpty(Model.CallEventSubscriptionId))
-            {
-                <span class="hint d-block">@T["Saved Dialpad webhook id: {0}. Saved call-event subscription id: {1}.", Model.WebhookId, Model.CallEventSubscriptionId]</span>
-            }
         </div>
-    </div>
+    }
 </div>

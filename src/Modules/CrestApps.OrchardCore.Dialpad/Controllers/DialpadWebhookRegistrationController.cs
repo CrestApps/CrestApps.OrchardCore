@@ -106,8 +106,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         var environment = settings.GetActiveEnvironmentSettings();
 
-        if (!string.IsNullOrEmpty(environment.WebhookId) &&
-            !string.IsNullOrEmpty(environment.CallEventSubscriptionId))
+        if (IsWebhookRegistrationComplete(environment))
         {
             return Ok(new
             {
@@ -122,16 +121,21 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         if (string.IsNullOrEmpty(apiToken))
         {
-            return BadRequest(new
-            {
-                success = false,
-                message = S["Automatic webhook registration requires either a saved Dialpad Admin API key or a connected Dialpad admin OAuth account for the current user."].Value,
-            });
+            return BuildMissingRegistrationTokenResult(environment);
         }
 
         var webhookUrl = BuildWebhookUrl(site);
         var secret = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var client = CreateClient(settings, environment, apiToken);
+
+        if (!await DeleteExistingRegistrationAsync(client, environment, cancellationToken))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = S["Dialpad did not delete the existing saved webhook registration. Disconnect the webhook and try again."].Value,
+            });
+        }
 
         var webhookId = await CreateWebhookAsync(client, webhookUrl, secret, cancellationToken);
 
@@ -148,6 +152,8 @@ public sealed class DialpadWebhookRegistrationController : Controller
         {
             _logger.LogError("Dialpad returned webhook id {WebhookId}, which cannot be used as a call-event subscription endpoint id.", webhookId.SanitizeLogValue());
 
+            await DeleteDialpadResourceAsync(client, $"webhooks/{webhookId}", "webhook", cancellationToken);
+
             return BadRequest(new
             {
                 success = false,
@@ -159,6 +165,8 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         if (string.IsNullOrEmpty(subscriptionId))
         {
+            await DeleteDialpadResourceAsync(client, $"webhooks/{webhookId}", "webhook", cancellationToken);
+
             return BadRequest(new
             {
                 success = false,
@@ -185,6 +193,112 @@ public sealed class DialpadWebhookRegistrationController : Controller
             webhookId,
             subscriptionId,
         });
+    }
+
+    /// <summary>
+    /// Disconnects the active environment's Dialpad webhook and call-event subscription.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("dialpad/webhook/disconnect", "DialpadWebhookDisconnect")]
+    public async Task<IActionResult> Disconnect(CancellationToken cancellationToken)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.ManageTelephonySettings))
+        {
+            return Forbid();
+        }
+
+        var site = await _siteService.GetSiteSettingsAsync();
+        var settings = site.GetOrCreate<DialpadSettings>();
+        var environment = settings.GetActiveEnvironmentSettings();
+        var apiToken = await GetWebhookRegistrationBearerTokenAsync(environment, cancellationToken);
+
+        if (string.IsNullOrEmpty(apiToken))
+        {
+            return BuildMissingRegistrationTokenResult(environment);
+        }
+
+        var client = CreateClient(settings, environment, apiToken);
+
+        if (!await DeleteExistingRegistrationAsync(client, environment, cancellationToken))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = S["Dialpad did not delete the saved webhook registration. Check the saved webhook registration credentials and try again."].Value,
+            });
+        }
+
+        environment.WebhookSigningSecret = null;
+        environment.WebhookId = null;
+        environment.CallEventSubscriptionId = null;
+
+        site.Put(settings);
+
+        await _siteService.UpdateSiteSettingsAsync(site);
+
+        _shellReleaseManager.RequestRelease();
+
+        return Ok(new
+        {
+            success = true,
+            message = S["Dialpad webhook registration disconnected."].Value,
+        });
+    }
+
+    private IActionResult BuildMissingRegistrationTokenResult(DialpadEnvironmentSettings environment)
+    {
+        var authenticationType = GetEffectiveWebhookRegistrationAuthenticationType(environment);
+
+        if (authenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2)
+        {
+            var authorizationUrl = BuildOAuthConnectUrl();
+
+            if (!string.IsNullOrEmpty(authorizationUrl))
+            {
+                return Ok(new
+                {
+                    success = false,
+                    requiresAuthentication = true,
+                    authorizationUrl,
+                    message = S["Sign in with a Dialpad company administrator account, then register the webhook again."].Value,
+                });
+            }
+        }
+
+        return BadRequest(new
+        {
+            success = false,
+            message = S["Automatic webhook registration requires either a saved Dialpad Admin API key or a connected Dialpad admin OAuth account for the current user."].Value,
+        });
+    }
+
+    private string BuildOAuthConnectUrl()
+    {
+        var returnUrl = Request.Headers["Referer"].ToString();
+
+        if (string.IsNullOrEmpty(returnUrl) ||
+            !Uri.TryCreate(returnUrl, UriKind.Absolute, out var referrer) ||
+            !string.Equals(referrer.Authority, Request.Host.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            returnUrl = $"{Request.PathBase}";
+        }
+        else
+        {
+            returnUrl = $"{referrer.PathAndQuery}";
+        }
+
+        returnUrl = QueryHelpers.AddQueryString(returnUrl, "dialpadRegisterWebhook", "1");
+
+        var authorizationUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect, new { returnUrl });
+
+        if (!string.IsNullOrEmpty(authorizationUrl))
+        {
+            return authorizationUrl;
+        }
+
+        return $"{Request.PathBase}/Telephony/Connect?returnUrl={Uri.EscapeDataString(returnUrl)}";
     }
 
     private async Task<string> GetWebhookRegistrationBearerTokenAsync(
@@ -248,6 +362,36 @@ public sealed class DialpadWebhookRegistrationController : Controller
         }
 
         return DialpadWebhookRegistrationAuthenticationType.NotConfigured;
+    }
+
+    private bool IsWebhookRegistrationComplete(DialpadEnvironmentSettings environment)
+    {
+        return !string.IsNullOrEmpty(environment.WebhookId) &&
+            !string.IsNullOrEmpty(environment.CallEventSubscriptionId) &&
+            HasReadableWebhookSigningSecret(environment);
+    }
+
+    private bool HasReadableWebhookSigningSecret(DialpadEnvironmentSettings environment)
+    {
+        if (string.IsNullOrEmpty(environment.WebhookSigningSecret))
+        {
+            return false;
+        }
+
+        try
+        {
+            _dataProtectionProvider
+                .CreateProtector(DialpadConstants.WebhookProtectorName)
+                .Unprotect(environment.WebhookSigningSecret);
+
+            return true;
+        }
+        catch (CryptographicException exception)
+        {
+            _logger.LogError(exception, "Unable to decrypt the Dialpad webhook signing secret.");
+
+            return false;
+        }
     }
 
     private string BuildWebhookUrl(ISite site)
@@ -314,6 +458,49 @@ public sealed class DialpadWebhookRegistrationController : Controller
         using var response = await client.PostAsync("subscriptions/call", content, cancellationToken);
 
         return await ReadDialpadIdAsync(response, "call-event subscription", cancellationToken);
+    }
+
+    private async Task<bool> DeleteDialpadResourceAsync(
+        HttpClient client,
+        string requestUri,
+        string resourceName,
+        CancellationToken cancellationToken)
+    {
+        using var response = await client.DeleteAsync(requestUri, cancellationToken);
+        var payload = await SafeReadContentAsync(response, cancellationToken);
+
+        if (response.IsSuccessStatusCode || (int)response.StatusCode == 404)
+        {
+            return true;
+        }
+
+        _logger.LogError(
+            "Dialpad rejected the {ResourceName} deletion request with status code {StatusCode}. Response: {Response}",
+            resourceName,
+            response.StatusCode,
+            payload.SanitizeLogValue());
+
+        return false;
+    }
+
+    private async Task<bool> DeleteExistingRegistrationAsync(
+        HttpClient client,
+        DialpadEnvironmentSettings environment,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(environment.CallEventSubscriptionId) &&
+            !await DeleteDialpadResourceAsync(client, $"subscriptions/call/{environment.CallEventSubscriptionId}", "call-event subscription", cancellationToken))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(environment.WebhookId) &&
+            !await DeleteDialpadResourceAsync(client, $"webhooks/{environment.WebhookId}", "webhook", cancellationToken))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private async Task<string> ReadDialpadIdAsync(

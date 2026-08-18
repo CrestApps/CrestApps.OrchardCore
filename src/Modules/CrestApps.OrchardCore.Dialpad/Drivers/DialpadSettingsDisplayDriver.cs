@@ -84,7 +84,10 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
 
             Initialize<DialpadEnvironmentSettingsViewModel>("DialpadEnvironmentSettings_Edit", model =>
             {
-                MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialpadEnvironment.Production), model);
+                MapEnvironmentToViewModel(
+                    settings.GetEnvironmentSettings(DialpadEnvironment.Production),
+                    model,
+                    settings.Environment == DialpadEnvironment.Production);
             }).Location("Content:10#Dialpad%Production;5")
             .Differentiator(nameof(DialpadSettingsViewModel.Production))
             .Prefix($"{Prefix}.{nameof(DialpadSettingsViewModel.Production)}")
@@ -93,7 +96,10 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
 
             Initialize<DialpadEnvironmentSettingsViewModel>("DialpadEnvironmentSettings_Edit", model =>
             {
-                MapEnvironmentToViewModel(settings.GetEnvironmentSettings(DialpadEnvironment.Sandbox), model);
+                MapEnvironmentToViewModel(
+                    settings.GetEnvironmentSettings(DialpadEnvironment.Sandbox),
+                    model,
+                    settings.Environment == DialpadEnvironment.Sandbox);
             }).Location("Content:10#Dialpad%Sandbox;10")
             .Differentiator(nameof(DialpadSettingsViewModel.Sandbox))
             .Prefix($"{Prefix}.{nameof(DialpadSettingsViewModel.Sandbox)}")
@@ -159,8 +165,12 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         return Edit(site, settings, context);
     }
 
-    private void MapEnvironmentToViewModel(DialpadEnvironmentSettings environment, DialpadEnvironmentSettingsViewModel model)
+    private void MapEnvironmentToViewModel(
+        DialpadEnvironmentSettings environment,
+        DialpadEnvironmentSettingsViewModel model,
+        bool isActive)
     {
+        model.IsActive = isActive;
         model.AuthenticationType = environment.GetEffectiveAuthenticationType();
         model.Host = environment.Host;
         model.ClientId = environment.ClientId;

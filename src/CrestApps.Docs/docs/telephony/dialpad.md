@@ -88,8 +88,8 @@ To configure the event subscription automatically with an admin OAuth account:
 
 1. Configure OAuth 2.0 in the active environment, including the client id, client secret, and scopes approved for your Dialpad OAuth app, then save the Dialpad settings.
 2. Set **Webhook registration method** to **Admin OAuth account** and save.
-3. Click **Connect admin account** and sign in with a Dialpad company administrator account.
-4. Click **Register webhook**. The server uses the connected admin user's Dialpad bearer token, generates a 32-byte signing secret, creates the Dialpad webhook with `POST https://<dialpad-host>/api/v2/webhooks`, creates the call-event subscription with `POST https://<dialpad-host>/api/v2/subscriptions/call`, stores the encrypted signing secret, and stores the returned Dialpad webhook and subscription ids.
+3. Click **Register webhook**. If the current Orchard user does not already have a usable Dialpad OAuth token, the button starts the OAuth flow; sign in with a Dialpad company administrator account and the settings page continues registration when the OAuth flow returns.
+4. The server uses the connected admin user's Dialpad bearer token, generates a 32-byte signing secret, creates the Dialpad webhook with `POST https://<dialpad-host>/api/v2/webhooks`, creates the call-event subscription with `POST https://<dialpad-host>/api/v2/subscriptions/call`, stores the encrypted signing secret, and stores the returned Dialpad webhook and subscription ids. The active environment then shows a green registered status; use **Disconnect webhook** only when you want to delete the Dialpad call-event subscription and webhook and clear the local signing secret.
 5. Place a test call and confirm the application log shows `/api/dialpad/webhook/call` accepting signed deliveries.
 
 If Dialpad rejects webhook creation for the connected OAuth admin account, switch **Webhook registration method** to **Admin API key**, save a Dialpad Admin API key, and click **Register webhook** again.
@@ -212,11 +212,13 @@ Inbound routing and asynchronous call-state updates require a Dialpad call-event
 To register the webhook automatically with OAuth:
 
 1. In Orchard, go to **Settings → Communication → Telephony → Dialpad**, configure OAuth 2.0 in the active environment, select **Admin OAuth account** as the **Webhook registration method**, and save the settings.
-2. Click **Connect admin account** and sign in with a Dialpad company administrator account.
-3. Click **Register webhook**. The server generates the signing secret, creates a Dialpad webhook whose `hook_url` is the tenant endpoint (`https://<tenant-host>/api/dialpad/webhook/call`, including the tenant URL prefix if the tenant uses one), creates the **call event** subscription, and stores the encrypted signing secret plus the Dialpad ids.
+2. Click **Register webhook**. If no usable Dialpad admin OAuth token is saved for the current Orchard user, the button starts the OAuth flow; sign in with a Dialpad company administrator account and the settings page continues registration when the OAuth flow returns.
+3. The server generates the signing secret, creates a Dialpad webhook whose `hook_url` is the tenant endpoint (`https://<tenant-host>/api/dialpad/webhook/call`, including the tenant URL prefix if the tenant uses one), creates the **call event** subscription, and stores the encrypted signing secret plus the Dialpad ids. A green registered status appears for the active environment when the signing secret and Dialpad ids are saved.
 4. Place an inbound test call and confirm the application log shows the `/api/dialpad/webhook/call` endpoint accepting a signed delivery. If Dialpad shows delivery failures, verify the public URL, TLS certificate, tenant prefix, OAuth scopes/admin permissions, and Dialpad environment host.
 
 If OAuth registration is unavailable for your Dialpad account, select **Admin API key** as the **Webhook registration method**, save a Dialpad Admin API key, then click **Register webhook**. Dialpad documents Admin API authentication as a bearer token in the `Authorization` header.
+
+Use **Disconnect webhook** when you want to remove the registration. Orchard asks for confirmation, deletes the saved Dialpad call-event subscription and webhook through the Admin API when Dialpad accepts the request, and then clears the local signing secret and saved Dialpad ids. If the saved ids already refer to deleted Dialpad resources, the local disconnect still completes.
 
 The automatic action performs the same Admin API flow shown below for the beta sandbox host:
 

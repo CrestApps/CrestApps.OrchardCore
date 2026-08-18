@@ -65,6 +65,12 @@ public class DialpadEnvironmentSettingsViewModel
     public string WebhookRegistrationApiToken { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this environment is currently active.
+    /// </summary>
+    [BindNever]
+    public bool IsActive { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether OAuth credentials are saved and readable for webhook
     /// registration.
     /// </summary>
