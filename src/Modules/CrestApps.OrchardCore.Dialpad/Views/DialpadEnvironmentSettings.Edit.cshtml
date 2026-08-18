@@ -107,11 +107,11 @@
         <div class="ocat-end">
             <select asp-for="WebhookRegistrationAuthenticationType" class="form-select" data-dialpad-webhook-registration-authentication-type>
                 <option value="@DialpadWebhookRegistrationAuthenticationType.NotConfigured">@T["Select registration method"]</option>
+                <option value="@DialpadWebhookRegistrationAuthenticationType.OAuth2">@T["Admin account"]</option>
                 <option value="@DialpadWebhookRegistrationAuthenticationType.ApiKey">@T["Admin API key"]</option>
-                <option value="@DialpadWebhookRegistrationAuthenticationType.OAuth2">@T["Admin OAuth account"]</option>
             </select>
             <span asp-validation-for="WebhookRegistrationAuthenticationType"></span>
-            <span class="hint">@T["Select how the app authenticates to Dialpad when it creates the company-level call-event webhook. Use Admin OAuth account when a Dialpad company administrator can connect through OAuth; use Admin API key when your Dialpad account requires an API key for Admin API operations."]</span>
+            <span class="hint">@T["Select how the app authenticates to Dialpad when it creates the company-level call-event webhook. Use Admin account when a Dialpad company administrator can sign in; use Admin API key when your Dialpad account requires an API key for Admin API operations."]</span>
         </div>
     </div>
 
@@ -138,11 +138,11 @@
             <div class="ocat-end-offset">
                 @if (Model.CanUseOAuthWebhookRegistration)
                 {
-                    <span class="hint d-block">@T["Register webhook will use the current user's connected Dialpad OAuth account. If no usable admin token is saved yet, the button starts the OAuth flow. Sign in with a Dialpad company administrator account."]</span>
+                    <span class="hint d-block">@T["Register webhook starts the Dialpad sign-in flow for a company administrator account, then uses that connected account to create the webhook."]</span>
                 }
                 else
                 {
-                    <span class="hint text-warning">@T["Save the OAuth client id and client secret before registering the webhook with an admin OAuth account."]</span>
+                    <span class="hint text-warning">@T["Save the OAuth client id and client secret before registering the webhook with an admin account."]</span>
                 }
             </div>
         </div>

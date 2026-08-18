@@ -24,6 +24,8 @@ namespace CrestApps.OrchardCore.Dialpad.Controllers;
 /// </summary>
 public sealed class DialpadWebhookRegistrationController : Controller
 {
+    private const string OAuthRegistrationReadyHeader = "X-Dialpad-Webhook-OAuth-Ready";
+
     private static readonly string[] _callStates =
     [
         "calling",
@@ -117,11 +119,19 @@ public sealed class DialpadWebhookRegistrationController : Controller
             });
         }
 
+        var registrationAuthenticationType = GetEffectiveWebhookRegistrationAuthenticationType(environment);
+
+        if (registrationAuthenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2 &&
+            !IsOAuthRegistrationReadyRequest())
+        {
+            return BuildOAuthAuthenticationRequiredResult();
+        }
+
         var apiToken = await GetWebhookRegistrationBearerTokenAsync(environment, cancellationToken);
 
         if (string.IsNullOrEmpty(apiToken))
         {
-            return BuildMissingRegistrationTokenResult(environment);
+            return BuildMissingRegistrationTokenResult(registrationAuthenticationType);
         }
 
         var webhookUrl = BuildWebhookUrl(site);
@@ -144,7 +154,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
             return BadRequest(new
             {
                 success = false,
-                message = S["Dialpad did not create the call-event webhook. Check the saved webhook registration API key and the Dialpad environment host."].Value,
+                message = GetWebhookCreationFailureMessage(registrationAuthenticationType),
             });
         }
 
@@ -216,7 +226,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         if (string.IsNullOrEmpty(apiToken))
         {
-            return BuildMissingRegistrationTokenResult(environment);
+            return BuildMissingRegistrationTokenResult(GetEffectiveWebhookRegistrationAuthenticationType(environment));
         }
 
         var client = CreateClient(settings, environment, apiToken);
@@ -247,31 +257,59 @@ public sealed class DialpadWebhookRegistrationController : Controller
         });
     }
 
-    private IActionResult BuildMissingRegistrationTokenResult(DialpadEnvironmentSettings environment)
+    private BadRequestObjectResult BuildMissingRegistrationTokenResult(DialpadWebhookRegistrationAuthenticationType authenticationType)
     {
-        var authenticationType = GetEffectiveWebhookRegistrationAuthenticationType(environment);
-
         if (authenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2)
         {
-            var authorizationUrl = BuildOAuthConnectUrl();
-
-            if (!string.IsNullOrEmpty(authorizationUrl))
+            return BadRequest(new
             {
-                return Ok(new
-                {
-                    success = false,
-                    requiresAuthentication = true,
-                    authorizationUrl,
-                    message = S["Sign in with a Dialpad company administrator account, then register the webhook again."].Value,
-                });
-            }
+                success = false,
+                message = S["The Dialpad admin account sign-in did not provide a usable access token. Click Register webhook and sign in with a Dialpad company administrator account."].Value,
+            });
         }
 
         return BadRequest(new
         {
             success = false,
-            message = S["Automatic webhook registration requires either a saved Dialpad Admin API key or a connected Dialpad admin OAuth account for the current user."].Value,
+            message = S["Automatic webhook registration requires either a saved Dialpad Admin API key or a connected Dialpad admin account for the current user."].Value,
         });
+    }
+
+    private IActionResult BuildOAuthAuthenticationRequiredResult()
+    {
+        var authorizationUrl = BuildOAuthConnectUrl();
+
+        if (!string.IsNullOrEmpty(authorizationUrl))
+        {
+            return Ok(new
+            {
+                success = false,
+                requiresAuthentication = true,
+                authorizationUrl,
+                message = S["Sign in with a Dialpad company administrator account so the app can register the webhook."].Value,
+            });
+        }
+
+        return BadRequest(new
+        {
+            success = false,
+            message = S["The Dialpad admin account sign-in flow could not be started. Save the Dialpad OAuth client settings and try again."].Value,
+        });
+    }
+
+    private string GetWebhookCreationFailureMessage(DialpadWebhookRegistrationAuthenticationType authenticationType)
+    {
+        if (authenticationType == DialpadWebhookRegistrationAuthenticationType.OAuth2)
+        {
+            return S["Dialpad did not create the call-event webhook with the connected admin account. Sign in with a Dialpad company administrator account that can manage webhooks, or switch the webhook registration method to Admin API key."].Value;
+        }
+
+        return S["Dialpad did not create the call-event webhook. Check the saved webhook registration API key and the Dialpad environment host."].Value;
+    }
+
+    private bool IsOAuthRegistrationReadyRequest()
+    {
+        return string.Equals(Request.Headers[OAuthRegistrationReadyHeader].ToString(), "true", StringComparison.OrdinalIgnoreCase);
     }
 
     private string BuildOAuthConnectUrl()

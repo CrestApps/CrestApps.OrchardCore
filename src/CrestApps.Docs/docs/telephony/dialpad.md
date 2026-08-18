@@ -53,7 +53,7 @@ Each environment card (**Production** and **Sandbox**) exposes its own copy of t
 | **OAuth client id** | The OAuth client id issued by Dialpad. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth client secret** | The OAuth client secret issued by Dialpad. Stored encrypted with the data protection provider. Required when **OAuth 2.0** authentication is selected. |
 | **OAuth scopes** | Optional. The space-separated OAuth scopes requested during authorization. Every scope — including `offline_access` — must be approved for your Dialpad OAuth app, so only the scopes you enter here are requested. Add `offline_access` to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. |
-| **Webhook registration method** | Select how the app authenticates when it creates the company-level call-event webhook. Choose **Admin OAuth account** when a Dialpad company administrator can connect through OAuth, or **Admin API key** when your Dialpad account requires an API key for Admin API operations. |
+| **Webhook registration method** | Select how the app authenticates when it creates the company-level call-event webhook. Choose **Admin account** when a Dialpad company administrator can sign in, or **Admin API key** when your Dialpad account requires an API key for Admin API operations. |
 | **Webhook registration API key** | Required only when **Webhook registration method** is **Admin API key**. A Dialpad Admin API key used only by the **Register webhook** action to create the company-level call-event webhook and subscription. Stored encrypted with the data protection provider. |
 | **Webhook signing secret** | Required for the active Dialpad environment, but not typed by administrators in the normal setup flow. Use **Register webhook** to have the server generate and save this secret without showing it in the browser, create the Dialpad webhook, and create the call-event subscription. Used to validate webhooks posted to `/api/dialpad/webhook/call` so the soft phone receives call-state updates and inbound calls can route through Contact Center. See [Required Dialpad call-event subscription](#required-dialpad-call-event-subscription). |
 
@@ -84,15 +84,15 @@ Dialpad supports event delivery through its event-subscription system. This modu
 
 The webhook is normally registered once per Dialpad company/application, not once per connected Orchard user. A single company call-event subscription can deliver events for the users and numbers in that Dialpad account; the app then correlates those provider events to local soft-phone and Contact Center state.
 
-To configure the event subscription automatically with an admin OAuth account:
+To configure the event subscription automatically with an admin account:
 
 1. Configure OAuth 2.0 in the active environment, including the client id, client secret, and scopes approved for your Dialpad OAuth app, then save the Dialpad settings.
-2. Set **Webhook registration method** to **Admin OAuth account** and save.
-3. Click **Register webhook**. If the current Orchard user does not already have a usable Dialpad OAuth token, the button starts the OAuth flow; sign in with a Dialpad company administrator account and the settings page continues registration when the OAuth flow returns.
+2. Set **Webhook registration method** to **Admin account** and save.
+3. Click **Register webhook**. The button starts the admin account sign-in flow; sign in with a Dialpad company administrator account and the settings page continues registration when the sign-in flow returns.
 4. The server uses the connected admin user's Dialpad bearer token, generates a 32-byte signing secret, creates the Dialpad webhook with `POST https://<dialpad-host>/api/v2/webhooks`, creates the call-event subscription with `POST https://<dialpad-host>/api/v2/subscriptions/call`, stores the encrypted signing secret, and stores the returned Dialpad webhook and subscription ids. The active environment then shows a green registered status; use **Disconnect webhook** only when you want to delete the Dialpad call-event subscription and webhook and clear the local signing secret.
 5. Place a test call and confirm the application log shows `/api/dialpad/webhook/call` accepting signed deliveries.
 
-If Dialpad rejects webhook creation for the connected OAuth admin account, switch **Webhook registration method** to **Admin API key**, save a Dialpad Admin API key, and click **Register webhook** again.
+If Dialpad rejects webhook creation for the connected admin account, switch **Webhook registration method** to **Admin API key**, save a Dialpad Admin API key, and click **Register webhook** again.
 
 For the assigned beta sandbox host, use `https://dialpadbeta.com/api/v2/webhooks` and `https://dialpadbeta.com/api/v2/subscriptions/call`.
 
@@ -211,8 +211,8 @@ Inbound routing and asynchronous call-state updates require a Dialpad call-event
 
 To register the webhook automatically with OAuth:
 
-1. In Orchard, go to **Settings → Communication → Telephony → Dialpad**, configure OAuth 2.0 in the active environment, select **Admin OAuth account** as the **Webhook registration method**, and save the settings.
-2. Click **Register webhook**. If no usable Dialpad admin OAuth token is saved for the current Orchard user, the button starts the OAuth flow; sign in with a Dialpad company administrator account and the settings page continues registration when the OAuth flow returns.
+1. In Orchard, go to **Settings → Communication → Telephony → Dialpad**, configure OAuth 2.0 in the active environment, select **Admin account** as the **Webhook registration method**, and save the settings.
+2. Click **Register webhook**. The button starts the admin account sign-in flow; sign in with a Dialpad company administrator account and the settings page continues registration when the sign-in flow returns.
 3. The server generates the signing secret, creates a Dialpad webhook whose `hook_url` is the tenant endpoint (`https://<tenant-host>/api/dialpad/webhook/call`, including the tenant URL prefix if the tenant uses one), creates the **call event** subscription, and stores the encrypted signing secret plus the Dialpad ids. A green registered status appears for the active environment when the signing secret and Dialpad ids are saved.
 4. Place an inbound test call and confirm the application log shows the `/api/dialpad/webhook/call` endpoint accepting a signed delivery. If Dialpad shows delivery failures, verify the public URL, TLS certificate, tenant prefix, OAuth scopes/admin permissions, and Dialpad environment host.
 

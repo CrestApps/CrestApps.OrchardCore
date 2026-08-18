@@ -46,6 +46,7 @@
             registrationInProgress: @Html.Raw(JsonSerializer.Serialize(T["Registering the Dialpad webhook..."].Value)),
             saveSettingsFirst: @Html.Raw(JsonSerializer.Serialize(T["Save the Dialpad settings before registering the webhook."].Value))
         };
+        var isCompletingWebhookOAuthFlow = false;
 
         var environments = Array.prototype.slice.call(document.querySelectorAll('[data-dialpad-environment-section]'));
 
@@ -120,13 +121,19 @@
             registerButton.disabled = true;
             setStatus(container, messages.registrationInProgress, false);
 
+            var headers = {
+                'Accept': 'application/json',
+                'RequestVerificationToken': token.value
+            };
+
+            if (isCompletingWebhookOAuthFlow) {
+                headers['X-Dialpad-Webhook-OAuth-Ready'] = 'true';
+            }
+
             fetch(registrationUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'RequestVerificationToken': token.value
-                }
+                headers: headers
             })
                 .then(function (response) {
                     return response.json().catch(function () {
@@ -159,6 +166,7 @@
                     setStatus(container, error.message || messages.registrationFailed, true);
                 })
                 .finally(function () {
+                    isCompletingWebhookOAuthFlow = false;
                     registerButton.disabled = false;
                 });
         });
@@ -239,6 +247,7 @@
         if (query.get('dialpadRegisterWebhook') === '1') {
             var registerButton = document.querySelector('[data-dialpad-register-webhook]');
 
+            isCompletingWebhookOAuthFlow = true;
             query.delete('dialpadRegisterWebhook');
 
             var queryString = query.toString();
