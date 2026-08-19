@@ -50,6 +50,8 @@ public sealed class Startup : StartupBase
             .AddTransient<IConfigureOptions<DialpadOptions>, DialpadOptionsConfigurations>()
             .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
+
+        services.AddScoped<IDialpadWebhookApiService, DialpadWebhookApiService>();
     }
 }
 

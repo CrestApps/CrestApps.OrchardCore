@@ -176,7 +176,7 @@
                     }
                 </div>
 
-                <div class="btn-group" role="group" data-dialpad-webhook-registration data-register-url="@Url.RouteUrl("DialpadWebhookRegister")" data-disconnect-url="@Url.RouteUrl("DialpadWebhookDisconnect")">
+                <div class="btn-group" role="group" data-dialpad-webhook-registration data-register-url="@Url.RouteUrl("DialpadWebhookRegister")" data-disconnect-url="@Url.RouteUrl("DialpadWebhookDisconnect")" data-status-url="@Url.RouteUrl("DialpadWebhookStatus")">
                     @if (!isWebhookRegistered)
                     {
                         <button class="btn btn-outline-secondary" type="button" data-dialpad-register-webhook>@T["Register webhook"]</button>

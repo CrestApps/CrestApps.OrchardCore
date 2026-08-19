@@ -44,9 +44,12 @@
             disconnectInProgress: @Html.Raw(JsonSerializer.Serialize(T["Disconnecting the Dialpad webhook..."].Value)),
             registrationFailed: @Html.Raw(JsonSerializer.Serialize(T["Dialpad webhook registration failed."].Value)),
             registrationInProgress: @Html.Raw(JsonSerializer.Serialize(T["Registering the Dialpad webhook..."].Value)),
+            oauthSignInFailed: @Html.Raw(JsonSerializer.Serialize(T["The Dialpad admin account sign-in did not provide a usable access token. Try registering the webhook again."].Value)),
             saveSettingsFirst: @Html.Raw(JsonSerializer.Serialize(T["Save the Dialpad settings before registering the webhook."].Value))
         };
-        var isCompletingWebhookOAuthFlow = false;
+
+        var statusPollIntervalMs = 1500;
+        var statusPollMaxAttempts = 12;
 
         var environments = Array.prototype.slice.call(document.querySelectorAll('[data-dialpad-environment-section]'));
 
@@ -99,6 +102,67 @@
             status.classList.toggle('text-success', !isError && !!message);
         }
 
+        function reloadWithoutFlags() {
+            var url = new URL(window.location.href);
+
+            url.searchParams.delete('dialpadWebhookRegistering');
+            url.searchParams.delete('dialpadWebhookError');
+
+            window.location.replace(url.pathname + url.search + url.hash);
+        }
+
+        function pollStatusThenReload(container) {
+            var statusUrl = container ? container.getAttribute('data-status-url') : null;
+            var attempts = 0;
+
+            function poll() {
+                attempts++;
+
+                if (!statusUrl) {
+                    reloadWithoutFlags();
+
+                    return;
+                }
+
+                fetch(statusUrl, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (body) {
+                        if (body && body.registered) {
+                            reloadWithoutFlags();
+
+                            return;
+                        }
+
+                        if (attempts >= statusPollMaxAttempts) {
+                            reloadWithoutFlags();
+
+                            return;
+                        }
+
+                        window.setTimeout(poll, statusPollIntervalMs);
+                    })
+                    .catch(function () {
+                        if (attempts >= statusPollMaxAttempts) {
+                            reloadWithoutFlags();
+
+                            return;
+                        }
+
+                        window.setTimeout(poll, statusPollIntervalMs);
+                    });
+            }
+
+            window.setTimeout(poll, statusPollIntervalMs);
+        }
+
         document.addEventListener('click', function (event) {
             var registerButton = event.target.closest('[data-dialpad-register-webhook]');
 
@@ -121,19 +185,13 @@
             registerButton.disabled = true;
             setStatus(container, messages.registrationInProgress, false);
 
-            var headers = {
-                'Accept': 'application/json',
-                'RequestVerificationToken': token.value
-            };
-
-            if (isCompletingWebhookOAuthFlow) {
-                headers['X-Dialpad-Webhook-OAuth-Ready'] = 'true';
-            }
-
             fetch(registrationUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: headers
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': token.value
+                }
             })
                 .then(function (response) {
                     return response.json().catch(function () {
@@ -159,14 +217,18 @@
                         return;
                     }
 
-                    setStatus(container, body.message, false);
+                    setStatus(container, body.message || messages.registrationInProgress, false);
+
+                    if (body.registrationStarted) {
+                        pollStatusThenReload(container);
+
+                        return;
+                    }
+
                     window.location.reload();
                 })
                 .catch(function (error) {
                     setStatus(container, error.message || messages.registrationFailed, true);
-                })
-                .finally(function () {
-                    isCompletingWebhookOAuthFlow = false;
                     registerButton.disabled = false;
                 });
         });
@@ -213,12 +275,6 @@
                             message: messages.disconnectFailed
                         };
                     }).then(function (body) {
-                        if (body.authorizationUrl) {
-                            window.location.href = body.authorizationUrl;
-
-                            return body;
-                        }
-
                         if (!response.ok || !body.success) {
                             throw new Error(body.message || messages.disconnectFailed);
                         }
@@ -227,37 +283,34 @@
                     });
                 })
                 .then(function (body) {
-                    if (body.authorizationUrl) {
-                        return;
-                    }
-
                     setStatus(container, body.message, false);
                     window.location.reload();
                 })
                 .catch(function (error) {
                     setStatus(container, error.message || messages.disconnectFailed, true);
-                })
-                .finally(function () {
                     disconnectButton.disabled = false;
                 });
         });
 
         var query = new URLSearchParams(window.location.search);
+        var container = document.querySelector('[data-dialpad-webhook-registration]');
 
-        if (query.get('dialpadRegisterWebhook') === '1') {
-            var registerButton = document.querySelector('[data-dialpad-register-webhook]');
-
-            isCompletingWebhookOAuthFlow = true;
-            query.delete('dialpadRegisterWebhook');
-
-            var queryString = query.toString();
-            var newUrl = window.location.pathname + (queryString ? '?' + queryString : '') + window.location.hash;
-
-            window.history.replaceState({}, document.title, newUrl);
+        if (container && query.get('dialpadWebhookRegistering') === '1') {
+            var registerButton = container.querySelector('[data-dialpad-register-webhook]');
 
             if (registerButton) {
-                registerButton.click();
+                registerButton.disabled = true;
             }
+
+            setStatus(container, messages.registrationInProgress, false);
+            pollStatusThenReload(container);
+        } else if (container && query.get('dialpadWebhookError') === '1') {
+            setStatus(container, messages.oauthSignInFailed, true);
+
+            var cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('dialpadWebhookError');
+
+            window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
         }
     })();
 </script>
