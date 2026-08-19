@@ -1,5 +1,5 @@
 using System.Runtime.Serialization;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.ModelBinding;

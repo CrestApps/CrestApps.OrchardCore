@@ -1,6 +1,6 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using CrestApps.OrchardCore.Wizard.Handlers;
-using CrestApps.OrchardCore.Wizard.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore;

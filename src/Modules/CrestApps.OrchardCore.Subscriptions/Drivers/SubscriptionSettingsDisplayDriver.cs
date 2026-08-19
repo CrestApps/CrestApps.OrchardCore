@@ -1,5 +1,5 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -31,6 +31,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellReleaseManager _shellReleaseManager;
     private readonly PaymentMethodOptions _paymentMethodOptions;
+    private readonly IProductCurrencyProvider _currencyProvider;
 
     internal IStringLocalizer S;
 
@@ -46,6 +47,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IOptions<PaymentMethodOptions> paymentMethodOptions,
+        IProductCurrencyProvider currencyProvider,
         IShellReleaseManager shellReleaseManager,
         IStringLocalizer<SubscriptionSettingsDisplayDriver> stringLocalizer)
     {
@@ -53,6 +55,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         _authorizationService = authorizationService;
         _shellReleaseManager = shellReleaseManager;
         _paymentMethodOptions = paymentMethodOptions.Value;
+        _currencyProvider = currencyProvider;
         S = stringLocalizer;
     }
 
@@ -78,15 +81,15 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
         context.AddTenantReloadWarningWrapper();
 
-        return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", model =>
+        return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", async model =>
         {
             model.DefaultPaymentMethod = settings.DefaultPaymentMethod;
             model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
-            model.Currencies = GetCurrencies();
+            model.Currencies = await BuildCurrencyOptionsAsync(model.Currency);
             model.PaymentMethods = _paymentMethodOptions.PaymentMethods
             .Select(m => new SelectListItem(m.Value.Title, m.Key))
-            .OrderBy(m => m.Text);
+            .OrderBy(m => m.Text, StringComparer.OrdinalIgnoreCase);
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
     }
@@ -109,18 +112,20 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.Currency))
+        var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
+
+        if (string.IsNullOrEmpty(normalizedCurrency))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Currency is required field."]);
         }
-        else if (!GetCurrencies().Any(x => x.Value == model.Currency))
+        else if (await _currencyProvider.FindByCodeAsync(normalizedCurrency) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
         }
         else
         {
             // Update the currency only if a valid value is provided, as other components may depend on the existing values.
-            settings.Currency = model.Currency;
+            settings.Currency = normalizedCurrency;
         }
 
         var providedPaymentMethod = !string.IsNullOrEmpty(model.DefaultPaymentMethod);
@@ -142,32 +147,29 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         return await EditAsync(site, settings, context);
     }
 
-    private static SelectListItem[] _currencies;
-
-    private static SelectListItem[] GetCurrencies()
+    private async Task<IEnumerable<SelectListItem>> BuildCurrencyOptionsAsync(string selectedCurrency)
     {
-        if (_currencies == null)
-        {
-            var currencies = new Dictionary<string, SelectListItem>();
-
-            foreach (var cultureInfo in CultureInfo.GetCultures(CultureTypes.SpecificCultures))
+        var normalizedCurrency = NormalizeCurrencyCode(selectedCurrency);
+        var currencies = await _currencyProvider.GetCurrenciesAsync();
+        var options = currencies
+            .Select(currency => new SelectListItem($"{currency.DisplayName} ({currency.CurrencyCode})", currency.CurrencyCode)
             {
-                var regionInfo = new RegionInfo(cultureInfo.Name);
-                var currencyCode = regionInfo.ISOCurrencySymbol;
-                if (string.IsNullOrEmpty(regionInfo.CurrencyEnglishName) || string.IsNullOrEmpty(currencyCode))
-                {
-                    continue;
-                }
+                Selected = string.Equals(currency.CurrencyCode, normalizedCurrency, StringComparison.OrdinalIgnoreCase),
+            })
+            .OrderBy(item => item.Text, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-                if (!currencies.ContainsKey(currencyCode))
-                {
-                    currencies.Add(currencyCode, new SelectListItem(regionInfo.CurrencyEnglishName, currencyCode));
-                }
-            }
-
-            _currencies = currencies.Values.OrderBy(x => x.Text).ToArray();
+        if (!string.IsNullOrEmpty(normalizedCurrency) &&
+            options.All(item => !string.Equals(item.Value, normalizedCurrency, StringComparison.OrdinalIgnoreCase)))
+        {
+            options.Add(new SelectListItem(normalizedCurrency, normalizedCurrency) { Selected = true });
         }
 
-        return _currencies;
+        return options;
     }
+
+    private static string NormalizeCurrencyCode(string currencyCode)
+        => string.IsNullOrWhiteSpace(currencyCode)
+            ? null
+            : currencyCode.Trim().ToUpperInvariant();
 }

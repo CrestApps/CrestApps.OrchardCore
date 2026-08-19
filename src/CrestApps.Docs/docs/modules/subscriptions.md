@@ -58,9 +58,13 @@ Each step is a display driver against the `SubscriptionFlow`, and the server tra
 
 The invoice currency comes from the subscribed product itself: the flow resolves the product through `IProductSnapshotResolver` and bills in the product-owned currency. A product that declares no currency at all (neither its own nor its content type's default) is not sellable, so the flow fails closed rather than billing it in a guessed currency; the site subscription currency applies only when the flow content item is not a product. Prices are never converted between currencies — when Stripe price synchronization is asked for a currency that differs from the product's own currency, that price is skipped and a warning is logged rather than silently relabeled.
 
+The site-level subscription currency picker and the product editors now read from the shared **Commerce → Currencies** catalog, so editors select friendly managed values such as **US Dollar (USD)** instead of typing currency codes free-form.
+
 ### Payment methods at checkout
 
 The **Payment** step renders the payment methods advertised in `PaymentMethodOptions`. Enabling the **Stripe** module adds the *Stripe* method (with a real processor), and enabling the **Pay Later** module adds a *Pay Later* method (no processor). The site owner picks the default under the subscription settings; developers add more options (for example PayPal) by registering a payment method and a checkout display driver — see [Adding another payment provider](payments#adding-another-payment-provider).
+
+The checkout UI presents those methods as selection cards and keeps the processor-specific input inside a dedicated panel, which makes the difference between online payment and offline pay-later flows clearer at checkout.
 
 ### Stripe checkout modes
 

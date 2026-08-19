@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Routing;
 

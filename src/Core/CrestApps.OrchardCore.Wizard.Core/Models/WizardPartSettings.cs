@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Wizard.Models;
+namespace CrestApps.OrchardCore.Wizard.Core.Models;
 
 /// <summary>
 /// The configurable settings for a <see cref="WizardPart"/> attachment on a content type. They restrict the

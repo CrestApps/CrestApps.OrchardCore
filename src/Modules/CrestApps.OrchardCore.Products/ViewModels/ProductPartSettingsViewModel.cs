@@ -12,4 +12,7 @@ public class ProductPartSettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Types { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Currencies { get; set; }
 }

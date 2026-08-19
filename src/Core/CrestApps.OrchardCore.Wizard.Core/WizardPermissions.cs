@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Wizard;
+namespace CrestApps.OrchardCore.Wizard.Core;
 
 /// <summary>
 /// The permissions exposed by the wizard module.

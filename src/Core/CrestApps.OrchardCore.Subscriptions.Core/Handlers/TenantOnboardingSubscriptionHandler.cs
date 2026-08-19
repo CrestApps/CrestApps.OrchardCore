@@ -106,9 +106,14 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
     /// <param name="context">The context for the subscription flow that is completing.</param>
     public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
+        if (!RequiresTenantOnboarding(context.Flow.ContentItem))
+        {
+            return;
+        }
+
         if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
         {
-            throw new InvalidOperationException("Unable to local the new site info.");
+            throw new InvalidOperationException("Unable to locate the saved new site information.");
         }
 
         var info = node.Deserialize<TenantOnboardingStep>(_documentJsonSerializerOptions.SerializerOptions);
@@ -290,4 +295,9 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         return shellSettings;
     }
+
+    private static bool RequiresTenantOnboarding(ContentItem contentItem)
+        => contentItem.TryGet<SubscriptionPart>(out _) &&
+        contentItem.TryGet<ProductPart>(out _) &&
+        contentItem.TryGet<TenantOnboardingPart>(out _);
 }

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.ContentManagement;
 
-namespace CrestApps.OrchardCore.Wizard.Models;
+namespace CrestApps.OrchardCore.Wizard.Core.Models;
 
 /// <summary>
 /// A content part that turns a content item into a wizard definition. Each contained content item is one

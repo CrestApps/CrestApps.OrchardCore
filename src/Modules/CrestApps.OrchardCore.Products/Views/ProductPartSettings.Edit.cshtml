@@ -13,8 +13,10 @@
 <div class="ocat-wrapper" asp-validation-class-for="DefaultCurrency">
     <label asp-for="DefaultCurrency" class="ocat-label">@T["Default currency"]</label>
     <div class="ocat-end">
-        <input type="text" maxlength="3" asp-for="DefaultCurrency" class="form-control text-uppercase" placeholder="USD" />
-        <span class="hint">@T["The ISO-4217 currency code applied to products of this type when an item does not set its own currency."]</span>
+        <select asp-for="DefaultCurrency" asp-items="Model.Currencies" class="form-select">
+            <option value="">@T["Select a default currency"]</option>
+        </select>
+        <span class="hint">@T["The managed currency applied to products of this type when an item does not set its own currency."]</span>
         <span asp-validation-for="DefaultCurrency"></span>
     </div>
 </div>

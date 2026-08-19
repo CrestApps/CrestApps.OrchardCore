@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using CrestApps.OrchardCore.Wizard.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

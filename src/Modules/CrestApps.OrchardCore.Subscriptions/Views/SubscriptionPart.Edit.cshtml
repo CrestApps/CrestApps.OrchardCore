@@ -2,6 +2,18 @@
 
 @model SubscriptionPartViewModel
 
+<div class="ocat-wrapper" asp-validation-class-for="BillingDuration">
+    <label asp-for="BillingDuration" class="ocat-label">@T["Billing Duration"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
+            <select asp-for="DurationType" asp-items="Model.DurationTypes" class="form-select" aria-label="@T["Duration Type"]"></select>
+        </div>
+        <span asp-validation-for="BillingDuration"></span>
+        <span asp-validation-for="DurationType"></span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="InitialAmount">
     <label asp-for="InitialAmount" class="ocat-label">@T["Initial Amount"]</label>
     <div class="ocat-end">
@@ -18,26 +30,11 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="BillingDuration">
-    <label asp-for="BillingDuration" class="ocat-label">@T["Billing Duration"]</label>
-    <div class="ocat-end">
-        <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
-        <span asp-validation-for="BillingDuration"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="DurationType">
-    <label asp-for="DurationType" class="ocat-label">@T["Duration Type"]</label>
-    <div class="ocat-end">
-        <select asp-for="DurationType" asp-items="Model.DurationTypes" class="form-select"></select>
-        <span asp-validation-for="DurationType"></span>
-    </div>
-</div>
-
 <div class="ocat-wrapper" asp-validation-class-for="BillingCycleLimit">
     <label asp-for="BillingCycleLimit" class="ocat-label">@T["Billing Cycle Limit"]</label>
     <div class="ocat-end">
         <input type="number" min="0" step="1" asp-for="BillingCycleLimit" class="form-control" />
+        <span class="hint">@T["Optionally stop the subscription after this many billing cycles. Leave it empty to bill until the subscription is cancelled."]</span>
         <span asp-validation-for="BillingCycleLimit"></span>
     </div>
 </div>
@@ -46,6 +43,7 @@
     <label asp-for="SubscriptionDayDelay" class="ocat-label">@T["Subscription Day Delay"]</label>
     <div class="ocat-end">
         <input type="number" min="0" step="1" asp-for="SubscriptionDayDelay" class="form-control" />
+        <span class="hint">@T["Delay the first recurring subscription payment by this many days after signup. Leave it empty or set it to 0 to start billing immediately."]</span>
         <span asp-validation-for="SubscriptionDayDelay"></span>
     </div>
 </div>

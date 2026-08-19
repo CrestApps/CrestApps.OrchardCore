@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Products.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -13,5 +14,9 @@ using OrchardCore.Modules.Manifest;
     Id = ProductConstants.Feature.ModuleId,
     Name = "Products",
     Description = "Provides product related components.",
-    Category = "Content Management"
+    Category = "Content Management",
+    Dependencies =
+    [
+        CommerceConstants.Features.Area,
+    ]
 )]

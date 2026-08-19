@@ -37,16 +37,6 @@ public static class WizardConstants
         /// The core wizard feature that provides the reusable, multi-step wizard framework.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Wizard";
-
-        /// <summary>
-        /// The feature that lets editors build wizards from content items using the wizard part.
-        /// </summary>
-        public const string Contents = "CrestApps.OrchardCore.Wizard.Contents";
-
-        /// <summary>
-        /// The feature that raises workflow events for wizard and step lifecycle transitions.
-        /// </summary>
-        public const string Workflows = "CrestApps.OrchardCore.Wizard.Workflows";
     }
 
     /// <summary>

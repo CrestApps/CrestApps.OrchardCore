@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;

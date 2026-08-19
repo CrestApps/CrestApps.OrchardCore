@@ -1,6 +1,6 @@
 using System.Collections.Specialized;
 using CrestApps.OrchardCore.Wizard.Contents;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 
 namespace CrestApps.OrchardCore.Wizard.ViewModels;
 

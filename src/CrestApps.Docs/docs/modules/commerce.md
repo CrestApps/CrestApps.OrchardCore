@@ -12,7 +12,7 @@ description: Registers the shared Commerce admin menu and its icon so every comm
 | **Category** | Commerce |
 | **Enabled** | By dependency only |
 
-The **Commerce** module registers the shared **Commerce** top-level admin menu and its icon. Commerce-related modules — such as [Transactions](transactions) and [Taxation](taxation) — contribute their own screens under this single menu instead of each declaring their own copy of it.
+The **Commerce** module registers the shared **Commerce** top-level admin menu and its icon. Commerce-related modules — such as [Products](products), [Transactions](transactions), and [Taxation](taxation) — contribute their own screens under this single menu instead of each declaring their own copy of it.
 
 ## Why this module exists
 
@@ -85,5 +85,6 @@ You do not enable **Commerce** directly. Enable a module that depends on it — 
 
 ## Related modules
 
+- [Products](products) — contributes the shared **Currencies** catalog under Commerce and reuses it for product and subscription pricing.
 - [Transactions](transactions) — a provider-agnostic ledger of outstanding obligations that contributes to the Commerce menu.
 - [Taxation](taxation) — a provider-agnostic taxation framework that contributes to the Commerce menu.

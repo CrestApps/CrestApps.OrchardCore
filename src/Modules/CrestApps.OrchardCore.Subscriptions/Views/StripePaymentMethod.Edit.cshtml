@@ -23,8 +23,9 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
 
 @if (Model.CheckoutMode == StripeCheckoutMode.HostedCheckout)
 {
-    <div class="alert alert-info" role="alert">
-        @T["You will be redirected to Stripe's secure checkout page to complete your payment."]
+    <div class="alert alert-info mb-3" role="alert">
+        <div class="fw-semibold mb-1">@T["Stripe checkout"]</div>
+        <div>@T["You will be redirected to Stripe's secure checkout page to complete your payment."]</div>
     </div>
 
     <script asp-name="subscription-payment-methods"></script>
@@ -51,10 +52,10 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
     return;
 }
 
-<!-- Additional input fields for billing details -->
-<div class="mb-1">
-    <label for="NameOnBankCard" class="visually-hidden"></label>
+<div class="mb-3">
+    <label for="NameOnBankCard" class="form-label">@T["Name on card"]</label>
     <input id="NameOnBankCard" type="text" class="form-control" placeholder="@T["Name as it appears on card"]">
+    <div class="form-text">@T["Enter the cardholder name exactly as it appears on the payment card."]</div>
 </div>
 
 <div id="card-element" class="form-control"></div>

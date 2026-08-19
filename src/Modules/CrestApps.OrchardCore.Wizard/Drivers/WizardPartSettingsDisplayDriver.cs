@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Wizard.Contents;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using CrestApps.OrchardCore.Wizard.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;

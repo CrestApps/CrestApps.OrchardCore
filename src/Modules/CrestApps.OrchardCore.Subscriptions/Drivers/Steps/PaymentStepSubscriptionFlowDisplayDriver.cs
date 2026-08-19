@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -56,15 +55,17 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
                 model.Flow = flow;
                 model.PaymentMethod = _paymentMethodOptions.DefaultPaymentMethod;
                 model.PaymentMethods = _paymentMethodOptions.PaymentMethods
-                .Select(x => new
+                .Select(x => new PaymentMethodOptionViewModel
                 {
-                    x.Key,
-                    x.Value.Title,
-                    x.Value.HasProcessor,
+                    Key = x.Key,
+                    Title = x.Value.Title,
+                    HasProcessor = x.Value.HasProcessor,
                     IsDefault = string.Equals(x.Key, _paymentMethodOptions.DefaultPaymentMethod, StringComparison.Ordinal),
+                    Description = x.Value.HasProcessor
+                        ? S["Pay securely online and confirm the subscription immediately."].Value
+                        : S["Complete checkout now and collect payment offline later."].Value,
                 }).OrderBy(m => m.IsDefault ? 0 : 1)
-                .ThenBy(x => x.Title)
-                .Select(m => new SelectListItem(m.Title, m.Key))
+                .ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             }).Location("Content:after")

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;

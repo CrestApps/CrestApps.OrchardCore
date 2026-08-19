@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Wizard.Models;
+using CrestApps.OrchardCore.Wizard.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

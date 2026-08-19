@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
@@ -18,7 +17,7 @@ public class PaymentMethodsViewModel
     /// Gets or sets the available payment method options.
     /// </summary>
     [BindNever]
-    public SelectListItem[] PaymentMethods { get; set; }
+    public PaymentMethodOptionViewModel[] PaymentMethods { get; set; }
 
     /// <summary>
     /// Gets the subscription flow associated with the payment method step.

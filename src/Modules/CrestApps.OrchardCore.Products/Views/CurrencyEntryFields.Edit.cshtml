@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model CurrencyEntryViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Currency code"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control text-uppercase" maxlength="3" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control text-uppercase" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The currency code is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Use the three-letter ISO-4217 code, for example USD or EUR."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        <span class="hint">@T["The friendly name shown in currency dropdowns, for example US Dollar."]</span>
+    </div>
+</div>

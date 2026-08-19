@@ -5,16 +5,14 @@
 <div class="ocat-wrapper" asp-validation-class-for="Price">
     <label asp-for="Price" class="ocat-label">@T["Price"]</label>
     <div class="ocat-end">
-        <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
+        <div class="input-group">
+            <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" aria-label="@T["Currency"]">
+                <option value="">@T["Use the default currency"]</option>
+            </select>
+        </div>
+        <span class="hint">@T["Select the currency this price is sold in. Leave it empty to use the content type's default currency."]</span>
         <span asp-validation-for="Price"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="Currency">
-    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
-    <div class="ocat-end">
-        <input type="text" maxlength="3" asp-for="Currency" class="form-control text-uppercase" placeholder="USD" />
-        <span class="hint">@T["The ISO-4217 currency code the price is sold in (for example USD). Leave empty to use the content type's default currency."]</span>
         <span asp-validation-for="Currency"></span>
     </div>
 </div>

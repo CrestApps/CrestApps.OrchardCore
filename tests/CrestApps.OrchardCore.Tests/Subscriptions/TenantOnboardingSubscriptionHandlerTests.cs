@@ -24,6 +24,27 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 public class TenantOnboardingSubscriptionHandlerTests
 {
     [Fact]
+    public async Task CompletingAsync_WhenContentItemDoesNotRequireTenantOnboarding_DoesNothing()
+    {
+        var workflowManager = CreateWorkflowManager();
+        var setupService = new Mock<ISetupService>();
+        var handler = CreateHandler(setupService.Object, workflowManager.Object);
+        var session = new SubscriptionSession
+        {
+            SessionId = "session-1",
+        };
+
+        var flow = new SubscriptionFlow(session, new ContentItem { ContentType = "Plan" });
+        var context = new SubscriptionFlowCompletingContext(flow);
+
+        var exception = await Record.ExceptionAsync(() => handler.CompletingAsync(context));
+
+        Assert.Null(exception);
+
+        setupService.Verify(service => service.GetSetupRecipesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task CompletedAsync_WhenProvisioningThrows_TriggersFailedSetupEvent_AndDoesNotPropagate()
     {
         // Payment already succeeded before CompletedAsync runs, so a provisioning failure must be

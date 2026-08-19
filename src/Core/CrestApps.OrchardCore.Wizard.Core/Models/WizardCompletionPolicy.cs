@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Wizard.Models;
+namespace CrestApps.OrchardCore.Wizard.Core.Models;
 
 /// <summary>
 /// Determines what a content-driven wizard does with the response content items a visitor filled in once the

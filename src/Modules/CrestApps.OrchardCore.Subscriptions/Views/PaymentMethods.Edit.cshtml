@@ -12,18 +12,31 @@
 
 @if (Model.PaymentMethods.Length >= 1)
 {
-    <h5 class="py-3">@T["Payment Method"]</h5>
-    <div class="mb-3">
+    <h5 class="mb-3">@T["Payment Method"]</h5>
+    <div class="row g-3 mb-3">
         @for (var i = 0; i < Model.PaymentMethods.Length; i++)
         {
             var method = Model.PaymentMethods[i];
-            var htmlId = @Html.IdFor(x => x.PaymentMethods[i]) + "_" + method.Value;
-            var isSelected = Model.PaymentMethods.Length == 1 || Model.PaymentMethod == method.Value;
+            var htmlId = $"{Html.IdFor(x => x.PaymentMethod)}_{method.Key}";
+            var isSelected = Model.PaymentMethods.Length == 1 || Model.PaymentMethod == method.Key;
 
-            <div class="form-check">
-                <input class="form-check-input" type="radio" value="@method.Value" name="PaymentMethod" id="@htmlId" @(isSelected ? "checked" : string.Empty) />
-                <label class="form-check-label" for="@htmlId">
-                    @method.Text
+            <div class="col-lg-6">
+                <input class="btn-check" type="radio" value="@method.Key" name="PaymentMethod" id="@htmlId" @(isSelected ? "checked" : string.Empty) />
+                <label class="payment-method-card" for="@htmlId">
+                    <span class="payment-method-card__header">
+                        <span class="payment-method-card__title">@method.Title</span>
+
+                        @if (method.IsDefault)
+                        {
+                            <span class="badge text-bg-success">@T["Default"]</span>
+                        }
+                    </span>
+                    <span class="payment-method-card__meta">
+                        <span class="badge text-bg-light">@(method.HasProcessor ? T["Online payment"] : T["Offline payment"])</span>
+                    </span>
+                    <span class="payment-method-card__description">
+                        @method.Description
+                    </span>
                 </label>
             </div>
         }
@@ -36,11 +49,68 @@
     var shape = await DisplayManager.BuildEditorAsync(
     model: new SubscriptionFlowPaymentMethod { Flow = Model.Flow },
     updater: UpdateModelAccessor.ModelUpdater,
-    isNew: false, method.Value);
+    isNew: false, method.Key);
 
     var wrapperCssClass = Model.PaymentMethods.Length > 1 ? "payment-method-wrapper d-none" : "payment-method-wrapper";
 
-    <div class="@wrapperCssClass" data-method-name="@method.Value">
+    <div class="@wrapperCssClass" data-method-name="@method.Key">
         @await DisplayAsync(shape)
     </div>
 }
+
+<style at="Foot">
+    .payment-method-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        height: 100%;
+        padding: 1rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius-lg);
+        background: var(--bs-body-bg);
+        box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.04);
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    }
+
+    .payment-method-card:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0.25rem 1rem rgba(13, 110, 253, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .btn-check:checked + .payment-method-card {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    }
+
+    .payment-method-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .payment-method-card__title {
+        font-weight: 600;
+        color: var(--bs-emphasis-color);
+    }
+
+    .payment-method-card__meta,
+    .payment-method-card__description {
+        color: var(--bs-secondary-color);
+    }
+
+    .payment-method-wrapper {
+        margin-top: 1rem;
+        padding: 1.25rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius-lg);
+        background: var(--bs-tertiary-bg);
+    }
+
+    .payment-method-wrapper #card-element {
+        min-height: 2.75rem;
+        padding-top: 0.75rem;
+    }
+</style>
