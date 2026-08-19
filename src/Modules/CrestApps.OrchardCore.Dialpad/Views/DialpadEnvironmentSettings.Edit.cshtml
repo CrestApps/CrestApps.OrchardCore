@@ -97,85 +97,90 @@
             <div class="ocat-end">
                 <input asp-for="Scopes" class="form-control" />
                 <span asp-validation-for="Scopes"></span>
-                <span class="hint">@T["Optional. Space-separated OAuth scopes requested during authorization. Every scope must be approved for your Dialpad OAuth app. Add offline_access to receive a refresh token so access tokens are renewed automatically; without it, users reconnect when the access token expires. PKCE is always used to protect the authorization code exchange."]</span>
+                <span class="hint">@T["Optional. Space-separated OAuth scopes requested during authorization. Every scope must be approved for your Dialpad OAuth app."]</span>
             </div>
         </div>
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="WebhookRegistrationAuthenticationType">
-        <label asp-for="WebhookRegistrationAuthenticationType" class="ocat-label">@T["Webhook registration method"]</label>
-        <div class="ocat-end">
-            <select asp-for="WebhookRegistrationAuthenticationType" class="form-select" data-dialpad-webhook-registration-authentication-type>
-                <option value="@DialpadWebhookRegistrationAuthenticationType.NotConfigured">@T["Select registration method"]</option>
-                <option value="@DialpadWebhookRegistrationAuthenticationType.OAuth2">@T["Admin account"]</option>
-                <option value="@DialpadWebhookRegistrationAuthenticationType.ApiKey">@T["Admin API key"]</option>
-            </select>
-            <span asp-validation-for="WebhookRegistrationAuthenticationType"></span>
-            <span class="hint">@T["Select how the app authenticates to Dialpad when it creates the company-level call-event webhook. Use Admin account when a Dialpad company administrator can sign in; use Admin API key when your Dialpad account requires an API key for Admin API operations."]</span>
-        </div>
-    </div>
-
-    <div data-dialpad-webhook-registration-authentication-section="@DialpadWebhookRegistrationAuthenticationType.ApiKey" hidden="@(Model.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.ApiKey)">
-        <div class="ocat-wrapper" asp-validation-class-for="WebhookRegistrationApiToken">
-            <label asp-for="WebhookRegistrationApiToken" class="ocat-label">@T["Webhook registration API key"]</label>
-            <div class="ocat-end">
-                <input asp-for="WebhookRegistrationApiToken" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookRegistrationApiToken ? T["An API key is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter a Dialpad Admin API key."])" />
-                <span asp-validation-for="WebhookRegistrationApiToken"></span>
-                @if (Model.HasWebhookRegistrationApiToken && Model.HasUnreadableWebhookRegistrationApiToken)
-                {
-                    <span class="hint text-danger">@T["The saved webhook registration API key cannot be decrypted with the current application data-protection keys. Re-enter the API key and save the settings."]</span>
-                }
-                else
-                {
-                    <span class="hint">@T["Used only by the server-side Register webhook action to call Dialpad's Admin API and create the company call-event webhook and subscription."]</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div data-dialpad-webhook-registration-authentication-section="@DialpadWebhookRegistrationAuthenticationType.OAuth2" hidden="@(Model.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.OAuth2)">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                @if (Model.CanUseOAuthWebhookRegistration)
-                {
-                    <span class="hint d-block">@T["Register webhook starts the Dialpad sign-in flow for a company administrator account, then uses that connected account to create the webhook."]</span>
-                }
-                else
-                {
-                    <span class="hint text-warning">@T["Save the OAuth client id and client secret before registering the webhook with an admin account."]</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    @if (Model.IsActive)
+    @if(Model.IsEnabled)
     {
         var isWebhookRegistered = Model.HasWebhookSigningSecret &&
             !Model.HasUnreadableWebhookSigningSecret &&
             !string.IsNullOrEmpty(Model.WebhookId) &&
             !string.IsNullOrEmpty(Model.CallEventSubscriptionId);
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <h3>@T["Webhook Registration"]</h3>
+                <p>@T["Webhook registration enables real-time communication between the two applications."]</p>
+            </div>
+        </div>
 
-        <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
-            <label class="ocat-label">@T["Webhook registration"]</label>
+        <div class="alert @(isWebhookRegistered ? "alert-success" : "alert-danger") mb-2" role="alert">
+            @if (isWebhookRegistered)
+            {
+                <strong>@T["Dialpad webhook is registered."]</strong>
+                <span>@T["Webhook id: {0}. Call-event subscription id: {1}.", Model.WebhookId, Model.CallEventSubscriptionId]</span>
+            }
+            else if (Model.HasWebhookSigningSecret && Model.HasUnreadableWebhookSigningSecret)
+            {
+                <strong>@T["Dialpad webhook signing secret cannot be read."]</strong>
+                <span>@T["Register the webhook again so the app can save a new signing secret with the current data-protection keys."]</span>
+            }
+            else
+            {
+                <strong>@T["Dialpad webhook is not registered for the active environment."]</strong>
+                <span>@T["Register the webhook before using Dialpad so call-state events can update the soft phone and route inbound calls."]</span>
+            }
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="WebhookRegistrationAuthenticationType">
+            <label asp-for="WebhookRegistrationAuthenticationType" class="ocat-label">@T["Webhook registration method"]</label>
             <div class="ocat-end">
-                <div class="alert @(isWebhookRegistered ? "alert-success" : "alert-danger") mb-2" role="alert">
-                    @if (isWebhookRegistered)
+                <select asp-for="WebhookRegistrationAuthenticationType" class="form-select" data-dialpad-webhook-registration-authentication-type>
+                    <option value="@DialpadWebhookRegistrationAuthenticationType.NotConfigured">@T["Select registration method"]</option>
+                    <option value="@DialpadWebhookRegistrationAuthenticationType.OAuth2">@T["Admin account"]</option>
+                    <option value="@DialpadWebhookRegistrationAuthenticationType.ApiKey">@T["Admin API key"]</option>
+                </select>
+                <span asp-validation-for="WebhookRegistrationAuthenticationType"></span>
+                <span class="hint">@T["Select how the app authenticates to Dialpad when it creates the company-level call-event webhook. Use Admin account when a Dialpad company administrator can sign in; use Admin API key when your Dialpad account requires an API key for Admin API operations."]</span>
+            </div>
+        </div>
+
+        <div data-dialpad-webhook-registration-authentication-section="@DialpadWebhookRegistrationAuthenticationType.ApiKey" hidden="@(Model.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.ApiKey)">
+            <div class="ocat-wrapper" asp-validation-class-for="WebhookRegistrationApiToken">
+                <label asp-for="WebhookRegistrationApiToken" class="ocat-label">@T["Webhook registration API key"]</label>
+                <div class="ocat-end">
+                    <input asp-for="WebhookRegistrationApiToken" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookRegistrationApiToken ? T["An API key is securely saved. Provide a new value to replace it or leave it blank to keep it."] : T["Enter a Dialpad Admin API key."])" />
+                    <span asp-validation-for="WebhookRegistrationApiToken"></span>
+                    @if (Model.HasWebhookRegistrationApiToken && Model.HasUnreadableWebhookRegistrationApiToken)
                     {
-                        <strong>@T["Dialpad webhook is registered."]</strong>
-                        <span>@T["Webhook id: {0}. Call-event subscription id: {1}.", Model.WebhookId, Model.CallEventSubscriptionId]</span>
-                    }
-                    else if (Model.HasWebhookSigningSecret && Model.HasUnreadableWebhookSigningSecret)
-                    {
-                        <strong>@T["Dialpad webhook signing secret cannot be read."]</strong>
-                        <span>@T["Register the webhook again so the app can save a new signing secret with the current data-protection keys."]</span>
+                        <span class="hint text-danger">@T["The saved webhook registration API key cannot be decrypted with the current application data-protection keys. Re-enter the API key and save the settings."]</span>
                     }
                     else
                     {
-                        <strong>@T["Dialpad webhook is not registered for the active environment."]</strong>
-                        <span>@T["Register the webhook before using Dialpad so call-state events can update the soft phone and route inbound calls."]</span>
+                        <span class="hint">@T["Used only by the server-side Register webhook action to call Dialpad's Admin API and create the company call-event webhook and subscription."]</span>
                     }
                 </div>
+            </div>
+        </div>
 
+        <div data-dialpad-webhook-registration-authentication-section="@DialpadWebhookRegistrationAuthenticationType.OAuth2" hidden="@(Model.WebhookRegistrationAuthenticationType != DialpadWebhookRegistrationAuthenticationType.OAuth2)">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    @if (Model.CanUseOAuthWebhookRegistration)
+                    {
+                        <span class="hint d-block">@T["Register webhook starts the Dialpad sign-in flow for a company administrator account, then uses that connected account to create the webhook."]</span>
+                    }
+                    else
+                    {
+                        <span class="hint text-warning">@T["Save the OAuth client id and client secret before registering the webhook with an admin account."]</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="WebhookSigningSecret">
+            <div class="ocat-end">
                 <div class="btn-group" role="group" data-dialpad-webhook-registration data-register-url="@Url.RouteUrl("DialpadWebhookRegister")" data-disconnect-url="@Url.RouteUrl("DialpadWebhookDisconnect")" data-status-url="@Url.RouteUrl("DialpadWebhookStatus")">
                     @if (!isWebhookRegistered)
                     {

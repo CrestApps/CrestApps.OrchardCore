@@ -84,6 +84,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
 
             Initialize<DialpadEnvironmentSettingsViewModel>("DialpadEnvironmentSettings_Edit", model =>
             {
+                model.IsEnabled = settings.IsEnabled;
                 MapEnvironmentToViewModel(
                     settings.GetEnvironmentSettings(DialpadEnvironment.Production),
                     model,
@@ -96,6 +97,8 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
 
             Initialize<DialpadEnvironmentSettingsViewModel>("DialpadEnvironmentSettings_Edit", model =>
             {
+                model.IsEnabled = settings.IsEnabled;
+
                 MapEnvironmentToViewModel(
                     settings.GetEnvironmentSettings(DialpadEnvironment.Sandbox),
                     model,

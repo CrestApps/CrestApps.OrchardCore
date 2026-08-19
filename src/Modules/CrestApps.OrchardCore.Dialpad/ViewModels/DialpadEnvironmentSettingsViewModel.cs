@@ -135,4 +135,7 @@ public class DialpadEnvironmentSettingsViewModel
     /// </summary>
     [BindNever]
     public bool HasUnreadableWebhookSigningSecret { get; set; }
+
+    [BindNever]
+    public bool IsEnabled { get; internal set; }
 }

@@ -6,13 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Dialpad.Controllers;
@@ -29,7 +26,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IDialpadWebhookApiService _webhookApiService;
-    private readonly IShellReleaseManager _shellReleaseManager;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -51,7 +47,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IDialpadWebhookApiService webhookApiService,
-        IShellReleaseManager shellReleaseManager,
         ILogger<DialpadWebhookRegistrationController> logger,
         IStringLocalizer<DialpadWebhookRegistrationController> stringLocalizer)
     {
@@ -60,7 +55,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _webhookApiService = webhookApiService;
-        _shellReleaseManager = shellReleaseManager;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -81,7 +75,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
             return Forbid();
         }
 
-        var site = await _siteService.GetSiteSettingsAsync();
+        var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<DialpadSettings>();
 
         if (!settings.IsEnabled)
@@ -221,7 +215,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
             return Forbid();
         }
 
-        var site = await _siteService.GetSiteSettingsAsync();
+        var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<DialpadSettings>();
         var environment = settings.GetActiveEnvironmentSettings();
         var bearerToken = await GetWebhookRegistrationBearerTokenAsync(environment, cancellationToken);
@@ -249,8 +243,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
         site.Put(settings);
 
         await _siteService.UpdateSiteSettingsAsync(site);
-
-        _shellReleaseManager.RequestRelease();
 
         return Ok(new
         {
@@ -280,8 +272,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         await _siteService.UpdateSiteSettingsAsync(site);
 
-        _shellReleaseManager.RequestRelease();
-
         var baseUrl = ResolveApiBaseUrl(settings, environment);
         var webhookUrl = BuildWebhookUrl(site);
         var environmentType = settings.Environment;
@@ -289,19 +279,17 @@ public sealed class DialpadWebhookRegistrationController : Controller
         // The signing secret is committed when this request's session commits. Creating the Dialpad webhook
         // from a deferred task guarantees the committed secret is readable by the time Dialpad verifies the
         // webhook.
-        ShellScope.AddDeferredTask(scope => RegisterWebhookAsync(
-            scope,
+        await RegisterWebhookAsync(
             environmentType,
             baseUrl,
             bearerToken,
             webhookUrl,
             secret,
             oldWebhookId,
-            oldCallEventSubscriptionId));
+            oldCallEventSubscriptionId);
     }
 
-    private static async Task RegisterWebhookAsync(
-        ShellScope scope,
+    private async Task RegisterWebhookAsync(
         DialpadEnvironment environmentType,
         string baseUrl,
         string bearerToken,
@@ -310,25 +298,19 @@ public sealed class DialpadWebhookRegistrationController : Controller
         string oldWebhookId,
         string oldCallEventSubscriptionId)
     {
-        var services = scope.ServiceProvider;
-        var apiService = services.GetRequiredService<IDialpadWebhookApiService>();
-        var siteService = services.GetRequiredService<ISiteService>();
-        var shellReleaseManager = services.GetRequiredService<IShellReleaseManager>();
-        var logger = services.GetRequiredService<ILogger<DialpadWebhookRegistrationController>>();
-
         // Remove any previous registration this environment still points at, ignoring resources already gone.
-        await apiService.DeleteAsync(baseUrl, bearerToken, oldWebhookId, oldCallEventSubscriptionId, CancellationToken.None);
+        await _webhookApiService.DeleteAsync(baseUrl, bearerToken, oldWebhookId, oldCallEventSubscriptionId, CancellationToken.None);
 
-        var result = await apiService.CreateAsync(baseUrl, bearerToken, webhookUrl, secret, CancellationToken.None);
+        var result = await _webhookApiService.CreateAsync(baseUrl, bearerToken, webhookUrl, secret, CancellationToken.None);
 
         if (result is null)
         {
-            logger.LogError("Dialpad webhook registration failed while creating the call-event webhook or subscription for the {Environment} environment.", environmentType);
+            _logger.LogError("Dialpad webhook registration failed while creating the call-event webhook or subscription for the {Environment} environment.", environmentType);
 
             return;
         }
 
-        var site = await siteService.GetSiteSettingsAsync();
+        var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<DialpadSettings>();
         var environment = settings.GetEnvironmentSettings(environmentType);
 
@@ -337,9 +319,7 @@ public sealed class DialpadWebhookRegistrationController : Controller
 
         site.Put(settings);
 
-        await siteService.UpdateSiteSettingsAsync(site);
-
-        shellReleaseManager.RequestRelease();
+        await _siteService.UpdateSiteSettingsAsync(site);
     }
 
     private BadRequestObjectResult BuildMissingRegistrationTokenResult(DialpadWebhookRegistrationAuthenticationType authenticationType)

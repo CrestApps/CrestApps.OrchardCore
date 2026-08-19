@@ -122,13 +122,11 @@ public sealed class DialpadWebhookApiService : IDialpadWebhookApiService
         string secret,
         CancellationToken cancellationToken)
     {
-        using var content = JsonContent.Create(new
+        using var response = await client.PostAsJsonAsync("webhooks", new
         {
             hook_url = webhookUrl,
             secret,
-        });
-
-        using var response = await client.PostAsync("webhooks", content, cancellationToken);
+        }, cancellationToken);
 
         return await ReadDialpadIdAsync(response, "webhook", cancellationToken);
     }
@@ -138,14 +136,12 @@ public sealed class DialpadWebhookApiService : IDialpadWebhookApiService
         long endpointId,
         CancellationToken cancellationToken)
     {
-        using var content = JsonContent.Create(new
+        using var response = await client.PostAsJsonAsync("subscriptions/call", new
         {
             endpoint_id = endpointId,
             enabled = true,
             call_states = _callStates,
-        });
-
-        using var response = await client.PostAsync("subscriptions/call", content, cancellationToken);
+        }, cancellationToken);
 
         return await ReadDialpadIdAsync(response, "call-event subscription", cancellationToken);
     }
