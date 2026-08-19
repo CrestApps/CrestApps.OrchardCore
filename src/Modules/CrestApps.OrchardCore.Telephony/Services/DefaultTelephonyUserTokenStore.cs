@@ -109,6 +109,10 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
             ExpiresUtc = tokens.ExpiresUtc,
             TokenType = tokens.TokenType,
             Scope = tokens.Scope,
+            RemoteUserId = tokens.RemoteUserId,
+            RemoteUserName = tokens.RemoteUserName,
+            RemoteUserEmail = tokens.RemoteUserEmail,
+            RemotePhoneNumber = tokens.RemotePhoneNumber,
         };
     }
 
@@ -122,6 +126,10 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
             ExpiresUtc = stored.ExpiresUtc,
             TokenType = stored.TokenType,
             Scope = stored.Scope,
+            RemoteUserId = stored.RemoteUserId,
+            RemoteUserName = stored.RemoteUserName,
+            RemoteUserEmail = stored.RemoteUserEmail,
+            RemotePhoneNumber = stored.RemotePhoneNumber,
         };
     }
 }

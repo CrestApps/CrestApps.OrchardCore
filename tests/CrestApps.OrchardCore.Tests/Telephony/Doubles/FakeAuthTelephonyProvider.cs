@@ -19,7 +19,8 @@ internal sealed class FakeAuthTelephonyProvider :
     ITelephonyDtmfProvider,
     ITelephonyVoicemailProvider,
     ITelephonySoftPhoneCredentialsProvider,
-    ITelephonyAuthenticationProvider
+    ITelephonyAuthenticationProvider,
+    ITelephonyUserConnectionMetadataProvider
 {
     public bool RequiresUserAuthentication { get; set; } = true;
 
@@ -58,6 +59,8 @@ internal sealed class FakeAuthTelephonyProvider :
 
     public Exception RevokeException { get; set; }
 
+    public TelephonyUserTokens EnrichedTokensResult { get; set; }
+
     public LocalizedString Name => new("FakeAuth", "FakeAuth");
 
     public TelephonyCapabilities Capabilities => TelephonyCapabilities.Dial;
@@ -92,6 +95,9 @@ internal sealed class FakeAuthTelephonyProvider :
 
         return Task.FromResult(RevokeResult);
     }
+
+    public Task<TelephonyUserTokens> EnrichTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+        => Task.FromResult(EnrichedTokensResult ?? tokens);
 
     public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult(TelephonyResult.Success());

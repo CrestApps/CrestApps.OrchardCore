@@ -18,7 +18,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<DialpadContactCenterVoiceProvider>()
             .AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialpadContactCenterVoiceProvider>())
             .AddSingleton<IProviderIdentityProvider, DialpadProviderIdentityProvider>()
-            .AddScoped<IDialpadWebhookService, DialpadWebhookService>()
+            .AddScoped<IDialpadInboundCallRouter, ContactCenterDialpadInboundCallRouter>()
             .AddScoped<IProviderWebhookInboxHandler, DialpadWebhookInboxHandler>()
             .AddScoped<DialpadContactCenterFeatureLifecycleParticipant>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>

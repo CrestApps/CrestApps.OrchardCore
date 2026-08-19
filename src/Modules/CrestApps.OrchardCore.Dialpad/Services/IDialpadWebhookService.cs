@@ -1,8 +1,8 @@
 namespace CrestApps.OrchardCore.Dialpad.Services;
 
 /// <summary>
-/// Handles a parsed Dialpad call event: it updates existing Contact Center interactions and routes new
-/// inbound calls into the Contact Center.
+/// Handles a parsed Dialpad call event: it projects provider call-state changes onto the shared Telephony
+/// stream and routes new inbound calls when a higher-level voice feature is available.
 /// </summary>
 public interface IDialpadWebhookService
 {

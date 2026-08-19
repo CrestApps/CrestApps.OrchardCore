@@ -29,6 +29,7 @@
     }
 
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+    var disconnectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthDisconnect);
 
     if (string.IsNullOrEmpty(connectUrl))
     {
@@ -36,6 +37,11 @@
         // cannot resolve the named route from this shape, so the "Connect to provider" button always has
         // a destination instead of silently doing nothing.
         connectUrl = $"{Context.Request.PathBase}/Telephony/Connect";
+    }
+
+    if (string.IsNullOrEmpty(disconnectUrl))
+    {
+        disconnectUrl = $"{Context.Request.PathBase}/Telephony/Disconnect";
     }
 
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
@@ -49,6 +55,7 @@
         ["browserMediaAdapterName"] = browserMediaAdapterName,
         ["recentCallsCount"] = recentCallsCount,
         ["connectUrl"] = connectUrl,
+        ["disconnectUrl"] = disconnectUrl,
         ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
         ["defaultCountryCode"] = defaultCountryCode,
@@ -90,6 +97,10 @@
             ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
             ["connectPopupBlocked"] = T["Your browser blocked the connection window. Allow pop-ups for this site and try again."].Value,
             ["connectFailed"] = T["The connection could not be completed. Please try connecting again."].Value,
+            ["disconnectProvider"] = T["Disconnect provider"].Value,
+            ["disconnectConfirm"] = T["Disconnect your provider account from the soft phone?"].Value,
+            ["disconnectFailed"] = T["The provider could not be disconnected. Please try again."].Value,
+            ["disconnectActiveCalls"] = T["End active calls before disconnecting from the provider."].Value,
             ["noInteractions"] = T["No recent calls."].Value,
             ["incoming"] = T["Incoming"].Value,
             ["outgoing"] = T["Outgoing"].Value,
@@ -129,6 +140,14 @@
             {
                 @await DisplayAsync(Model.HeaderActions)
             }
+            <button type="button"
+                    class="telephony-soft-phone__icon-btn"
+                    data-telephony-disconnect
+                    title="@T["Disconnect provider"]"
+                    aria-label="@T["Disconnect provider"]"
+                    hidden>
+                <i class="fa-solid fa-link-slash"></i>
+            </button>
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>
             </button>

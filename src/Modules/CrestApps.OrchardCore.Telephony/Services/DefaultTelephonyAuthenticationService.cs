@@ -182,6 +182,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         }
 
         tokens.ProviderName = name;
+        tokens = await EnsureConnectionMetadataAsync(name, provider, tokens, persistChanges: false, cancellationToken);
 
         try
         {
@@ -261,9 +262,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return null;
         }
 
+        var provider = await _providerResolver.GetAsync(providerName);
+
         if (!IsExpired(tokens))
         {
-            return tokens;
+            return await EnsureConnectionMetadataAsync(providerName, provider, tokens, persistChanges: true, cancellationToken);
         }
 
         if (string.IsNullOrEmpty(tokens.RefreshToken))
@@ -271,18 +274,17 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return null;
         }
 
-        var provider = await _providerResolver.GetAsync(providerName);
-
         if (provider is not ITelephonyAuthenticationProvider authenticationProvider)
         {
             return null;
         }
 
-        return await RefreshTokensUnderLockAsync(providerName, authenticationProvider, tokens, cancellationToken);
+        return await RefreshTokensUnderLockAsync(providerName, provider, authenticationProvider, tokens, cancellationToken);
     }
 
     private async Task<TelephonyUserTokens> RefreshTokensUnderLockAsync(
         string providerName,
+        ITelephonyProvider provider,
         ITelephonyAuthenticationProvider authenticationProvider,
         TelephonyUserTokens expiredTokens,
         CancellationToken cancellationToken)
@@ -338,6 +340,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         }
 
         refreshed.ProviderName = providerName;
+        refreshed = await EnsureConnectionMetadataAsync(providerName, provider, refreshed, persistChanges: false, cancellationToken);
 
         // Store the refreshed tokens. The token store commits them durably on its own isolated unit of work,
         // so a waiting peer that reloads the user before this method releases the lock observes them and reuses
@@ -348,8 +351,57 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         return refreshed;
     }
 
+    private async Task<TelephonyUserTokens> EnsureConnectionMetadataAsync(
+        string providerName,
+        ITelephonyProvider provider,
+        TelephonyUserTokens tokens,
+        bool persistChanges,
+        CancellationToken cancellationToken)
+    {
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken) || HasConnectionMetadata(tokens))
+        {
+            return tokens;
+        }
+
+        if (provider is not ITelephonyUserConnectionMetadataProvider metadataProvider)
+        {
+            return tokens;
+        }
+
+        var enriched = await metadataProvider.EnrichTokensAsync(tokens, cancellationToken);
+
+        if (enriched is null || string.IsNullOrEmpty(enriched.AccessToken))
+        {
+            return tokens;
+        }
+
+        enriched.ProviderName ??= providerName;
+
+        if (persistChanges && ConnectionMetadataChanged(tokens, enriched))
+        {
+            await _tokenStore.StoreAsync(providerName, enriched, cancellationToken);
+        }
+
+        return enriched;
+    }
+
     private bool IsUsable(TelephonyUserTokens tokens)
         => tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken) && !IsExpired(tokens);
+
+    private static bool ConnectionMetadataChanged(TelephonyUserTokens original, TelephonyUserTokens enriched)
+    {
+        return !string.Equals(original.RemoteUserId, enriched.RemoteUserId, StringComparison.Ordinal) ||
+            !string.Equals(original.RemoteUserName, enriched.RemoteUserName, StringComparison.Ordinal) ||
+            !string.Equals(original.RemoteUserEmail, enriched.RemoteUserEmail, StringComparison.Ordinal) ||
+            !string.Equals(original.RemotePhoneNumber, enriched.RemotePhoneNumber, StringComparison.Ordinal);
+    }
+
+    private static bool HasConnectionMetadata(TelephonyUserTokens tokens)
+    {
+        return !string.IsNullOrWhiteSpace(tokens.RemoteUserId) ||
+            !string.IsNullOrWhiteSpace(tokens.RemoteUserEmail) ||
+            !string.IsNullOrWhiteSpace(tokens.RemotePhoneNumber);
+    }
 
     private bool IsExpired(TelephonyUserTokens tokens)
     {

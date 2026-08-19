@@ -14,5 +14,9 @@ public static class DialpadJsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNameCaseInsensitive = true,
+        Converters =
+        {
+            new DialpadCallEventJsonConverter(),
+        },
     };
 }

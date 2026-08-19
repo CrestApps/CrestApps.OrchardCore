@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Moq;
 using OrchardCore.Modules;
@@ -15,12 +16,11 @@ public sealed class DialpadWebhookServiceTests
     public async Task ProcessAsync_NewInboundRingingCall_RoutesInbound()
     {
         // Arrange
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var inboundSink = new Mock<IInboundVoiceEventSink>();
 
-        var service = CreateService(eventSink, inboundSink);
+        var service = CreateService(ingestor, inboundSink);
 
         var callEvent = new DialpadCallEvent
         {
@@ -47,11 +47,10 @@ public sealed class DialpadWebhookServiceTests
     public async Task ProcessAsync_ExistingInteraction_UpdatesWithoutRouting()
     {
         // Arrange
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
-
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var inboundSink = new Mock<IInboundVoiceEventSink>();
-        var service = CreateService(eventSink, inboundSink);
+        var service = CreateService(ingestor, inboundSink);
 
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "connected", Direction = "inbound" };
 
@@ -69,11 +68,10 @@ public sealed class DialpadWebhookServiceTests
     public async Task ProcessAsync_OutboundWithNoInteraction_Ignored()
     {
         // Arrange
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
-
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var inboundSink = new Mock<IInboundVoiceEventSink>();
-        var service = CreateService(eventSink, inboundSink);
+        var service = CreateService(ingestor, inboundSink);
 
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "connected", Direction = "outbound" };
 
@@ -88,12 +86,43 @@ public sealed class DialpadWebhookServiceTests
     }
 
     [Fact]
+    public async Task ProcessAsync_OutboundEvent_UsesDestinationNumberAsTheActiveCallTarget()
+    {
+        // Arrange
+        ProviderVoiceEvent captured = null;
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
+            .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
+            .ReturnsAsync(true);
+        var service = CreateService(ingestor, new Mock<IInboundVoiceEventSink>());
+        var callEvent = new DialpadCallEvent
+        {
+            CallId = "c1",
+            State = "ringing",
+            Direction = "outbound",
+            ExternalNumber = "+17024993350",
+            InternalNumber = "blocked",
+            Target = "+12088208280",
+        };
+
+        // Act
+        var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(DialpadWebhookResult.Updated, result);
+        Assert.NotNull(captured);
+        Assert.Null(captured.FromAddress);
+        Assert.Equal("+17024993350", captured.ToAddress);
+    }
+
+    [Fact]
     public async Task ProcessAsync_UnknownState_IgnoredWithoutIngest()
     {
         // Arrange
-        var eventSink = new Mock<IProviderVoiceEventSink>();
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
         var inboundSink = new Mock<IInboundVoiceEventSink>();
-        var service = CreateService(eventSink, inboundSink);
+        var service = CreateService(ingestor, inboundSink);
 
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "something_odd", Direction = "inbound" };
 
@@ -102,7 +131,7 @@ public sealed class DialpadWebhookServiceTests
 
         // Assert
         Assert.Equal(DialpadWebhookResult.Ignored, result);
-        eventSink.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        ingestor.Verify(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -110,13 +139,13 @@ public sealed class DialpadWebhookServiceTests
     {
         // Arrange
         ProviderVoiceEvent providerEvent = null;
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor.Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
             .ReturnsAsync(true);
 
         var inboundSink = new Mock<IInboundVoiceEventSink>();
-        var service = CreateService(eventSink, inboundSink);
+        var service = CreateService(ingestor, inboundSink);
 
         var callEvent = new DialpadCallEvent
         {
@@ -149,12 +178,12 @@ public sealed class DialpadWebhookServiceTests
     {
         // Arrange
         var providerEvents = new List<ProviderVoiceEvent>();
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
             .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvents.Add(value))
             .ReturnsAsync(true);
-        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var service = CreateService(ingestor, new Mock<IInboundVoiceEventSink>());
 
         // Act
         await service.ProcessAsync(new DialpadCallEvent
@@ -182,13 +211,13 @@ public sealed class DialpadWebhookServiceTests
     {
         // Arrange
         ProviderVoiceEvent captured = null;
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
             .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
             .ReturnsAsync(true);
 
-        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var service = CreateService(ingestor, new Mock<IInboundVoiceEventSink>());
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "voicemail", Direction = "outbound" };
 
         // Act
@@ -206,13 +235,13 @@ public sealed class DialpadWebhookServiceTests
     {
         // Arrange
         ProviderVoiceEvent captured = null;
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
             .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
             .ReturnsAsync(true);
 
-        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var service = CreateService(ingestor, new Mock<IInboundVoiceEventSink>());
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "fax", Direction = "outbound" };
 
         // Act
@@ -230,13 +259,13 @@ public sealed class DialpadWebhookServiceTests
     {
         // Arrange
         ProviderVoiceEvent captured = null;
-        var eventSink = new Mock<IProviderVoiceEventSink>();
-        eventSink
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
             .Setup(s => s.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => captured = value)
             .ReturnsAsync(true);
 
-        var service = CreateService(eventSink, new Mock<IInboundVoiceEventSink>());
+        var service = CreateService(ingestor, new Mock<IInboundVoiceEventSink>());
         var callEvent = new DialpadCallEvent { CallId = "c1", State = "connected", Direction = "outbound" };
 
         // Act
@@ -249,12 +278,15 @@ public sealed class DialpadWebhookServiceTests
     }
 
     private static DialpadWebhookService CreateService(
-        Mock<IProviderVoiceEventSink> eventSink,
+        Mock<INormalizedVoiceEventIngestor> ingestor,
         Mock<IInboundVoiceEventSink> inboundSink)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
 
-        return new DialpadWebhookService(eventSink.Object, inboundSink.Object, clock.Object);
+        return new DialpadWebhookService(
+            ingestor.Object,
+            new ContactCenterDialpadInboundCallRouter(inboundSink.Object),
+            clock.Object);
     }
 }

@@ -87,6 +87,46 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     }
 
     [Fact]
+    public async Task GetStatusAsync_WithOAuthProviderAndMissingConnectionMetadata_StoresEnrichedMetadata()
+    {
+        // Arrange
+        var tokenStore = new FakeTelephonyUserTokenStore();
+        await tokenStore.StoreAsync("Dialpad", new TelephonyUserTokens
+        {
+            AccessToken = "valid",
+            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1),
+        }, TestContext.Current.CancellationToken);
+
+        var provider = new FakeAuthTelephonyProvider
+        {
+            RequiresUserAuthentication = true,
+            EnrichedTokensResult = new TelephonyUserTokens
+            {
+                AccessToken = "valid",
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1),
+                RemoteUserId = "5171365938069504",
+                RemoteUserEmail = "agent@example.com",
+                RemotePhoneNumber = "+12088208280",
+            },
+        };
+        var service = CreateService(
+            provider,
+            new TelephonySettings { DefaultProviderName = "Dialpad" },
+            tokenStore);
+
+        // Act
+        var status = await service.GetStatusAsync(TestContext.Current.CancellationToken);
+        var stored = await tokenStore.GetAsync("Dialpad", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(status.IsConnected);
+        Assert.NotNull(stored);
+        Assert.Equal("5171365938069504", stored.RemoteUserId);
+        Assert.Equal("agent@example.com", stored.RemoteUserEmail);
+        Assert.Equal("+12088208280", stored.RemotePhoneNumber);
+    }
+
+    [Fact]
     public async Task CompleteAuthorizationAsync_StoresTokens()
     {
         // Arrange

@@ -78,11 +78,11 @@ Dialpad does not push call-state changes to this module automatically when the p
 https://<tenant-host>/api/dialpad/webhook/call
 ```
 
-This event subscription is required for the supported real-time integration. Outbound calls are still submitted through the Dialpad REST API, but call-state changes such as `calling`, `ringing`, `connected`, and `hangup` arrive through Dialpad events. Without the event subscription, the soft phone can only use periodic REST lookups as a fallback and may lag behind the provider state.
+This event subscription is required for the supported real-time integration. Outbound calls are still submitted through the Dialpad REST API, but call-state changes such as `calling`, `ringing`, `connected`, and `hangup` arrive through Dialpad events. The base **Dialpad** feature exposes `/api/dialpad/webhook/call` as soon as the feature is enabled, so webhook delivery does not depend on the Contact Center voice feature. Without the event subscription, the soft phone can only use periodic REST lookups as a fallback and may lag behind the provider state.
 
 Dialpad supports event delivery through its event-subscription system. This module currently supports the **webhook** target (`POST /api/v2/webhooks` plus `POST /api/v2/subscriptions/call`). It does not currently register or consume a Dialpad websocket/SSE event target automatically.
 
-The webhook is normally registered once per Dialpad company/application, not once per connected Orchard user. A single company call-event subscription can deliver events for the users and numbers in that Dialpad account; the app then correlates those provider events to local soft-phone and Contact Center state.
+The webhook is normally registered once per Dialpad company/application, not once per connected Orchard user. A single company call-event subscription can deliver events for the users and numbers in that Dialpad account; the app then correlates those provider events to local soft-phone state and, when Contact Center Voice is enabled, to Contact Center state as well.
 
 To configure the event subscription automatically with an admin account:
 
@@ -118,8 +118,10 @@ To configure OAuth 2.0:
    or **Sandbox**) of the Dialpad settings, and set that environment as the **Active environment**.
 
 Each user then sees a **Connect to provider** button in the soft phone and connects their own Dialpad
-account. Dialpad implements the "three-legged" OAuth 2.0 authorization code flow (RFC 6749 §4.1), and the
-provider follows Dialpad's documented requirements:
+account. After the user is connected, the soft phone header shows a **Disconnect provider** action so
+that same user can revoke the current soft-phone connection without leaving the widget. Dialpad
+implements the "three-legged" OAuth 2.0 authorization code flow (RFC 6749 §4.1), and the provider
+follows Dialpad's documented requirements:
 
 - **PKCE** ([RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636)) is always used. A per-request
   code verifier is generated, its `S256` challenge is sent on the authorization request, and the verifier
@@ -130,7 +132,11 @@ provider follows Dialpad's documented requirements:
   expires. The user's access and refresh tokens are stored **encrypted on the user's account**, and
   outbound calls are placed with the connected user's access token. Before placing an outbound call, the
   provider resolves the connected Dialpad user's numeric id through `users/me`, because Dialpad requires
-  that id in the call request. The **User id** setting is used only by API key authentication.
+  that id in the call request. The provider also stores the connected Dialpad account id, email address,
+  display name, and phone number alongside that user's encrypted tokens so signed inbound call events can
+  resolve the correct soft-phone user for a direct Dialpad line. Existing connected users pick up that
+  account metadata automatically the next time the soft phone refreshes their connection. The **User id**
+  setting is used only by API key authentication.
 - The **active environment** setting selects the endpoints. Production uses `https://dialpad.com/oauth2/authorize`,
   `/oauth2/token`, and `/oauth2/deauthorize`; sandbox uses the matching `https://sandbox.dialpad.com`
   endpoints. When the environment **Host** is set, the OAuth endpoints follow that host instead.
@@ -183,7 +189,7 @@ the Dialpad REST API on the server. For example, a dial request issues an authen
 `call` endpoint with the destination number, caller id, and numeric user id; subsequent operations target
 the `call/{id}/{action}` endpoints. Dialpad treats this as an **initiate via ring** request: Dialpad first rings the connected user's active Dialpad devices, and the outbound leg completes only after that user answers in Dialpad. The Orchard Core soft phone is a control surface for Dialpad call control; it is not a Dialpad media client and it does not receive Dialpad audio in the browser.
 
-For outbound testing, make sure the user whose OAuth token is connected, or the configured API-key **User id**, has at least one active Dialpad device. Dialpad documents active web, desktop, mobile, CTI, or physical desk phone devices for the `/api/v2/call` flow. If Dialpad accepts the request but no device answers, the call can quickly move to `hangup` and the destination phone will not ring. A Dialpad call-event webhook is not needed to submit the outbound REST request, but it is required for the supported integration so the soft phone receives provider state changes without relying only on fallback polling.
+For outbound testing, make sure the user whose OAuth token is connected, or the configured API-key **User id**, has at least one active Dialpad device. Dialpad documents active web, desktop, mobile, CTI, or physical desk phone devices for the `/api/v2/call` flow. If Dialpad accepts the request but no device answers, the call can quickly move to `hangup` and the destination phone will not ring. A Dialpad call-event webhook is not needed to submit the outbound REST request, but it is required for the supported integration so the soft phone receives provider state changes without relying only on fallback polling. The current webhook ingestor accepts Dialpad's signed payload shape with numeric `call_id` values and nested `contact` and `target` objects, and direct inbound calls to an OAuth-connected user's own Dialpad line now route by the target Dialpad account metadata instead of requiring a pre-existing outbound interaction.
 
 API key authentication uses the configured **User id**. OAuth authentication resolves the connected user's id through `users/me`. Because all control happens server-side, the API key never reaches the browser.
 

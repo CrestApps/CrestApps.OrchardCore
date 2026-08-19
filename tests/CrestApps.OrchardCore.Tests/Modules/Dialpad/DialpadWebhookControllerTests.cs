@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.ContactCenter;
@@ -7,14 +8,17 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Models;
+using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
+using DialpadStartup = CrestApps.OrchardCore.Dialpad.Startup;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 
@@ -29,10 +33,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
     {
         // Arrange
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -42,7 +45,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             new EphemeralDataProtectionProvider(),
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -57,9 +62,8 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
     {
         // Arrange
         var inbox = CreateInbox();
+        var webhookService = CreateWebhookService();
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -69,8 +73,10 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             new EphemeralDataProtectionProvider(),
-            NullLogger<DialpadContactCenterStartup>.Instance,
-            CreateHttpContext());
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
+            CreateHttpContext(inbox.Object, _ingressLimiter));
 
         // Assert
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
@@ -84,11 +90,10 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
     {
         // Arrange
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.ContentLength = DialpadWebhookEndpoint.MaximumRequestBodySizeBytes + 1;
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -98,7 +103,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             new EphemeralDataProtectionProvider(),
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -113,17 +120,18 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
     {
         // Arrange
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.Body = new PayloadTooLargeStream();
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
             }),
             new EphemeralDataProtectionProvider(),
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -138,7 +146,8 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
     {
         // Arrange
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         var body = new EndlessStream();
 
         // A caller that wants to send more than it is allowed to simply omits the content length.
@@ -146,14 +155,14 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
 
         // Act
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
             }),
             new EphemeralDataProtectionProvider(),
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -177,12 +186,11 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             .CreateProtector(DialpadConstants.WebhookProtectorName)
             .Protect(secret);
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
         httpContext.RequestAborted = new CancellationTokenSource().Token;
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -192,7 +200,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             dataProtectionProvider,
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -227,13 +237,12 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             {
                 Status = ProviderWebhookInboxAcceptanceStatus.Busy,
             });
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
 
         // Act
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -243,7 +252,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             dataProtectionProvider,
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -267,13 +278,12 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             .CreateProtector(DialpadConstants.WebhookProtectorName)
             .Protect(secret);
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, limiter);
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
 
         // Act
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            limiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -283,7 +293,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             dataProtectionProvider,
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -308,13 +320,12 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
         var inbox = CreateInbox();
         var timestamp = new DateTimeOffset(_now.AddSeconds(offsetSeconds)).ToUnixTimeMilliseconds();
         var payload = $"{{\"call_id\":\"c1\",\"state\":\"ringing\",\"event_timestamp\":{timestamp}}}";
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
 
         // Act
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -324,7 +335,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             dataProtectionProvider,
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -347,13 +360,12 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             .CreateProtector(DialpadConstants.WebhookProtectorName)
             .Protect(secret);
         var inbox = CreateInbox();
-        var httpContext = CreateHttpContext();
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext(inbox.Object, _ingressLimiter);
         httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
 
         // Act
         var result = await DialpadWebhookEndpoint.HandleAsync(
-            inbox.Object,
-            _ingressLimiter,
             SiteServiceFactory.Create(new DialpadSettings
             {
                 IsEnabled = true,
@@ -363,7 +375,9 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
                 },
             }),
             dataProtectionProvider,
-            NullLogger<DialpadContactCenterStartup>.Instance,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
             httpContext);
 
         // Assert
@@ -373,17 +387,126 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             Times.Never);
     }
 
+    [Fact]
+    public async Task Call_WhenDurableInboxIsUnavailable_ProcessesWebhookInline()
+    {
+        // Arrange
+        const string secret = "shhh";
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedSecret = dataProtectionProvider
+            .CreateProtector(DialpadConstants.WebhookProtectorName)
+            .Protect(secret);
+        var webhookService = CreateWebhookService();
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(_payload, secret)));
+        httpContext.RequestAborted = new CancellationTokenSource().Token;
+
+        // Act
+        var result = await DialpadWebhookEndpoint.HandleAsync(
+            SiteServiceFactory.Create(new DialpadSettings
+            {
+                IsEnabled = true,
+                Production = new DialpadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
+            }),
+            dataProtectionProvider,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        webhookService.Verify(
+            service => service.ProcessAsync(
+                It.IsAny<DialpadCallEvent>(),
+                It.Is<CancellationToken>(token => !token.CanBeCanceled)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Call_WhenSignedPayloadUsesCurrentDialpadShape_ProcessesWebhookInline()
+    {
+        // Arrange
+        const string secret = "shhh";
+        var eventTimestamp = new DateTimeOffset(_now).ToUnixTimeMilliseconds();
+        var payload = """
+            {"date_started":1787158716092,"call_id":5635304278851584,"state":"ringing","direction":"outbound","external_number":"+17024993350","internal_number":"blocked","selected_caller_id":null,"date_rang":null,"date_first_rang":1787158716151,"date_queued":null,"target_availability_status":"open","callback_requested":null,"date_connected":null,"date_ended":1787158716555,"talk_time":0,"hold_time":0,"duration":0,"total_duration":463.294,"contact":{"id":6051533200162816,"type":"local","email":"","phone":"+17024993350","name":"(702) 499-3350"},"target":{"id":5171365938069504,"type":"user","email":"mike@crestapps.com","phone":"+12088208280","name":"Mike Alhayek","office_id":5716039329251328},"entry_point_call_id":null,"entry_point_target":{},"operator_call_id":null,"proxy_target":{},"group_id":null,"master_call_id":null,"is_internal":false,"is_transferred":false,"transferred_from":{},"csat_score":null,"routing_breadcrumbs":[],"event_timestamp":{{eventTimestamp}},"mos_score":null,"labels":[],"was_recorded":false,"voicemail_link":null,"voicemail_recording_id":null,"call_recording_ids":[],"transcription_text":null,"recording_details":[],"integrations":{}}
+            """.Replace("{{eventTimestamp}}", eventTimestamp.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        DialpadCallEvent capturedCallEvent = null;
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protectedSecret = dataProtectionProvider
+            .CreateProtector(DialpadConstants.WebhookProtectorName)
+            .Protect(secret);
+        var webhookService = new Mock<IDialpadWebhookService>();
+        webhookService
+            .Setup(service => service.ProcessAsync(It.IsAny<DialpadCallEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<DialpadCallEvent, CancellationToken>((callEvent, _) => capturedCallEvent = callEvent)
+            .ReturnsAsync(DialpadWebhookResult.Updated);
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(CreateJwt(payload, secret)));
+
+        // Act
+        var result = await DialpadWebhookEndpoint.HandleAsync(
+            SiteServiceFactory.Create(new DialpadSettings
+            {
+                IsEnabled = true,
+                Production = new DialpadEnvironmentSettings
+                {
+                    WebhookSigningSecret = protectedSecret,
+                },
+            }),
+            dataProtectionProvider,
+            webhookService.Object,
+            CreateClock(),
+            NullLogger<DialpadStartup>.Instance,
+            httpContext);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        Assert.NotNull(capturedCallEvent);
+        Assert.Equal("5635304278851584", capturedCallEvent.CallId);
+        Assert.Equal("+17024993350", capturedCallEvent.ExternalNumber);
+        Assert.Equal("+12088208280", capturedCallEvent.Target);
+        Assert.Equal("(702) 499-3350", capturedCallEvent.ContactName);
+    }
+
     public void Dispose()
     {
         _ingressLimiter.Dispose();
     }
 
-    private static DefaultHttpContext CreateHttpContext()
+    private static DefaultHttpContext CreateHttpContext(
+        IProviderWebhookInbox inbox = null,
+        IProviderWebhookIngressLimiter ingressLimiter = null)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Body = new MemoryStream("signed-payload"u8.ToArray());
+        var services = new ServiceCollection();
+
+        if (inbox is not null)
+        {
+            services.AddSingleton(inbox);
+        }
+
+        if (ingressLimiter is not null)
+        {
+            services.AddSingleton(ingressLimiter);
+        }
+
+        httpContext.RequestServices = services.BuildServiceProvider();
 
         return httpContext;
+    }
+
+    private static IClock CreateClock()
+    {
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        return clock.Object;
     }
 
     private static string CreateJwt(string payloadJson, string secret)
@@ -431,5 +554,15 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
             .ReturnsAsync(true);
 
         return inbox;
+    }
+
+    private static Mock<IDialpadWebhookService> CreateWebhookService()
+    {
+        var webhookService = new Mock<IDialpadWebhookService>();
+        webhookService
+            .Setup(service => service.ProcessAsync(It.IsAny<DialpadCallEvent>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DialpadWebhookResult.Updated);
+
+        return webhookService;
     }
 }

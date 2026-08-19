@@ -31,9 +31,39 @@ public sealed class DialpadCallEvent
     public string InternalNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the target number, used as a fallback for the dialed DID.
+    /// Gets or sets the selected outbound caller id Dialpad reported for the call.
+    /// </summary>
+    public string SelectedCallerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target number or endpoint, used as a fallback for the dialed DID.
     /// </summary>
     public string Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target Dialpad entity identifier, when the payload includes one.
+    /// </summary>
+    public string TargetId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target Dialpad entity type, such as user.
+    /// </summary>
+    public string TargetType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target email address.
+    /// </summary>
+    public string TargetEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target phone number.
+    /// </summary>
+    public string TargetPhone { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target display name.
+    /// </summary>
+    public string TargetName { get; set; }
 
     /// <summary>
     /// Gets or sets the contact display name supplied by Dialpad, when available.

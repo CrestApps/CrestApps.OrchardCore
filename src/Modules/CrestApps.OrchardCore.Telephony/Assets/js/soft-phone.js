@@ -681,6 +681,7 @@
             toggleIcon: rootElement.querySelector('[data-telephony-toggle-icon]'),
             panel: rootElement.querySelector('[data-telephony-panel]'),
             dragHandle: rootElement.querySelector('[data-telephony-drag-handle]'),
+            disconnect: rootElement.querySelector('[data-telephony-disconnect]'),
             close: rootElement.querySelector('[data-telephony-close]'),
             status: rootElement.querySelector('[data-telephony-status]'),
             number: rootElement.querySelector('[data-telephony-number]'),
@@ -747,6 +748,7 @@
         var isAvailable = false;
         var connectionStatusResolved = false;
         var authenticationScheme = null;
+        var authActionPending = false;
         var activeTab = 'keypad';
         var activeCommand = null;
         var activeCallsRefreshTimer = null;
@@ -943,6 +945,16 @@
 
         function isBrowserAudioEnabled() {
             return config.audioMode === AUDIO_MODES.Browser && !!config.browserMediaAdapterName;
+        }
+
+        function isOAuth2Authentication() {
+            return (authenticationScheme || '').toLowerCase() === 'oauth2';
+        }
+
+        function hasLiveCall() {
+            return getActiveCalls().some(function (call) {
+                return isActive(normalizeState(call && call.state));
+            });
         }
 
         function stopLocalAudioStream() {
@@ -1655,6 +1667,21 @@
 
             if (dom.toggleIcon) {
                 dom.toggleIcon.className = 'fa-solid fa-phone';
+            }
+
+            var canDisconnectProvider = connectionStatusResolved &&
+                requiresAuthentication &&
+                isConnected &&
+                isOAuth2Authentication();
+
+            show(dom.disconnect, canDisconnectProvider);
+
+            if (dom.disconnect) {
+                dom.disconnect.disabled = !!authActionPending;
+            }
+
+            if (dom.connect) {
+                dom.connect.disabled = !!authActionPending;
             }
 
             var notAvailable = connectionStatusResolved && !isAvailable;
@@ -2598,6 +2625,36 @@
             window.location.href = url;
         }
 
+        function postToProviderUrl(url) {
+            if (!url) {
+                return Promise.resolve({ succeeded: false });
+            }
+
+            var headers = {};
+
+            if (config.antiForgeryToken) {
+                headers.RequestVerificationToken = config.antiForgeryToken;
+            }
+
+            try {
+                return fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: headers
+                }).then(function (response) {
+                    if (!response.ok) {
+                        return { succeeded: false };
+                    }
+
+                    return response.json().catch(function () { return { succeeded: true }; });
+                }).catch(function () {
+                    return { succeeded: false };
+                });
+            } catch (e) {
+                return Promise.resolve({ succeeded: false });
+            }
+        }
+
         function handleConnect() {
             var handlers = window.telephonySoftPhone && window.telephonySoftPhone.authHandlers;
             var handler = handlers && (handlers[authenticationScheme] || handlers.oauth2);
@@ -2614,6 +2671,46 @@
             } else {
                 startOAuth();
             }
+        }
+
+        function handleDisconnect() {
+            if (authActionPending) {
+                return;
+            }
+
+            if (hasLiveCall()) {
+                showError(strings.disconnectActiveCalls || 'End active calls before disconnecting from the provider.');
+
+                return;
+            }
+
+            if (window.confirm && !window.confirm(strings.disconnectConfirm || 'Disconnect your provider account from the soft phone?')) {
+                return;
+            }
+
+            authActionPending = true;
+            showError(null);
+            showConnectError(null);
+            render();
+
+            postToProviderUrl(config.disconnectUrl).then(function (result) {
+                if (!result || result.succeeded === false) {
+                    showError(strings.disconnectFailed || 'The provider could not be disconnected. Please try again.');
+
+                    return null;
+                }
+
+                releaseBrowserAudio();
+
+                return refreshConnectionStatus().then(function () {
+                    showConnectError(result.message || null);
+                });
+            }).catch(function () {
+                showError(strings.disconnectFailed || 'The provider could not be disconnected. Please try again.');
+            }).finally(function () {
+                authActionPending = false;
+                render();
+            });
         }
 
         function onOAuthMessage(event) {
@@ -2950,6 +3047,10 @@
 
             if (dom.connect) {
                 dom.connect.addEventListener('click', handleConnect);
+            }
+
+            if (dom.disconnect) {
+                dom.disconnect.addEventListener('click', handleDisconnect);
             }
 
             dom.keys.forEach(function (key) {

@@ -296,8 +296,10 @@ Providers use one of two authentication scenarios, and the soft phone adapts aut
 - **Per-user OAuth 2.0** – the provider requires each user to connect their own account (for example
   Dialpad). When the user is not yet connected, the widget shows a **Connect to provider** button
   that starts the OAuth 2.0 authorization code flow in a popup. After the user grants access, the
-  tokens are stored **encrypted on the user's account** and the dialer is shown. Expired tokens are
-  refreshed automatically when a refresh token is available.
+  tokens are stored **encrypted on the user's account** and the dialer is shown. When the user is
+  connected over OAuth 2.0, the widget header also shows a **Disconnect provider** action so the user
+  can clear that provider connection without leaving the soft phone. Expired tokens are refreshed
+  automatically when a refresh token is available.
 
 On connection the widget asks the hub for the user's status (`GetConnectionStatus`). The hub reports
 whether authentication is required, whether the user is connected, and which authentication scheme

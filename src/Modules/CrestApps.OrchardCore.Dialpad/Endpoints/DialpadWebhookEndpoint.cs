@@ -12,7 +12,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql;
 
@@ -33,13 +35,15 @@ internal static class DialpadWebhookEndpoint
     }
 
     internal static async Task<IResult> HandleAsync(
-        IProviderWebhookInbox inbox,
-        IProviderWebhookIngressLimiter ingressLimiter,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        ILogger<DialpadContactCenterStartup> logger,
+        IDialpadWebhookService webhookService,
+        IClock clock,
+        ILogger<Startup> logger,
         HttpContext httpContext)
     {
+        var ingressLimiter = httpContext.RequestServices.GetService<IProviderWebhookIngressLimiter>();
+        var inbox = httpContext.RequestServices.GetService<IProviderWebhookInbox>();
         var settings = await siteService.GetSettingsAsync<DialpadSettings>();
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -69,202 +73,247 @@ internal static class DialpadWebhookEndpoint
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
-        // The body arrives at whatever speed the caller chooses to send it, so buffering it is admission-controlled:
-        // the permit below bounds how many bodies this tenant holds at once.
-        using var concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
-
-        if (!concurrencyLease.IsAcquired)
-        {
-            SetRetryAfter(httpContext, concurrencyLease.RetryAfter);
-
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning(
-                    "Rejected the Dialpad webhook because the ingress concurrency limit was reached. RetryAfterSeconds: {RetryAfterSeconds}",
-                    GetRetryAfterSeconds(concurrencyLease.RetryAfter));
-            }
-
-            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
-        }
-
-        var read = await RequestBodyReader.ReadAsync(httpContext.Request, MaximumRequestBodySizeBytes, httpContext.RequestAborted);
-
-        if (read.IsTooLarge)
-        {
-            logger.LogWarning("Rejected the Dialpad webhook because the streamed request body exceeded the maximum allowed size of {MaximumRequestBodySizeBytes} bytes.", MaximumRequestBodySizeBytes);
-
-            return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
-        }
-
-        var body = read.Body;
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Dialpad webhook raw request body. TraceIdentifier: {TraceIdentifier}, BodyLength: {BodyLength}, Body: {Body}",
-                httpContext.TraceIdentifier,
-                body.Length,
-                body);
-        }
-
-        if (string.IsNullOrEmpty(environment.WebhookSigningSecret))
-        {
-            logger.LogWarning("Rejected a Dialpad webhook because no webhook signing secret is configured.");
-
-            return TypedResults.Unauthorized();
-        }
-
-        if (!TryUnprotectSecret(dataProtectionProvider, environment.WebhookSigningSecret, out var secret))
-        {
-            logger.LogError("Rejected a Dialpad webhook because the configured signing secret could not be unprotected.");
-
-            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-
-        if (!DialpadJwtValidator.TryValidateAndExtract(body, secret, out var payloadJson))
-        {
-            logger.LogWarning("Rejected a Dialpad webhook because the signature could not be validated.");
-
-            return TypedResults.Unauthorized();
-        }
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Validated Dialpad webhook payload. TraceIdentifier: {TraceIdentifier}, Payload: {Payload}",
-                httpContext.TraceIdentifier,
-                payloadJson);
-        }
-
-        using var rateLease = await ingressLimiter.AcquireRateAsync(DialpadConstants.ProviderTechnicalName, CancellationToken.None);
-
-        if (!rateLease.IsAcquired)
-        {
-            SetRetryAfter(httpContext, rateLease.RetryAfter);
-
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning(
-                    "Rejected the Dialpad webhook because the provider rate limit was reached. RetryAfterSeconds: {RetryAfterSeconds}",
-                    GetRetryAfterSeconds(rateLease.RetryAfter));
-            }
-
-            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
-        }
-
-        DialpadCallEvent callEvent;
+        ProviderWebhookIngressLease concurrencyLease = null;
 
         try
         {
-            callEvent = JsonSerializer.Deserialize<DialpadCallEvent>(payloadJson, DialpadJsonSerializerOptions.Default);
-        }
-        catch (JsonException)
-        {
-            logger.LogWarning(
-                "Rejected the Dialpad webhook because the validated payload could not be deserialized. TraceIdentifier: {TraceIdentifier}, Payload: {Payload}",
-                httpContext.TraceIdentifier,
-                payloadJson);
+            // The body arrives at whatever speed the caller chooses to send it, so buffering it is admission-controlled:
+            // the permit below bounds how many bodies this tenant holds at once.
+            if (ingressLimiter is not null)
+            {
+                concurrencyLease = await ingressLimiter.AcquireConcurrencyAsync(httpContext.RequestAborted);
 
-            return TypedResults.BadRequest();
-        }
+                if (!concurrencyLease.IsAcquired)
+                {
+                    SetRetryAfter(httpContext, concurrencyLease.RetryAfter);
 
-        if (callEvent is null)
-        {
-            logger.LogWarning(
-                "Rejected the Dialpad webhook because the validated payload deserialized to null. TraceIdentifier: {TraceIdentifier}, Payload: {Payload}",
-                httpContext.TraceIdentifier,
-                payloadJson);
+                    if (logger.IsEnabled(LogLevel.Warning))
+                    {
+                        logger.LogWarning(
+                            "Rejected the Dialpad webhook because the ingress concurrency limit was reached. RetryAfterSeconds: {RetryAfterSeconds}",
+                            GetRetryAfterSeconds(concurrencyLease.RetryAfter));
+                    }
 
-            return TypedResults.BadRequest();
-        }
+                    return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
+                }
+            }
 
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Parsed Dialpad webhook event. TraceIdentifier: {TraceIdentifier}, CallId: {CallId}, State: {State}, EventTimestamp: {EventTimestamp}, Event: {Event}",
-                httpContext.TraceIdentifier,
-                callEvent.CallId,
-                callEvent.State,
-                callEvent.EventTimestamp,
-                JsonSerializer.Serialize(callEvent, DialpadJsonSerializerOptions.Default));
-        }
+            var read = await RequestBodyReader.ReadAsync(httpContext.Request, MaximumRequestBodySizeBytes, httpContext.RequestAborted);
 
-        if (!callEvent.EventTimestamp.HasValue ||
-            !TryGetOccurredUtc(callEvent.EventTimestamp.Value, out var occurredUtc) ||
-            !ingressLimiter.IsFresh(occurredUtc))
-        {
-            logger.LogWarning("Rejected a Dialpad webhook because its signed event timestamp was missing, stale, or too far in the future.");
+            if (read.IsTooLarge)
+            {
+                logger.LogWarning("Rejected the Dialpad webhook because the streamed request body exceeded the maximum allowed size of {MaximumRequestBodySizeBytes} bytes.", MaximumRequestBodySizeBytes);
 
-            return TypedResults.BadRequest();
-        }
+                return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
+            }
 
-        var acceptance = await inbox.AcceptAsync(new ProviderWebhookInboxDelivery
-        {
-            ProviderName = DialpadConstants.ProviderTechnicalName,
-            DeliveryId = DialpadWebhookDelivery.GetDeliveryId(callEvent),
-            HandlerName = DialpadWebhookInboxHandler.HandlerTechnicalName,
-            Payload = JsonSerializer.Serialize(callEvent, DialpadJsonSerializerOptions.Default),
-        }, CancellationToken.None);
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Dialpad webhook delivery accepted by the durable inbox. TraceIdentifier: {TraceIdentifier}, DeliveryId: {DeliveryId}, MessageId: {MessageId}, Status: {Status}",
-                httpContext.TraceIdentifier,
-                DialpadWebhookDelivery.GetDeliveryId(callEvent),
-                acceptance.MessageId,
-                acceptance.Status);
-        }
-
-        if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Busy)
-        {
-            logger.LogWarning(
-                "Dialpad webhook dispatch was deferred because the durable inbox is busy. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
-                httpContext.TraceIdentifier,
-                acceptance.MessageId);
-
-            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-
-        try
-        {
-            await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
+            var body = read.Body;
 
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation(
-                    "Dispatched the Dialpad webhook for processing. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
+                    "Dialpad webhook raw request body. TraceIdentifier: {TraceIdentifier}, BodyLength: {BodyLength}, Body: {Body}",
                     httpContext.TraceIdentifier,
-                    acceptance.MessageId);
+                    body.Length,
+                    body);
             }
-        }
-        catch (ConcurrencyException)
-        {
-            // A concurrent worker won ownership of the affected call during immediate dispatch. The delivery
-            // is already durably accepted, so the background inbox completes it in a fresh scope; the canceled
-            // session must not be reused, so acknowledge acceptance without failing the webhook.
+
+            if (string.IsNullOrEmpty(environment.WebhookSigningSecret))
+            {
+                logger.LogWarning("Rejected a Dialpad webhook because no webhook signing secret is configured.");
+
+                return TypedResults.Unauthorized();
+            }
+
+            if (!TryUnprotectSecret(dataProtectionProvider, environment.WebhookSigningSecret, out var secret))
+            {
+                logger.LogError("Rejected a Dialpad webhook because the configured signing secret could not be unprotected.");
+
+                return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+
+            if (!DialpadJwtValidator.TryValidateAndExtract(body, secret, out var payloadJson))
+            {
+                logger.LogWarning("Rejected a Dialpad webhook because the signature could not be validated.");
+
+                return TypedResults.Unauthorized();
+            }
 
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation(
-                    "A concurrent worker took ownership of the Dialpad webhook after durable acceptance. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
+                    "Validated Dialpad webhook payload. TraceIdentifier: {TraceIdentifier}, Payload: {Payload}",
                     httpContext.TraceIdentifier,
-                    acceptance.MessageId);
+                    payloadJson);
+            }
+
+            ProviderWebhookIngressLease rateLease = null;
+
+            try
+            {
+                if (ingressLimiter is not null)
+                {
+                    rateLease = await ingressLimiter.AcquireRateAsync(DialpadConstants.ProviderTechnicalName, CancellationToken.None);
+
+                    if (!rateLease.IsAcquired)
+                    {
+                        SetRetryAfter(httpContext, rateLease.RetryAfter);
+
+                        if (logger.IsEnabled(LogLevel.Warning))
+                        {
+                            logger.LogWarning(
+                                "Rejected the Dialpad webhook because the provider rate limit was reached. RetryAfterSeconds: {RetryAfterSeconds}",
+                                GetRetryAfterSeconds(rateLease.RetryAfter));
+                        }
+
+                        return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
+                    }
+                }
+
+                DialpadCallEvent callEvent;
+
+                try
+                {
+                    callEvent = JsonSerializer.Deserialize<DialpadCallEvent>(payloadJson, DialpadJsonSerializerOptions.Default);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Rejected the Dialpad webhook because the validated payload could not be deserialized. TraceIdentifier: {TraceIdentifier}, Path: {Path}, Payload: {Payload}",
+                        httpContext.TraceIdentifier,
+                        ex.Path,
+                        payloadJson);
+
+                    return TypedResults.BadRequest();
+                }
+
+                if (callEvent is null)
+                {
+                    logger.LogWarning(
+                        "Rejected the Dialpad webhook because the validated payload deserialized to null. TraceIdentifier: {TraceIdentifier}, Payload: {Payload}",
+                        httpContext.TraceIdentifier,
+                        payloadJson);
+
+                    return TypedResults.BadRequest();
+                }
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "Parsed Dialpad webhook event. TraceIdentifier: {TraceIdentifier}, CallId: {CallId}, State: {State}, EventTimestamp: {EventTimestamp}, Event: {Event}",
+                        httpContext.TraceIdentifier,
+                        callEvent.CallId,
+                        callEvent.State,
+                        callEvent.EventTimestamp,
+                        JsonSerializer.Serialize(callEvent, DialpadJsonSerializerOptions.Default));
+                }
+
+                if (!callEvent.EventTimestamp.HasValue ||
+                    !TryGetOccurredUtc(callEvent.EventTimestamp.Value, out var occurredUtc) ||
+                    !IsFresh(ingressLimiter, occurredUtc, clock.UtcNow))
+                {
+                    logger.LogWarning("Rejected a Dialpad webhook because its signed event timestamp was missing, stale, or too far in the future.");
+
+                    return TypedResults.BadRequest();
+                }
+
+                if (inbox is null)
+                {
+                    var result = await webhookService.ProcessAsync(callEvent, CancellationToken.None);
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "Processed the Dialpad webhook inline. TraceIdentifier: {TraceIdentifier}, Result: {Result}",
+                            httpContext.TraceIdentifier,
+                            result);
+                    }
+
+                    return TypedResults.Ok(new
+                    {
+                        accepted = true,
+                        result,
+                    });
+                }
+
+                var acceptance = await inbox.AcceptAsync(new ProviderWebhookInboxDelivery
+                {
+                    ProviderName = DialpadConstants.ProviderTechnicalName,
+                    DeliveryId = DialpadWebhookDelivery.GetDeliveryId(callEvent),
+                    HandlerName = DialpadWebhookInboxHandler.HandlerTechnicalName,
+                    Payload = JsonSerializer.Serialize(callEvent, DialpadJsonSerializerOptions.Default),
+                }, CancellationToken.None);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "Dialpad webhook delivery accepted by the durable inbox. TraceIdentifier: {TraceIdentifier}, DeliveryId: {DeliveryId}, MessageId: {MessageId}, Status: {Status}",
+                        httpContext.TraceIdentifier,
+                        DialpadWebhookDelivery.GetDeliveryId(callEvent),
+                        acceptance.MessageId,
+                        acceptance.Status);
+                }
+
+                if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Busy)
+                {
+                    logger.LogWarning(
+                        "Dialpad webhook dispatch was deferred because the durable inbox is busy. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
+                        httpContext.TraceIdentifier,
+                        acceptance.MessageId);
+
+                    return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+                }
+
+                try
+                {
+                    await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "Dispatched the Dialpad webhook for processing. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
+                            httpContext.TraceIdentifier,
+                            acceptance.MessageId);
+                    }
+                }
+                catch (ConcurrencyException)
+                {
+                    // A concurrent worker won ownership of the affected call during immediate dispatch. The delivery
+                    // is already durably accepted, so the background inbox completes it in a fresh scope; the canceled
+                    // session must not be reused, so acknowledge acceptance without failing the webhook.
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "A concurrent worker took ownership of the Dialpad webhook after durable acceptance. TraceIdentifier: {TraceIdentifier}, MessageId: {MessageId}",
+                            httpContext.TraceIdentifier,
+                            acceptance.MessageId);
+                    }
+                }
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation(
+                        "Returning a successful Dialpad webhook response. TraceIdentifier: {TraceIdentifier}, Accepted: {Accepted}",
+                        httpContext.TraceIdentifier,
+                        acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted);
+                }
+
+                return TypedResults.Ok(new
+                {
+                    accepted = acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted,
+                });
+            }
+            finally
+            {
+                rateLease?.Dispose();
             }
         }
-
-        if (logger.IsEnabled(LogLevel.Information))
+        finally
         {
-            logger.LogInformation(
-                "Returning a successful Dialpad webhook response. TraceIdentifier: {TraceIdentifier}, Accepted: {Accepted}",
-                httpContext.TraceIdentifier,
-                acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted);
+            concurrencyLease?.Dispose();
         }
-
-        return TypedResults.Ok(new
-        {
-            accepted = acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted,
-        });
     }
 
     private static string FormatRequest(HttpRequest request)
@@ -313,6 +362,17 @@ internal static class DialpadWebhookEndpoint
     private static double? GetRetryAfterSeconds(TimeSpan? retryAfter)
     {
         return retryAfter.HasValue ? Math.Ceiling(retryAfter.Value.TotalSeconds) : null;
+    }
+
+    private static bool IsFresh(IProviderWebhookIngressLimiter ingressLimiter, DateTime occurredUtc, DateTime nowUtc)
+    {
+        if (ingressLimiter is not null)
+        {
+            return ingressLimiter.IsFresh(occurredUtc);
+        }
+
+        return occurredUtc >= nowUtc.AddSeconds(-900) &&
+            occurredUtc <= nowUtc.AddSeconds(120);
     }
 
     private static bool IsSensitiveHeader(string headerName)

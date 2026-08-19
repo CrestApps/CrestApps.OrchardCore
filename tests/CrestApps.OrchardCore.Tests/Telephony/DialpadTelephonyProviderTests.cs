@@ -495,6 +495,44 @@ public sealed class DialpadTelephonyProviderTests
     }
 
     [Fact]
+    public async Task EnrichTokensAsync_WhenCurrentUserProfileAvailable_PopulatesConnectionMetadata()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri.AbsoluteUri == $"{BaseUrl}users/me")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"id":5171365938069504,"email":"mike@crestapps.com","phone_number":"+12088208280","first_name":"Mike","last_name":"Alhayek"}"""),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(string.Empty),
+            };
+        });
+        var provider = CreateOAuthProvider(handler);
+
+        // Act
+        var tokens = await provider.EnrichTokensAsync(
+            new TelephonyUserTokens
+            {
+                AccessToken = "at",
+                RefreshToken = "rt",
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("5171365938069504", tokens.RemoteUserId);
+        Assert.Equal("mike@crestapps.com", tokens.RemoteUserEmail);
+        Assert.Equal("+12088208280", tokens.RemotePhoneNumber);
+        Assert.Equal("Mike Alhayek", tokens.RemoteUserName);
+        Assert.Equal($"{BaseUrl}users/me", handler.LastRequest.RequestUri.AbsoluteUri);
+    }
+
+    [Fact]
     public async Task ExchangeCodeAsync_WhenCodeVerifierProvided_IncludesPkceVerifierInBody()
     {
         // Arrange

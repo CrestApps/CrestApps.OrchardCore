@@ -100,7 +100,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>());
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
+        services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
+        services.AddDataMigration<TelephonyUserConnectionIndexMigrations>();
 
         // The default recording media store keeps encrypted recordings under a tenant-scoped application-data
         // folder, so recordings ingested by any voice provider are namespaced per tenant and never observable

@@ -34,6 +34,7 @@ public sealed class DialpadTelephonyProvider :
     ITelephonyAttendedTransferProvider,
     ITelephonyAudioProvider,
     ITelephonyAuthenticationProvider,
+    ITelephonyUserConnectionMetadataProvider,
     ITelephonyCallStateProvider,
     ITelephonyDirectoryProvider
 {
@@ -777,6 +778,43 @@ public sealed class DialpadTelephonyProvider :
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<TelephonyUserTokens> EnrichTokensAsync(TelephonyUserTokens tokens, CancellationToken cancellationToken = default)
+    {
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            return tokens;
+        }
+
+        var settings = _dialpadOptions;
+
+        if (settings.GetEffectiveAuthenticationType() != DialpadAuthenticationType.OAuth2)
+        {
+            return tokens;
+        }
+
+        var profile = await GetCurrentUserProfileAsync(settings, tokens.AccessToken, cancellationToken);
+
+        if (profile is null)
+        {
+            return tokens;
+        }
+
+        return new TelephonyUserTokens
+        {
+            ProviderName = tokens.ProviderName,
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            ExpiresUtc = tokens.ExpiresUtc,
+            TokenType = tokens.TokenType,
+            Scope = tokens.Scope,
+            RemoteUserId = profile.Id,
+            RemoteUserName = profile.DisplayName,
+            RemoteUserEmail = profile.Email,
+            RemotePhoneNumber = profile.PhoneNumber,
+        };
+    }
+
     private static string BuildScope(string configuredScopes)
     {
         if (string.IsNullOrWhiteSpace(configuredScopes))
@@ -922,6 +960,30 @@ public sealed class DialpadTelephonyProvider :
             return null;
         }
 
+        var profile = await GetCurrentUserProfileAsync(settings, bearerToken, cancellationToken);
+
+        if (profile is null || string.IsNullOrWhiteSpace(profile.Id))
+        {
+            _logger.LogError("Dialpad returned a current-user response without a valid user id.");
+
+            return null;
+        }
+
+        if (long.TryParse(profile.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var profileUserId))
+        {
+            return profileUserId;
+        }
+
+        _logger.LogError("Dialpad returned a non-numeric current-user id.");
+
+        return null;
+    }
+
+    private async Task<DialpadCurrentUserProfile> GetCurrentUserProfileAsync(
+        DialpadOptions settings,
+        string bearerToken,
+        CancellationToken cancellationToken)
+    {
         try
         {
             var client = CreateClient(settings, bearerToken);
@@ -944,25 +1006,32 @@ public sealed class DialpadTelephonyProvider :
             if (!string.IsNullOrWhiteSpace(payload))
             {
                 using var document = JsonDocument.Parse(payload);
+                var root = document.RootElement;
 
-                if (document.RootElement.ValueKind == JsonValueKind.Object &&
-                    document.RootElement.TryGetProperty("id", out var idElement))
+                if (root.ValueKind == JsonValueKind.Object)
                 {
-                    if (idElement.ValueKind == JsonValueKind.Number &&
-                        idElement.TryGetInt64(out var numericUserId))
+                    var firstName = ReadString(root, "first_name");
+                    var lastName = ReadString(root, "last_name");
+                    var displayName = ReadString(root, "name");
+
+                    if (string.IsNullOrWhiteSpace(displayName))
                     {
-                        return numericUserId;
+                        displayName = string.Join(
+                            " ",
+                            new[] { firstName, lastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
                     }
 
-                    if (idElement.ValueKind == JsonValueKind.String &&
-                        long.TryParse(idElement.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var stringUserId))
+                    return new DialpadCurrentUserProfile
                     {
-                        return stringUserId;
-                    }
+                        Id = ReadScalarString(root, "id"),
+                        Email = ReadString(root, "email"),
+                        PhoneNumber = ReadPhoneNumber(root),
+                        DisplayName = string.IsNullOrWhiteSpace(displayName)
+                            ? ReadString(root, "email")
+                            : displayName,
+                    };
                 }
             }
-
-            _logger.LogError("Dialpad returned a current-user response without a valid user id.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -1115,6 +1184,37 @@ public sealed class DialpadTelephonyProvider :
             JsonValueKind.Number => value.GetRawText(),
             _ => null,
         };
+    }
+
+    private static string ReadPhoneNumber(JsonElement element)
+    {
+        var phoneNumber = ReadString(element, "phone_number");
+
+        if (!string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return phoneNumber;
+        }
+
+        if (element.TryGetProperty("phone_numbers", out var phoneNumbers) &&
+            phoneNumbers.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var phone in phoneNumbers.EnumerateArray())
+            {
+                var value = phone.ValueKind switch
+                {
+                    JsonValueKind.String => phone.GetString(),
+                    JsonValueKind.Object => ReadString(phone, "phone_number") ?? ReadString(phone, "number"),
+                    _ => null,
+                };
+
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+        }
+
+        return ReadString(element, "extension");
     }
 
     private static bool ReadBoolean(JsonElement element, string propertyName)

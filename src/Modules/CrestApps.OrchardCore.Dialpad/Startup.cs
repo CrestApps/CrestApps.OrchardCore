@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -51,16 +52,11 @@ public sealed class Startup : StartupBase
             .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
 
+        services.AddScoped<IDialpadWebhookService, DialpadWebhookService>();
+        services.AddScoped<IDialpadInboundCallRouter, DialpadDirectInboundCallRouter>();
         services.AddScoped<IDialpadWebhookApiService, DialpadWebhookApiService>();
     }
-}
 
-/// <summary>
-/// Registers Dialpad Contact Center voice integration endpoints.
-/// </summary>
-[Feature(DialpadConstants.Feature.ContactCenterVoice)]
-public sealed class DialpadContactCenterStartup : StartupBase
-{
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddDialpadWebhookEndpoint();

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using Moq;
@@ -316,8 +317,8 @@ public sealed class DialpadWebhookContractTests
         ProviderVoiceEvent providerEvent = null;
         InboundVoiceEvent inboundEvent = null;
 
-        var providerSink = new Mock<IProviderVoiceEventSink>();
-        providerSink
+        var ingestor = new Mock<INormalizedVoiceEventIngestor>();
+        ingestor
             .Setup(sink => sink.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
             .Callback<ProviderVoiceEvent, CancellationToken>((captured, _) => providerEvent = captured)
             .ReturnsAsync(providerHandled);
@@ -331,7 +332,10 @@ public sealed class DialpadWebhookContractTests
         var clock = new Mock<IClock>();
         clock.SetupGet(instance => instance.UtcNow).Returns(_fallbackNow);
 
-        var service = new DialpadWebhookService(providerSink.Object, inboundSink.Object, clock.Object);
+        var service = new DialpadWebhookService(
+            ingestor.Object,
+            new ContactCenterDialpadInboundCallRouter(inboundSink.Object),
+            clock.Object);
         var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
 
         return new CapturedDelivery(result, providerEvent, inboundEvent);

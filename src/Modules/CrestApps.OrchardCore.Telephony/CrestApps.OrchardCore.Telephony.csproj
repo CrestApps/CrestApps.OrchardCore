@@ -27,6 +27,7 @@
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>
