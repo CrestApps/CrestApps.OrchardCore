@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
         services.AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
                 .AddSignalOptionsChangeTokenSource<AIMemoryOptions>()
                 .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
+                .AddSignalOptionsChangeTokenSource<ChatInteractionMemoryOptions>()
                 .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
                 .AddScoped<AIMemoryIndexingService>()
                 .AddDataMigration<MemoryMetadataMigrations>()
