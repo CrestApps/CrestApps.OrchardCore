@@ -175,9 +175,9 @@ The equivalent environment variables are `AsteriskWeb__AsteriskUserName` and `As
 
 ## Bidirectional RTP media
 
-The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` or `CrestApps.OrchardCore.Asterisk.ContactCenterMedia`.
+The Asterisk package can run as a Telephony provider without Contact Center. Install the Contact Center module package and enable **Contact Center Voice** (and, for media, **Contact Center Voice Media**) before the Asterisk contact center adapters can activate. The adapters are integration glue, not selectable features: the voice adapter activates whenever the Asterisk module and Contact Center Voice are both enabled, and the media adapter whenever the Asterisk module and Contact Center Voice Media are both enabled.
 
-`CrestApps.OrchardCore.ContactCenter.Voice.Media` and `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` are dependency-only development foundations and are not included in either approved GA-Core profile. They remain hidden from direct selection in the Orchard Features UI until the transport certification tracked for R9 is complete. The executable media feature registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
+`CrestApps.OrchardCore.ContactCenter.Voice.Media` is a dependency-only development foundation and is not included in either approved GA-Core profile. It remains hidden from direct selection in the Orchard Features UI until the transport certification tracked for R9 is complete. The Asterisk media adapter registers `AsteriskContactCenterVoiceMediaProvider`; the base Asterisk voice provider does not advertise media through a capability flag. The adapter uses ARI External Media over RTP/UDP with G.711 mu-law, 8 kHz, mono audio.
 
 Opening a media session:
 

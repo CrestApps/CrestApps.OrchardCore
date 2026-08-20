@@ -20,8 +20,7 @@ calls to agents server-side** (`ServerSideAcd`), which is what makes true power 
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
-| **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. |
-| **Telnyx Contact Center Voice** | `CrestApps.OrchardCore.Telnyx.ContactCenterVoice` | Places outbound contact center calls, bridges live calls to agents (`ServerSideAcd`), and handles their real-time call events. Depends on Telnyx and Contact Center Voice. |
+| **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
 
 ## Dependencies
 

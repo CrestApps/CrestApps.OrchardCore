@@ -9,12 +9,12 @@ Asterisk-specific concepts stay inside this module; the shared Telephony and Con
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Asterisk | `CrestApps.OrchardCore.Asterisk` | Provides the Asterisk telephony provider and its settings. Depends on `CrestApps.OrchardCore.Telephony`. |
-| Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Enables the Asterisk provider to handle real-time phone-call events and call execution for the Contact Center. |
-| Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Adds bidirectional RTP media sessions for active Asterisk Contact Center calls. Enabled by dependency only. |
+
+The Asterisk contact center **voice** adapter (real-time phone-call events and call execution) and **media** adapter (bidirectional RTP media sessions) are no longer separate features. They are integration glue that activates automatically: the voice adapter whenever the **Asterisk** feature and **Contact Center Voice** are both enabled, and the media adapter whenever the **Asterisk** feature and **Contact Center Voice Media** are both enabled. An operator never enables a per-provider toggle that has to match the provider they already configured.
 
 ## Installation
 
-Install the package into the web/startup project and enable the features you need:
+Install the package into the web/startup project and enable the Asterisk feature:
 
 ```json
 {
@@ -22,15 +22,14 @@ Install the package into the web/startup project and enable the features you nee
     {
       "name": "Feature",
       "enable": [
-        "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Asterisk.ContactCenterVoice"
+        "CrestApps.OrchardCore.Asterisk"
       ]
     }
   ]
 }
 ```
 
-The **Telephony** feature (and, for Contact Center voice, the **Contact Center Voice** feature) must also be enabled.
+The **Telephony** feature must also be enabled (it is a dependency of Asterisk). Enable a Contact Center voice capability — such as **Contact Center Inbound Voice** or the **Outbound Dialer** — to turn on **Contact Center Voice**; the Asterisk contact center voice adapter then activates on its own.
 
 ## Configuration
 

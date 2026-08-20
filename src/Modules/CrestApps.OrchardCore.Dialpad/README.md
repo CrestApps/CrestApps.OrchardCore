@@ -9,11 +9,12 @@ Dialpad-specific concepts stay inside this module; the shared Telephony and Cont
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Dialpad | `CrestApps.OrchardCore.Dialpad` | Provides the Dialpad telephony provider and its settings. Depends on `CrestApps.OrchardCore.Telephony`. |
-| Dialpad Contact Center Voice | `CrestApps.OrchardCore.Dialpad.ContactCenterVoice` | Enables the Dialpad provider to place outbound contact center calls and handle their real-time call events. |
+
+The Dialpad contact center voice adapter (place outbound contact center calls and handle their real-time call events) is no longer a separate feature. It is integration glue that activates automatically whenever the **Dialpad** feature and **Contact Center Voice** are both enabled, so an operator never enables a per-provider toggle that has to match the provider they already configured.
 
 ## Installation
 
-Install the package into the web/startup project and enable the features you need:
+Install the package into the web/startup project and enable the Dialpad feature:
 
 ```json
 {
@@ -21,15 +22,14 @@ Install the package into the web/startup project and enable the features you nee
     {
       "name": "Feature",
       "enable": [
-        "CrestApps.OrchardCore.Dialpad",
-        "CrestApps.OrchardCore.Dialpad.ContactCenterVoice"
+        "CrestApps.OrchardCore.Dialpad"
       ]
     }
   ]
 }
 ```
 
-The **Telephony** feature (and, for Contact Center voice, the **Contact Center Voice** feature) must also be enabled.
+The **Telephony** feature must also be enabled (it is a dependency of Dialpad). Enable a Contact Center voice capability — such as **Contact Center Inbound Voice** or the **Outbound Dialer** — to turn on **Contact Center Voice**; the Dialpad contact center voice adapter then activates on its own.
 
 ## Configuration
 

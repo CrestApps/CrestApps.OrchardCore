@@ -19,7 +19,7 @@ Dialpad SDK or token.
 
 Enabling **Dialpad** automatically enables the **Telephony** feature it depends on. The Dialpad module compiles only against the Telephony and Contact Center abstraction packages, keeping it decoupled from their implementation assemblies, the soft phone, and the hub.
 
-The base Dialpad feature does not require Contact Center. Install the Contact Center module package before enabling `CrestApps.OrchardCore.Dialpad.ContactCenterVoice`; its manifest dependency then enables Contact Center Voice for that tenant.
+The base Dialpad feature does not require Contact Center. To use Dialpad for contact center voice, install the Contact Center module package and enable a Contact Center voice capability (such as Inbound Voice or the Outbound Dialer, which turn on **Contact Center Voice**). The Dialpad contact center voice adapter is integration glue rather than a selectable feature: it activates automatically once the Dialpad module and Contact Center Voice are both enabled.
 
 ## Configuration
 

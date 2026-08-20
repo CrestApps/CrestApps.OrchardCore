@@ -21,11 +21,11 @@ This page explains how the surfaces work. For a searchable, task-by-task how-to 
 There are two agent tiers, so enable the one that matches how your agents work:
 
 - **Soft-phone agents** - the Contact Center soft-phone projection is integration glue rather than a standalone feature: it activates automatically whenever **Contact Center Voice**, **Contact Center Real-Time**, and the **Telephony soft phone** (`CrestApps.OrchardCore.Telephony.SoftPhone`) are all enabled. Agents then get live Contact Center call state, presence, and work offers inside the Telephony soft phone, without the full-screen workspace.
-- **Full-desktop agents** - enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`), which adds the CRM-integrated Agent Workspace. It depends on the Telephony soft phone, Voice, and Real-Time, so enabling it also surfaces the soft-phone projection automatically.
+- **Full-desktop agents** - the CRM-integrated Agent Workspace is integration glue rather than a standalone feature. It activates automatically whenever **Contact Center Agents**, **Contact Center Voice**, **Contact Center Real-Time**, and the **Telephony soft phone** are all enabled, so it also surfaces the soft-phone projection automatically. There is no separate Agent Desktop feature to enable.
 
 ## Enabling the surfaces
 
-Enable **Contact Center Agent Desktop** (`CrestApps.OrchardCore.ContactCenter.AgentDesktop`) for **My workspace**. It explicitly composes Agents, Real-Time, Voice, the Telephony soft phone, and Omnichannel Management so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [Dialpad](../telephony/dialpad.md) for voice work.
+The **My workspace** Agent Workspace activates on its own once **Contact Center Agents**, the **Telephony soft phone**, and a Contact Center voice capability — such as **Contact Center Inbound Voice** or the **Outbound Dialer**, which turn on **Contact Center Voice** and, with it, **Contact Center Real-Time** — are all enabled. It is gated on exactly those capabilities so the workspace cannot activate with missing services. Enable **Contact Center Supervision & Live Dashboard** (`CrestApps.OrchardCore.ContactCenter.Supervision`) for the **Live dashboard**; it explicitly composes Real-Time and Voice. Configure a voice provider such as [Dialpad](../telephony/dialpad.md) for voice work.
 
 The corresponding entries appear independently under **Interaction Center**:
 

@@ -18,15 +18,13 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Inbound Voice | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound voice entry-point administration, business-hours qualification, closed actions, and queue ingress. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Optional recording orchestration and recording-state events over Contact Center Voice. |
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
-| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by the agent desktop, supervision, and soft phone). |
-| Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | CRM-integrated workspace, navigation, presence controls, offers, active interaction context, and recent work for agents. |
+| Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by Contact Center Voice and Supervision). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Enterprise report catalog under the shared Reports area, including executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports. |
-| Asterisk Contact Center Voice | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | Asterisk implementation of the Contact Center voice provider boundary. |
-| Asterisk Contact Center Media | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | Dependency-only Asterisk RTP development foundation; unavailable in approved GA-Core profiles. |
-| Dialpad Contact Center Voice | `CrestApps.OrchardCore.Dialpad.ContactCenterVoice` | Dialpad implementation of the Contact Center voice provider boundary. |
 
-> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Entry Points, Dialer, Recording, Supervision, the soft phone, and provider adapters, so it is not a separately selectable feature.
+> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, the Dialer, Recording, and Supervision, so it is not a separately selectable feature. It in turn pulls in Contact Center Real-Time.
+
+> The **CRM-integrated Agent Workspace** and each **provider contact center adapter** (Asterisk voice, Asterisk media, Dialpad voice) are integration glue rather than selectable features. The Agent Workspace activates whenever Contact Center Agents, Contact Center Voice, Contact Center Real-Time, and the Telephony soft phone are all enabled. A provider's voice adapter activates whenever that provider module and Contact Center Voice are both enabled (the Asterisk media adapter, whenever the Asterisk module and Contact Center Voice Media are both enabled), so an operator never enables a per-provider toggle that has to match the provider they already configured.
 
 ## Agents and presence
 
@@ -197,7 +195,7 @@ Use callbacks when an agent schedules a later follow-up, an inbound entry point 
 
 ## Voice Contact Center Call Router
 
-The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`, which resolves the configured `IContactCenterVoiceProvider`, so the Contact Center keeps assignment, queue, pacing, and compliance logic while the provider executes call operations. The `CrestApps.OrchardCore.Dialpad.ContactCenterVoice` feature implements `IContactCenterVoiceProvider` over the Dialpad telephony provider. The `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` feature provides the equivalent Asterisk adapter and uses the tenant Asterisk provider when enabled, otherwise resolving the configured **Default Asterisk** provider.
+The dialer never talks to a telephony platform directly. It calls `IVoiceContactCenterCallRouter`, which resolves the configured `IContactCenterVoiceProvider`, so the Contact Center keeps assignment, queue, pacing, and compliance logic while the provider executes call operations. The Dialpad adapter implements `IContactCenterVoiceProvider` over the Dialpad telephony provider; it activates automatically whenever the **Dialpad** module and **Contact Center Voice** are both enabled. The equivalent Asterisk adapter activates whenever the **Asterisk** module and **Contact Center Voice** are both enabled, and uses the tenant Asterisk provider when configured, otherwise resolving the configured **Default Asterisk** provider. Neither adapter is a separately selectable feature.
 
 Voice providers that support contact-center orchestration beyond soft-phone call control can also register `IContactCenterVoiceProvider`. The `IContactCenterVoiceProviderResolver` resolves those providers by technical name so future PBX integrations can participate in provider-side queueing, call assignment, and voice-specific orchestration without coupling Contact Center to one provider. Dial results include the actual executing provider identity, which is persisted on the interaction so provider events and reconciliation use the same configured alias.
 
@@ -220,7 +218,7 @@ Agent state reason codes are a catalog-backed admin surface (**Interaction Cente
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.ContactCenter.Analytics",
-        "CrestApps.OrchardCore.Dialpad.ContactCenterVoice"
+        "CrestApps.OrchardCore.Dialpad"
       ]
     }
   ]

@@ -27,10 +27,10 @@ phone can be the only endpoint (browser audio) and the dialer can bridge a live 
 | `CrestApps.OrchardCore.Telnyx.Core` | Library | Shareable contracts and provider‑neutral building blocks: `TelnyxConstants`, settings/options/models, the normalized call‑event model + parser, the Ed25519 webhook signature validator, JSON options, the durable browser‑credential index, and the service interfaces. Other modules depend on this, never on the module. |
 | `CrestApps.OrchardCore.Telnyx` | Module | OrchardCore wiring and concrete implementations: the telephony provider, Contact Center voice provider, credential issuer/store/registration/revoker, webhook endpoint + service + inbox handler, settings driver + views, migrations, and DI startups. |
 
-Two features:
+One feature plus an auto-activating adapter:
 
 - **Telnyx** (`CrestApps.OrchardCore.Telnyx`) — provider, browser WebRTC soft phone, signed webhooks. Depends on Telephony.
-- **Telnyx Contact Center Voice** (`CrestApps.OrchardCore.Telnyx.ContactCenterVoice`) — `ServerSideAcd` dial, agent bridge, transfer. Depends on Telnyx + Contact Center Voice.
+- **Telnyx contact center voice adapter** — `ServerSideAcd` dial, agent bridge, transfer. Integration glue rather than a selectable feature: it activates automatically once the Telnyx module and Contact Center Voice are both enabled.
 
 ## Implemented
 

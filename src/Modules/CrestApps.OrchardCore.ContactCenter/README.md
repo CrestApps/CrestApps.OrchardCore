@@ -31,14 +31,15 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 | Contact Center Paced Dialing | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Power and Progressive paced dialing strategies with scheduled pacing over the compliant base Dialer. |
 | Contact Center Call Recording | `CrestApps.OrchardCore.ContactCenter.Recording` | Provider-gated recording orchestration and recording-state events. |
 
-> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, Outbound Dialer, Call Recording, Supervision, the Agent Desktop, and provider adapters, so it is not listed as a separately selectable feature.
+> The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, Outbound Dialer, Call Recording, and Supervision, so it is not listed as a separately selectable feature. It in turn pulls in Contact Center Real-Time.
+
+> The CRM-integrated **Agent Workspace** and each **provider contact center voice adapter** (Telnyx, Dialpad, Asterisk) are integration glue rather than selectable features. The Agent Workspace activates whenever Contact Center Agents, Contact Center Voice, Contact Center Real-Time, and the Telephony soft phone are all enabled; a provider's voice adapter activates whenever that provider module and Contact Center Voice are both enabled.
 
 ### Real-time experiences and reporting
 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts (enabled by dependency only). |
-| Contact Center Agent Desktop | `CrestApps.OrchardCore.ContactCenter.AgentDesktop` | Full CRM-integrated agent workspace for presence, offers, active interactions, and recent work. Surfaces the soft-phone call-state projection when the Telephony soft phone is enabled. |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-gated monitoring actions. |
 | Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
 | Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
