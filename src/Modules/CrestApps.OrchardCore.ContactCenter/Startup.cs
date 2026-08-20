@@ -86,29 +86,6 @@ public sealed class Startup : StartupBase
             .ValidateOnStart();
 
         services
-            .AddOptions<ContactCenterHealthCheckOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:HealthChecks"))
-            .Validate(
-                options => options.DeadLetterDegradedThreshold >= 1,
-                "'CrestApps:ContactCenter:HealthChecks:DeadLetterDegradedThreshold' must be at least one.")
-            .Validate(
-                options => options.OverdueBacklogDegradedThreshold >= 1,
-                "'CrestApps:ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold' must be at least one.")
-            .Validate(
-                options => options.ConsecutiveFailuresBeforeUnready >= 1,
-                "'CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready' must be at least one.")
-            .Validate(
-                options => options.ConsecutiveSuccessesBeforeReady >= 1,
-                "'CrestApps:ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady' must be at least one.")
-            .Validate(
-                options => options.DeadLetterUnhealthyThreshold >= options.DeadLetterDegradedThreshold,
-                "'CrestApps:ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold' cannot be lower than 'DeadLetterDegradedThreshold'.")
-            .Validate(
-                options => options.OverdueBacklogUnhealthyThreshold >= options.OverdueBacklogDegradedThreshold,
-                "'CrestApps:ContactCenter:HealthChecks:OverdueBacklogUnhealthyThreshold' cannot be lower than 'OverdueBacklogDegradedThreshold'.")
-            .ValidateOnStart();
-
-        services
             .AddOptions<ContactCenterCoordinationOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Coordination"))
             .Validate(

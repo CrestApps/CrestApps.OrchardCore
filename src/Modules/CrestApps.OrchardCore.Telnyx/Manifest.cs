@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
+using CrestApps.OrchardCore.WebSockets;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -20,5 +21,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
+        WebSocketsConstants.Feature.Area,
     ]
 )]

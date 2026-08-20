@@ -63,13 +63,20 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ITelnyxWebhookService, TelnyxWebhookService>()
-            .AddScoped<ITelnyxInboundCallRouter, TelnyxDirectInboundCallRouter>()
             .AddScoped<ITelnyxOutboundBridgeOrchestrator, TelnyxOutboundBridgeOrchestrator>()
             .AddScoped<ITelnyxAgentCredentialStore, TelnyxAgentCredentialStore>()
             .AddScoped<ITelnyxTelephonyCredentialIssuer, TelnyxTelephonyCredentialIssuer>()
             .AddScoped<ITelnyxProvisioningApiService, TelnyxProvisioningApiService>()
             .AddScoped<ISoftPhoneRegistrationConfigContributor, TelnyxSoftPhoneRegistrationConfigContributor>()
             .AddScoped<ISoftPhoneCredentialRevoker, TelnyxSoftPhoneCredentialRevoker>();
+
+        // The base router never routes; the Contact Center Voice feature (DialerStartup) registers
+        // ContactCenterTelnyxInboundCallRouter to take over inbound routing. TryAdd registers this no-op
+        // fallback only when nothing else has, so the Contact Center router always wins whenever Voice is
+        // enabled - regardless of the order the module's startup classes run in. A plain AddScoped here made
+        // resolution depend on that ordering, so adding an unrelated startup class could (and did) let this
+        // no-op router shadow the real one and silently drop every inbound Contact Center call.
+        services.TryAddScoped<ITelnyxInboundCallRouter, TelnyxDirectInboundCallRouter>();
 
         services.AddIndexProvider<TelnyxAgentCredentialIndexProvider>();
         services.AddDataMigration<TelnyxAgentCredentialMigrations>();
@@ -101,11 +108,13 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
                     TelnyxConstants.Feature.Area,
+                    TelnyxConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
                     ContactCenterConstants.Feature.Voice,
+                    TelnyxConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
@@ -119,5 +128,41 @@ public sealed class DialerStartup : StartupBase
         services.AddIndexProvider<TelnyxRecordingIngestJobIndexProvider>();
         services.AddDataMigration<TelnyxRecordingIngestJobMigrations>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelnyxRecordingIngestBackgroundTask>());
+    }
+}
+
+/// <summary>
+/// Registers the Telnyx implementation of the Contact Center bidirectional voice-media boundary through Telnyx Media
+/// Streaming. Like the voice adapter this is integration glue rather than a separately selectable feature: it
+/// activates automatically whenever the Telnyx provider and Contact Center Voice Media are both enabled. It maps the
+/// WebSocket endpoint Telnyx dials back to; the WebSocket middleware itself comes from the WebSockets feature the
+/// module depends on.
+/// </summary>
+[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
+public sealed class TelnyxContactCenterMediaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterVoiceMediaProvider, TelnyxContactCenterVoiceMediaProvider>()
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new TelnyxContactCenterFeatureLifecycleParticipant(
+                    TelnyxConstants.Feature.Area,
+                    TelnyxConstants.ContactCenterMediaWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new TelnyxContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.VoiceMedia,
+                    TelnyxConstants.ContactCenterMediaWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        // Telnyx dials the media-stream endpoint as a raw WebSocket. The WebSocket middleware itself is added by the
+        // CrestApps.OrchardCore.WebSockets feature, which the Telnyx module depends on, so this only maps the route.
+        routes.AddTelnyxMediaStreamEndpoint();
     }
 }

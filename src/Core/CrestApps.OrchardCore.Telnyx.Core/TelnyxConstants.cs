@@ -74,6 +74,56 @@ public static class TelnyxConstants
     public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Telnyx.ContactCenterVoice";
 
     /// <summary>
+    /// The stable work-admission partition key that guards in-flight Telnyx Contact Center bidirectional media work
+    /// so it can be quiesced and drained across shell reloads. Like the voice partition it is not an Orchard feature:
+    /// the Telnyx media adapter is integration glue that activates whenever the Telnyx provider and Contact Center
+    /// Voice Media are both enabled.
+    /// </summary>
+    public const string ContactCenterMediaWorkPartition = "CrestApps.OrchardCore.Telnyx.ContactCenterMedia";
+
+    /// <summary>
+    /// The relative path of the Telnyx media-streaming WebSocket endpoint exposed by this module. Telnyx dials this
+    /// endpoint after a <c>streaming_start</c> command, so it must be reachable at the tenant's public base URL.
+    /// </summary>
+    public const string MediaStreamPath = "api/telnyx/media/stream";
+
+    /// <summary>
+    /// The media-session metadata key that overrides the public base URL used to build the Telnyx media-stream
+    /// <c>stream_url</c>. When absent, the tenant site base URL is used.
+    /// </summary>
+    public const string MediaStreamPublicUrlMetadataKey = "mediaStreamPublicUrl";
+
+    /// <summary>
+    /// Contains constants for Telnyx bidirectional media streaming over WebSockets, the equivalent of Asterisk ARI
+    /// External Media used by the Contact Center voice-media provider boundary.
+    /// </summary>
+    public static class MediaStreaming
+    {
+        /// <summary>
+        /// The Telnyx codec used for both the streamed call audio and the injected bidirectional audio. G.711 mu-law
+        /// at 8 kHz matches the format the Contact Center voice-media session advertises.
+        /// </summary>
+        public const string Codec = "PCMU";
+
+        /// <summary>
+        /// The call track streamed to the WebSocket. The inbound track carries the audio arriving from the far end.
+        /// </summary>
+        public const string Track = "inbound_track";
+
+        /// <summary>
+        /// The bidirectional streaming mode. RTP mode delivers raw base64 codec payloads in both directions, which the
+        /// session exchanges directly as <see cref="ContactCenter.Models.ContactCenterVoiceMediaFrame"/> data.
+        /// </summary>
+        public const string BidirectionalMode = "rtp";
+
+        /// <summary>
+        /// The call legs the injected bidirectional audio is played into. "self" plays it into the leg the stream is
+        /// attached to, so audio written to the session is heard by the party on that call.
+        /// </summary>
+        public const string BidirectionalTargetLegs = "self";
+    }
+
+    /// <summary>
     /// Contains constants for Telnyx call recording and its secure ingestion into the encrypted media store.
     /// </summary>
     public static class Recording

@@ -30,6 +30,7 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" PrivateAssets="none" />
   </ItemGroup>
 
   <ItemGroup>

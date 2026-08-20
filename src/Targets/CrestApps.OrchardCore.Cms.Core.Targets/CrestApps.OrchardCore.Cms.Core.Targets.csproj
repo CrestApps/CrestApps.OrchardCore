@@ -85,6 +85,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

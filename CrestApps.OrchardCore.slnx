@@ -24,6 +24,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
@@ -104,6 +105,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" />
   </Folder>
   <Folder Name="/src/Startup/">
     <Project Path="src/Startup/CrestApps.Aspire.AppHost/CrestApps.Aspire.AppHost.csproj" />

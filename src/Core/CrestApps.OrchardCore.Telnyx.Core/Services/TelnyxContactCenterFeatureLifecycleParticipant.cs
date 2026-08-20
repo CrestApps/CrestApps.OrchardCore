@@ -4,23 +4,26 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
-/// Participates in the Contact Center feature lifecycle so in-flight Telnyx voice work is quiesced and
-/// drained when the boundary that composes it is torn down or the tenant shuts down. The Telnyx Contact
-/// Center voice adapter is now integration glue gated on the Telnyx provider and Contact Center Voice, so
-/// one instance is registered per gating feature: disabling either one drains the shared work partition,
-/// preserving the drain-on-disable behavior the former dedicated feature provided.
+/// Participates in the Contact Center feature lifecycle so in-flight Telnyx voice or media work is quiesced and
+/// drained when the boundary that composes it is torn down or the tenant shuts down. The Telnyx Contact Center
+/// adapters are integration glue gated on the Telnyx provider and Contact Center Voice (or Voice Media), so one
+/// instance is registered per gating feature over a shared work partition: disabling either gating feature drains
+/// that partition, preserving the drain-on-disable behavior the former dedicated features provided.
 /// </summary>
 internal sealed class TelnyxContactCenterFeatureLifecycleParticipant : IContactCenterFeatureLifecycleParticipant
 {
+    private readonly string _partitionKey;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly TimeSpan _drainTimeout;
 
     public TelnyxContactCenterFeatureLifecycleParticipant(
         string featureId,
+        string partitionKey,
         IContactCenterFeatureWorkManager workManager,
         IOptions<ContactCenterFeatureLifecycleOptions> options)
     {
         FeatureId = featureId;
+        _partitionKey = partitionKey;
         _workManager = workManager;
         _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
     }
@@ -29,11 +32,11 @@ internal sealed class TelnyxContactCenterFeatureLifecycleParticipant : IContactC
 
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        _workManager.Quiesce(TelnyxConstants.ContactCenterVoiceWorkPartition);
+        _workManager.Quiesce(_partitionKey);
 
         return Task.CompletedTask;
     }
 
     public Task DrainAsync(CancellationToken cancellationToken = default)
-        => _workManager.DrainAsync(TelnyxConstants.ContactCenterVoiceWorkPartition, _drainTimeout, cancellationToken);
+        => _workManager.DrainAsync(_partitionKey, _drainTimeout, cancellationToken);
 }
