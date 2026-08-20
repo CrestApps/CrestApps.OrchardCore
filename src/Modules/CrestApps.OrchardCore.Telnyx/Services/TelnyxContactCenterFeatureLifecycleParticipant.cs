@@ -1,0 +1,34 @@
+using CrestApps.OrchardCore.ContactCenter;
+using Microsoft.Extensions.Options;
+
+namespace CrestApps.OrchardCore.Telnyx.Services;
+
+/// <summary>
+/// Participates in the Contact Center feature lifecycle so in-flight Telnyx voice work is quiesced and
+/// drained when the feature is disabled or the tenant shuts down.
+/// </summary>
+internal sealed class TelnyxContactCenterFeatureLifecycleParticipant : IContactCenterFeatureLifecycleParticipant
+{
+    private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly TimeSpan _drainTimeout;
+
+    public TelnyxContactCenterFeatureLifecycleParticipant(
+        IContactCenterFeatureWorkManager workManager,
+        IOptions<ContactCenterFeatureLifecycleOptions> options)
+    {
+        _workManager = workManager;
+        _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
+    }
+
+    public string FeatureId => TelnyxConstants.Feature.ContactCenterVoice;
+
+    public Task QuiesceAsync(CancellationToken cancellationToken = default)
+    {
+        _workManager.Quiesce(FeatureId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task DrainAsync(CancellationToken cancellationToken = default)
+        => _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
+}

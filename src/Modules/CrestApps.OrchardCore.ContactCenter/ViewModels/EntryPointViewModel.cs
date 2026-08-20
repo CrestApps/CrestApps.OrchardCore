@@ -31,7 +31,23 @@ public class EntryPointViewModel
     public string DialedNumbersText { get; set; }
 
     /// <summary>
-    /// Gets or sets the target queue identifier.
+    /// Gets or sets what the entry point routes calls to: a queue or a specific agent.
+    /// </summary>
+    public EntryPointTargetType TargetType { get; set; } = EntryPointTargetType.Queue;
+
+    /// <summary>
+    /// Gets or sets the target agent identifier used when <see cref="TargetType"/> is
+    /// <see cref="EntryPointTargetType.Agent"/>.
+    /// </summary>
+    public string TargetAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available target agents.
+    /// </summary>
+    public IList<SelectListItem> TargetAgentOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the target queue identifier. For an agent target this is the fallback queue.
     /// </summary>
     public string TargetQueueId { get; set; }
 

@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -131,6 +132,80 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
 
         return count;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityReservation> AssignSpecificAsync(
+        string activityItemId,
+        string queueId,
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetQueueLockKey(queueId),
+            _assignmentLockTimeout,
+            _assignmentLockExpiration);
+
+        if (!locked)
+        {
+            if (_logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Skipped a direct-to-agent assignment for queue '{QueueId}' because its assignment lock was not acquired.",
+                    queueId.SanitizeLogValue());
+            }
+
+            return null;
+        }
+
+        await using var acquiredLock = locker;
+
+        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+
+        if (queue is null || !queue.Enabled)
+        {
+            return null;
+        }
+
+        var queueItem = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        // Only a still-waiting item can be reserved. If the item was already reserved/assigned (for example a
+        // concurrent queue sweep grabbed it) the direct offer yields to that outcome.
+        if (queueItem is null || queueItem.Status != QueueItemStatus.Waiting)
+        {
+            return null;
+        }
+
+        // The availability service returns null when the named agent is not entitled, opted in, live,
+        // available, and within capacity for the queue, so a direct offer fails closed to the queue fallback.
+        var availability = await _availabilityService.GetAsync(agentId, queueId, cancellationToken);
+
+        if (availability?.Agent is null)
+        {
+            return null;
+        }
+
+        var timeout = queue.ReservationTimeoutSeconds > 0
+            ? queue.ReservationTimeoutSeconds
+            : 30;
+
+        var reservation = await _reservationService.ReserveAsync(queueItem, availability.Agent, timeout, cancellationToken);
+
+        if (reservation is not null && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Directly reserved Contact Center queue item '{QueueItemId}' as reservation '{ReservationId}' for agent '{AgentId}' in queue '{QueueId}'.",
+                queueItem.ItemId.SanitizeLogValue(),
+                reservation.ItemId.SanitizeLogValue(),
+                agentId.SanitizeLogValue(),
+                queueId.SanitizeLogValue());
+        }
+
+        return reservation;
     }
 
     private async Task<ActivityReservation> AssignNextCoreAsync(string queueId, CancellationToken cancellationToken)

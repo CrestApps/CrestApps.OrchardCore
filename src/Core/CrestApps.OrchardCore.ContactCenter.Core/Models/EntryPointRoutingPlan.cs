@@ -28,6 +28,18 @@ public sealed class EntryPointRoutingPlan
     public string TargetQueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the queued call should first be offered directly to a
+    /// specific agent (<see cref="TargetAgentId"/>) before the queue's normal routing takes over.
+    /// </summary>
+    public bool RouteToAgent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent profile the call should be offered to directly when
+    /// <see cref="RouteToAgent"/> is <see langword="true"/>.
+    /// </summary>
+    public string TargetAgentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the priority to assign to the queued call.
     /// </summary>
     public InteractionPriority Priority { get; set; } = InteractionPriority.Normal;

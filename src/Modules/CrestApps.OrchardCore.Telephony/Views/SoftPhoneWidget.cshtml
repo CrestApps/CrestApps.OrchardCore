@@ -12,10 +12,14 @@
     var capabilities = 0;
     var audioCapabilities = Model.AudioCapabilities is TelephonyAudioCapabilities configuredAudioCapabilities
         ? (int)configuredAudioCapabilities
-        : 0;
+        : Model.AudioCapabilities is int intAudioCapabilities
+            ? intAudioCapabilities
+            : 0;
     var audioMode = Model.AudioMode is TelephonyAudioMode configuredAudioMode
         ? (int)configuredAudioMode
-        : 0;
+        : Model.AudioMode is int intAudioMode
+            ? intAudioMode
+            : 0;
     var browserMediaAdapterName = Model.BrowserMediaAdapterName as string;
     var defaultCountryCode = Model.DefaultCountryCode as string ?? string.Empty;
 

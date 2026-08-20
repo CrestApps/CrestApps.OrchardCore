@@ -236,9 +236,4 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>());
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
     }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddContactCenterHealthEndpoints();
-    }
 }

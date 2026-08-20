@@ -22,4 +22,20 @@ public interface IActivityAssignmentService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of reservations created.</returns>
     Task<int> AssignQueueAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reserves a specific waiting activity for a specific agent, bypassing the queue's routing strategy.
+    /// Used to route a direct-to-agent (personal line) inbound call. Serialized with the same per-queue
+    /// assignment lock as <see cref="AssignNextAsync"/> so it cannot double-reserve the agent or item.
+    /// </summary>
+    /// <param name="activityItemId">The activity whose queue item is reserved.</param>
+    /// <param name="queueId">The queue the item is waiting in.</param>
+    /// <param name="agentId">The agent profile to reserve the item for.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The created reservation, or <see langword="null"/> when the agent or item is unavailable.</returns>
+    Task<ActivityReservation> AssignSpecificAsync(
+        string activityItemId,
+        string queueId,
+        string agentId,
+        CancellationToken cancellationToken = default);
 }

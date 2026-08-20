@@ -28,6 +28,29 @@
     </div>
 </div>
 
+<div class="ocat-limited-wrapper" asp-validation-class-for="TargetType">
+    <label asp-for="TargetType" class="ocat-label">@T["Route to"]</label>
+    <div class="ocat-limited">
+        <select asp-for="TargetType" class="form-select">
+            <option value="@EntryPointTargetType.Queue">@T["Queue"]</option>
+            <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
+        </select>
+        <span asp-validation-for="TargetType" class="text-danger"></span>
+        <span class="hint">@T["Route calls to a queue, or directly to a specific agent (a personal line) with the queue below as the fallback when the agent is unavailable."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TargetAgentId">
+    <label asp-for="TargetAgentId" class="ocat-label">@T["Target agent"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetAgentId" asp-items="Model.TargetAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" data-width="100%" title="@T["No agent"]">
+            <option value="">@T["No agent"]</option>
+        </select>
+        <span asp-validation-for="TargetAgentId" class="text-danger"></span>
+        <span class="hint">@T["Used when Route to is set to Specific agent. Calls ring this agent directly."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="TargetQueueId">
     <label asp-for="TargetQueueId" class="ocat-label">@T["Target queue"]</label>
     <div class="ocat-end">
@@ -35,6 +58,7 @@
             <option value="">@T["No queue"]</option>
         </select>
         <span asp-validation-for="TargetQueueId" class="text-danger"></span>
+        <span class="hint">@T["The queue calls route to. For an agent target this is the fallback used when the agent is unavailable."]</span>
     </div>
 </div>
 

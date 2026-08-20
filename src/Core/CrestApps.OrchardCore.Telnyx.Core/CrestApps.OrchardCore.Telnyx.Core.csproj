@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Telnyx Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Shareable Telnyx contracts and provider-neutral building blocks: constants, settings and options
+      models, the normalized call-event model and parser, the Ed25519 webhook signature validator, the
+      durable browser-credential index, and the service interfaces. Other modules depend on this library
+      instead of the Telnyx module so they never take a dependency on the module's OrchardCore wiring.
+    </Description>
+    <PackageTags>$(PackageTags) Telephony Telnyx Voice</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Telnyx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
+  </ItemGroup>
+
+</Project>

@@ -19,6 +19,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly IContactCenterSkillManager _skillManager;
     private readonly IBusinessHoursCalendarManager _calendarManager;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
+    private readonly IAgentProfileManager _agentProfileManager;
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
 
     /// <summary>
@@ -30,6 +31,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// <param name="skillManager">The Contact Center skill manager.</param>
     /// <param name="calendarManager">The business-hours calendar manager.</param>
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
+    /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="voiceProviders">The registered voice call providers.</param>
     public ContactCenterAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
@@ -38,6 +40,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
         IContactCenterSkillManager skillManager,
         IBusinessHoursCalendarManager calendarManager,
         IOmnichannelChannelEndpointManager channelEndpointManager,
+        IAgentProfileManager agentProfileManager,
         IEnumerable<IContactCenterVoiceProvider> voiceProviders)
     {
         _campaignManager = campaignManager;
@@ -46,7 +49,38 @@ public sealed class ContactCenterAdminFormOptionsProvider
         _skillManager = skillManager;
         _calendarManager = calendarManager;
         _channelEndpointManager = channelEndpointManager;
+        _agentProfileManager = agentProfileManager;
         _voiceProviders = voiceProviders;
+    }
+
+    internal async Task<IList<SelectListItem>> GetAgentOptionsAsync(string selectedAgentId)
+    {
+        var selected = CreateSelectedSet([selectedAgentId], StringComparer.Ordinal);
+        var agents = await _agentProfileManager.GetAllAsync();
+
+        var options = agents
+            .OrderBy(agent => agent.DisplayName ?? agent.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(agent => new SelectListItem(
+                GetAgentText(agent),
+                agent.ItemId,
+                selected.Contains(agent.ItemId)))
+            .ToList();
+
+        AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
+
+        return options;
+    }
+
+    private static string GetAgentText(AgentProfile agent)
+    {
+        var name = string.IsNullOrWhiteSpace(agent.DisplayName) ? agent.Name : agent.DisplayName;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = agent.UserName ?? agent.ItemId;
+        }
+
+        return string.IsNullOrWhiteSpace(agent.UserName) ? name : $"{name} ({agent.UserName})";
     }
 
     internal async Task<IList<SelectListItem>> GetCampaignOptionsAsync(IEnumerable<string> selectedCampaignIds)
@@ -204,6 +238,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task PopulateEntryPointEditorAsync(EntryPointViewModel model)
     {
         model.TargetQueueOptions = await GetQueueOptionsAsync(model.TargetQueueId);
+        model.TargetAgentOptions = await GetAgentOptionsAsync(model.TargetAgentId);
         model.OverflowQueueOptions = await GetQueueOptionsAsync(model.OverflowQueueId);
         model.BusinessHoursCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.BusinessHoursCalendarId);
     }

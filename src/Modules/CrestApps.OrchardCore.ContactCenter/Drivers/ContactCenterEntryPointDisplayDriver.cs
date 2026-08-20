@@ -51,6 +51,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             DialedNumbersText = entryPoint.DialedNumbers is { Count: > 0 }
                 ? string.Join(Environment.NewLine, entryPoint.DialedNumbers)
                 : null,
+            TargetType = entryPoint.TargetType,
+            TargetAgentId = entryPoint.TargetAgentId,
             TargetQueueId = entryPoint.TargetQueueId,
             Priority = entryPoint.Priority,
             BusinessHoursCalendarId = entryPoint.BusinessHoursCalendarId,
@@ -69,6 +71,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.Name = viewModel.Name;
             model.Description = viewModel.Description;
             model.DialedNumbersText = viewModel.DialedNumbersText;
+            model.TargetType = viewModel.TargetType;
+            model.TargetAgentId = viewModel.TargetAgentId;
+            model.TargetAgentOptions = viewModel.TargetAgentOptions;
             model.TargetQueueId = viewModel.TargetQueueId;
             model.TargetQueueOptions = viewModel.TargetQueueOptions;
             model.Priority = viewModel.Priority;
@@ -94,6 +99,10 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();
         entryPoint.DialedNumbers = ParseLines(model.DialedNumbersText);
+        entryPoint.TargetType = model.TargetType;
+        entryPoint.TargetAgentId = model.TargetType == CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType.Agent && !string.IsNullOrWhiteSpace(model.TargetAgentId)
+            ? model.TargetAgentId.Trim()
+            : null;
         entryPoint.TargetQueueId = string.IsNullOrWhiteSpace(model.TargetQueueId) ? null : model.TargetQueueId.Trim();
         entryPoint.Priority = model.Priority;
         entryPoint.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId) ? null : model.BusinessHoursCalendarId.Trim();

@@ -26,7 +26,20 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public IList<string> DialedNumbers { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the identifier of the queue calls route to while the entry point is open.
+    /// Gets or sets what the entry point routes calls to: a queue (default) or a specific agent.
+    /// </summary>
+    public EntryPointTargetType TargetType { get; set; } = EntryPointTargetType.Queue;
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent profile calls route directly to when
+    /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Agent"/>. When that agent is
+    /// unavailable, the call falls back to <see cref="TargetQueueId"/>.
+    /// </summary>
+    public string TargetAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the queue calls route to while the entry point is open. For an
+    /// agent-target entry point this is the fallback queue used when the agent is unavailable.
     /// </summary>
     public string TargetQueueId { get; set; }
 

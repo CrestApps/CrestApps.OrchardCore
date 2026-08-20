@@ -159,4 +159,62 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
 
         return null;
     }
+
+    /// <inheritdoc/>
+    public async Task<string> OfferToAgentAsync(
+        string activityItemId,
+        string queueId,
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+
+        if (workLease is null)
+        {
+            return null;
+        }
+
+        var reservation = await _assignmentService.AssignSpecificAsync(activityItemId, queueId, agentId, cancellationToken);
+
+        if (reservation is null)
+        {
+            return null;
+        }
+
+        var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+        if (agent is null || string.IsNullOrEmpty(agent.UserId))
+        {
+            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
+            return null;
+        }
+
+        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+
+        if (interaction is null)
+        {
+            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
+            return null;
+        }
+
+        if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
+        {
+            await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
+
+            return null;
+        }
+
+        interaction.Reoffer();
+        interaction.AgentId = agent.ItemId;
+        interaction.QueueId = reservation.QueueId;
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        return agent.UserId;
+    }
 }

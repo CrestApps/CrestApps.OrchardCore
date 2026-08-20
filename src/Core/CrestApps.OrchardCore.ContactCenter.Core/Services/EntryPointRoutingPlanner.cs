@@ -31,6 +31,14 @@ public static class EntryPointRoutingPlanner
             plan.ShouldQueue = true;
             plan.TargetQueueId = entryPoint.TargetQueueId;
 
+            // An agent-target entry point still enqueues into the target queue, but the call is first offered
+            // directly to the named agent; the queue then acts as the fallback when that agent is unavailable.
+            if (entryPoint.TargetType == EntryPointTargetType.Agent && !string.IsNullOrEmpty(entryPoint.TargetAgentId))
+            {
+                plan.RouteToAgent = true;
+                plan.TargetAgentId = entryPoint.TargetAgentId;
+            }
+
             return plan;
         }
 

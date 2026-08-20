@@ -35,6 +35,14 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public int MaxConcurrentInteractions { get; set; } = 1;
 
     /// <summary>
+    /// Gets or sets the caller identifier (E.164) presented on this agent's outbound calls, such as the
+    /// agent's assigned direct dial number. When empty, the provider's default caller id is used. Providers
+    /// that support per-call caller id (for example Telnyx) present this value on agent-initiated and dialer
+    /// calls so callbacks reach the agent.
+    /// </summary>
+    public string OutboundCallerId { get; set; }
+
+    /// <summary>
     /// Gets or sets the current presence state of the agent.
     /// </summary>
     public AgentPresenceStatus PresenceStatus { get; set; }

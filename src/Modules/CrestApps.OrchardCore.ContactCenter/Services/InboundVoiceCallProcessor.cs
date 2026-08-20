@@ -320,7 +320,17 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         await _queueService.EnqueueAsync(activity.ItemId, queue.ItemId, priority, cancellationToken);
         result.Queued = true;
 
-        var agentUserId = await _offerService.OfferNextAsync(queue.ItemId, cancellationToken);
+        // Agent-target entry points offer the call directly to the named agent first; when that agent is
+        // unavailable the offer falls through to the queue's normal routing so the personal line degrades to
+        // ordinary queue handling instead of stranding the caller.
+        string agentUserId = null;
+
+        if (plan is not null && plan.RouteToAgent && !string.IsNullOrEmpty(plan.TargetAgentId))
+        {
+            agentUserId = await _offerService.OfferToAgentAsync(activity.ItemId, queue.ItemId, plan.TargetAgentId, cancellationToken);
+        }
+
+        agentUserId ??= await _offerService.OfferNextAsync(queue.ItemId, cancellationToken);
 
         if (string.IsNullOrEmpty(agentUserId))
         {

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Telnyx Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Integrates the Telnyx voice platform as a provider for the CrestApps Telephony soft phone, with a
+      browser WebRTC soft phone, signed call-event webhooks, and Contact Center server-side call bridging.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony Telnyx</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Depend directly on the Telephony module so installing Telnyx resolves the Telephony feature
+      dependency without a separate manual package reference. The base Telnyx telephony feature depends
+      only on the provider-agnostic Telephony abstractions; the optional Telnyx Contact Center Voice
+      feature additionally implements the Contact Center voice extension contract, which is why this
+      assembly also references ContactCenter.Abstractions above.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

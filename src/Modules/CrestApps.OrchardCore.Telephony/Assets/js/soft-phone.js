@@ -9,6 +9,32 @@
 (function () {
     'use strict';
 
+    // Chrome requires RTCP multiplexing, but the Telnyx SDP answer omits "a=rtcp-mux", so
+    // setRemoteDescription rejects the answer ("RTCP-MUX is not enabled") and the call is torn down on
+    // answer. Patch setRemoteDescription once to add a=rtcp-mux to any audio m-section of an answer that
+    // lacks it; RTP still flows on the single muxed port, so audio negotiates and connects.
+    function ensureRtcpMuxAnswerWorkaround() {
+        if (typeof RTCPeerConnection === 'undefined' || RTCPeerConnection.prototype.__rtcpMuxAnswerPatched) {
+            return;
+        }
+
+        var originalSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
+
+        RTCPeerConnection.prototype.setRemoteDescription = function (description) {
+            if (description && description.type === 'answer' && description.sdp &&
+                description.sdp.indexOf('a=rtcp-mux') === -1) {
+                description = {
+                    type: description.type,
+                    sdp: description.sdp.replace(/(m=audio[^\r\n]*\r?\n)/g, '$1a=rtcp-mux\r\n')
+                };
+            }
+
+            return originalSetRemoteDescription.apply(this, [description].concat(Array.prototype.slice.call(arguments, 1)));
+        };
+
+        RTCPeerConnection.prototype.__rtcpMuxAnswerPatched = true;
+    }
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -29,6 +55,26 @@
         Browser: 1,
         ExternalDevice: 2
     };
+
+    // The widget config renders the audio mode as its numeric enum value, but the SignalR hub serializes the
+    // same enum by name (for example "Browser"). Normalize both forms to the numeric value before comparing.
+    function normalizeAudioMode(value) {
+        if (typeof value === 'number') {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            if (Object.prototype.hasOwnProperty.call(AUDIO_MODES, value)) {
+                return AUDIO_MODES[value];
+            }
+
+            var parsed = parseInt(value, 10);
+
+            return isNaN(parsed) ? -1 : parsed;
+        }
+
+        return -1;
+    }
 
     var normalizeState = window.telephonyClient.normalizeCallState;
 
@@ -135,6 +181,8 @@
     }
 
     function createSipJsSession(sip, context, registrationConfig) {
+        ensureRtcpMuxAnswerWorkaround();
+
         var signaling = registrationConfig.signaling || {};
         var credential = registrationConfig.credential || {};
         var ice = registrationConfig.ice || {};
@@ -277,6 +325,94 @@
             return {
                 providerConfig: registrationConfig,
                 mediaCodecs: media.codecs || [],
+                // Whether the browser places its own outbound calls (Telnyx) instead of the server originating
+                // a leg to this registered client.
+                canOriginate: !!registrationConfig.clientOriginatesCalls,
+                outboundCallerId: registrationConfig.outboundCallerId || '',
+                // Places an outbound call from the registered browser client and returns a controller. The
+                // caller id, when supplied, is presented as the SIP P-Asserted-Identity (required by Telnyx).
+                // onState receives soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
+                originate: function (destination, callerId, onState) {
+                    var notify = typeof onState === 'function' ? onState : function () { };
+
+                    if (disposed) {
+                        notify('Disconnected');
+
+                        return null;
+                    }
+
+                    var atIndex = (signaling.sipUri || '').indexOf('@');
+                    var domain = atIndex >= 0
+                        ? signaling.sipUri.substring(atIndex + 1).replace(/[;>].*$/, '')
+                        : 'sip.telnyx.com';
+                    var targetUri = sip.UserAgent.makeURI('sip:' + destination + '@' + domain);
+
+                    if (!targetUri) {
+                        notify('Disconnected');
+
+                        return null;
+                    }
+
+                    var extraHeaders = [];
+
+                    if (callerId) {
+                        extraHeaders.push('P-Asserted-Identity: <sip:' + callerId + '@' + domain + '>');
+                    }
+
+                    var inviter = new sip.Inviter(userAgent, targetUri, {
+                        // Early media is intentionally off: negotiating media on a provisional (183) response
+                        // caused the session to terminate mid-ring. Media is set up from the 200 OK on answer.
+                        earlyMedia: false,
+                        sessionDescriptionHandlerOptions: {
+                            constraints: { audio: true, video: false }
+                        },
+                        extraHeaders: extraHeaders
+                    });
+
+                    wireSession(inviter);
+
+                    inviter.stateChange.addListener(function (state) {
+                        if (state === 'Established') {
+                            setMicrophoneEnabled(true);
+                            notify('Connected');
+                        } else if (state === 'Terminating' || state === 'Terminated') {
+                            notify('Disconnected');
+                        }
+                    });
+
+                    Promise.resolve(inviter.invite({
+                        requestDelegate: {
+                            onProgress: function () { notify('Ringing'); },
+                            onReject: function () { notify('Disconnected'); }
+                        }
+                    })).catch(function () {
+                        notify('Disconnected');
+                    });
+
+                    return {
+                        terminate: function () {
+                            var currentState = inviter.state;
+
+                            // An established call is ended with BYE; an INVITE that has not been answered yet
+                            // must be cancelled (CANCEL), which BYE cannot do.
+                            if (currentState === 'Established') {
+                                return Promise.resolve(inviter.bye()).catch(function () { });
+                            }
+
+                            if (currentState === 'Initial' || currentState === 'Establishing') {
+                                return Promise.resolve(inviter.cancel()).catch(function () { });
+                            }
+
+                            if (typeof inviter.dispose === 'function') {
+                                return Promise.resolve(inviter.dispose()).catch(function () { });
+                            }
+
+                            return Promise.resolve();
+                        },
+                        setHold: function (hold) { return requestHold(hold); },
+                        setMute: function (mute) { setMicrophoneEnabled(!mute); return Promise.resolve(); }
+                    };
+                },
                 handleCallState: function (call) {
                     var stateName = normalizeState(call && call.state);
 
@@ -399,6 +535,8 @@
     }
 
     function createSipJsSession(sip, context, registrationConfig) {
+        ensureRtcpMuxAnswerWorkaround();
+
         var signaling = registrationConfig.signaling || {};
         var credential = registrationConfig.credential || {};
         var ice = registrationConfig.ice || {};
@@ -541,6 +679,94 @@
             return {
                 providerConfig: registrationConfig,
                 mediaCodecs: media.codecs || [],
+                // Whether the browser places its own outbound calls (Telnyx) instead of the server originating
+                // a leg to this registered client.
+                canOriginate: !!registrationConfig.clientOriginatesCalls,
+                outboundCallerId: registrationConfig.outboundCallerId || '',
+                // Places an outbound call from the registered browser client and returns a controller. The
+                // caller id, when supplied, is presented as the SIP P-Asserted-Identity (required by Telnyx).
+                // onState receives soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
+                originate: function (destination, callerId, onState) {
+                    var notify = typeof onState === 'function' ? onState : function () { };
+
+                    if (disposed) {
+                        notify('Disconnected');
+
+                        return null;
+                    }
+
+                    var atIndex = (signaling.sipUri || '').indexOf('@');
+                    var domain = atIndex >= 0
+                        ? signaling.sipUri.substring(atIndex + 1).replace(/[;>].*$/, '')
+                        : 'sip.telnyx.com';
+                    var targetUri = sip.UserAgent.makeURI('sip:' + destination + '@' + domain);
+
+                    if (!targetUri) {
+                        notify('Disconnected');
+
+                        return null;
+                    }
+
+                    var extraHeaders = [];
+
+                    if (callerId) {
+                        extraHeaders.push('P-Asserted-Identity: <sip:' + callerId + '@' + domain + '>');
+                    }
+
+                    var inviter = new sip.Inviter(userAgent, targetUri, {
+                        // Early media is intentionally off: negotiating media on a provisional (183) response
+                        // caused the session to terminate mid-ring. Media is set up from the 200 OK on answer.
+                        earlyMedia: false,
+                        sessionDescriptionHandlerOptions: {
+                            constraints: { audio: true, video: false }
+                        },
+                        extraHeaders: extraHeaders
+                    });
+
+                    wireSession(inviter);
+
+                    inviter.stateChange.addListener(function (state) {
+                        if (state === 'Established') {
+                            setMicrophoneEnabled(true);
+                            notify('Connected');
+                        } else if (state === 'Terminating' || state === 'Terminated') {
+                            notify('Disconnected');
+                        }
+                    });
+
+                    Promise.resolve(inviter.invite({
+                        requestDelegate: {
+                            onProgress: function () { notify('Ringing'); },
+                            onReject: function () { notify('Disconnected'); }
+                        }
+                    })).catch(function () {
+                        notify('Disconnected');
+                    });
+
+                    return {
+                        terminate: function () {
+                            var currentState = inviter.state;
+
+                            // An established call is ended with BYE; an INVITE that has not been answered yet
+                            // must be cancelled (CANCEL), which BYE cannot do.
+                            if (currentState === 'Established') {
+                                return Promise.resolve(inviter.bye()).catch(function () { });
+                            }
+
+                            if (currentState === 'Initial' || currentState === 'Establishing') {
+                                return Promise.resolve(inviter.cancel()).catch(function () { });
+                            }
+
+                            if (typeof inviter.dispose === 'function') {
+                                return Promise.resolve(inviter.dispose()).catch(function () { });
+                            }
+
+                            return Promise.resolve();
+                        },
+                        setHold: function (hold) { return requestHold(hold); },
+                        setMute: function (mute) { setMicrophoneEnabled(!mute); return Promise.resolve(); }
+                    };
+                },
                 handleCallState: function (call) {
                     var stateName = normalizeState(call && call.state);
 
@@ -756,6 +982,9 @@
         var browserAudioPromise = null;
         var browserAudioSession = null;
         var localAudioStream = null;
+        // Controllers for calls the browser originated itself (client-originated providers such as Telnyx),
+        // keyed by the synthetic call id. Server-tracked calls are not in this map.
+        var browserCallControllers = {};
 
         // The phone number input is enhanced with intl-tel-input so a national number entered on the
         // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
@@ -1020,7 +1249,7 @@
 
             browserAudioPromise = connection.invoke('GetCredentials').then(function (credentials) {
                 if (!credentials ||
-                    credentials.audioMode !== AUDIO_MODES.Browser ||
+                    normalizeAudioMode(credentials.audioMode) !== AUDIO_MODES.Browser ||
                     credentials.browserMediaAdapterName !== config.browserMediaAdapterName) {
                     throw new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.');
                 }
@@ -1052,6 +1281,12 @@
         }
 
         function notifyBrowserAudio(call) {
+            // Browser-originated calls drive their own SIP session directly; the passive-answer bridging here
+            // must not touch them (it would toggle the mic or terminate the live session).
+            if (call && call.browserOriginated) {
+                return;
+            }
+
             if (!browserAudioSession || !localAudioStream) {
                 return;
             }
@@ -1078,6 +1313,79 @@
 
                 return null;
             });
+        }
+
+        // Places an outbound call. When the active provider delivers audio to this browser and expects the
+        // browser to originate its own calls (Telnyx), the call is dialed directly from the registered SIP
+        // client; otherwise the server places it over the hub as before.
+        function placeCall(number, isExtension) {
+            return ensureBrowserAudio().then(function (session) {
+                if (session && session.canOriginate && typeof session.originate === 'function') {
+                    originateBrowserCall(session, number);
+
+                    return null;
+                }
+
+                return invoke('Dial', { to: number, isExtension: isExtension });
+            }).catch(function (error) {
+                showError(error && error.message ? error.message : String(error));
+
+                return null;
+            });
+        }
+
+        function originateBrowserCall(session, number) {
+            var callId = 'browser-' + Date.now();
+            var call = {
+                callId: callId,
+                state: 'Connecting',
+                direction: 'Outbound',
+                to: number,
+                from: session.outboundCallerId || '',
+                startedUtc: new Date().toISOString(),
+                isMuted: false,
+                isOnHold: false,
+                browserOriginated: true,
+                metadata: {}
+            };
+
+            upsertActiveCall(call, true);
+            render();
+
+            var controller = session.originate(number, session.outboundCallerId, function (stateName) {
+                var existing = activeCalls[callId];
+
+                if (!existing) {
+                    return;
+                }
+
+                // Preserve a local hold state (the SIP session has no distinct hold signal to the UI).
+                if (!(stateName === 'Connected' && existing.isOnHold)) {
+                    existing.state = stateName;
+                }
+
+                if (stateName === 'Disconnected') {
+                    removeActiveCall(callId);
+                    delete browserCallControllers[callId];
+                } else {
+                    upsertActiveCall(existing, false);
+                }
+
+                render();
+            });
+
+            if (controller) {
+                browserCallControllers[callId] = controller;
+            } else {
+                removeActiveCall(callId);
+                render();
+            }
+        }
+
+        function currentBrowserController() {
+            return currentCall && currentCall.browserOriginated
+                ? browserCallControllers[currentCall.callId] || null
+                : null;
         }
 
         function showView(name) {
@@ -1766,7 +2074,9 @@
             }
 
             show(dom.dial, canDial && has(CAPABILITIES.Dial));
-            show(dom.hangup, liveMedia && has(CAPABILITIES.Hangup));
+            // Allow hanging up (cancelling) while the call is still connecting or ringing, not only once media
+            // is live, so an outbound call that has not been answered yet can still be ended.
+            show(dom.hangup, active && has(CAPABILITIES.Hangup));
             show(dom.hangupAll, calls.length > 1 && has(CAPABILITIES.Hangup));
             show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
             show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
@@ -1859,9 +2169,20 @@
 
             var calls = result.calls || [];
             var previousCallId = currentCall ? currentCall.callId : null;
+
+            // The server does not track browser-originated calls, so a server active-calls lookup must not
+            // erase them; carry them over so a poll during a live browser call cannot blank the UI.
+            var preservedBrowserCalls = Object.keys(activeCalls)
+                .map(function (id) { return activeCalls[id]; })
+                .filter(function (call) { return call && call.browserOriginated; });
+
             activeCalls = {};
 
             calls.forEach(function (call) {
+                upsertActiveCall(call, false);
+            });
+
+            preservedBrowserCalls.forEach(function (call) {
                 upsertActiveCall(call, false);
             });
 
@@ -1978,7 +2299,7 @@
             clearNumberInput();
             numberIsCallDisplay = false;
 
-            invokeWithBrowserAudio('Dial', { to: number, isExtension: extensionMode });
+            placeCall(number, extensionMode);
         }
 
         function dialNumber(number) {
@@ -1992,10 +2313,18 @@
             clearNumberInput();
             numberIsCallDisplay = false;
 
-            invokeWithBrowserAudio('Dial', { to: normalizeDialNumber(number) });
+            placeCall(normalizeDialNumber(number), false);
         }
 
         function hangup() {
+            var controller = currentBrowserController();
+
+            if (controller) {
+                Promise.resolve(controller.terminate()).catch(function () { });
+
+                return;
+            }
+
             var call = currentCallReference();
 
             if (call) {
@@ -2006,14 +2335,29 @@
         function hangupAll() {
             var calls = getActiveCalls();
 
-            if (!connection || !calls.length || activeCommand) {
+            // End browser-originated calls directly on their SIP sessions; they have no server-side call.
+            calls.filter(function (call) {
+                return call.browserOriginated;
+            }).forEach(function (call) {
+                var controller = browserCallControllers[call.callId];
+
+                if (controller) {
+                    Promise.resolve(controller.terminate()).catch(function () { });
+                }
+            });
+
+            var serverCalls = calls.filter(function (call) {
+                return !call.browserOriginated;
+            });
+
+            if (!connection || !serverCalls.length || activeCommand) {
                 return Promise.resolve(null);
             }
 
             activeCommand = 'HangupAll';
             render();
 
-            return Promise.all(calls.map(function (call) {
+            return Promise.all(serverCalls.map(function (call) {
                 return connection.invoke('Hangup', {
                     callId: call.callId,
                     metadata: call.metadata || null
@@ -2033,6 +2377,18 @@
         }
 
         function hold() {
+            var controller = currentBrowserController();
+
+            if (controller) {
+                Promise.resolve(controller.setHold(true)).catch(function () { });
+                currentCall.isOnHold = true;
+                currentCall.state = 'OnHold';
+                upsertActiveCall(currentCall, true);
+                render();
+
+                return;
+            }
+
             var call = currentCallReference();
 
             if (call) {
@@ -2041,6 +2397,18 @@
         }
 
         function resume() {
+            var controller = currentBrowserController();
+
+            if (controller) {
+                Promise.resolve(controller.setHold(false)).catch(function () { });
+                currentCall.isOnHold = false;
+                currentCall.state = 'Connected';
+                upsertActiveCall(currentCall, true);
+                render();
+
+                return;
+            }
+
             var call = currentCallReference();
 
             if (call) {
@@ -2049,6 +2417,16 @@
         }
 
         function mute() {
+            var controller = currentBrowserController();
+
+            if (controller) {
+                controller.setMute(true);
+                currentCall.isMuted = true;
+                render();
+
+                return;
+            }
+
             var call = currentCallReference();
 
             if (call) {
@@ -2057,6 +2435,16 @@
         }
 
         function unmute() {
+            var controller = currentBrowserController();
+
+            if (controller) {
+                controller.setMute(false);
+                currentCall.isMuted = false;
+                render();
+
+                return;
+            }
+
             var call = currentCallReference();
 
             if (call) {
@@ -2835,9 +3223,19 @@
 
                 if (isTerminal) {
                     if (!call || !call.callId) {
+                        // Keep browser-originated calls; this server signal is about server-tracked calls only.
+                        var keptBrowserCalls = Object.keys(activeCalls)
+                            .map(function (id) { return activeCalls[id]; })
+                            .filter(function (existing) { return existing && existing.browserOriginated; });
+
                         activeCalls = {};
                         conferenceSelections = {};
-                        currentCall = null;
+
+                        keptBrowserCalls.forEach(function (existing) {
+                            activeCalls[existing.callId] = existing;
+                        });
+
+                        currentCall = getActiveCalls()[0] || null;
                         incomingHandled = false;
                     } else {
                         var tracked = !!activeCalls[call.callId];
@@ -2974,6 +3372,9 @@
             if (dom.number) {
                 dom.number.addEventListener('input', function () {
                     numberIsCallDisplay = false;
+                    // Clear a transient error (for example "Enter a phone number to call.") as soon as the
+                    // user starts entering a number.
+                    showError(null);
                 });
                 dom.number.addEventListener('focus', function () {
                     if (currentCall && normalizeState(currentCall.state) === 'OnHold') {

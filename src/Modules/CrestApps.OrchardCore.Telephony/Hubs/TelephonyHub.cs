@@ -87,7 +87,18 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The dial request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Dial(DialRequest request)
-        => ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
+    {
+        if (request is not null && !string.IsNullOrEmpty(Context.UserIdentifier))
+        {
+            // Stamp the caller's identity so a provider that delivers audio to a per-user browser endpoint
+            // (Telnyx WebRTC) can resolve this agent's live soft-phone registration and bridge the outbound
+            // call to their browser. Providers without browser audio ignore the key.
+            request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
+        }
+
+        return ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
+    }
 
     /// <summary>
     /// Ends an active call.

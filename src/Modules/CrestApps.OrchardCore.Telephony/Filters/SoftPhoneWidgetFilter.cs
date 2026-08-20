@@ -109,6 +109,16 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
 
         _resourceManager.RegisterResource("stylesheet", "intl-tel-input").AtHead();
         _resourceManager.RegisterResource("stylesheet", "telephony-soft-phone").AtHead();
+
+        // The WebRTC soft phone needs the SIP.js library (window.SIP) for the browser audio adapter.
+        // Only load it when the active provider actually offers browser audio through that adapter, so
+        // providers without in-browser media (for example Dialpad) don't pull an extra ~270 KB.
+        if (audioMode == TelephonyAudioMode.Browser &&
+            string.Equals(audioProvider?.BrowserMediaAdapterName, "sipjs", StringComparison.OrdinalIgnoreCase))
+        {
+            _resourceManager.RegisterResource("script", "sip.js").AtFoot();
+        }
+
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();
         _resourceManager.RegisterResource("script", "telephony-phone-field").AtFoot();
 

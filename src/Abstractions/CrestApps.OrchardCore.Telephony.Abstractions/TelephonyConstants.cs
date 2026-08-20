@@ -43,6 +43,13 @@ public static class TelephonyConstants
         /// Identifies the monotonic fence token associated with an idempotent provider command.
         /// </summary>
         public const string FenceToken = "commandFenceToken";
+
+        /// <summary>
+        /// Identifies the authenticated user placing a soft phone command. Providers that deliver audio to a
+        /// per-user browser endpoint (such as Telnyx WebRTC) use it to resolve the caller's live soft-phone
+        /// registration so an outbound call can be bridged to their browser.
+        /// </summary>
+        public const string SoftPhoneUserId = "softPhoneUserId";
     }
 
     /// <summary>
