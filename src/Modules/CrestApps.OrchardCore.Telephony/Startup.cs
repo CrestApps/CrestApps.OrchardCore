@@ -91,6 +91,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
         services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
         services.AddTransient<IPostConfigureOptions<TelephonySettings>, TelephonySettingsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<TelephonyProviderOptions>();
 
         services.AddScoped<ITelephonyUserAccessor, DefaultTelephonyUserAccessor>();
         services.AddScoped<ITelephonyUserTokenStore, DefaultTelephonyUserTokenStore>();
