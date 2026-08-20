@@ -24,7 +24,6 @@ public sealed class ContactCenterSetupRecipeTests
             "CrestApps.OrchardCore.Telephony.SoftPhone",
             "CrestApps.OrchardCore.ContactCenter.Dialer",
             "CrestApps.OrchardCore.Asterisk",
-            "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
         ],
         ["ga-core-dialpad"] =
         [
@@ -35,7 +34,6 @@ public sealed class ContactCenterSetupRecipeTests
             "CrestApps.OrchardCore.Telephony.SoftPhone",
             "CrestApps.OrchardCore.ContactCenter.Dialer",
             "CrestApps.OrchardCore.Dialpad",
-            "CrestApps.OrchardCore.Dialpad.ContactCenterVoice",
         ],
     };
 

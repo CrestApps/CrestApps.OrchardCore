@@ -14,7 +14,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(AsteriskConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {
@@ -208,7 +208,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(AsteriskConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {

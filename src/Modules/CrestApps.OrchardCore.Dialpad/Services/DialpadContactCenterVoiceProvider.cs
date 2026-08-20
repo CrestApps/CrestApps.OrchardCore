@@ -50,7 +50,7 @@ public sealed class DialpadContactCenterVoiceProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(DialpadConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(DialpadConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {
@@ -65,7 +65,7 @@ public sealed class DialpadContactCenterVoiceProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(DialpadConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(DialpadConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {

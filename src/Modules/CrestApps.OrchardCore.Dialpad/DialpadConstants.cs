@@ -119,6 +119,15 @@ public static class DialpadConstants
         => $"{GetBaseUrl(environment, host)}/api/v2/";
 
     /// <summary>
+    /// The stable work-admission partition key that guards in-flight Dialpad Contact Center voice work so it can
+    /// be quiesced and drained across shell reloads. It is not an Orchard feature: the Dialpad Contact Center
+    /// voice adapter is now integration glue that activates whenever the Dialpad provider and Contact Center
+    /// Voice are both enabled. The value is intentionally kept equal to the former feature identifier so
+    /// partitioned leases and provider-command recovery survive the upgrade.
+    /// </summary>
+    public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Dialpad.ContactCenterVoice";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Dialpad module.
     /// </summary>
     public static class Feature
@@ -127,10 +136,5 @@ public static class DialpadConstants
         /// The identifier of the Dialpad provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Dialpad";
-
-        /// <summary>
-        /// The identifier of the Dialpad Contact Center voice-provider feature.
-        /// </summary>
-        public const string ContactCenterVoice = "CrestApps.OrchardCore.Dialpad.ContactCenterVoice";
     }
 }

@@ -332,10 +332,49 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
         await _application.StopAsync();
         await _application.DisposeAsync();
 
-        if (Directory.Exists(_applicationDataPath))
+        // Microsoft.Data.Sqlite pools its connections for reuse, and a pooled connection keeps the underlying
+        // database file handle open even after the host and its YesSql store are disposed. On Windows an open
+        // handle blocks deleting the file, so the per-test data directory cannot be removed and DisposeAsync
+        // throws; on Linux the open handle does not block the delete, which is why this only bites on Windows.
+        // Clearing the pools releases the handles so teardown is deterministic on every platform.
+        ClearSqliteConnectionPools();
+
+        await TryDeleteApplicationDataAsync();
+    }
+
+    private async Task TryDeleteApplicationDataAsync()
+    {
+        // Even after the pools are cleared the operating system can take a moment to release the file handle, so
+        // the delete is retried briefly rather than failing the test on a transient lock.
+        for (var attempt = 0; ; attempt++)
         {
-            Directory.Delete(_applicationDataPath, recursive: true);
+            if (!Directory.Exists(_applicationDataPath))
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(_applicationDataPath, recursive: true);
+
+                return;
+            }
+            catch (Exception exception) when ((exception is IOException or UnauthorizedAccessException) && attempt < 10)
+            {
+                await Task.Delay(100);
+            }
         }
+    }
+
+    private static void ClearSqliteConnectionPools()
+    {
+        // Microsoft.Data.Sqlite is only a transitive dependency of the CMS targets, so its connection type is
+        // reached by name rather than through a compile-time reference. The assembly is always loaded here
+        // because every test tenant is set up on SQLite.
+        var connectionType = Type.GetType("Microsoft.Data.Sqlite.SqliteConnection, Microsoft.Data.Sqlite");
+        connectionType
+            ?.GetMethod("ClearAllPools", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?.Invoke(null, null);
     }
 
     private async Task SetupTenantAsync(ShellSettings settings)
@@ -449,9 +488,13 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
 
     private static string GetProviderFeature(ContactCenterTenantProfile profile)
     {
-        return profile.Features.Single(featureId =>
-            featureId.EndsWith(".ContactCenterVoice", StringComparison.Ordinal) &&
-            !featureId.StartsWith("CrestApps.OrchardCore.ContactCenter.", StringComparison.Ordinal));
+        // The provider's Contact Center voice adapter is no longer a dedicated feature: it is integration glue
+        // gated on the provider module and Contact Center Voice. Toggling the provider module feature therefore
+        // activates and deactivates the voice-provider registration, so that is the feature the disable/re-enable
+        // round trip exercises.
+        return GetExpectedProviderName(profile) == "Asterisk"
+            ? "CrestApps.OrchardCore.Asterisk"
+            : "CrestApps.OrchardCore.Dialpad";
     }
 
     private static string GetExpectedProviderName(ContactCenterTenantProfile profile)

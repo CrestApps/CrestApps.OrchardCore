@@ -94,7 +94,7 @@ internal sealed class AsteriskContactCenterVoiceMediaProvider : IContactCenterVo
         }
 
         var udpClient = BindUdpClient(request.Metadata);
-        var workLease = _workManager.TryEnter(AsteriskConstants.Feature.ContactCenterMedia);
+        var workLease = _workManager.TryEnter(AsteriskConstants.ContactCenterMediaWorkPartition);
 
         if (workLease is null)
         {

@@ -79,9 +79,12 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Registers the Telnyx implementation of the Contact Center voice provider boundary.
+/// Registers the Telnyx implementation of the Contact Center voice provider boundary. This is integration
+/// glue rather than a separately selectable feature: it activates automatically whenever the Telnyx provider
+/// and Contact Center Voice are both enabled, so an operator never has to enable a redundant per-provider
+/// toggle that must match the provider they already configured.
 /// </summary>
-[Feature(TelnyxConstants.Feature.ContactCenterVoice)]
+[RequireFeatures(TelnyxConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
 public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -92,6 +95,15 @@ public sealed class DialerStartup : StartupBase
             .AddSingleton<IProviderIdentityProvider, TelnyxProviderIdentityProvider>()
             .AddScoped<ITelnyxInboundCallRouter, ContactCenterTelnyxInboundCallRouter>()
             .AddScoped<IProviderWebhookInboxHandler, TelnyxWebhookInboxHandler>()
-            .AddScoped<IContactCenterFeatureLifecycleParticipant, TelnyxContactCenterFeatureLifecycleParticipant>();
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new TelnyxContactCenterFeatureLifecycleParticipant(
+                    TelnyxConstants.Feature.Area,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new TelnyxContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.Voice,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
     }
 }

@@ -64,6 +64,15 @@ public static class TelnyxConstants
     public const string WebhookPath = "api/telnyx/webhook/call";
 
     /// <summary>
+    /// The stable work-admission partition key that guards in-flight Telnyx Contact Center voice work so it can
+    /// be quiesced and drained across shell reloads. It is not an Orchard feature: the Telnyx Contact Center
+    /// voice adapter is now integration glue that activates whenever the Telnyx provider and Contact Center Voice
+    /// are both enabled. The value is intentionally kept equal to the former feature identifier so partitioned
+    /// leases and provider-command recovery survive the upgrade.
+    /// </summary>
+    public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Telnyx.ContactCenterVoice";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Telnyx module.
     /// </summary>
     public static class Feature
@@ -72,10 +81,5 @@ public static class TelnyxConstants
         /// The identifier of the Telnyx provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Telnyx";
-
-        /// <summary>
-        /// The identifer of the Telnyx Content Center Voice feature.
-        /// </summary>
-        public const string ContactCenterVoice = "CrestApps.OrchardCore.Telnyx.ContactCenterVoice";
     }
 }

@@ -18,8 +18,7 @@
         "CrestApps.OrchardCore.ContactCenter.InboundVoice",
         "CrestApps.OrchardCore.Telephony.SoftPhone",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
-        "CrestApps.OrchardCore.Asterisk",
-        "CrestApps.OrchardCore.Asterisk.ContactCenterVoice"
+        "CrestApps.OrchardCore.Asterisk"
       ]
     }
   ]

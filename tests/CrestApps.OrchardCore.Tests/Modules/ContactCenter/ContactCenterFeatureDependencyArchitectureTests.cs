@@ -538,8 +538,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>()",
                 StringComparison.Ordinal));
         var asteriskBaseDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk"].Dependencies;
-        var asteriskVoiceDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterVoice"].Dependencies;
-        var asteriskMediaDependencies = asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterMedia"].Dependencies;
         var asteriskVoiceOwner = asteriskStartups.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IContactCenterVoiceProvider, AsteriskContactCenterVoiceProvider>()",
@@ -557,7 +555,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()",
                 StringComparison.Ordinal));
         var dialPadBaseDependencies = dialPadFeatures["CrestApps.OrchardCore.Dialpad"].Dependencies;
-        var dialPadVoiceDependencies = dialPadFeatures["CrestApps.OrchardCore.Dialpad.ContactCenterVoice"].Dependencies;
         var dialPadVoiceOwner = dialPadStartups.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialpadContactCenterVoiceProvider>())",
@@ -566,41 +563,59 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             startup.FeatureId == "CrestApps.OrchardCore.Asterisk"
             && startup.RequiredFeatureIds.Count == 0);
 
-        // Assert
+        // Assert: the Contact Center Voice Media boundary stays an owned Contact Center feature, but a provider's
+        // participation in it (and in Contact Center Voice) is no longer a dedicated per-provider feature. Each
+        // provider adapter is integration glue owned by the provider's own module feature and gated with
+        // [RequireFeatures] on the provider module plus the Contact Center capability it composes, so it
+        // activates automatically once the provider and the capability are both enabled.
         Assert.Equal(["CrestApps.OrchardCore.ContactCenter.Voice"], mediaDependencies);
         Assert.True(contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].EnabledByDependencyOnly);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.Media", mediaResolverOwner.FeatureId);
+        Assert.False(
+            asteriskFeatures.ContainsKey("CrestApps.OrchardCore.Asterisk.ContactCenterVoice"),
+            "The Asterisk Contact Center voice adapter is integration glue and must not be a selectable feature.");
+        Assert.False(
+            asteriskFeatures.ContainsKey("CrestApps.OrchardCore.Asterisk.ContactCenterMedia"),
+            "The Asterisk Contact Center media adapter is integration glue and must not be a selectable feature.");
+        Assert.False(
+            dialPadFeatures.ContainsKey("CrestApps.OrchardCore.Dialpad.ContactCenterVoice"),
+            "The Dialpad Contact Center voice adapter is integration glue and must not be a selectable feature.");
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], asteriskBaseDependencies);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskVoiceOwner.FeatureId);
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.Asterisk",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
             ],
-            asteriskVoiceDependencies);
+            asteriskVoiceOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
+        Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskMediaOwner.FeatureId);
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.Asterisk.ContactCenterVoice",
+                "CrestApps.OrchardCore.Asterisk",
                 "CrestApps.OrchardCore.ContactCenter.Voice.Media",
             ],
-            asteriskMediaDependencies);
-        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskVoiceOwner.FeatureId);
+            asteriskMediaOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         // The Contact Center projection is a peer consumer of the provider-neutral normalized stream, so it
         // is owned by the Contact Center voice feature rather than by any one provider module. A provider
         // module that owned it would be able to absorb the stream and starve every other projection.
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice", contactCenterVoiceProjectionOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterVoice", asteriskContactCenterReconcilerOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.Asterisk.ContactCenterMedia", asteriskMediaOwner.FeatureId);
-        Assert.True(asteriskFeatures["CrestApps.OrchardCore.Asterisk.ContactCenterMedia"].EnabledByDependencyOnly);
+        Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskContactCenterReconcilerOwner.FeatureId);
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.Asterisk",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
+            asteriskContactCenterReconcilerOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.DoesNotContain("IProviderVoiceEventService", asteriskBaseStartup.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("IProviderCallStateSynchronizationService", asteriskBaseStartup.Body, StringComparison.Ordinal);
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], dialPadBaseDependencies);
+        Assert.Equal("CrestApps.OrchardCore.Dialpad", dialPadVoiceOwner.FeatureId);
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.Dialpad",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
+                "CrestApps.OrchardCore.Dialpad",
             ],
-            dialPadVoiceDependencies);
-        Assert.Equal("CrestApps.OrchardCore.Dialpad.ContactCenterVoice", dialPadVoiceOwner.FeatureId);
+            dialPadVoiceOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
     }
 
     [Fact]

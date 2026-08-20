@@ -151,6 +151,23 @@ public static class AsteriskConstants
     public const string CoordinationConfigurationSectionPath = "CrestApps:Asterisk:Coordination";
 
     /// <summary>
+    /// The stable work-admission partition key that guards in-flight Asterisk Contact Center voice work so it can
+    /// be quiesced and drained across shell reloads. It is not an Orchard feature: the Asterisk Contact Center
+    /// voice adapter is now integration glue that activates whenever the Asterisk provider and Contact Center
+    /// Voice are both enabled. The value is intentionally kept equal to the former feature identifier so
+    /// partitioned leases and provider-command recovery survive the upgrade.
+    /// </summary>
+    public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Asterisk.ContactCenterVoice";
+
+    /// <summary>
+    /// The stable work-admission partition key that guards in-flight Asterisk Contact Center media work. It is
+    /// not an Orchard feature: the Asterisk bidirectional-media adapter is now integration glue that activates
+    /// whenever the Asterisk provider and Contact Center Voice Media are both enabled. The value is intentionally
+    /// kept equal to the former feature identifier so partitioned leases survive the upgrade.
+    /// </summary>
+    public const string ContactCenterMediaWorkPartition = "CrestApps.OrchardCore.Asterisk.ContactCenterMedia";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Asterisk module.
     /// </summary>
     public static class Feature
@@ -159,15 +176,5 @@ public static class AsteriskConstants
         /// The identifier of the Asterisk provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Asterisk";
-
-        /// <summary>
-        /// The identifier of the Asterisk Contact Center voice-adapter feature.
-        /// </summary>
-        public const string ContactCenterVoice = "CrestApps.OrchardCore.Asterisk.ContactCenterVoice";
-
-        /// <summary>
-        /// The identifier of the Asterisk Contact Center bidirectional-media feature.
-        /// </summary>
-        public const string ContactCenterMedia = "CrestApps.OrchardCore.Asterisk.ContactCenterMedia";
     }
 }

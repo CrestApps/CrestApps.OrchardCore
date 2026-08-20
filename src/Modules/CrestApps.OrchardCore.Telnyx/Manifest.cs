@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
 using OrchardCore.Modules.Manifest;
@@ -16,22 +15,10 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = TelnyxConstants.Feature.Area,
     Name = "Telnyx",
-    Description = "Provides the Telnyx telephony provider, its browser WebRTC soft phone, and signed call-event webhooks.",
+    Description = "Provides the Telnyx telephony provider, its browser WebRTC soft phone, and signed call-event webhooks. When Contact Center Voice is also enabled, the Telnyx provider automatically participates in contact center call orchestration.",
     Category = "Telephony",
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
-    Id = TelnyxConstants.Feature.ContactCenterVoice,
-    Name = "Telnyx Contact Center Voice",
-    Description = "Enables the Telnyx provider to place outbound contact center calls, bridge live calls to agents, and handle their real-time call events.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        TelnyxConstants.Feature.Area,
-        ContactCenterConstants.Feature.Voice,
     ]
 )]

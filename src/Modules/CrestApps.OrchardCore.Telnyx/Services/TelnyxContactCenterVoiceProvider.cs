@@ -74,7 +74,7 @@ public sealed class TelnyxContactCenterVoiceProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(TelnyxConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(TelnyxConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {
@@ -126,7 +126,7 @@ public sealed class TelnyxContactCenterVoiceProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(TelnyxConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(TelnyxConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {
@@ -237,7 +237,7 @@ public sealed class TelnyxContactCenterVoiceProvider :
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(TelnyxConstants.Feature.ContactCenterVoice);
+        using var workLease = _workManager.TryEnter(TelnyxConstants.ContactCenterVoiceWorkPartition);
 
         if (workLease is null)
         {

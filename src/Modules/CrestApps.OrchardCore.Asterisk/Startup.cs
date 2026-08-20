@@ -143,9 +143,12 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Registers the Asterisk Contact Center voice adapter.
+/// Registers the Asterisk Contact Center voice adapter. This is integration glue rather than a separately
+/// selectable feature: it activates automatically whenever the Asterisk provider and Contact Center Voice are
+/// both enabled, so an operator never has to enable a redundant per-provider toggle that must match the
+/// provider they already configured.
 /// </summary>
-[Feature(AsteriskConstants.Feature.ContactCenterVoice)]
+[RequireFeatures(AsteriskConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
 public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -168,7 +171,14 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IAsteriskRecordingIngestService, AsteriskRecordingIngestService>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    AsteriskConstants.Feature.ContactCenterVoice,
+                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ContactCenterVoiceWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.Voice,
+                    AsteriskConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
@@ -182,9 +192,11 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 }
 
 /// <summary>
-/// Registers Asterisk bidirectional RTP media for Contact Center voice calls.
+/// Registers Asterisk bidirectional RTP media for Contact Center voice calls. This is integration glue rather
+/// than a separately selectable feature: it activates automatically whenever the Asterisk provider and Contact
+/// Center Voice Media are both enabled.
 /// </summary>
-[Feature(AsteriskConstants.Feature.ContactCenterMedia)]
+[RequireFeatures(AsteriskConstants.Feature.Area, ContactCenterConstants.Feature.VoiceMedia)]
 public sealed class AsteriskContactCenterMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -193,7 +205,14 @@ public sealed class AsteriskContactCenterMediaStartup : StartupBase
             .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    AsteriskConstants.Feature.ContactCenterMedia,
+                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ContactCenterMediaWorkPartition,
+                    serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
+                    serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
+            .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
+                new AsteriskContactCenterFeatureLifecycleParticipant(
+                    ContactCenterConstants.Feature.VoiceMedia,
+                    AsteriskConstants.ContactCenterMediaWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
     }
