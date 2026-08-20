@@ -18,10 +18,11 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// bridges the live call to the agent's browser SIP endpoint, so the provider uses the
 /// <see cref="VoiceProviderDeliveryModel.ServerSideAcd"/> delivery model.
 /// </summary>
-public sealed class TelnyxContactCenterVoiceProvider :
+public sealed partial class TelnyxContactCenterVoiceProvider :
     IContactCenterVoiceProvider,
     IContactCenterVoiceCallControlProvider,
-    IContactCenterVoiceTransferProvider
+    IContactCenterVoiceTransferProvider,
+    IContactCenterVoiceRecordingProvider
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -64,7 +65,8 @@ public sealed class TelnyxContactCenterVoiceProvider :
     public ContactCenterVoiceProviderCapabilities Capabilities
         => ContactCenterVoiceProviderCapabilities.DialerDial |
             ContactCenterVoiceProviderCapabilities.AgentConnect |
-            ContactCenterVoiceProviderCapabilities.CallTransfer;
+            ContactCenterVoiceProviderCapabilities.CallTransfer |
+            ContactCenterVoiceProviderCapabilities.Recording;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.ServerSideAcd;

@@ -14,6 +14,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
+    private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
     private readonly IClock _clock;
 
     /// <summary>
@@ -22,16 +23,22 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     /// <param name="normalizedVoiceEventIngestor">The shared voice-event ingestor.</param>
     /// <param name="inboundCallRouter">The inbound-call router.</param>
     /// <param name="outboundBridgeOrchestrator">The outbound soft-phone bridge orchestrator.</param>
+    /// <param name="recordingSavedHandlers">
+    /// The optional handlers for finished recordings. When Contact Center Voice is enabled a handler ingests the
+    /// recording into the encrypted media store; when none are registered, saved-recording events are ignored.
+    /// </param>
     /// <param name="clock">The clock used to stamp event times.</param>
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         ITelnyxInboundCallRouter inboundCallRouter,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
+        IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
         IClock clock)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
+        _recordingSavedHandlers = recordingSavedHandlers;
         _clock = clock;
     }
 
@@ -48,6 +55,21 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)
         {
             return TelnyxWebhookResult.Updated;
+        }
+
+        // A finished recording is not a call-state transition, so it is dispatched to the recording handlers
+        // before state mapping. When Contact Center Voice is enabled a handler ingests the recording into the
+        // encrypted media store; otherwise there are no handlers and the event is ignored below.
+        if (string.Equals(callEvent.EventType?.Trim(), TelnyxConstants.Recording.SavedEventType, StringComparison.OrdinalIgnoreCase))
+        {
+            var recordingHandled = false;
+
+            foreach (var handler in _recordingSavedHandlers)
+            {
+                recordingHandled |= await handler.HandleAsync(callEvent, cancellationToken);
+            }
+
+            return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
         }
 
         if (string.IsNullOrEmpty(callEvent.CallControlId) || !TryMapState(callEvent, out var state))

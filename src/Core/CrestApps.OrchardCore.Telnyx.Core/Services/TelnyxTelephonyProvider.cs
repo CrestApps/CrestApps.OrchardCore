@@ -98,11 +98,11 @@ public sealed class TelnyxTelephonyProvider :
             return Task.FromResult<TelephonyClientCredentials>(null);
         }
 
-        // The browser registers directly with the Telnyx SIP-over-WebSocket registrar using a short-lived
-        // credential minted by the soft-phone registration endpoint, so the client credentials only need to
-        // declare that Telnyx delivers browser audio through the shared SIP.js adapter. The audio fields are
-        // set explicitly because the registration endpoint reads the provider's raw credentials without the
-        // enrichment the SignalR credential path applies.
+        // The browser logs in to Telnyx's WebRTC gateway with a short-lived credential minted by the
+        // soft-phone registration endpoint, so the client credentials only need to declare that Telnyx
+        // delivers browser audio through the Telnyx WebRTC SDK adapter. The audio fields are set explicitly
+        // because the registration endpoint reads the provider's raw credentials without the enrichment the
+        // SignalR credential path applies.
         return Task.FromResult(new TelephonyClientCredentials
         {
             ProviderName = TelnyxConstants.ProviderTechnicalName,
