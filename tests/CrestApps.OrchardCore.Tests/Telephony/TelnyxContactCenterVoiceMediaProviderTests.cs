@@ -273,7 +273,7 @@ public sealed class TelnyxContactCenterVoiceMediaProviderTests
         string siteBaseUrl = null,
         TimeSpan? connectTimeout = null)
     {
-        var options = Options.Create(new TelnyxOptions
+        var options = new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions
         {
             IsEnabled = true,
             ApiKey = configured ? "KEY" : null,

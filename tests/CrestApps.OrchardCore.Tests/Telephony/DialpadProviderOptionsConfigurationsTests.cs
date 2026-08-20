@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
-using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -13,7 +13,7 @@ public sealed class DialpadProviderOptionsConfigurationsTests
     public void Configure_RegistersDialpadProvider_WithEnabledStateFromResolvedSettings(bool enabled)
     {
         // Arrange
-        var resolvedOptions = Options.Create(new DialpadOptions
+        var resolvedOptions = new TestOptionsMonitor<DialpadOptions>(new DialpadOptions
         {
             IsEnabled = enabled,
         });

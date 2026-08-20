@@ -756,7 +756,7 @@ public sealed class DialpadTelephonyProviderTests
             CreateResolvedOptions(settings, dataProtectionProvider));
     }
 
-    private static IOptions<DialpadOptions> CreateResolvedOptions(
+    private static IOptionsMonitor<DialpadOptions> CreateResolvedOptions(
         DialpadSettings settings,
         IDataProtectionProvider dataProtectionProvider)
     {
@@ -768,6 +768,6 @@ public sealed class DialpadTelephonyProviderTests
 
         configuration.Configure(options);
 
-        return Options.Create(options);
+        return new TestOptionsMonitor<DialpadOptions>(options);
     }
 }
