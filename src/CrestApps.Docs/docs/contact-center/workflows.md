@@ -5,9 +5,9 @@ title: Contact Center Workflows Automation
 description: React to Contact Center domain events and drive presence, queueing, callbacks, and recording from Orchard Core Workflows without writing code.
 ---
 
-The **Workflows** bridge (`CrestApps.OrchardCore.ContactCenter.Workflows`) exposes the Contact Center to the Orchard Core [Workflows](https://docs.orchardcore.net/en/latest/reference/modules/Workflows/) module. It contributes one event activity that starts or resumes a workflow whenever a domain event is published, and a set of task activities that let a no-code author act on the contact center in response.
+The **Workflows** bridge exposes the Contact Center to the Orchard Core [Workflows](https://docs.orchardcore.net/en/latest/reference/modules/Workflows/) module. It contributes one event activity that starts or resumes a workflow whenever a domain event is published, and a set of task activities that let a no-code author act on the contact center in response.
 
-Enable `CrestApps.OrchardCore.ContactCenter.Workflows` alongside `OrchardCore.Workflows`. The task activities are additionally gated on the capability that owns the underlying service, so an activity only appears in the editor when its capability is enabled and its service is guaranteed to be resolvable.
+The bridge is not a separate feature. Simply enable `OrchardCore.Workflows` alongside Contact Center and the event activity becomes available automatically. The task activities are additionally gated on the capability that owns the underlying service, so an activity only appears in the editor when its capability is enabled and its service is guaranteed to be resolvable.
 
 ## Contact Center Event
 

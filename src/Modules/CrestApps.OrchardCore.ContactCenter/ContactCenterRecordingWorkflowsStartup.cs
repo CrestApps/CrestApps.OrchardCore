@@ -7,11 +7,11 @@ using OrchardCore.Workflows.Helpers;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers the call-recording workflow tasks, available only when both the Workflows bridge and the
+/// Registers the call-recording workflow tasks, available only when both Orchard Core Workflows and the
 /// Recording feature are enabled so the required recording service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Workflows)]
-[RequireFeatures(ContactCenterConstants.Feature.Recording)]
+[Feature(ContactCenterConstants.Feature.Recording)]
+[RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterRecordingWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -51,7 +51,7 @@ public sealed class ContactCenterTopologyEvaluatorTests
         });
 
         Assert.False(result.IsSatisfied);
-        Assert.Contains(result.Failures, failure => failure.Contains("CrestApps_ContactCenter:Topology:ProfileId", StringComparison.Ordinal));
+        Assert.Contains(result.Failures, failure => failure.Contains("CrestApps:ContactCenter:Topology:ProfileId", StringComparison.Ordinal));
         Assert.Contains(result.Failures, failure => failure.Contains(ContactCenterTopologyProfiles.SingleNodeDistributedId, StringComparison.Ordinal));
     }
 

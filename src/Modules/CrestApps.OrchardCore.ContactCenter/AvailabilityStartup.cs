@@ -39,7 +39,7 @@ public sealed class AvailabilityStartup : StartupBase
     {
         services
             .AddOptions<AgentAvailabilityOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Availability"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Availability"))
             .Validate(options => options.HeartbeatTimeout > TimeSpan.Zero, "HeartbeatTimeout must be greater than zero.")
             .Validate(options => options.MaximumWrapUpDuration > TimeSpan.Zero, "MaximumWrapUpDuration must be greater than zero.")
             .ValidateOnStart();

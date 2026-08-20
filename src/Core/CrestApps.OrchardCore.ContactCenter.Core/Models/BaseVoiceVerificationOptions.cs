@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// The operator's declaration that the base-voice audio path has been verified for this deployment.
 /// </summary>
 /// <remarks>
-/// Bound from the <c>CrestApps_ContactCenter:BaseVoiceVerification</c> configuration section. Whether the
+/// Bound from the <c>CrestApps:ContactCenter:BaseVoiceVerification</c> configuration section. Whether the
 /// end-to-end WebRTC media path works — trusted certificates, TURN relay, direct ICE, restart drain, and a
 /// measured capacity floor — is a property of a <em>deployment</em> and its infrastructure, not of the
 /// capability code, so it cannot be proven in the application build. It is proven once against the reference

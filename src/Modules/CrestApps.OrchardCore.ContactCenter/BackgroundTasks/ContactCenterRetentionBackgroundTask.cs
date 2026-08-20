@@ -36,7 +36,7 @@ public sealed class ContactCenterRetentionBackgroundTask : IBackgroundTask
                     report.Entities.Where(entity => entity.WorkRemains).Select(entity => entity.EntityName));
 
                 logger.LogWarning(
-                    "Contact Center retention purged {PurgedCount} records but did not reach steady state for: {StarvedEntities}. Raise 'CrestApps_ContactCenter:Retention:MaxPurgeBatchesPerCycle' or shorten the retention windows.",
+                    "Contact Center retention purged {PurgedCount} records but did not reach steady state for: {StarvedEntities}. Raise 'CrestApps:ContactCenter:Retention:MaxPurgeBatchesPerCycle' or shorten the retention windows.",
                     report.TotalPurged,
                     starvedEntities);
             }

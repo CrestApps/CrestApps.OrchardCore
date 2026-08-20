@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// The operator-declared deployment topology for this tenant.
 /// </summary>
 /// <remarks>
-/// Bound from the <c>CrestApps_ContactCenter:Topology</c> configuration section.
+/// Bound from the <c>CrestApps:ContactCenter:Topology</c> configuration section.
 /// </remarks>
 public sealed class ContactCenterTopologyOptions
 {

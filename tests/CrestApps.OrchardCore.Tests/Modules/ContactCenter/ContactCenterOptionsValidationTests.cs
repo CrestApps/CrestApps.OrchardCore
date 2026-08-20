@@ -112,9 +112,9 @@ public sealed class ContactCenterOptionsValidationTests
     }
 
     [Theory]
-    [InlineData("CrestApps_ContactCenter:Retention:InteractionEventRetentionDays", "-1")]
-    [InlineData("CrestApps_ContactCenter:Retention:ProjectionReplayHorizonDays", "-1")]
-    [InlineData("CrestApps_ContactCenter:Retention:LegalHoldMinimumDays", "-1")]
+    [InlineData("CrestApps:ContactCenter:Retention:InteractionEventRetentionDays", "-1")]
+    [InlineData("CrestApps:ContactCenter:Retention:ProjectionReplayHorizonDays", "-1")]
+    [InlineData("CrestApps:ContactCenter:Retention:LegalHoldMinimumDays", "-1")]
     public void RetentionOptions_WhenAWindowIsNegative_AreRejected(string key, string value)
     {
         var exception = Assert.Throws<OptionsValidationException>(
@@ -124,10 +124,10 @@ public sealed class ContactCenterOptionsValidationTests
     }
 
     [Theory]
-    [InlineData("CrestApps_ContactCenter:HealthChecks:DeadLetterDegradedThreshold", "0")]
-    [InlineData("CrestApps_ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold", "0")]
-    [InlineData("CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready", "0")]
-    [InlineData("CrestApps_ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady", "0")]
+    [InlineData("CrestApps:ContactCenter:HealthChecks:DeadLetterDegradedThreshold", "0")]
+    [InlineData("CrestApps:ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold", "0")]
+    [InlineData("CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready", "0")]
+    [InlineData("CrestApps:ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady", "0")]
     public void HealthCheckOptions_WhenAThresholdIsBelowOne_AreRejected(string key, string value)
     {
         Assert.Throws<OptionsValidationException>(
@@ -152,8 +152,8 @@ public sealed class ContactCenterOptionsValidationTests
         var exception = Assert.Throws<OptionsValidationException>(() => ResolveContactCenterOptions<ContactCenterHealthCheckOptions>(
             new Dictionary<string, string>
             {
-                ["CrestApps_ContactCenter:HealthChecks:DeadLetterDegradedThreshold"] = "10",
-                ["CrestApps_ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold"] = "5",
+                ["CrestApps:ContactCenter:HealthChecks:DeadLetterDegradedThreshold"] = "10",
+                ["CrestApps:ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold"] = "5",
             }));
 
         Assert.Contains(
@@ -166,7 +166,7 @@ public sealed class ContactCenterOptionsValidationTests
     {
         // A typo that fell through to the default would be a silent downgrade out of the production topology.
         var exception = Assert.Throws<OptionsValidationException>(() => ResolveContactCenterOptions<ContactCenterTopologyOptions>(
-            "CrestApps_ContactCenter:Topology:ProfileId",
+            "CrestApps:ContactCenter:Topology:ProfileId",
             "single-node-distributedd"));
 
         Assert.Contains(
@@ -190,7 +190,7 @@ public sealed class ContactCenterOptionsValidationTests
         // Acknowledging the base-voice path is the operator asserting a proof run happened, so it cannot be a
         // bare boolean flip: without a retained-evidence reference there is nothing to trace the claim to.
         var exception = Assert.Throws<OptionsValidationException>(() => ResolveContactCenterOptions<BaseVoiceVerificationOptions>(
-            "CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged",
+            "CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged",
             "true"));
 
         Assert.Contains(
@@ -203,8 +203,8 @@ public sealed class ContactCenterOptionsValidationTests
     {
         var options = ResolveContactCenterOptions<BaseVoiceVerificationOptions>(new Dictionary<string, string>
         {
-            ["CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged"] = "true",
-            ["CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationEvidenceReference"] = "https://evidence/base-voice-proof",
+            ["CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged"] = "true",
+            ["CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationEvidenceReference"] = "https://evidence/base-voice-proof",
         });
 
         Assert.True(options.AudioVerificationAcknowledged);

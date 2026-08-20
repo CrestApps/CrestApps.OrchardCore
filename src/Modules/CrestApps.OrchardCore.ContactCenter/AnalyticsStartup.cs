@@ -15,9 +15,10 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the reporting and analytics experience: the reporting service that aggregates interactions
 /// and activities into productivity, call insights, queue usage, and campaign/subject progress reports,
-/// and the Reports admin navigation.
+/// and the Reports admin navigation. Available whenever both the Work Distribution and Reports features
+/// are enabled, so no separate feature is required.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Analytics)]
+[RequireFeatures(ContactCenterConstants.Feature.Queues, ReportsConstants.Feature)]
 public sealed class AnalyticsStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
@@ -35,10 +36,10 @@ public sealed class AnalyticsStartup : StartupBase
 
         services
             .AddOptions<ContactCenterReportingOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Reporting"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Reporting"))
             .Validate(
                 options => options.MaximumReportRange > TimeSpan.Zero,
-                "'CrestApps_ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
+                "'CrestApps:ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
             .ValidateOnStart();
 
         services

@@ -12,8 +12,8 @@ namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 /// publishing a zero that reads as an operational result.
 /// </summary>
 /// <remarks>
-/// The analytics feature deliberately does not depend on the voice or recording capabilities: forcing telephony onto a
-/// chat-only tenant to read a queue report would be a worse outcome than the one being fixed. What it must not do is
+/// The reports deliberately do not depend on the voice or recording capabilities: forcing telephony onto a
+/// chat-only tenant to read a queue report would be a worse outcome than the one being fixed. What they must not do is
 /// keep publishing the reports those capabilities feed. A tenant without recording that reads "recording coverage: 0%"
 /// has been told its calls are not being recorded, which is a compliance statement, not a measurement.
 /// <para>
@@ -46,7 +46,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-contract",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Analytics],
+            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
         });
 
         var undeclared = await host.ExecuteInTenantScopeAsync(tenant, serviceProvider =>
@@ -79,7 +79,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-degradation",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Analytics],
+            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
         });
 
         var result = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -166,7 +166,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-columns",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Analytics],
+            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
         });
 
         var result = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -250,7 +250,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-independence",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Analytics],
+            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
         });
 
         var dragged = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>

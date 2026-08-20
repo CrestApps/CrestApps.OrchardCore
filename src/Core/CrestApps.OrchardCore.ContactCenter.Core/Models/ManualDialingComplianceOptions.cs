@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 /// Represents the compliance policy applied to manual, agent-initiated outbound calls placed through the
 /// soft phone. Manual dialing is treated separately from automated campaign dialing because the two are
 /// governed differently, but a manual call must still be screened before it is placed. It is bound from
-/// the <c>CrestApps_ContactCenter:Compliance:ManualDialing</c> configuration section.
+/// the <c>CrestApps:ContactCenter:Compliance:ManualDialing</c> configuration section.
 /// </summary>
 public sealed class ManualDialingComplianceOptions
 {

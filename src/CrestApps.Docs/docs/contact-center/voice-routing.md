@@ -93,13 +93,15 @@ Configure tenant-local limits in shell configuration:
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "WebhookIngress": {
-      "ConcurrencyPermitLimit": 8,
-      "RatePermitLimit": 120,
-      "RatePeriodSeconds": 60,
-      "MaximumDeliveryAgeSeconds": 900,
-      "MaximumFutureSkewSeconds": 120
+  "CrestApps": {
+    "ContactCenter": {
+      "WebhookIngress": {
+        "ConcurrencyPermitLimit": 8,
+        "RatePermitLimit": 120,
+        "RatePeriodSeconds": 60,
+        "MaximumDeliveryAgeSeconds": 900,
+        "MaximumFutureSkewSeconds": 120
+      }
     }
   }
 }

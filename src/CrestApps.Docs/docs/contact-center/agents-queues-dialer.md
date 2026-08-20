@@ -20,9 +20,10 @@ This phase adds the operational core of the Contact Center: agent presence, work
 | Contact Center Voice Media | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Dependency-only, non-GA executable media resolution foundation; transport certification is deferred to R9. |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence, offer, and queue projections over the workforce availability state. Enabled by dependency only (auto-enabled by Contact Center Voice and Supervision). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Live supervisor dashboard, queue and agent monitoring state, and provider-capability-gated monitoring actions. |
-| Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Enterprise report catalog under the shared Reports area, including executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports. |
 
 > The server-side voice orchestration (`CrestApps.OrchardCore.ContactCenter.Voice`) is enabled automatically as a dependency of Inbound Voice, the Dialer, Recording, and Supervision, so it is not a separately selectable feature. It in turn pulls in Contact Center Real-Time.
+
+> The **enterprise report catalog** (executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports plus CSV exports) is not a separately selectable feature. It activates automatically under the shared Reports area whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled.
 
 > The **CRM-integrated Agent Workspace** and each **provider contact center adapter** (Asterisk voice, Asterisk media, Dialpad voice) are integration glue rather than selectable features. The Agent Workspace activates whenever Contact Center Agents, Contact Center Voice, Contact Center Real-Time, and the Telephony soft phone are all enabled. A provider's voice adapter activates whenever that provider module and Contact Center Voice are both enabled (the Asterisk media adapter, whenever the Asterisk module and Contact Center Voice Media are both enabled), so an operator never enables a per-provider toggle that has to match the provider they already configured.
 
@@ -42,10 +43,12 @@ Availability policy is tenant configuration:
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "Availability": {
-      "HeartbeatTimeout": "00:01:30",
-      "MaximumWrapUpDuration": "00:15:00"
+  "CrestApps": {
+    "ContactCenter": {
+      "Availability": {
+        "HeartbeatTimeout": "00:01:30",
+        "MaximumWrapUpDuration": "00:15:00"
+      }
     }
   }
 }
@@ -162,7 +165,7 @@ Before every attempt, `IDialerEligibilityService` runs and records an auditable 
 - **Abandonment cap** - when *Enforce an abandonment cap* is enabled for an automated pacing mode (Power/Progressive), the profile's rolling live-answer/abandon statistics must stay at or below `MaxAbandonmentRatePercent`. The cap is only evaluated once the rolling window has accumulated at least `AbandonmentSampleFloor` live answers, and it **fails closed**: an automated profile that enforces the cap but cannot prove its current rate is suppressed. Manual and Preview modes bind an agent per call and are always permitted.
 - **National do-not-call registries** - any registered `INationalDoNotCallRegistry` (for example the USA FTC or Canada DNCL registries) is scrubbed when *Respect do-not-call* is enabled. Registries receive the canonical number, never a raw or partially normalized one, so a registry cannot be asked about a different number than the one being dialed. Registry screening **fails closed**: a registry that is unreachable or rejecting requests has reported nothing rather than reported the number as unlisted, and the attempt is suppressed with `ComplianceScreeningUnavailable`. That suppression is deliberately **not terminal** - the destination was never shown to be off limits, only unverified, so the activity stays available for a later cycle instead of being cancelled because a registry had a bad minute. A registry that has no credentials configured is simply not participating and does not suppress anything.
 
-When an automated profile enforces the abandonment cap, **safe-harbor messaging** must be enabled with an announcement so a live party that no agent reaches hears a caller-identifying message instead of a silent drop. `CrestApps_ContactCenter:Compliance:AbandonmentRollingWindowMinutes` (default 30, range 1-1440) sets the rolling measurement window and is validated on start.
+When an automated profile enforces the abandonment cap, **safe-harbor messaging** must be enabled with an announcement so a live party that no agent reaches hears a caller-identifying message instead of a silent drop. `CrestApps:ContactCenter:Compliance:AbandonmentRollingWindowMinutes` (default 30, range 1-1440) sets the rolling measurement window and is validated on start.
 
 Answering-machine detection (AMD) outcomes reported by the provider are mapped to a provider-neutral `AnswerClassification` (`Human`, `Machine`, `Fax`, `Unknown`) and stored on the call session and interaction technical metadata under the stable `amd_answer_classification` key for downstream pacing and analytics.
 
@@ -174,7 +177,7 @@ The campaign gate above governs the automated and preview dialer paths. Agent-in
 
 The base **Contact Center Outbound Dialer** registers a manual-call screener that applies the same do-not-call and calling-window rules to soft-phone dials. The screener resolves the destination to E.164, looks up the matching contact, and suppresses the dial when the contact has opted out, when the destination is on a national do-not-call registry, or when *Enforce a calling window* is enabled and the destination's calendar reports closed. A destination that cannot be parsed fails closed while do-not-call enforcement is on. Every suppression publishes a `ManualDialSuppressed` audit event so manual originations carry the same suppression trail as campaign attempts.
 
-Manual screening is configured under `CrestApps_ContactCenter:Compliance:ManualDialing`:
+Manual screening is configured under `CrestApps:ContactCenter:Compliance:ManualDialing`:
 
 | Setting | Default | Description |
 | --- | --- | --- |
@@ -217,7 +220,7 @@ Agent state reason codes are a catalog-backed admin surface (**Interaction Cente
         "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
-        "CrestApps.OrchardCore.ContactCenter.Analytics",
+        "CrestApps.OrchardCore.Reports",
         "CrestApps.OrchardCore.Dialpad"
       ]
     }

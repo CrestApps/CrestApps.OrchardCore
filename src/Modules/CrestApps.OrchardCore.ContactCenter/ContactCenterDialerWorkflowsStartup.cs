@@ -7,11 +7,11 @@ using OrchardCore.Workflows.Helpers;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Registers the Schedule Callback workflow task, available only when both the Workflows bridge and the
+/// Registers the Schedule Callback workflow task, available only when both Orchard Core Workflows and the
 /// Dialer feature are enabled so the required callback service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Workflows)]
-[RequireFeatures(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterConstants.Feature.Dialer)]
+[RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterDialerWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

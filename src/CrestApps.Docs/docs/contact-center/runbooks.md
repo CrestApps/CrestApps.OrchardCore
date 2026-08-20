@@ -13,7 +13,7 @@ Every runbook uses the same signals so responders do not have to learn per-incid
 - **Metrics** from the `CrestApps.OrchardCore.ContactCenter` meter: `contactcenter.outbox.redelivered` and `contactcenter.outbox.dead_lettered` (tagged by `reason`). On tenants that enable Voice, the `CrestApps.OrchardCore.Asterisk` meter adds three counters tagged by `provider`: `asterisk.realtime.ingestion.saturated` counts real-time buffer saturation episodes (a sustained rise means the dispatcher is falling behind the provider event stream); `asterisk.realtime.connected` counts successful ARI event-stream connections (first connect plus every reconnect), so it is the listener connectivity signal; and `asterisk.realtime.reconnect_attempted` counts reconnection attempts, so a sustained rate is connection churn and an early warning that events may be missed between reconciliation sweeps.
 - **Traces** from the `CrestApps.OrchardCore.ContactCenter` activity source.
 
-Thresholds are configurable under `CrestApps_ContactCenter:HealthChecks`; tune them per deployment before relying on the states below.
+Thresholds are configurable under `CrestApps:ContactCenter:HealthChecks`; tune them per deployment before relying on the states below.
 
 ## General triage
 

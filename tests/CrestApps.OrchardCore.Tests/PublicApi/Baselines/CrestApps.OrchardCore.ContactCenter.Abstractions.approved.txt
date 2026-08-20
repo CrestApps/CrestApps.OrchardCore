@@ -97,7 +97,6 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class Feature
         {
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
-            public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
@@ -109,7 +108,6 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
             public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
             public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
-            public const string Workflows = "CrestApps.OrchardCore.ContactCenter.Workflows";
         }
         public static class HealthChecks
         {

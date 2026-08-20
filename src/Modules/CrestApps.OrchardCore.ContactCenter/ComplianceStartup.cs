@@ -29,7 +29,7 @@ public sealed class ComplianceStartup : StartupBase
     {
         services
             .AddOptions<ContactCenterComplianceOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Compliance"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Compliance"))
             .Validate(
                 options => options.AbandonmentRollingWindowMinutes is >= 1 and <= 1440,
                 "The Contact Center abandonment rolling window must be between 1 and 1440 minutes.")
@@ -37,7 +37,7 @@ public sealed class ComplianceStartup : StartupBase
 
         services
             .AddOptions<ManualDialingComplianceOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Compliance:ManualDialing"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Compliance:ManualDialing"))
             .Validate(
                 options => !options.EnforceCallingWindow || !string.IsNullOrWhiteSpace(options.CallingCalendarId),
                 "Manual dialing calling-window enforcement requires a calling calendar id.")

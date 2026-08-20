@@ -185,7 +185,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void WorkflowBridge_HasAnIndependentlySelectableFeature()
+    public void WorkflowBridge_ActivatesWithOrchardWorkflows_WithoutASeparateFeature()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -197,22 +197,19 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ContactCenterConstantsFeatureArea(repositoryRoot));
 
         // Act
-        var dependencies = features["CrestApps.OrchardCore.ContactCenter.Workflows"].Dependencies
-            .Order(StringComparer.Ordinal);
         var workflowHandlerOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>()",
                 StringComparison.Ordinal));
 
-        // Assert
+        // Assert. The workflow bridge is no longer an independently selectable feature: it is owned by the base
+        // Contact Center feature and activates whenever Orchard Core Workflows is also enabled, so an operator does
+        // not have to enable a separate feature to get workflow automation.
+        Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Workflows", features.Keys);
+        Assert.Equal("CrestApps.OrchardCore.ContactCenter", workflowHandlerOwner.FeatureId);
         Assert.Equal(
-            [
-                "CrestApps.OrchardCore.ContactCenter",
-                "OrchardCore.Workflows",
-            ],
-            dependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.Workflows", workflowHandlerOwner.FeatureId);
-        Assert.Empty(workflowHandlerOwner.RequiredFeatureIds);
+            ["OrchardCore.Workflows"],
+            workflowHandlerOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
     }
 
     [Fact]

@@ -62,7 +62,7 @@ public static class ContactCenterTopologyEvaluator
                     Failures =
                     [
                         "The host is running in a production environment but no Contact Center topology profile is declared. " +
-                        $"Set 'CrestApps_ContactCenter:Topology:ProfileId' to '{ContactCenterTopologyProfiles.SingleNodeDistributedId}'.",
+                        $"Set 'CrestApps:ContactCenter:Topology:ProfileId' to '{ContactCenterTopologyProfiles.SingleNodeDistributedId}'.",
                     ],
                 }
                 : new ContactCenterTopologyValidationResult

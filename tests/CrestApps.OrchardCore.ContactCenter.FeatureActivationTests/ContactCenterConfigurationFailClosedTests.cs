@@ -35,7 +35,7 @@ public sealed class ContactCenterConfigurationFailClosedTests
         await using var host = await ContactCenterFeatureActivationHost.StartAsync(
             shellConfiguration: new Dictionary<string, string>
             {
-                ["CrestApps_ContactCenter:Retention:InteractionEventRetentionDays"] = "-5",
+                ["CrestApps:ContactCenter:Retention:InteractionEventRetentionDays"] = "-5",
             });
 
         // Act
@@ -49,7 +49,7 @@ public sealed class ContactCenterConfigurationFailClosedTests
 
         Assert.Contains(
             validationFailure.Failures,
-            failure => failure.Contains("CrestApps_ContactCenter:Retention:InteractionEventRetentionDays", StringComparison.Ordinal));
+            failure => failure.Contains("CrestApps:ContactCenter:Retention:InteractionEventRetentionDays", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class ContactCenterConfigurationFailClosedTests
         await using var host = await ContactCenterFeatureActivationHost.StartAsync(
             shellConfiguration: new Dictionary<string, string>
             {
-                ["CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready"] = "0",
+                ["CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready"] = "0",
             });
 
         var tenant = await host.CreateTenantAsync(CreateProfile());
@@ -68,7 +68,7 @@ public sealed class ContactCenterConfigurationFailClosedTests
 
         Assert.Contains(
             Unwrap(exception).Failures,
-            failure => failure.Contains("CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready", StringComparison.Ordinal));
+            failure => failure.Contains("CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class ContactCenterConfigurationFailClosedTests
         await using var host = await ContactCenterFeatureActivationHost.StartAsync(
             shellConfiguration: new Dictionary<string, string>
             {
-                ["CrestApps_ContactCenter:Topology:ProfileId"] = "single-node-distributedd",
+                ["CrestApps:ContactCenter:Topology:ProfileId"] = "single-node-distributedd",
             });
 
         var tenant = await host.CreateTenantAsync(CreateProfile());
@@ -98,9 +98,9 @@ public sealed class ContactCenterConfigurationFailClosedTests
         await using var host = await ContactCenterFeatureActivationHost.StartAsync(
             shellConfiguration: new Dictionary<string, string>
             {
-                ["CrestApps_ContactCenter:Retention:InteractionEventRetentionDays"] = "30",
-                ["CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready"] = "3",
-                ["CrestApps_ContactCenter:Topology:ProfileId"] = "single-node-distributed",
+                ["CrestApps:ContactCenter:Retention:InteractionEventRetentionDays"] = "30",
+                ["CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready"] = "3",
+                ["CrestApps:ContactCenter:Topology:ProfileId"] = "single-node-distributed",
             });
 
         var tenant = await host.CreateTenantAsync(CreateProfile());

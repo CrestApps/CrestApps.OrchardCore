@@ -41,8 +41,10 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 | --- | --- | --- |
 | Contact Center Real-Time | `CrestApps.OrchardCore.ContactCenter.RealTime` | Shared SignalR hub and real-time presence/offer/queue broadcasts (enabled by dependency only). |
 | Contact Center Supervision & Live Dashboard | `CrestApps.OrchardCore.ContactCenter.Supervision` | Real-time supervisor dashboard and provider-gated monitoring actions. |
-| Contact Center Reports & Analytics | `CrestApps.OrchardCore.ContactCenter.Analytics` | Executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports. |
-| Contact Center - Workflows | `CrestApps.OrchardCore.ContactCenter.Workflows` | Contact Center domain-event activity and bridge for Orchard Core Workflows. |
+
+> **Reports & analytics** are not a separate feature. The executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports activate automatically whenever both Contact Center Work Distribution (`CrestApps.OrchardCore.ContactCenter.Queues`) and the Reports framework (`CrestApps.OrchardCore.Reports`) are enabled.
+
+> **Workflow automation** is not a separate feature either. The Contact Center domain-event activity and the workflow tasks activate automatically whenever `OrchardCore.Workflows` is enabled alongside Contact Center. Each task is additionally gated on the capability that owns its underlying service, so an activity only appears in the editor when its capability is enabled: the Enqueue Activity task requires Work Distribution, Schedule Callback requires the Outbound Dialer, Set Agent Presence requires Agents, and the recording tasks require Call Recording.
 
 ## Installation
 

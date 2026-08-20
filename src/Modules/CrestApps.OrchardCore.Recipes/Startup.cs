@@ -1974,7 +1974,7 @@ public sealed class OmnichannelActivitiesRecipeStartup : StartupBase
 /// <summary>
 /// Registers workflow activity schemas for the Contact Center workflows feature.
 /// </summary>
-[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter.Workflows")]
+[RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter")]
 public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

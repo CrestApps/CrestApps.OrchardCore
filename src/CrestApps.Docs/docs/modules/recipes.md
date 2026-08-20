@@ -86,7 +86,7 @@ The feature also exports dedicated schemas for the Contact Center and Omnichanne
 - **Contact Center dialer** (`CrestApps.OrchardCore.ContactCenter.Dialer`): `ContactCenterDialerProfile`.
 - **Omnichannel activities** (`CrestApps.OrchardCore.Omnichannel.Activities`): `OmnichannelCampaignGroup`, `OmnichannelCampaign`, `OmnichannelChannelEndpoint`, `OmnichannelDisposition`, and `OmnichannelSubjectAction`.
 
-The Contact Center workflows feature (`CrestApps.OrchardCore.ContactCenter.Workflows`) additionally contributes workflow-activity schemas for the `ContactCenterEvent` event and the `EnqueueActivityTask`, `ScheduleCallbackTask`, `SetAgentPresenceTask`, `StartCallRecordingTask`, and `StopCallRecordingTask` tasks, so the `WorkflowType` step can describe their properties and outcomes.
+The Contact Center workflows bridge (available automatically when `OrchardCore.Workflows` is enabled alongside Contact Center) additionally contributes workflow-activity schemas for the `ContactCenterEvent` event and the `EnqueueActivityTask`, `ScheduleCallbackTask`, `SetAgentPresenceTask`, `StartCallRecordingTask`, and `StopCallRecordingTask` tasks, so the `WorkflowType` step can describe their properties and outcomes.
 
 ## Creating a Recipe Step
 

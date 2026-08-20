@@ -43,7 +43,7 @@ public sealed class VoiceStartup : StartupBase
     {
         services
             .AddOptions<ProviderWebhookIngressOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:WebhookIngress"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:WebhookIngress"))
             .Validate(
                 options => options.ConcurrencyPermitLimit > 0 &&
                     options.ConcurrencyPermitLimit <= 1024 &&
@@ -56,11 +56,11 @@ public sealed class VoiceStartup : StartupBase
 
         services
             .AddOptions<BaseVoiceVerificationOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:BaseVoiceVerification"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:BaseVoiceVerification"))
             .Validate(
                 options => !options.AudioVerificationAcknowledged
                     || !string.IsNullOrWhiteSpace(options.AudioVerificationEvidenceReference),
-                "'CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' cannot be set without also supplying 'AudioVerificationEvidenceReference', which must point at the retained base-voice acceptance evidence.")
+                "'CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' cannot be set without also supplying 'AudioVerificationEvidenceReference', which must point at the retained base-voice acceptance evidence.")
             .ValidateOnStart();
 
         services.AddScoped<IModularTenantEvents, BaseVoiceVerificationStartupCheck>();

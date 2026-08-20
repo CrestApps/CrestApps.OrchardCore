@@ -77,6 +77,6 @@ public static class SharedHealthCheckEndpointGuard
             "restart cannot drain an event outbox. Set 'OrchardCore_HealthChecks:Url' to a route that does not " +
             "claim liveness, such as '/health/aggregate', and probe '/health/process' for liveness and " +
             "'api/contact-center/health/ready' for readiness. To keep the current route anyway, set " +
-            "'CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute' to true.";
+            "'CrestApps:ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute' to true.";
     }
 }

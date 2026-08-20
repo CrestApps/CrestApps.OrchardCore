@@ -49,16 +49,16 @@ public sealed class Startup : StartupBase
 
         services
             .AddOptions<ContactCenterRetentionOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Retention"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Retention"))
             .Validate(
                 options => options.InteractionEventRetentionDays >= 0,
-                "'CrestApps_ContactCenter:Retention:InteractionEventRetentionDays' cannot be negative. Use zero to keep interaction events indefinitely.")
+                "'CrestApps:ContactCenter:Retention:InteractionEventRetentionDays' cannot be negative. Use zero to keep interaction events indefinitely.")
             .Validate(
                 options => options.ProjectionReplayHorizonDays >= 0,
-                "'CrestApps_ContactCenter:Retention:ProjectionReplayHorizonDays' cannot be negative. Use zero to apply no replay floor.")
+                "'CrestApps:ContactCenter:Retention:ProjectionReplayHorizonDays' cannot be negative. Use zero to apply no replay floor.")
             .Validate(
                 options => options.LegalHoldMinimumDays >= 0,
-                "'CrestApps_ContactCenter:Retention:LegalHoldMinimumDays' cannot be negative. Use zero to apply no legal-hold floor.")
+                "'CrestApps:ContactCenter:Retention:LegalHoldMinimumDays' cannot be negative. Use zero to apply no legal-hold floor.")
             .Validate(
                 options => options.InteractionRetentionDays >= 0
                     && options.CallSessionRetentionDays >= 0
@@ -73,69 +73,69 @@ public sealed class Startup : StartupBase
                     && options.SecureCaptureRetentionDays >= 0
                     && options.ProcessedEventRetentionDays >= 0
                     && options.WorkStateRetentionDays >= 0,
-                "Every 'CrestApps_ContactCenter:Retention' window must be zero or greater. Use zero to keep that entity indefinitely.")
+                "Every 'CrestApps:ContactCenter:Retention' window must be zero or greater. Use zero to keep that entity indefinitely.")
             .Validate(
                 options => options.ProcessedEventDeliveryEnvelopeDays >= 0,
-                "'CrestApps_ContactCenter:Retention:ProcessedEventDeliveryEnvelopeDays' cannot be negative. Use zero to apply no redelivery floor.")
+                "'CrestApps:ContactCenter:Retention:ProcessedEventDeliveryEnvelopeDays' cannot be negative. Use zero to apply no redelivery floor.")
             .Validate(
                 options => options.PurgeBatchSize >= 0,
-                "'CrestApps_ContactCenter:Retention:PurgeBatchSize' cannot be negative. Use zero to apply the default batch size.")
+                "'CrestApps:ContactCenter:Retention:PurgeBatchSize' cannot be negative. Use zero to apply the default batch size.")
             .Validate(
                 options => options.MaxPurgeBatchesPerCycle >= 0,
-                "'CrestApps_ContactCenter:Retention:MaxPurgeBatchesPerCycle' cannot be negative. Use zero to apply the default batch budget.")
+                "'CrestApps:ContactCenter:Retention:MaxPurgeBatchesPerCycle' cannot be negative. Use zero to apply the default batch budget.")
             .ValidateOnStart();
 
         services
             .AddOptions<ContactCenterHealthCheckOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:HealthChecks"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:HealthChecks"))
             .Validate(
                 options => options.DeadLetterDegradedThreshold >= 1,
-                "'CrestApps_ContactCenter:HealthChecks:DeadLetterDegradedThreshold' must be at least one.")
+                "'CrestApps:ContactCenter:HealthChecks:DeadLetterDegradedThreshold' must be at least one.")
             .Validate(
                 options => options.OverdueBacklogDegradedThreshold >= 1,
-                "'CrestApps_ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold' must be at least one.")
+                "'CrestApps:ContactCenter:HealthChecks:OverdueBacklogDegradedThreshold' must be at least one.")
             .Validate(
                 options => options.ConsecutiveFailuresBeforeUnready >= 1,
-                "'CrestApps_ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready' must be at least one.")
+                "'CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready' must be at least one.")
             .Validate(
                 options => options.ConsecutiveSuccessesBeforeReady >= 1,
-                "'CrestApps_ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady' must be at least one.")
+                "'CrestApps:ContactCenter:HealthChecks:ConsecutiveSuccessesBeforeReady' must be at least one.")
             .Validate(
                 options => options.DeadLetterUnhealthyThreshold >= options.DeadLetterDegradedThreshold,
-                "'CrestApps_ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold' cannot be lower than 'DeadLetterDegradedThreshold'.")
+                "'CrestApps:ContactCenter:HealthChecks:DeadLetterUnhealthyThreshold' cannot be lower than 'DeadLetterDegradedThreshold'.")
             .Validate(
                 options => options.OverdueBacklogUnhealthyThreshold >= options.OverdueBacklogDegradedThreshold,
-                "'CrestApps_ContactCenter:HealthChecks:OverdueBacklogUnhealthyThreshold' cannot be lower than 'OverdueBacklogDegradedThreshold'.")
+                "'CrestApps:ContactCenter:HealthChecks:OverdueBacklogUnhealthyThreshold' cannot be lower than 'OverdueBacklogDegradedThreshold'.")
             .ValidateOnStart();
 
         services
             .AddOptions<ContactCenterCoordinationOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Coordination"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Coordination"))
             .Validate(
                 options => options.InboundLockTimeout > TimeSpan.Zero,
-                "'CrestApps_ContactCenter:Coordination:InboundLockTimeout' must be greater than zero.")
+                "'CrestApps:ContactCenter:Coordination:InboundLockTimeout' must be greater than zero.")
             .Validate(
                 options => options.InboundLockExpiration > TimeSpan.Zero,
-                "'CrestApps_ContactCenter:Coordination:InboundLockExpiration' must be greater than zero.")
+                "'CrestApps:ContactCenter:Coordination:InboundLockExpiration' must be greater than zero.")
             .Validate(
                 options => options.InboundLockExpiration > options.InboundLockTimeout,
-                "'CrestApps_ContactCenter:Coordination:InboundLockExpiration' must exceed 'InboundLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes route the same call.")
+                "'CrestApps:ContactCenter:Coordination:InboundLockExpiration' must exceed 'InboundLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes route the same call.")
             .ValidateOnStart();
 
         services
             .AddOptions<ContactCenterTopologyOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:Topology"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Topology"))
             .Validate(
                 options => string.IsNullOrWhiteSpace(options.ProfileId)
                     || ContactCenterTopologyProfiles.Find(options.ProfileId) is not null,
-                $"'CrestApps_ContactCenter:Topology:ProfileId' is not recognized. Recognized profiles are: {string.Join(", ", ContactCenterTopologyProfiles.All.Select(profile => profile.Id).Order(StringComparer.Ordinal))}.")
+                $"'CrestApps:ContactCenter:Topology:ProfileId' is not recognized. Recognized profiles are: {string.Join(", ", ContactCenterTopologyProfiles.All.Select(profile => profile.Id).Order(StringComparer.Ordinal))}.")
             .ValidateOnStart();
 
         services.AddSingleton<ContactCenterTopologyState>();
         services.AddScoped<IModularTenantEvents, ContactCenterTopologyValidator>();
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_ContactCenter:FeatureLifecycle"))
+            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:FeatureLifecycle"))
             .Validate(
                 options => options.DrainTimeoutSeconds is >= 1 and <= 300,
                 "The Contact Center feature drain timeout must be between 1 and 300 seconds.")

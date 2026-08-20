@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
@@ -155,29 +154,5 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Queues,
         "OrchardCore.SignalR",
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.Analytics,
-    Name = "Contact Center Reports & Analytics",
-    Description = "Adds enterprise executive, interaction, queue/SLA, agent, transfer, recording, campaign, and subject reports to the admin Reports area.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Queues,
-        ReportsConstants.Feature,
-    ]
-)]
-
-[assembly: Feature(
-    Id = ContactCenterConstants.Feature.Workflows,
-    Name = "Contact Center - Workflows",
-    Description = "Adds a Contact Center domain-event activity and bridge for Orchard Core Workflows.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Area,
-        "OrchardCore.Workflows",
     ]
 )]

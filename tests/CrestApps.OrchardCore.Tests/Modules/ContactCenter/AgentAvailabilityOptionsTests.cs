@@ -18,7 +18,7 @@ public sealed class AgentAvailabilityOptionsTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
-                [$"CrestApps_ContactCenter:Availability:{optionName}"] = "00:00:00",
+                [$"CrestApps:ContactCenter:Availability:{optionName}"] = "00:00:00",
             })
             .Build();
         var services = new ServiceCollection();

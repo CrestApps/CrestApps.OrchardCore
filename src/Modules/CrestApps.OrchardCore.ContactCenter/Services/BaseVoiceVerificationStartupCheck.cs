@@ -56,7 +56,7 @@ internal sealed class BaseVoiceVerificationStartupCheck : ModularTenantEvents
             if (_logger.IsEnabled(LogLevel.Critical))
             {
                 _logger.LogCritical(
-                    "Tenant '{TenantName}' is running in a production host but the base-voice audio path has not been verified. Contact Center voice readiness is withheld until 'CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' is set to 'true' after the base-voice deployment acceptance step passes.",
+                    "Tenant '{TenantName}' is running in a production host but the base-voice audio path has not been verified. Contact Center voice readiness is withheld until 'CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' is set to 'true' after the base-voice deployment acceptance step passes.",
                     _shellSettings.Name);
             }
 

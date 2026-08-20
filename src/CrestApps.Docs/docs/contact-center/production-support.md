@@ -28,7 +28,7 @@ The disable path is deliberately asymmetric. A re-enabled feature rebuilds the t
 
 R3 adds tenant-shell admission leases for base Contact Center outbox dispatch, Dialer callbacks, Paced Dialing pacing, Voice ingress/routing/reconciliation/provider commands, Contact Center Real-Time connections, Asterisk and Dialpad Contact Center provider adapters, and Asterisk Contact Center media sessions. Quiescing atomically rejects new work. Already admitted work may settle, and disable waits for its leases up to the configured timeout. Contact Center hub connections are aborted so disconnect cleanup releases their leases; open media sessions retain a lease until cleanup succeeds. Pending provider commands and claimed inbox/outbox rows remain durable and continue to use owner/fence validation rather than being redelivered blindly. A command rejected before provider contact because the provider feature is quiescing returns from `Sent` to delayed `Pending` instead of compensating business work or becoming an unknown outcome. Outbox rows persist the handler ids expected when the message was created, so temporarily disabled feature handlers cannot disappear and cause false completion or consume the poison-message dead-letter budget.
 
-Configure the tenant drain timeout under `CrestApps_ContactCenter:FeatureLifecycle:DrainTimeoutSeconds`. The default is `30` seconds; startup validation accepts values from `1` through `300` seconds. The gate is tenant-shell-local. Multi-node correctness continues to rely on Orchard shell invalidation plus the relational command, inbox, and outbox ownership/fencing boundaries; node-crash and rolling-deployment certification remains part of R8.
+Configure the tenant drain timeout under `CrestApps:ContactCenter:FeatureLifecycle:DrainTimeoutSeconds`. The default is `30` seconds; startup validation accepts values from `1` through `300` seconds. The gate is tenant-shell-local. Multi-node correctness continues to rely on Orchard shell invalidation plus the relational command, inbox, and outbox ownership/fencing boundaries; node-crash and rolling-deployment certification remains part of R8.
 
 ## Database and topology
 
@@ -44,9 +44,11 @@ The supported topology above is not advisory. Each tenant declares the topology 
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "Topology": {
-      "ProfileId": "single-node-distributed"
+  "CrestApps": {
+    "ContactCenter": {
+      "Topology": {
+        "ProfileId": "single-node-distributed"
+      }
     }
   }
 }
@@ -197,11 +199,13 @@ Enable it only when your load balancer fails open once too few targets remain he
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "HealthChecks": {
-      "EnableNodeServingGate": true,
-      "ConsecutiveFailuresBeforeUnready": 3,
-      "ConsecutiveSuccessesBeforeReady": 2
+  "CrestApps": {
+    "ContactCenter": {
+      "HealthChecks": {
+        "EnableNodeServingGate": true,
+        "ConsecutiveFailuresBeforeUnready": 3,
+        "ConsecutiveSuccessesBeforeReady": 2
+      }
     }
   }
 }
@@ -250,25 +254,29 @@ If you have deliberately accepted the aggregate-on-liveness-route behavior, ackn
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "HealthChecks": {
-      "AllowUnsafeSharedEndpointRoute": true
+  "CrestApps": {
+    "ContactCenter": {
+      "HealthChecks": {
+        "AllowUnsafeSharedEndpointRoute": true
+      }
     }
   }
 }
 ```
 :::
 
-Thresholds are configured under `CrestApps_ContactCenter:HealthChecks` and are normalized so an unhealthy bound can never fall below its degraded bound:
+Thresholds are configured under `CrestApps:ContactCenter:HealthChecks` and are normalized so an unhealthy bound can never fall below its degraded bound:
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "HealthChecks": {
-      "DeadLetterDegradedThreshold": 1,
-      "DeadLetterUnhealthyThreshold": 25,
-      "OverdueBacklogDegradedThreshold": 50,
-      "OverdueBacklogUnhealthyThreshold": 500
+  "CrestApps": {
+    "ContactCenter": {
+      "HealthChecks": {
+        "DeadLetterDegradedThreshold": 1,
+        "DeadLetterUnhealthyThreshold": 25,
+        "OverdueBacklogDegradedThreshold": 50,
+        "OverdueBacklogUnhealthyThreshold": 500
+      }
     }
   }
 }
@@ -290,7 +298,7 @@ Until an operator declares the base-voice path verified, a production host **wit
 
 The verdict is surfaced by the `contactcenter-base-voice-verification` readiness check (registered by the Contact Center Voice feature and tagged `contactcenter-ready`). In a production host it reports:
 
-- **Unhealthy** — `CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged` is unset or `false`. Readiness is withheld.
+- **Unhealthy** — `CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged` is unset or `false`. Readiness is withheld.
 - **Healthy** — the flag is `true`. Acknowledging requires a non-empty `AudioVerificationEvidenceReference` — every host rejects an acknowledgment that cites no retained evidence at startup, regardless of environment — and that reference is echoed in the verdict so an operator can trace the acknowledgment to its evidence.
 
 Outside a production host the check is always `Healthy`; the accompanying startup log entry warns (`Warning` outside production, `Critical` in production) whenever the path is unverified.
@@ -324,10 +332,12 @@ Declare the result once the run passes:
 
 ```json
 {
-  "CrestApps_ContactCenter": {
-    "BaseVoiceVerification": {
-      "AudioVerificationAcknowledged": true,
-      "AudioVerificationEvidenceReference": "https://…/base-voice-proof/prod-eu-west-2026-07"
+  "CrestApps": {
+    "ContactCenter": {
+      "BaseVoiceVerification": {
+        "AudioVerificationAcknowledged": true,
+        "AudioVerificationEvidenceReference": "https://…/base-voice-proof/prod-eu-west-2026-07"
+      }
     }
   }
 }
@@ -369,11 +379,13 @@ Validated settings:
 
 | Section | Rule |
 | --- | --- |
-| `CrestApps_ContactCenter:Retention` | Every window and floor is non-negative, and so are the purge batch size and the per-entity batch budget, where zero means "use the default". |
-| `CrestApps_ContactCenter:HealthChecks` | Every threshold is at least one, and each unhealthy bound is at or above its degraded bound. |
-| `CrestApps_ContactCenter:Topology` | A declared profile identifier resolves to a known topology profile, so a typo is refused rather than silently falling back to a weaker topology. |
-| `CrestApps_ContactCenter:BaseVoiceVerification` | An acknowledgment (`AudioVerificationAcknowledged`) must be accompanied by a non-empty `AudioVerificationEvidenceReference`, so the base-voice path can never be declared verified without citing the retained evidence. |
-| `CrestApps_ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
+| `CrestApps:ContactCenter:Retention` | Every window and floor is non-negative, and so are the purge batch size and the per-entity batch budget, where zero means "use the default". |
+| `CrestApps:ContactCenter:HealthChecks` | Every threshold is at least one, and each unhealthy bound is at or above its degraded bound. |
+| `CrestApps:ContactCenter:Topology` | A declared profile identifier resolves to a known topology profile, so a typo is refused rather than silently falling back to a weaker topology. |
+| `CrestApps:ContactCenter:BaseVoiceVerification` | An acknowledgment (`AudioVerificationAcknowledged`) must be accompanied by a non-empty `AudioVerificationEvidenceReference`, so the base-voice path can never be declared verified without citing the retained evidence. |
+| `CrestApps:ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
+| `CrestApps:ContactCenter:Availability` | `HeartbeatTimeout` and `MaximumWrapUpDuration` are both greater than zero. |
+| `CrestApps:ContactCenter:WebhookIngress` | Concurrency, rate, period, delivery-age, and future-skew values are within their supported ranges. |
 | `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
 | `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |
 | `CrestApps:Asterisk:Default` | Numeric settings are sane whenever the configuration-backed provider is enabled. |
@@ -395,13 +407,34 @@ Where a credential is only used to derive a client-visible artifact, the guard d
 
 Distributed-lock waits, lease expiries, the inbound reclamation threshold, the per-channel binding create-lock timeout (`CrestApps:Asterisk:Coordination:ChannelBindingCreateLockTimeout`, default 10 seconds — the bounded window an inbound create waits for the single-node exactly-once claim before surfacing an ambiguous outcome the reconciler resolves) and the Asterisk HTTP request budget are deployment characteristics: a node under heavier load, or one further from its database or from Asterisk, needs different values than a developer laptop. They are settable under the `Coordination` sections above and validated on the same terms as everything else.
 
+### Agent availability tuning
+
+The `CrestApps:ContactCenter:Availability` section (Contact Center Agents feature) defines the agent liveness and after-call recovery policy. Both values must be greater than zero.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `HeartbeatTimeout` | `00:01:30` (90 s) | Maximum age of an agent heartbeat still considered live for routing. |
+| `MaximumWrapUpDuration` | `00:15:00` (15 min) | Maximum time an agent may remain in after-call wrap-up before capacity is recovered. |
+
+### Provider webhook ingress tuning
+
+The `CrestApps:ContactCenter:WebhookIngress` section (Contact Center Voice feature) caps provider webhook rate and concurrency. The limits are enforced in-process, so they apply **per application node**; on a multi-node deployment the effective accepted rate is the per-node limit multiplied by the number of nodes, so enforce any fleet-wide ceiling at the edge.
+
+| Setting | Default | Supported range | Meaning |
+| --- | --- | --- | --- |
+| `ConcurrencyPermitLimit` | `8` | 1–1024 | Provider webhook requests that may concurrently buffer or process. |
+| `RatePermitLimit` | `120` | 1–100000 | Authenticated deliveries permitted per provider during each rate period. |
+| `RatePeriodSeconds` | `60` | 1–3600 | Rate-limit replenishment period in seconds. |
+| `MaximumDeliveryAgeSeconds` | `900` | 1–86400 | Maximum accepted age of a provider-signed event timestamp. |
+| `MaximumFutureSkewSeconds` | `120` | 0–3600 | Maximum accepted future clock skew of a provider-signed event timestamp. |
+
 ## Retention, legal holds, and replay horizon
 
 Every table that grows with traffic is aged out by a retention policy. A table without one is not a small oversight: it is the table that eventually fills the disk, and it is invisible until it does. Retention therefore covers the whole database rather than the event log alone, and a table that is deliberately *not* aged out has to say so.
 
 Each entity declares a policy that answers three questions: which timestamp the record is aged from, what makes the record finished, and which floors hold it beyond its configured window.
 
-Retention is configured under `CrestApps_ContactCenter:Retention`. Every window defaults to `0`, which means "keep indefinitely":
+Retention is configured under `CrestApps:ContactCenter:Retention`. Every window defaults to `0`, which means "keep indefinitely":
 
 | Setting | Entity |
 | --- | --- |

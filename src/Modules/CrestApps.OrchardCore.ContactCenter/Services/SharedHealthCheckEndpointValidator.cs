@@ -48,7 +48,7 @@ internal sealed class SharedHealthCheckEndpointValidator : ModularTenantEvents
         var hazardMessage = SharedHealthCheckEndpointGuard.BuildHazardMessage(
             _shellConfiguration["OrchardCore_HealthChecks:Url"],
             string.Equals(
-                _shellConfiguration["CrestApps_ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
+                _shellConfiguration["CrestApps:ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute"],
                 bool.TrueString,
                 StringComparison.OrdinalIgnoreCase));
 

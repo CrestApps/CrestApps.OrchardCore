@@ -765,7 +765,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         if (span > maximumRange)
         {
             throw new InvalidOperationException(
-                $"The requested reporting range of {span.TotalDays:N0} days exceeds the maximum of {maximumRange.TotalDays:N0} days. Narrow the range, or raise 'CrestApps_ContactCenter:Reporting:MaximumReportRange'.");
+                $"The requested reporting range of {span.TotalDays:N0} days exceeds the maximum of {maximumRange.TotalDays:N0} days. Narrow the range, or raise 'CrestApps:ContactCenter:Reporting:MaximumReportRange'.");
         }
     }
 

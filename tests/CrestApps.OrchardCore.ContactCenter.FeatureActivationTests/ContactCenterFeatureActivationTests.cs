@@ -123,16 +123,18 @@ public sealed class ContactCenterFeatureActivationTests
     }
 
     [Fact]
-    public async Task FreshTenant_WorkflowsFeatureAlone_ActivatesReplaySafeWorkflowBridge()
+    public async Task FreshTenant_ContactCenterWithOrchardWorkflows_ActivatesReplaySafeWorkflowBridge()
     {
-        // Arrange
+        // Arrange. The workflow bridge is no longer a separate feature; it activates whenever the base
+        // Contact Center feature and Orchard Core Workflows are both enabled.
         var profile = new ContactCenterTenantProfile
         {
             Id = "workflows-only",
             ProviderProfile = "none",
             Features =
             [
-                "CrestApps.OrchardCore.ContactCenter.Workflows",
+                "CrestApps.OrchardCore.ContactCenter",
+                "OrchardCore.Workflows",
             ],
         };
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();

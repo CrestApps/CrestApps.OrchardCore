@@ -67,15 +67,5 @@ public static partial class ContactCenterConstants
         /// The identifier of the shared Contact Center real-time transport feature.
         /// </summary>
         public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
-
-        /// <summary>
-        /// The identifier of the reporting and analytics feature.
-        /// </summary>
-        public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
-
-        /// <summary>
-        /// The identifier of the Orchard Core Workflows integration feature.
-        /// </summary>
-        public const string Workflows = "CrestApps.OrchardCore.ContactCenter.Workflows";
     }
 }

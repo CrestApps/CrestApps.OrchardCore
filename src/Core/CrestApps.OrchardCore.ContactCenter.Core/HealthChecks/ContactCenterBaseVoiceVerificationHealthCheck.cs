@@ -78,7 +78,7 @@ public sealed class ContactCenterBaseVoiceVerificationHealthCheck : IHealthCheck
                 context.Registration.FailureStatus,
                 "The base-voice audio path has not been verified for this production deployment. " +
                 "Complete the base-voice deployment acceptance step and set " +
-                "'CrestApps_ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' to 'true'. " +
+                "'CrestApps:ContactCenter:BaseVoiceVerification:AudioVerificationAcknowledged' to 'true'. " +
                 "Readiness is withheld until it is acknowledged.");
         }
 
