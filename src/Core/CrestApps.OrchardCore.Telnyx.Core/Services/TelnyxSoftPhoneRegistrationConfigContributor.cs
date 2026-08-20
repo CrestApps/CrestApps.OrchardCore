@@ -6,8 +6,8 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
 /// Builds the browser soft-phone registration configuration for Telnyx. It mints a short-lived SIP
-/// credential from Telnyx and returns the SIP-over-WebSocket signaling, credential, ICE, and media
-/// configuration the shared SIP.js browser media adapter registers with.
+/// credential from Telnyx and returns the login (SIP username), credential (SIP password), ICE, and media
+/// configuration the Telnyx WebRTC SDK browser media adapter logs in with.
 /// </summary>
 public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneRegistrationConfigContributor
 {
@@ -80,7 +80,8 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
                 ExpiresAtUtc = credential.ExpiresAtUtc,
             },
             // Telnyx rejects a server-originated call placed to a registered WebRTC credential, so the browser
-            // must place its own outbound calls, presenting the tenant caller id as the SIP P-Asserted-Identity.
+            // places its own outbound calls through the Telnyx WebRTC SDK, presenting the tenant caller id as
+            // the newCall callerNumber.
             ClientOriginatesCalls = true,
             OutboundCallerId = _options.DefaultOutboundCallerId,
         };

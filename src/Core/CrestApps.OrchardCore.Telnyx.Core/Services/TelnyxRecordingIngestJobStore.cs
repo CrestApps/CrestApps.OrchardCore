@@ -1,0 +1,121 @@
+using CrestApps.OrchardCore.Telnyx.Indexes;
+using CrestApps.OrchardCore.Telnyx.Models;
+using YesSql;
+
+namespace CrestApps.OrchardCore.Telnyx.Services;
+
+/// <summary>
+/// YesSql-backed implementation of <see cref="ITelnyxRecordingIngestJobStore"/>. Every mutating operation
+/// commits in its OWN isolated session created from the tenant <see cref="IStore"/>, so a job becomes durable
+/// immediately, independent of the ambient request scope. Because all sessions are opened from the tenant
+/// store, operations are inherently isolated to the current tenant and never observe or mutate another tenant's
+/// jobs.
+/// </summary>
+public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobStore
+{
+    private readonly IStore _store;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TelnyxRecordingIngestJobStore"/> class.
+    /// </summary>
+    /// <param name="store">The tenant YesSql store used to open isolated, immediately committed sessions.</param>
+    public TelnyxRecordingIngestJobStore(IStore store)
+    {
+        _store = store;
+    }
+
+    /// <inheritdoc/>
+    public async Task EnqueueAsync(
+        string interactionId,
+        string recordingId,
+        string format,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(recordingId);
+
+        await using var session = _store.CreateSession();
+
+        // Enqueue is idempotent per recording: Telnyx can redeliver the saved webhook, and the unique recording
+        // id means a second enqueue must not create a duplicate job or reset the progress of an in-flight
+        // ingestion.
+        var existing = await session
+            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                index.RecordingId == recordingId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existing is not null)
+        {
+            return;
+        }
+
+        await session.SaveAsync(new TelnyxRecordingIngestJob
+        {
+            InteractionId = interactionId,
+            RecordingId = recordingId,
+            Format = format,
+            Status = TelnyxRecordingIngestJobStatus.Pending,
+            AttemptCount = 0,
+            NextAttemptUtc = nowUtc,
+            CreatedUtc = nowUtc,
+        }, cancellationToken: cancellationToken);
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TelnyxRecordingIngestJob>> GetDueAsync(
+        DateTime nowUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? 100 : maxCount;
+
+        await using var session = _store.CreateSession();
+        var jobs = await session
+            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                index.Status == TelnyxRecordingIngestJobStatus.Pending &&
+                index.NextAttemptUtc <= nowUtc)
+            .OrderBy(index => index.NextAttemptUtc)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return jobs.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task UpdateAsync(TelnyxRecordingIngestJob job, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        await using var session = _store.CreateSession();
+
+        // Re-materialize the job inside this session by its stable recording-id key so the update targets a
+        // tracked instance and commits durably, even when the caller holds a detached copy from an earlier
+        // isolated session.
+        var tracked = await session
+            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                index.RecordingId == job.RecordingId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (tracked is null)
+        {
+            await session.SaveAsync(job, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            tracked.InteractionId = job.InteractionId;
+            tracked.Format = job.Format;
+            tracked.Status = job.Status;
+            tracked.AttemptCount = job.AttemptCount;
+            tracked.NextAttemptUtc = job.NextAttemptUtc;
+            tracked.MediaReference = job.MediaReference;
+            tracked.MediaStored = job.MediaStored;
+            tracked.LastError = job.LastError;
+            tracked.ModifiedUtc = job.ModifiedUtc;
+            await session.SaveAsync(tracked, cancellationToken: cancellationToken);
+        }
+
+        await session.SaveChangesAsync(cancellationToken);
+    }
+}

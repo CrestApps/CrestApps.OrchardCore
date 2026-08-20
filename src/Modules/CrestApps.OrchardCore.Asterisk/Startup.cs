@@ -148,7 +148,7 @@ public sealed class Startup : StartupBase
 /// both enabled, so an operator never has to enable a redundant per-provider toggle that must match the
 /// provider they already configured.
 /// </summary>
-[RequireFeatures(AsteriskConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(ContactCenterConstants.Feature.Voice)]
 public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -196,7 +196,7 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 /// than a separately selectable feature: it activates automatically whenever the Asterisk provider and Contact
 /// Center Voice Media are both enabled.
 /// </summary>
-[RequireFeatures(AsteriskConstants.Feature.Area, ContactCenterConstants.Feature.VoiceMedia)]
+[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
 public sealed class AsteriskContactCenterMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

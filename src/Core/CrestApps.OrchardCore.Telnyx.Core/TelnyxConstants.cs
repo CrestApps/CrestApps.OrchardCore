@@ -11,10 +11,11 @@ public static class TelnyxConstants
     public const string ProviderTechnicalName = "Telnyx";
 
     /// <summary>
-    /// The name of the browser media adapter the Telnyx soft phone registers against. Telnyx exposes a
-    /// SIP-over-WebSocket registrar, so the provider reuses the shared SIP.js browser media adapter.
+    /// The name of the browser media adapter the Telnyx soft phone registers against. Telnyx ships its own
+    /// WebRTC SDK (window.TelnyxWebRTC), so the provider uses the dedicated Telnyx browser media adapter,
+    /// which speaks Verto to Telnyx's tuned media gateway instead of driving a raw SIP.js session.
     /// </summary>
-    public const string BrowserMediaAdapterName = "sipjs";
+    public const string BrowserMediaAdapterName = "telnyx-webrtc";
 
     /// <summary>
     /// The name of the data protector used to protect the Telnyx API key.
@@ -71,6 +72,48 @@ public static class TelnyxConstants
     /// leases and provider-command recovery survive the upgrade.
     /// </summary>
     public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Telnyx.ContactCenterVoice";
+
+    /// <summary>
+    /// Contains constants for Telnyx call recording and its secure ingestion into the encrypted media store.
+    /// </summary>
+    public static class Recording
+    {
+        /// <summary>
+        /// The Telnyx webhook event type raised once a recording has finished and is available to download.
+        /// </summary>
+        public const string SavedEventType = "call.recording.saved";
+
+        /// <summary>
+        /// The <c>client_state</c> intent that marks a recording started for a Contact Center interaction, so the
+        /// saved-recording webhook can be correlated back to the interaction that owns it.
+        /// </summary>
+        public const string ClientStateIntent = "cc-rec";
+
+        /// <summary>
+        /// The recording format requested from Telnyx and used as the stored media format.
+        /// </summary>
+        public const string Format = "mp3";
+
+        /// <summary>
+        /// The maximum number of due ingest jobs processed per background sweep.
+        /// </summary>
+        public const int IngestBatchSize = 25;
+
+        /// <summary>
+        /// The maximum number of ingest attempts before a recording is dead-lettered.
+        /// </summary>
+        public const int IngestMaxAttempts = 10;
+
+        /// <summary>
+        /// The base back-off, in seconds, between failed ingest attempts (grows exponentially).
+        /// </summary>
+        public const int IngestBaseBackoffSeconds = 30;
+
+        /// <summary>
+        /// The upper bound, in minutes, on the exponential ingest back-off.
+        /// </summary>
+        public const int IngestMaxBackoffMinutes = 60;
+    }
 
     /// <summary>
     /// Contains the feature identifiers exposed by the Telnyx module.

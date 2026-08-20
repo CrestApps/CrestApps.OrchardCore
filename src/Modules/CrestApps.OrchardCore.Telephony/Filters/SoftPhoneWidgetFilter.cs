@@ -110,13 +110,25 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         _resourceManager.RegisterResource("stylesheet", "intl-tel-input").AtHead();
         _resourceManager.RegisterResource("stylesheet", "telephony-soft-phone").AtHead();
 
-        // The WebRTC soft phone needs the SIP.js library (window.SIP) for the browser audio adapter.
-        // Only load it when the active provider actually offers browser audio through that adapter, so
-        // providers without in-browser media (for example Dialpad) don't pull an extra ~270 KB.
-        if (audioMode == TelephonyAudioMode.Browser &&
-            string.Equals(audioProvider?.BrowserMediaAdapterName, "sipjs", StringComparison.OrdinalIgnoreCase))
+        // The WebRTC soft phone loads a provider-specific browser audio library, chosen by the active
+        // provider's BrowserMediaAdapterName. Only the library the current provider actually needs is
+        // pulled, so providers without in-browser media (for example Dialpad) load neither, and a SIP.js
+        // provider never downloads the Telnyx SDK (or vice versa).
+        if (audioMode == TelephonyAudioMode.Browser)
         {
-            _resourceManager.RegisterResource("script", "sip.js").AtFoot();
+            var adapterName = audioProvider?.BrowserMediaAdapterName;
+
+            if (string.Equals(adapterName, "sipjs", StringComparison.OrdinalIgnoreCase))
+            {
+                // SIP.js (window.SIP) — used by Asterisk and any SIP-over-WebSocket provider.
+                _resourceManager.RegisterResource("script", "sip.js").AtFoot();
+            }
+            else if (string.Equals(adapterName, "telnyx-webrtc", StringComparison.OrdinalIgnoreCase))
+            {
+                // Telnyx WebRTC SDK (window.TelnyxWebRTC) — used by the Telnyx provider so it can use
+                // Telnyx's own tuned media stack instead of a raw SIP.js session with SDP workarounds.
+                _resourceManager.RegisterResource("script", "telnyx-webrtc").AtFoot();
+            }
         }
 
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();

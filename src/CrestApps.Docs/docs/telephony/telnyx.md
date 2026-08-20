@@ -119,10 +119,14 @@ acceptance.
 
 Telnyx is a **browser-audio** provider (`AudioCapabilities = Browser`). When an agent opens the soft phone,
 the server mints a short-lived Telnyx **telephony credential** (`POST /v2/telephony_credentials`) bound to
-the SIP connection and returns the SIP username/password to the browser, which registers directly with
-`wss://sip.telnyx.com:7443` through the shared SIP.js media adapter. Credentials are capped per user, expire on
-their own, and are deleted at Telnyx on sign-out. The mapping of user → SIP username is stored durably so
-the Contact Center can resolve the agent's live endpoint when bridging a call.
+the SIP connection and returns the SIP username/password to the browser, which logs in to Telnyx's WebRTC
+gateway through the **Telnyx WebRTC SDK** (`@telnyx/webrtc`, vendored as the `telnyx-webrtc` media adapter).
+The SDK owns the peer connection, media, and codec/SDP negotiation end to end, so this path needs no
+browser-side SDP workarounds. Only the provider that is actually active loads its media library — Telnyx
+loads the Telnyx SDK, a SIP provider such as Asterisk loads SIP.js, and neither downloads the other.
+Credentials are capped per user, expire on their own, and are deleted at Telnyx on sign-out. The mapping of
+user → SIP username is stored durably so the Contact Center can resolve the agent's live endpoint when
+bridging a call.
 
 ## Outbound calls and caller id
 
@@ -161,12 +165,31 @@ To give an agent a dedicated inbound line, create an entry point with the agent'
 **Specific agent**, pick the agent, and set a **Target queue** as the fallback. For outbound, set the same
 number as the agent's **Outbound caller id** on their agent profile so callbacks reach them.
 
+## Call recording
+
+When the **Contact Center Call Recording** feature is enabled, Telnyx recordings are captured *and* stored on
+your platform, encrypted at rest — not left only in Telnyx's cloud.
+
+- **Recording control** — starting, pausing, resuming, and stopping a recording is driven by Contact Center
+  recording governance and executed on the call through Telnyx Call Control (`record_start`, `record_pause`,
+  `record_resume`, `record_stop`). The recording carries the interaction as `client_state` so the finished
+  recording can be traced back to the conversation that owns it.
+- **Secure ingestion** — Telnyx assigns a recording id only once the recording is saved, so when the
+  `call.recording.saved` webhook arrives the platform stamps the interaction with the recording's retrieval
+  handle and enqueues a durable ingest job. A background sweep resolves the recording's current download URL
+  from the Telnyx recordings API, streams the media into the **encrypted media store**, and then **deletes the
+  Telnyx-hosted copy** so no plaintext recording lingers off-platform. Transient failures are retried with
+  exponential back-off and dead-lettered after the attempt budget, so a recording is never silently lost.
+- **Right to erasure** — an interaction whose recording has been erased is never (re-)ingested; any media
+  already written for it is removed, so a late ingest can never resurrect deleted media.
+
 ## Capabilities
 
 The Telnyx telephony provider advertises dialing, hang up, hold, resume, mute, blind and attended transfer,
 merge (conference), sending DTMF digits, and receiving inbound calls. Hold and mute are executed by the
 browser media adapter because Telnyx delivers this call's audio to the browser. The Contact Center voice
-provider advertises dialer dialing, agent connect (bridge), and call transfer.
+provider advertises dialer dialing, agent connect (bridge), call transfer, and — with the Call Recording
+feature — recording.
 
 :::note
 SMS/MMS is not part of this module. Telnyx supports messaging for US and Canadian numbers, but it is out of

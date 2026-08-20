@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@microsoft/signalr": "10.0.0",
+    "@telnyx/webrtc": "2.27.9",
     "chart.js": "^4.5.1",
     "extendable-media-recorder": "^9.2.36",
     "sip.js": "0.21.2"

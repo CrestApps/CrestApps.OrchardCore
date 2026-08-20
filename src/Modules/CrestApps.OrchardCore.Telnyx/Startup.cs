@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
+using CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 using CrestApps.OrchardCore.Telnyx.Drivers;
 using CrestApps.OrchardCore.Telnyx.Endpoints;
 using CrestApps.OrchardCore.Telnyx.Indexes;
@@ -9,8 +10,10 @@ using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -84,7 +87,7 @@ public sealed class Startup : StartupBase
 /// and Contact Center Voice are both enabled, so an operator never has to enable a redundant per-provider
 /// toggle that must match the provider they already configured.
 /// </summary>
-[RequireFeatures(TelnyxConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(ContactCenterConstants.Feature.Voice)]
 public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -105,5 +108,16 @@ public sealed class DialerStartup : StartupBase
                     ContactCenterConstants.Feature.Voice,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        // Secure recording ingestion: the saved-recording webhook enqueues a durable job, and the background
+        // sweep downloads each recording into the encrypted media store with retry and dead-lettering.
+        services
+            .AddScoped<ITelnyxRecordingIngestJobStore, TelnyxRecordingIngestJobStore>()
+            .AddScoped<ITelnyxRecordingIngestService, TelnyxRecordingIngestService>()
+            .AddScoped<ITelnyxRecordingSavedHandler, TelnyxRecordingIngestEnqueuer>();
+
+        services.AddIndexProvider<TelnyxRecordingIngestJobIndexProvider>();
+        services.AddDataMigration<TelnyxRecordingIngestJobMigrations>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelnyxRecordingIngestBackgroundTask>());
     }
 }

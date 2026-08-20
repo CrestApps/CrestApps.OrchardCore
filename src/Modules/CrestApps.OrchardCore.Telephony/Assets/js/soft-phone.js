@@ -9,35 +9,6 @@
 (function () {
     'use strict';
 
-    // Chrome requires RTCP multiplexing (rtcpMuxPolicy "require"), but Telnyx SDP omits "a=rtcp-mux". On an
-    // outbound call this makes setRemoteDescription reject the answer; on an inbound call Telnyx sends the
-    // offer, so setRemoteDescription rejects that too ("m-section ... is missing a=rtcp-mux"). Either way the
-    // call fails to connect. Patch setRemoteDescription once to add a=rtcp-mux to any audio m-section of a
-    // remote offer or answer that lacks it; RTP still flows on the single muxed port, so audio negotiates.
-    function ensureRtcpMuxAnswerWorkaround() {
-        if (typeof RTCPeerConnection === 'undefined' || RTCPeerConnection.prototype.__rtcpMuxAnswerPatched) {
-            return;
-        }
-
-        var originalSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
-
-        RTCPeerConnection.prototype.setRemoteDescription = function (description) {
-            if (description &&
-                (description.type === 'answer' || description.type === 'offer') &&
-                description.sdp &&
-                description.sdp.indexOf('a=rtcp-mux') === -1) {
-                description = {
-                    type: description.type,
-                    sdp: description.sdp.replace(/(m=audio[^\r\n]*\r?\n)/g, '$1a=rtcp-mux\r\n')
-                };
-            }
-
-            return originalSetRemoteDescription.apply(this, [description].concat(Array.prototype.slice.call(arguments, 1)));
-        };
-
-        RTCPeerConnection.prototype.__rtcpMuxAnswerPatched = true;
-    }
-
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -165,6 +136,7 @@
          * process-wide registry that any script could silently overwrite.
          */
         adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
+        adapters['telnyx-webrtc'] = createTelnyxBrowserMediaAdapter(rootElement, config);
 
         return adapters;
     }
@@ -184,8 +156,6 @@
     }
 
     function createSipJsSession(sip, context, registrationConfig) {
-        ensureRtcpMuxAnswerWorkaround();
-
         var signaling = registrationConfig.signaling || {};
         var credential = registrationConfig.credential || {};
         var ice = registrationConfig.ice || {};
@@ -455,240 +425,178 @@
         });
     }
 
-    function buildRegistrationConfigUrl(config) {
-        if (config.registrationConfigUrl) {
-            return config.registrationConfigUrl;
+    // Maps a Telnyx WebRTC SDK call state (call.state) to the soft-phone outbound state names the
+    // originate() callback expects: 'Ringing', 'Connected', or 'Disconnected'. Returns null for
+    // transient states that should not change the UI.
+    function mapTelnyxOutboundState(state) {
+        switch (state) {
+            case 'new':
+            case 'requesting':
+            case 'trying':
+            case 'recovering':
+            case 'ringing':
+            case 'answering':
+            case 'early':
+                return 'Ringing';
+            case 'active':
+                return 'Connected';
+            case 'held':
+                // A held call is still connected from the dialer's perspective; the hold indicator is driven
+                // separately, so don't report a state change here.
+                return null;
+            case 'hangup':
+            case 'destroy':
+            case 'purge':
+                return 'Disconnected';
+            default:
+                return null;
         }
-
-        var parts = window.location.pathname.split('/').filter(function (part) {
-            return !!part;
-        });
-        var adminPrefix = parts.length ? parts[0] : 'Admin';
-
-        return '/' + adminPrefix + '/contact-center/agent/soft-phone/registration-config';
     }
 
-    function fetchRegistrationConfig(config) {
-        return fetch(buildRegistrationConfigUrl(config), {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: {
-                Accept: 'application/json'
-            }
-        }).then(function (response) {
-            if (!response.ok) {
-                throw new Error('The browser media registration configuration is unavailable.');
-            }
-
-            return response.json();
-        });
+    function isTelnyxTerminalState(state) {
+        return state === 'hangup' || state === 'destroy' || state === 'purge';
     }
 
-    function createRemoteStreamSink(setRemoteStream) {
-        var remoteStream = new MediaStream();
-
-        return {
-            stream: remoteStream,
-            addTrack: function (track) {
-                remoteStream.addTrack(track);
-                setRemoteStream(remoteStream);
-            },
-            clear: function () {
-                remoteStream.getTracks().forEach(function (track) {
-                    remoteStream.removeTrack(track);
-                    track.stop();
-                });
-                setRemoteStream(null);
-            }
-        };
-    }
-
-    function createBrowserMediaAdapterRegistry(rootElement, config) {
-        var adapters = {};
-
-        /*
-         * IBrowserMediaAdapter contract:
-         *   adapter(context) -> Promise/session
-         *   context: { config, credentials, localStream, remoteAudioElement, setRemoteStream, showError }
-         *   session: { handleCallState(call), dispose() }
-         *
-         * The registry is intentionally scoped to this soft-phone instance/page. Providers add server
-         * contributors through shell DI; the browser does not expose a global adapter registry. A provider
-         * that ships its own browser media stack registers it on the instance through
-         * `registerMediaAdapter`, so one page can host adapters from different providers without a
-         * process-wide registry that any script could silently overwrite.
-         */
-        adapters.sipjs = createSipJsBrowserMediaAdapter(rootElement, config);
-
-        return adapters;
-    }
-
-    function createSipJsBrowserMediaAdapter(rootElement, widgetConfig) {
+    function createTelnyxBrowserMediaAdapter(rootElement, widgetConfig) {
         return function (context) {
-            var sip = window.SIP;
+            var telnyx = window.TelnyxWebRTC;
 
-            if (!sip || typeof sip.UserAgent !== 'function') {
-                return Promise.reject(new Error('SIP.js is required for the configured browser audio adapter.'));
+            if (!telnyx || typeof telnyx.TelnyxRTC !== 'function') {
+                return Promise.reject(new Error('The Telnyx WebRTC SDK is required for the configured browser audio adapter.'));
             }
 
             return fetchRegistrationConfig(widgetConfig).then(function (registrationConfig) {
-                return createSipJsSession(sip, context, registrationConfig);
+                return createTelnyxSession(telnyx, context, registrationConfig);
             });
         };
     }
 
-    function createSipJsSession(sip, context, registrationConfig) {
-        ensureRtcpMuxAnswerWorkaround();
-
+    function createTelnyxSession(telnyx, context, registrationConfig) {
         var signaling = registrationConfig.signaling || {};
         var credential = registrationConfig.credential || {};
         var ice = registrationConfig.ice || {};
         var media = registrationConfig.media || {};
-        var remoteSink = createRemoteStreamSink(context.setRemoteStream);
-        var peerConnection = null;
-        var activeSession = null;
-        var registerer = null;
-        var disposed = false;
+        var remoteElement = context.remoteAudioElement;
 
-        if (!signaling.webSocketUrl || !signaling.sipUri || !signaling.authorizationUser || !credential.value) {
+        // Telnyx logs in with the telephony-credential SIP username/password, delivered in the same
+        // registration config the SIP.js adapter consumes (authorizationUser + credential.value). The SDK
+        // speaks Verto to Telnyx's own WebRTC gateway, so it manages the peer connection, media, and the
+        // rtcp-mux/SDP details internally; no SDP workaround is needed on this path.
+        var login = signaling.authorizationUser;
+        var password = credential.value;
+
+        if (!login || !password) {
             return Promise.reject(new Error('The browser media registration configuration is incomplete.'));
         }
 
-        function getSessionDescriptionHandler(session) {
-            return session && session.sessionDescriptionHandler
-                ? session.sessionDescriptionHandler
-                : null;
+        var currentCall = null;
+        // The active outbound call's state callback, set by originate() and cleared when that call ends.
+        var outboundNotify = null;
+        var disposed = false;
+
+        var clientOptions = {
+            login: login,
+            password: password
+        };
+
+        if (Array.isArray(ice.iceServers) && ice.iceServers.length > 0) {
+            clientOptions.iceServers = ice.iceServers;
         }
 
-        function attachPeerConnection(session) {
-            var handler = getSessionDescriptionHandler(session);
+        var client = new telnyx.TelnyxRTC(clientOptions);
 
-            if (!handler || !handler.peerConnection || peerConnection === handler.peerConnection) {
+        function clearCall(call) {
+            if (currentCall === call) {
+                currentCall = null;
+                outboundNotify = null;
+            }
+        }
+
+        // A single notification handler drives both directions:
+        //  * inbound: the server only originates a leg to this registered credential after the agent has
+        //    accepted the offer over SignalR, so answering the incoming call here mirrors the SIP.js
+        //    passive-answer model;
+        //  * outbound: relay the SDK call state to the originate() callback that owns the active call.
+        client.on('telnyx.notification', function (notification) {
+            if (!notification || notification.type !== 'callUpdate' || !notification.call) {
                 return;
             }
 
-            peerConnection = handler.peerConnection;
-            context.localStream.getTracks().forEach(function (track) {
-                var alreadyAdded = peerConnection.getSenders().some(function (sender) {
-                    return sender.track === track;
-                });
+            var call = notification.call;
 
-                if (!alreadyAdded) {
-                    peerConnection.addTrack(track, context.localStream);
+            if (call.direction === 'inbound' && call.state === 'ringing' && call !== currentCall && !disposed) {
+                currentCall = call;
+
+                try {
+                    call.answer({ remoteElement: remoteElement });
+                } catch (error) {
+                    context.showError(error && error.message ? error.message : String(error));
                 }
-            });
 
-            peerConnection.getReceivers().forEach(function (receiver) {
-                if (receiver.track) {
-                    remoteSink.addTrack(receiver.track);
+                return;
+            }
+
+            if (call === currentCall) {
+                if (outboundNotify) {
+                    var mapped = mapTelnyxOutboundState(call.state);
+
+                    if (mapped) {
+                        outboundNotify(mapped);
+                    }
                 }
-            });
-            peerConnection.addEventListener('track', function (event) {
-                if (event.track) {
-                    remoteSink.addTrack(event.track);
-                }
-            });
-        }
 
-        function wireSession(session) {
-            activeSession = session;
-            attachPeerConnection(session);
-
-            if (session.stateChange && typeof session.stateChange.addListener === 'function') {
-                session.stateChange.addListener(function () {
-                    attachPeerConnection(session);
-                });
-            }
-        }
-
-        function setMicrophoneEnabled(enabled) {
-            context.localStream.getAudioTracks().forEach(function (track) {
-                track.enabled = enabled;
-            });
-        }
-
-        function requestHold(hold) {
-            if (!activeSession || typeof activeSession.invite !== 'function') {
-                return Promise.resolve();
-            }
-
-            var modifiers = hold && sip.Web && sip.Web.holdModifier
-                ? [sip.Web.holdModifier]
-                : [];
-
-            return Promise.resolve(activeSession.invite({ requestDelegate: {}, sessionDescriptionHandlerModifiers: modifiers })).catch(function () { });
-        }
-
-        function terminateSession() {
-            if (!activeSession) {
-                return Promise.resolve();
-            }
-
-            if (typeof activeSession.bye === 'function') {
-                return Promise.resolve(activeSession.bye()).catch(function () { });
-            }
-
-            if (typeof activeSession.dispose === 'function') {
-                return Promise.resolve(activeSession.dispose()).catch(function () { });
-            }
-
-            return Promise.resolve();
-        }
-
-        var userAgent = new sip.UserAgent({
-            uri: sip.UserAgent.makeURI(signaling.sipUri),
-            displayName: signaling.displayName || '',
-            authorizationUsername: signaling.authorizationUser,
-            authorizationPassword: credential.value,
-            transportOptions: {
-                server: signaling.webSocketUrl
-            },
-            sessionDescriptionHandlerFactoryOptions: {
-                constraints: {
-                    audio: true,
-                    video: false
-                },
-                peerConnectionConfiguration: {
-                    iceServers: ice.iceServers || [],
-                    iceTransportPolicy: ice.iceTransportPolicy || 'all'
-                }
-            },
-            delegate: {
-                onInvite: function (invitation) {
-                    wireSession(invitation);
-                    Promise.resolve(invitation.accept({
-                        sessionDescriptionHandlerOptions: {
-                            constraints: {
-                                audio: true,
-                                video: false
-                            }
-                        }
-                    })).then(function () {
-                        attachPeerConnection(invitation);
-                    }).catch(function (error) {
-                        context.showError(error && error.message ? error.message : String(error));
-                    });
+                if (isTelnyxTerminalState(call.state)) {
+                    clearCall(call);
                 }
             }
         });
 
-        registerer = new sip.Registerer(userAgent, {
-            expires: Math.max(30, Math.floor((Date.parse(credential.expiresAtUtc) - Date.now()) / 1000))
+        client.on('telnyx.error', function (error) {
+            context.showError((error && (error.error || error.message)) || 'Telnyx WebRTC error.');
         });
 
-        return userAgent.start().then(function () {
-            return registerer.register();
-        }).then(function () {
+        // Resolve the session only once the client has logged in (telnyx.ready); newCall/answer require a
+        // live session.
+        return new Promise(function (resolve, reject) {
+            var settled = false;
+
+            client.on('telnyx.ready', function () {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                resolve(buildSession());
+            });
+
+            client.on('telnyx.error', function (error) {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                reject(new Error((error && (error.error || error.message)) || 'Telnyx WebRTC login failed.'));
+            });
+
+            try {
+                client.connect();
+            } catch (error) {
+                if (!settled) {
+                    settled = true;
+                    reject(error instanceof Error ? error : new Error(String(error)));
+                }
+            }
+        });
+
+        function buildSession() {
             return {
                 providerConfig: registrationConfig,
                 mediaCodecs: media.codecs || [],
-                // Whether the browser places its own outbound calls (Telnyx) instead of the server originating
-                // a leg to this registered client.
-                canOriginate: !!registrationConfig.clientOriginatesCalls,
+                // The browser places its own outbound calls through the Telnyx SDK.
+                canOriginate: true,
                 outboundCallerId: registrationConfig.outboundCallerId || '',
-                // Places an outbound call from the registered browser client and returns a controller. The
-                // caller id, when supplied, is presented as the SIP P-Asserted-Identity (required by Telnyx).
-                // onState receives soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
+                // Places an outbound call through the Telnyx SDK and returns a controller. onState receives
+                // soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
                 originate: function (destination, callerId, onState) {
                     var notify = typeof onState === 'function' ? onState : function () { };
 
@@ -698,93 +606,97 @@
                         return null;
                     }
 
-                    var atIndex = (signaling.sipUri || '').indexOf('@');
-                    var domain = atIndex >= 0
-                        ? signaling.sipUri.substring(atIndex + 1).replace(/[;>].*$/, '')
-                        : 'sip.telnyx.com';
-                    var targetUri = sip.UserAgent.makeURI('sip:' + destination + '@' + domain);
+                    var call;
 
-                    if (!targetUri) {
+                    try {
+                        call = client.newCall({
+                            destinationNumber: destination,
+                            callerNumber: callerId || registrationConfig.outboundCallerId || '',
+                            // Reuse the microphone stream the soft phone already acquired so the SDK does not
+                            // open a second capture for outbound calls.
+                            localStream: context.localStream,
+                            remoteElement: remoteElement,
+                            audio: true,
+                            video: false
+                        });
+                    } catch (error) {
+                        context.showError(error && error.message ? error.message : String(error));
                         notify('Disconnected');
 
                         return null;
                     }
 
-                    var extraHeaders = [];
-
-                    if (callerId) {
-                        extraHeaders.push('P-Asserted-Identity: <sip:' + callerId + '@' + domain + '>');
-                    }
-
-                    var inviter = new sip.Inviter(userAgent, targetUri, {
-                        // Early media is intentionally off: negotiating media on a provisional (183) response
-                        // caused the session to terminate mid-ring. Media is set up from the 200 OK on answer.
-                        earlyMedia: false,
-                        sessionDescriptionHandlerOptions: {
-                            constraints: { audio: true, video: false }
-                        },
-                        extraHeaders: extraHeaders
-                    });
-
-                    wireSession(inviter);
-
-                    inviter.stateChange.addListener(function (state) {
-                        if (state === 'Established') {
-                            setMicrophoneEnabled(true);
-                            notify('Connected');
-                        } else if (state === 'Terminating' || state === 'Terminated') {
-                            notify('Disconnected');
-                        }
-                    });
-
-                    Promise.resolve(inviter.invite({
-                        requestDelegate: {
-                            onProgress: function () { notify('Ringing'); },
-                            onReject: function () { notify('Disconnected'); }
-                        }
-                    })).catch(function () {
-                        notify('Disconnected');
-                    });
+                    currentCall = call;
+                    outboundNotify = notify;
 
                     return {
                         terminate: function () {
-                            var currentState = inviter.state;
-
-                            // An established call is ended with BYE; an INVITE that has not been answered yet
-                            // must be cancelled (CANCEL), which BYE cannot do.
-                            if (currentState === 'Established') {
-                                return Promise.resolve(inviter.bye()).catch(function () { });
+                            try {
+                                return Promise.resolve(call.hangup()).catch(function () { });
+                            } catch (error) {
+                                return Promise.resolve();
                             }
-
-                            if (currentState === 'Initial' || currentState === 'Establishing') {
-                                return Promise.resolve(inviter.cancel()).catch(function () { });
+                        },
+                        setHold: function (hold) {
+                            try {
+                                return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () { });
+                            } catch (error) {
+                                return Promise.resolve();
                             }
-
-                            if (typeof inviter.dispose === 'function') {
-                                return Promise.resolve(inviter.dispose()).catch(function () { });
-                            }
+                        },
+                        setMute: function (mute) {
+                            try {
+                                if (mute) {
+                                    call.muteAudio();
+                                } else {
+                                    call.unmuteAudio();
+                                }
+                            } catch (error) { /* best effort */ }
 
                             return Promise.resolve();
-                        },
-                        setHold: function (hold) { return requestHold(hold); },
-                        setMute: function (mute) { setMicrophoneEnabled(!mute); return Promise.resolve(); }
+                        }
                     };
                 },
-                handleCallState: function (call) {
-                    var stateName = normalizeState(call && call.state);
+                handleCallState: function (serverCall) {
+                    var stateName = normalizeState(serverCall && serverCall.state);
 
-                    if (stateName === 'Disconnected' || stateName === 'Failed' || !call) {
-                        return terminateSession();
+                    if (!serverCall || stateName === 'Disconnected' || stateName === 'Failed') {
+                        if (currentCall) {
+                            try {
+                                currentCall.hangup();
+                            } catch (error) { /* best effort */ }
+
+                            currentCall = null;
+                            outboundNotify = null;
+                        }
+
+                        return Promise.resolve();
                     }
 
-                    setMicrophoneEnabled(stateName === 'Connected' && !call.isMuted);
+                    if (!currentCall) {
+                        return Promise.resolve();
+                    }
 
                     if (stateName === 'OnHold') {
-                        return requestHold(true);
+                        try {
+                            return Promise.resolve(currentCall.hold()).catch(function () { });
+                        } catch (error) {
+                            return Promise.resolve();
+                        }
                     }
 
                     if (stateName === 'Connected') {
-                        return requestHold(false);
+                        try {
+                            if (serverCall.isMuted) {
+                                currentCall.muteAudio();
+                            } else {
+                                currentCall.unmuteAudio();
+                            }
+
+                            return Promise.resolve(currentCall.unhold()).catch(function () { });
+                        } catch (error) {
+                            return Promise.resolve();
+                        }
                     }
 
                     return Promise.resolve();
@@ -795,18 +707,24 @@
                     }
 
                     disposed = true;
-                    remoteSink.clear();
 
-                    return terminateSession()
-                        .then(function () {
-                            return registerer ? registerer.unregister().catch(function () { }) : null;
-                        })
-                        .then(function () {
-                            return userAgent.stop().catch(function () { });
-                        });
+                    if (currentCall) {
+                        try {
+                            currentCall.hangup();
+                        } catch (error) { /* best effort */ }
+
+                        currentCall = null;
+                        outboundNotify = null;
+                    }
+
+                    try {
+                        return Promise.resolve(client.disconnect()).catch(function () { });
+                    } catch (error) {
+                        return Promise.resolve();
+                    }
                 }
             };
-        });
+        }
     }
 
     function clamp(value, min, max) {
