@@ -55,13 +55,13 @@ public sealed class TelnyxTelephonyProvider :
         IClock clock,
         ILogger<TelnyxTelephonyProvider> logger,
         IStringLocalizer<TelnyxTelephonyProvider> stringLocalizer,
-        IOptions<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _httpClientFactory = httpClientFactory;
         _credentialStore = credentialStore;
         _clock = clock;
         _logger = logger;
-        _options = telnyxOptions.Value;
+        _options = telnyxOptions.CurrentValue;
         S = stringLocalizer;
     }
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.Models;
+using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Telnyx.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -11,7 +12,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -22,7 +23,7 @@ namespace CrestApps.OrchardCore.Telnyx.Drivers;
 /// </summary>
 public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettings>
 {
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -38,7 +39,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
     /// Initializes a new instance of the <see cref="TelnyxSettingsDisplayDriver"/> class.
     /// </summary>
     public TelnyxSettingsDisplayDriver(
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
@@ -46,7 +47,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         IHtmlLocalizer<TelnyxSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<TelnyxSettingsDisplayDriver> stringLocalizer)
     {
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -159,7 +160,9 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
 
         if (hasChanges)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier
+                .RequestUpdate<TelnyxOptions>()
+                .RequestUpdate<TelephonyProviderOptions>();
         }
 
         return Edit(site, settings, context);

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
@@ -26,7 +27,7 @@ public sealed class TelnyxConnectController : Controller
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ITelnyxProvisioningApiService _provisioningApiService;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly ShellSettings _shellSettings;
     private readonly ILogger _logger;
 
@@ -40,7 +41,7 @@ public sealed class TelnyxConnectController : Controller
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         ITelnyxProvisioningApiService provisioningApiService,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         ShellSettings shellSettings,
         ILogger<TelnyxConnectController> logger,
         IStringLocalizer<TelnyxConnectController> stringLocalizer)
@@ -49,7 +50,7 @@ public sealed class TelnyxConnectController : Controller
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _provisioningApiService = provisioningApiService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _shellSettings = shellSettings;
         _logger = logger;
         S = stringLocalizer;
@@ -109,7 +110,9 @@ public sealed class TelnyxConnectController : Controller
 
         site.Put(settings);
         await _siteService.UpdateSiteSettingsAsync(site);
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier
+            .RequestUpdate<TelnyxOptions>()
+            .RequestUpdate<TelephonyProviderOptions>();
 
         return Ok(new
         {
@@ -214,7 +217,9 @@ public sealed class TelnyxConnectController : Controller
 
         site.Put(settings);
         await _siteService.UpdateSiteSettingsAsync(site);
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier
+            .RequestUpdate<TelnyxOptions>()
+            .RequestUpdate<TelephonyProviderOptions>();
 
         return Ok(new { success = true, message = S["Disconnected from Telnyx. The provisioned resources were removed."].Value });
     }

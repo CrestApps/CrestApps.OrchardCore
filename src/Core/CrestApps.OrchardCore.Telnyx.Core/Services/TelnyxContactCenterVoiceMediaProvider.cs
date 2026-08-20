@@ -35,7 +35,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         IHttpClientFactory httpClientFactory,
         IContactCenterFeatureWorkManager workManager,
         IWebSocketConnectionRegistry registry,
-        IOptions<TelnyxOptions> options,
+        IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxContactCenterVoiceMediaProvider> logger,
         TimeSpan? connectTimeout = null)
     {
@@ -44,7 +44,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         _httpClientFactory = httpClientFactory;
         _workManager = workManager;
         _registry = registry;
-        _options = options.Value;
+        _options = options.CurrentValue;
         _logger = logger;
         _connectTimeout = connectTimeout ?? TimeSpan.FromSeconds(15);
     }

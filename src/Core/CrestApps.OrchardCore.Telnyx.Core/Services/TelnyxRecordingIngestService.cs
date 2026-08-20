@@ -52,7 +52,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         IRecordingMediaStore mediaStore,
         IEnumerable<IRecordingErasureGuard> erasureGuards,
         IClock clock,
-        IOptions<TelnyxOptions> telnyxOptions,
+        IOptionsMonitor<TelnyxOptions> telnyxOptions,
         ILogger<TelnyxRecordingIngestService> logger)
     {
         _jobStore = jobStore;
@@ -60,7 +60,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         _mediaStore = mediaStore;
         _erasureGuard = erasureGuards.FirstOrDefault();
         _clock = clock;
-        _options = telnyxOptions.Value;
+        _options = telnyxOptions.CurrentValue;
         _logger = logger;
     }
 

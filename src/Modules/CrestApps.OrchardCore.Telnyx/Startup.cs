@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
             .AddOptions<TelnyxOptions>()
             .Services
             .AddTransient<IConfigureOptions<TelnyxOptions>, TelnyxOptionsConfigurations>()
+            .AddSignalOptionsChangeTokenSource<TelnyxOptions>()
             .AddTelephonyProviderOptionsConfiguration<TelnyxProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<TelnyxSettingsDisplayDriver>();
 

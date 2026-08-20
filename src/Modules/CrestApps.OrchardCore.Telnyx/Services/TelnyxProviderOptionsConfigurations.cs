@@ -9,13 +9,13 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxProviderOptionsConfigurations : IConfigureOptions<TelephonyProviderOptions>
 {
-    private readonly IOptions<TelnyxOptions> _telnyxOptions;
+    private readonly IOptionsMonitor<TelnyxOptions> _telnyxOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxProviderOptionsConfigurations"/> class.
     /// </summary>
     /// <param name="telnyxOptions">The active Telnyx settings resolved for the tenant shell.</param>
-    public TelnyxProviderOptionsConfigurations(IOptions<TelnyxOptions> telnyxOptions)
+    public TelnyxProviderOptionsConfigurations(IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _telnyxOptions = telnyxOptions;
     }
@@ -25,7 +25,7 @@ public sealed class TelnyxProviderOptionsConfigurations : IConfigureOptions<Tele
     {
         var typeOptions = new TelephonyProviderTypeOptions(typeof(TelnyxTelephonyProvider))
         {
-            IsEnabled = _telnyxOptions.Value.IsEnabled,
+            IsEnabled = _telnyxOptions.CurrentValue.IsEnabled,
         };
 
         options.TryAddProvider(TelnyxConstants.ProviderTechnicalName, typeOptions);

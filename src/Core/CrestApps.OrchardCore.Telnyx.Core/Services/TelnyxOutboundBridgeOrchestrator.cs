@@ -21,11 +21,11 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
     public TelnyxOutboundBridgeOrchestrator(
         IHttpClientFactory httpClientFactory,
         ILogger<TelnyxOutboundBridgeOrchestrator> logger,
-        IOptions<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _options = telnyxOptions.Value;
+        _options = telnyxOptions.CurrentValue;
     }
 
     /// <inheritdoc/>

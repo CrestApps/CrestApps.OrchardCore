@@ -19,10 +19,10 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
     /// </summary>
     public TelnyxSoftPhoneRegistrationConfigContributor(
         ITelnyxTelephonyCredentialIssuer credentialIssuer,
-        IOptions<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _credentialIssuer = credentialIssuer;
-        _options = telnyxOptions.Value;
+        _options = telnyxOptions.CurrentValue;
     }
 
     /// <inheritdoc/>

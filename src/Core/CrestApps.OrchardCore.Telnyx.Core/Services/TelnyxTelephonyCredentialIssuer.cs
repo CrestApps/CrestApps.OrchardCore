@@ -35,13 +35,13 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         ITelnyxAgentCredentialStore credentialStore,
         IClock clock,
         ILogger<TelnyxTelephonyCredentialIssuer> logger,
-        IOptions<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _httpClientFactory = httpClientFactory;
         _credentialStore = credentialStore;
         _clock = clock;
         _logger = logger;
-        _options = telnyxOptions.Value;
+        _options = telnyxOptions.CurrentValue;
     }
 
     /// <inheritdoc/>
