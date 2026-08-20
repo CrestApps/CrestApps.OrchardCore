@@ -38,6 +38,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIMemoryEntryMigrations>();
 
         services.AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
+                .AddSignalOptionsChangeTokenSource<AIMemoryOptions>()
                 .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
                 .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
                 .AddScoped<AIMemoryIndexingService>()
