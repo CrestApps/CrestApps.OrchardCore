@@ -86,6 +86,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
+            .AddSignalOptionsChangeTokenSource<GeneralAIOptions>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
