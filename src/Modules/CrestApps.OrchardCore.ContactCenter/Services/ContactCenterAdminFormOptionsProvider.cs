@@ -4,7 +4,10 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -21,6 +24,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterAdminFormOptionsProvider"/> class.
@@ -33,6 +38,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="voiceProviders">The registered voice call providers.</param>
+    /// <param name="userManager">The Orchard user manager used to resolve an agent's user.</param>
+    /// <param name="displayNameProvider">The Orchard user display-name provider.</param>
     public ContactCenterAdminFormOptionsProvider(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         IActivityQueueManager queueManager,
@@ -41,7 +48,9 @@ public sealed class ContactCenterAdminFormOptionsProvider
         IBusinessHoursCalendarManager calendarManager,
         IOmnichannelChannelEndpointManager channelEndpointManager,
         IAgentProfileManager agentProfileManager,
-        IEnumerable<IContactCenterVoiceProvider> voiceProviders)
+        IEnumerable<IContactCenterVoiceProvider> voiceProviders,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider)
     {
         _campaignManager = campaignManager;
         _queueManager = queueManager;
@@ -51,19 +60,27 @@ public sealed class ContactCenterAdminFormOptionsProvider
         _channelEndpointManager = channelEndpointManager;
         _agentProfileManager = agentProfileManager;
         _voiceProviders = voiceProviders;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
     }
 
     internal async Task<IList<SelectListItem>> GetAgentOptionsAsync(string selectedAgentId)
     {
         var selected = CreateSelectedSet([selectedAgentId], StringComparer.Ordinal);
-        var agents = await _agentProfileManager.GetAllAsync();
+        var agents = (await _agentProfileManager.GetAllAsync()).ToList();
 
-        var options = agents
-            .OrderBy(agent => agent.DisplayName ?? agent.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(agent => new SelectListItem(
-                GetAgentText(agent),
+        var options = new List<SelectListItem>();
+
+        foreach (var agent in agents)
+        {
+            options.Add(new SelectListItem(
+                await ResolveAgentTextAsync(agent),
                 agent.ItemId,
-                selected.Contains(agent.ItemId)))
+                selected.Contains(agent.ItemId)));
+        }
+
+        options = options
+            .OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);
@@ -71,8 +88,27 @@ public sealed class ContactCenterAdminFormOptionsProvider
         return options;
     }
 
-    private static string GetAgentText(AgentProfile agent)
+    private async Task<string> ResolveAgentTextAsync(AgentProfile agent)
     {
+        // Prefer the user's real display name (full name) resolved through the shared display-name provider,
+        // so the agent selector shows a person's name rather than an opaque id.
+        if (!string.IsNullOrEmpty(agent.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return string.IsNullOrWhiteSpace(agent.UserName) || string.Equals(displayName, agent.UserName, StringComparison.Ordinal)
+                        ? displayName
+                        : $"{displayName} ({agent.UserName})";
+                }
+            }
+        }
+
         var name = string.IsNullOrWhiteSpace(agent.DisplayName) ? agent.Name : agent.DisplayName;
 
         if (string.IsNullOrWhiteSpace(name))
