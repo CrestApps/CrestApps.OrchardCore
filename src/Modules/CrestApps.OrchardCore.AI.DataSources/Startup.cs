@@ -46,6 +46,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIDataSourceStoresYesSql();
 
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<AIDataSourceOptions>();
         services.AddDataMigration<AIDataSourceIndexMigrations>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
