@@ -180,17 +180,28 @@ public sealed class TelnyxProvisioningApiService : ITelnyxProvisioningApiService
 
         if (!string.IsNullOrWhiteSpace(existing))
         {
+            // Keep the SIP URI calling preference current on re-connect so an already-provisioned connection is
+            // repaired without needing to be recreated. The field is top-level (not under "inbound").
+            await PatchAsync(client, "credential_connections", existing, new Dictionary<string, object>
+            {
+                ["sip_uri_calling_preference"] = "internal",
+            }, cancellationToken);
+
             return (existing, null);
         }
 
         // A Credential connection requires a static user name/password. The browser soft phone does not use
         // these — it mints short-lived telephony credentials against this connection — but Telnyx requires
-        // them to create the connection, so a random pair is generated.
+        // them to create the connection, so a random pair is generated. "sip_uri_calling_preference:internal"
+        // lets the platform deliver a call to the agent's registered browser (sip:{credential}@sip.telnyx.com)
+        // when it originates on one of this account's connections; without it Telnyx rejects the delivery with
+        // "Invalid SIP URI calling preference".
         return await CreateAsync(client, "credential_connections", new Dictionary<string, object>
         {
             ["connection_name"] = name,
             ["user_name"] = "cc" + RandomToken(14),
             ["password"] = RandomToken(24),
+            ["sip_uri_calling_preference"] = "internal",
         }, cancellationToken);
     }
 

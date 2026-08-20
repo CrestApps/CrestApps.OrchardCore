@@ -14,17 +14,18 @@
 (function () {
   'use strict';
 
-  // Chrome requires RTCP multiplexing, but the Telnyx SDP answer omits "a=rtcp-mux", so
-  // setRemoteDescription rejects the answer ("RTCP-MUX is not enabled") and the call is torn down on
-  // answer. Patch setRemoteDescription once to add a=rtcp-mux to any audio m-section of an answer that
-  // lacks it; RTP still flows on the single muxed port, so audio negotiates and connects.
+  // Chrome requires RTCP multiplexing (rtcpMuxPolicy "require"), but Telnyx SDP omits "a=rtcp-mux". On an
+  // outbound call this makes setRemoteDescription reject the answer; on an inbound call Telnyx sends the
+  // offer, so setRemoteDescription rejects that too ("m-section ... is missing a=rtcp-mux"). Either way the
+  // call fails to connect. Patch setRemoteDescription once to add a=rtcp-mux to any audio m-section of a
+  // remote offer or answer that lacks it; RTP still flows on the single muxed port, so audio negotiates.
   function ensureRtcpMuxAnswerWorkaround() {
     if (typeof RTCPeerConnection === 'undefined' || RTCPeerConnection.prototype.__rtcpMuxAnswerPatched) {
       return;
     }
     var originalSetRemoteDescription = RTCPeerConnection.prototype.setRemoteDescription;
     RTCPeerConnection.prototype.setRemoteDescription = function (description) {
-      if (description && description.type === 'answer' && description.sdp && description.sdp.indexOf('a=rtcp-mux') === -1) {
+      if (description && (description.type === 'answer' || description.type === 'offer') && description.sdp && description.sdp.indexOf('a=rtcp-mux') === -1) {
         description = {
           type: description.type,
           sdp: description.sdp.replace(/(m=audio[^\r\n]*\r?\n)/g, '$1a=rtcp-mux\r\n')
