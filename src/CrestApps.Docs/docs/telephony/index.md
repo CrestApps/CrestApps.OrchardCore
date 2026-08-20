@@ -338,6 +338,10 @@ calls are fully modeled (direction and outcome). Inbound calls reach the soft ph
 orchestration module such as the Contact Center reports the inbound event and offers the call to a
 user.
 
+## Recording storage
+
+Call recordings are ingested into a provider-neutral, encrypted media store. By default the store keeps the encrypted bytes under a tenant-scoped application-data folder. The backend is pluggable: enable [Recording — Azure Blob Storage](recording-azure-blob-storage.md) to store the same encrypted recordings in Azure Blob Storage instead, without changing any provider or the recording orchestration.
+
 ## Writing a provider
 
 To add a new provider:

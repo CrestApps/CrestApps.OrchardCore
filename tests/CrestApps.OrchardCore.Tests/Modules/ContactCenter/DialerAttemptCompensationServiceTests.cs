@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Framework.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -11,14 +12,16 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 public sealed class DialerAttemptCompensationServiceTests
 {
     [Fact]
-    public void ComplianceStartup_RegistersAttemptAndCompensationServices()
+    public void DialerStartup_RegistersAttemptAndCompensationServices()
     {
         // Arrange
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder().Build();
 
         // Act
-        new ComplianceStartup(new TestShellConfiguration(configuration)).ConfigureServices(services);
+        new DialerStartup(
+            new Mock<IStringLocalizer<DialerStartup>>().Object,
+            new TestShellConfiguration(configuration)).ConfigureServices(services);
 
         // Assert
         Assert.Contains(

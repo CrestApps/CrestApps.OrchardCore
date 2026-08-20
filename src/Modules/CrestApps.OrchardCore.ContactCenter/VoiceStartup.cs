@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
@@ -9,13 +10,17 @@ using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 
@@ -125,4 +130,44 @@ public sealed class VoiceStartup : StartupBase
             .AddVoiceOfferEndpoints();
     }
 
+}
+
+/// <summary>
+/// Registers the Contact Center projection that synchronizes server-side voice state with the Telephony soft phone.
+/// This projection is integration glue that activates whenever Contact Center Voice, Contact Center Real-Time, and the
+/// Telephony soft phone are all enabled, rather than a separately selectable feature.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyConstants.Feature.SoftPhone)]
+public sealed class VoiceSoftPhoneStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
+
+        services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
+        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
+    }
+}
+
+/// <summary>
+/// Registers the health checks owned by the Contact Center Voice feature, but only when the
+/// <c>OrchardCore.HealthChecks</c> feature is also enabled so a deployment that does not use health checks never
+/// pays for them.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.Voice)]
+[RequireFeatures("OrchardCore.HealthChecks")]
+public sealed class VoiceHealthChecksStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContactCenterVoiceHealthChecks();
+    }
 }

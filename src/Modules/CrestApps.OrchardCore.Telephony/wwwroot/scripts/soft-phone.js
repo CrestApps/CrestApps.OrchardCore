@@ -793,6 +793,34 @@
     // keyed by the synthetic call id. Server-tracked calls are not in this map.
     var browserCallControllers = {};
 
+    // True from the moment a call is placed until the first real call state arrives (or the attempt
+    // fails). While it is set - and no call is active yet - the status line reads "Connecting" instead
+    // of sitting on "Ready" during the 1-2s the browser audio session and the server take to acknowledge
+    // the dial, so the user can see the call is already in progress. A safety timer clears it if no call
+    // ever materializes so the status can never get stranded on "Connecting".
+    var pendingDial = false;
+    var pendingDialNumber = null;
+    var pendingDialTimer = null;
+    function beginPendingDial(number) {
+      if (pendingDialTimer) {
+        window.clearTimeout(pendingDialTimer);
+      }
+      pendingDial = true;
+      pendingDialNumber = number || null;
+      pendingDialTimer = window.setTimeout(function () {
+        clearPendingDial();
+        render();
+      }, 30000);
+    }
+    function clearPendingDial() {
+      pendingDial = false;
+      pendingDialNumber = null;
+      if (pendingDialTimer) {
+        window.clearTimeout(pendingDialTimer);
+        pendingDialTimer = null;
+      }
+    }
+
     // The phone number input is enhanced with intl-tel-input so a national number entered on the
     // keypad is normalized to E.164 (with a country selector) before it is dialed or screened.
     // A country must always be selected, otherwise intl-tel-input cannot resolve a national number
@@ -1050,6 +1078,12 @@
     // browser to originate its own calls (Telnyx), the call is dialed directly from the registered SIP
     // client; otherwise the server places it over the hub as before.
     function placeCall(number, isExtension) {
+      // Show "Connecting" immediately so the placed call is visible during the round trip, rather than
+      // leaving the status on "Ready" until the browser audio session and the server catch up. The real
+      // call state (browser-originated below, or the server's first CallStateChanged) takes over as soon
+      // as it arrives, and a failure clears it right away.
+      beginPendingDial(number);
+      render();
       return ensureBrowserAudio().then(function (session) {
         if (session && session.canOriginate && typeof session.originate === 'function') {
           originateBrowserCall(session, number);
@@ -1060,6 +1094,8 @@
           isExtension: isExtension
         });
       }).catch(function (error) {
+        clearPendingDial();
+        render();
         showError(error && error.message ? error.message : String(error));
         return null;
       });
@@ -1101,6 +1137,7 @@
       if (controller) {
         browserCallControllers[callId] = controller;
       } else {
+        clearPendingDial();
         removeActiveCall(callId);
         render();
       }
@@ -1630,11 +1667,22 @@
       show(dom.footer, true);
       updateTabs();
       showView(activeTab);
-      setStatus(currentCall ? statusTextForCall(currentCall) : strings.idle || 'Ready');
+      if (currentCall) {
+        clearPendingDial();
+      }
+      setStatus(currentCall ? statusTextForCall(currentCall) : pendingDial ? strings.connecting || 'Connecting' : strings.idle || 'Ready');
       if (dom.number && currentCall && (active || stateName === 'OnHold')) {
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
           setNumberDisplay(peerNumber);
+          numberIsCallDisplay = true;
+        }
+      } else if (dom.number && pendingDial && !currentCall) {
+        // Mirror the active-call look while the dial is in flight: show the number being connected
+        // in the input so the widget does not visibly change when the first real status update
+        // arrives. The input is held read-only by the disabled logic below, exactly as during a call.
+        if (pendingDialNumber) {
+          setNumberDisplay(pendingDialNumber);
           numberIsCallDisplay = true;
         }
       } else if (dom.number && canDial && numberIsCallDisplay) {
@@ -1654,7 +1702,7 @@
       show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
       show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
       if (dom.number) {
-        var numberDisabled = !canDial || !!activeCommand;
+        var numberDisabled = !canDial || !!activeCommand || (pendingDial && !currentCall);
         if (telInput && typeof telInput.setDisabled === 'function') {
           telInput.setDisabled(numberDisabled);
         } else {

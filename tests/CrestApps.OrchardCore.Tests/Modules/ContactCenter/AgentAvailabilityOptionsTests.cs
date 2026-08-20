@@ -12,7 +12,7 @@ public sealed class AgentAvailabilityOptionsTests
     [Theory]
     [InlineData("HeartbeatTimeout")]
     [InlineData("MaximumWrapUpDuration")]
-    public void AvailabilityStartup_WhenDurationIsZero_RejectsConfiguration(string optionName)
+    public void AgentsStartup_WhenDurationIsZero_RejectsConfiguration(string optionName)
     {
         // Arrange
         var configuration = new ConfigurationBuilder()
@@ -22,7 +22,7 @@ public sealed class AgentAvailabilityOptionsTests
             })
             .Build();
         var services = new ServiceCollection();
-        new AvailabilityStartup(new TestShellConfiguration(configuration)).ConfigureServices(services);
+        new AgentsStartup(new TestShellConfiguration(configuration)).ConfigureServices(services);
         using var serviceProvider = services.BuildServiceProvider();
 
         // Act & Assert
