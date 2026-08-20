@@ -15,7 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -31,7 +31,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     private readonly IAIToolInstanceAccessor _instanceAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -44,21 +44,21 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     /// <param name="instanceAccessor">The accessor that resolves the tool instances the current user may assign.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public McpServerSettingsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAIToolInstanceAccessor instanceAccessor,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<McpServerSettingsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _instanceAccessor = instanceAccessor;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
@@ -68,8 +68,6 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         {
             return null;
         }
-
-        context.AddTenantReloadWarningWrapper();
 
         var accessibleTools = await GetAccessibleToolsAsync();
         var accessibleInstances = await _instanceAccessor.GetAccessibleInstancesAsync();
@@ -190,7 +188,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         settings.ExposeAllTools = model.ExposeAllTools;
         settings.Tools = tools;
 
-        _shellReleaseManager.RequestRelease();
+        _optionsUpdateNotifier.RequestUpdate<McpServerOptions>();
 
         return await EditAsync(site, settings, context);
     }
