@@ -31,7 +31,7 @@
 <div class="ocat-limited-wrapper" asp-validation-class-for="TargetType">
     <label asp-for="TargetType" class="ocat-label">@T["Route to"]</label>
     <div class="ocat-limited">
-        <select asp-for="TargetType" class="form-select">
+        <select asp-for="TargetType" class="form-select" data-entry-point-target-type>
             <option value="@EntryPointTargetType.Queue">@T["Queue"]</option>
             <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
         </select>
@@ -40,7 +40,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="TargetAgentId">
+<div class="ocat-wrapper" asp-validation-class-for="TargetAgentId" data-entry-point-agent-field>
     <label asp-for="TargetAgentId" class="ocat-label">@T["Target agent"]</label>
     <div class="ocat-end">
         <select asp-for="TargetAgentId" asp-items="Model.TargetAgentOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an agent"]" data-width="100%" title="@T["No agent"]">
@@ -51,7 +51,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="TargetQueueId">
+<div class="ocat-wrapper" asp-validation-class-for="TargetQueueId" data-entry-point-queue-field>
     <label asp-for="TargetQueueId" class="ocat-label">@T["Target queue"]</label>
     <div class="ocat-end">
         <select asp-for="TargetQueueId" asp-items="Model.TargetQueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["No queue"]">
@@ -137,3 +137,24 @@
         <span class="hint dashed">@T["Disabled entry points do not receive inbound calls."]</span>
     </div>
 </div>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        var typeSelect = document.querySelector('[data-entry-point-target-type]');
+        var agentField = document.querySelector('[data-entry-point-agent-field]');
+
+        if (!typeSelect || !agentField) {
+            return;
+        }
+
+        // Show the "Target agent" field only when routing to a specific agent. The "Target queue" field stays
+        // visible for both targets: it is the primary queue for a queue target and the fallback for an agent
+        // target.
+        function apply() {
+            agentField.style.display = typeSelect.value === '@EntryPointTargetType.Agent' ? '' : 'none';
+        }
+
+        typeSelect.addEventListener('change', apply);
+        apply();
+    })();
+</script>

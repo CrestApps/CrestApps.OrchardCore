@@ -154,12 +154,38 @@ public sealed class TelnyxContactCenterVoiceProvider :
         {
             using var client = CreateClient();
 
-            // Originate the agent leg to the agent's registered browser SIP endpoint. The browser soft phone
-            // auto-answers the invite, then the caller and agent legs are bridged.
+            var callerCallControlId = request.ProviderCallId.Trim();
+
+            // Answer the inbound caller leg first. Telnyx rejects a bridge whose legs are not yet answered
+            // ("call not answered yet", code 90034), so the caller must be connected before the agent leg is
+            // bridged in. A caller leg that is already answered simply returns an error here, which is ignored.
+            using (var answerContent = JsonContent.Create(new Dictionary<string, object>(), options: TelnyxJsonSerializerOptions.Default))
+            using (var answerResponse = await client.PostAsync(
+                $"calls/{Uri.EscapeDataString(callerCallControlId)}/actions/answer",
+                answerContent,
+                cancellationToken))
+            {
+                if (!answerResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",
+                        answerResponse.StatusCode);
+                }
+            }
+
+            // Originate the agent leg to the agent's registered browser SIP endpoint. The browser auto-answers
+            // the invite; when its call.answered webhook arrives, the outbound-bridge orchestration bridges it
+            // to the caller leg carried in client_state. Bridging is deferred to then because Telnyx requires
+            // both legs to be answered first.
             var originateBody = new Dictionary<string, object>
             {
                 ["connection_id"] = _options.ConnectionId,
                 ["to"] = agentEndpoint,
+                ["client_state"] = new TelnyxOutboundBridgeState
+                {
+                    Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+                    PeerCallControlId = callerCallControlId,
+                }.ToClientState(),
             };
 
             if (!string.IsNullOrWhiteSpace(_options.DefaultOutboundCallerId))
@@ -187,28 +213,11 @@ public sealed class TelnyxContactCenterVoiceProvider :
                 return Failure("agent_connect_failed", "Telnyx did not return an agent call control id.");
             }
 
-            var bridgeBody = new Dictionary<string, object> { ["call_control_id"] = agentCallControlId };
-            using var bridgeContent = JsonContent.Create(bridgeBody, options: TelnyxJsonSerializerOptions.Default);
-            using var bridgeResponse = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(request.ProviderCallId.Trim())}/actions/bridge",
-                bridgeContent,
-                cancellationToken);
-
-            if (!bridgeResponse.IsSuccessStatusCode)
-            {
-                _logger.LogError(
-                    "Telnyx rejected a caller-to-agent bridge with status code {StatusCode}. Response: {Response}",
-                    bridgeResponse.StatusCode,
-                    (await SafeReadContentAsync(bridgeResponse, cancellationToken)).SanitizeLogValue());
-
-                return Failure("agent_connect_failed", "The Telnyx caller-to-agent bridge could not be completed.");
-            }
-
             return new ContactCenterVoiceProviderResult
             {
                 Succeeded = true,
                 ProviderName = TechnicalName,
-                ProviderCallId = request.ProviderCallId.Trim(),
+                ProviderCallId = callerCallControlId,
                 ProviderLegId = agentCallControlId,
             };
         }

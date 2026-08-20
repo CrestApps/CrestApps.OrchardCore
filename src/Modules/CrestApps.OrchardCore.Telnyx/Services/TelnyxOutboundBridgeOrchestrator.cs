@@ -51,6 +51,19 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             return TelnyxOutboundBridgeLeg.AgentLeg;
         }
 
+        if (state.Intent == TelnyxOutboundBridgeState.ContactCenterAgentLegIntent)
+        {
+            // The Contact Center agent's browser answered; bridge it to the already-answered caller leg. The
+            // agent leg is a tracked leg of the interaction, so let its events flow to normalization (return
+            // None) rather than treating it as an internal leg to hide.
+            if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
+            {
+                await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+            }
+
+            return TelnyxOutboundBridgeLeg.None;
+        }
+
         // The destination answered; bridge it to the agent leg that has been waiting.
         if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
         {

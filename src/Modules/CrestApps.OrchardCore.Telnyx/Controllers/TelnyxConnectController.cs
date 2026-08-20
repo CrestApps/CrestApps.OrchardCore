@@ -123,6 +123,44 @@ public sealed class TelnyxConnectController : Controller
     }
 
     /// <summary>
+    /// TEMPORARY DIAGNOSTIC: inspects how a phone number is routed on Telnyx (which connection it is assigned
+    /// to) so inbound routing to the Call Control application can be verified.
+    /// </summary>
+    [HttpGet]
+    [Admin("telnyx/connect/inspect-number", "TelnyxConnectInspectNumber")]
+    public async Task<IActionResult> InspectNumber(string number, CancellationToken cancellationToken)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.ManageTelephonySettings))
+        {
+            return Forbid();
+        }
+
+        var settings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<TelnyxSettings>();
+        var apiKey = Unprotect(settings.ApiKey);
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return BadRequest(new { message = "Missing api key." });
+        }
+
+        var client = new System.Net.Http.HttpClient { BaseAddress = new Uri(ResolveApiBaseUrl(settings)) };
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+        var q = string.IsNullOrWhiteSpace(number) ? "phone_numbers?page[size]=250" : $"phone_numbers?filter[phone_number]={Uri.EscapeDataString(number)}";
+        using var listResp = await client.GetAsync(q, cancellationToken);
+        var listBody = await listResp.Content.ReadAsStringAsync(cancellationToken);
+        client.Dispose();
+
+        return Ok(new
+        {
+            callControlAppId = settings.ConnectionId,
+            sipConnectionId = settings.SipConnectionId,
+            status = (int)listResp.StatusCode,
+            numbers = listBody.Length > 2500 ? listBody[..2500] : listBody,
+        });
+    }
+
+    /// <summary>
     /// Reports whether the tenant is connected to Telnyx (both connection ids present).
     /// </summary>
     [HttpGet]

@@ -19,6 +19,13 @@ public sealed class TelnyxOutboundBridgeState
     public const string DestinationLegIntent = "ob-dest";
 
     /// <summary>
+    /// The intent marking a Contact Center agent leg dialed to the agent's browser to receive an inbound (or
+    /// dialer) call. When this leg is answered by the browser, it is bridged to the already-answered caller leg
+    /// carried in <see cref="PeerCallControlId"/>.
+    /// </summary>
+    public const string ContactCenterAgentLegIntent = "cc-agent";
+
+    /// <summary>
     /// Gets or sets the leg intent, one of <see cref="AgentLegIntent"/> or <see cref="DestinationLegIntent"/>.
     /// </summary>
     [JsonPropertyName("i")]
@@ -74,7 +81,9 @@ public sealed class TelnyxOutboundBridgeState
             var parsed = JsonSerializer.Deserialize<TelnyxOutboundBridgeState>(decodedClientState, _options);
 
             if (parsed is null ||
-                (parsed.Intent != AgentLegIntent && parsed.Intent != DestinationLegIntent))
+                (parsed.Intent != AgentLegIntent &&
+                 parsed.Intent != DestinationLegIntent &&
+                 parsed.Intent != ContactCenterAgentLegIntent))
             {
                 return false;
             }
