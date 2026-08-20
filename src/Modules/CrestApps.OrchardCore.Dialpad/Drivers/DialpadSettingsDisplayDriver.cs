@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Dialpad.Models;
+using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Dialpad.ViewModels;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -24,7 +25,7 @@ namespace CrestApps.OrchardCore.Dialpad.Drivers;
 /// </summary>
 public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSettings>
 {
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -40,7 +41,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
     /// <summary>
     /// Initializes a new instance of the <see cref="DialpadSettingsDisplayDriver"/> class.
     /// </summary>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
@@ -49,7 +50,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
     public DialpadSettingsDisplayDriver(
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
@@ -58,7 +59,7 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
         IStringLocalizer<DialpadSettingsDisplayDriver> stringLocalizer,
         ILogger<DialpadSettingsDisplayDriver> logger)
     {
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
@@ -162,7 +163,9 @@ public sealed class DialpadSettingsDisplayDriver : SiteDisplayDriver<DialpadSett
 
         if (hasChanges)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier
+                .RequestUpdate<DialpadOptions>()
+                .RequestUpdate<TelephonyProviderOptions>();
         }
 
         return Edit(site, settings, context);

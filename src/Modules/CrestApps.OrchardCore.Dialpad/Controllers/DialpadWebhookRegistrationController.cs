@@ -38,7 +38,6 @@ public sealed class DialpadWebhookRegistrationController : Controller
     /// <param name="siteService">The site service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="webhookApiService">The Dialpad webhook API service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialpadWebhookRegistrationController(

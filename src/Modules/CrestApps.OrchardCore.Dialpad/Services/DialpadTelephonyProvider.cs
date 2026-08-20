@@ -61,13 +61,13 @@ public sealed class DialpadTelephonyProvider :
         IClock clock,
         ILogger<DialpadTelephonyProvider> logger,
         IStringLocalizer<DialpadTelephonyProvider> stringLocalizer,
-        IOptions<DialpadOptions> dialpadOptions)
+        IOptionsMonitor<DialpadOptions> dialpadOptions)
     {
         _httpClientFactory = httpClientFactory;
         _authenticationService = authenticationService;
         _clock = clock;
         _logger = logger;
-        _dialpadOptions = dialpadOptions.Value;
+        _dialpadOptions = dialpadOptions.CurrentValue;
         S = stringLocalizer;
     }
 

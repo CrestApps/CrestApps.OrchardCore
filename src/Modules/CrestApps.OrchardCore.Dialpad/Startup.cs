@@ -49,6 +49,7 @@ public sealed class Startup : StartupBase
             .AddOptions<DialpadOptions>()
             .Services
             .AddTransient<IConfigureOptions<DialpadOptions>, DialpadOptionsConfigurations>()
+            .AddSignalOptionsChangeTokenSource<DialpadOptions>()
             .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
 
