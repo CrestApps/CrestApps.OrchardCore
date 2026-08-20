@@ -75,6 +75,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.Queues",
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);
@@ -288,7 +289,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     [Fact]
-    public void AgentDesktopFeature_OwnsWorkspaceSurface()
+    public void AgentDesktopWorkspace_IsIntegrationGlueGatedOnItsCapabilities()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -298,10 +299,9 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             repositoryRoot,
             ContactCenterModulePath,
             ContactCenterConstantsFeatureArea(repositoryRoot));
+        var area = ContactCenterConstantsFeatureArea(repositoryRoot);
 
         // Act
-        var dependencies = features["CrestApps.OrchardCore.ContactCenter.AgentDesktop"].Dependencies
-            .Order(StringComparer.Ordinal);
         var endpointOwner = startupClasses.Single(startup =>
             startup.Body.Contains("AddAgentWorkspaceEndpoints()", StringComparison.Ordinal));
         var navigationOwner = startupClasses.Single(startup =>
@@ -317,18 +317,31 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             "Items",
             "ContactCenterSoftPhoneWork.View.cshtml"));
 
-        // Assert
+        // Assert: the agent desktop is no longer a separately selectable feature. Its workspace surface is
+        // integration glue owned by the base feature and gated on the agents, real-time, voice, and Telephony
+        // soft-phone capabilities it composes, so it activates automatically once a provider is wired for
+        // voice and the soft phone is enabled rather than requiring an operator to enable a redundant toggle.
+        Assert.False(
+            features.ContainsKey("CrestApps.OrchardCore.ContactCenter.AgentDesktop"),
+            "The agent desktop workspace is integration glue and must not be declared as a selectable feature.");
+        Assert.Equal(area, endpointOwner.FeatureId);
+        Assert.Equal(area, navigationOwner.FeatureId);
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.Agents",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
-                "CrestApps.OrchardCore.Omnichannel.Managements",
                 "CrestApps.OrchardCore.Telephony.SoftPhone",
             ],
-            dependencies);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.AgentDesktop", endpointOwner.FeatureId);
-        Assert.Equal("CrestApps.OrchardCore.ContactCenter.AgentDesktop", navigationOwner.FeatureId);
+            endpointOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
+        Assert.Equal(
+            [
+                "CrestApps.OrchardCore.ContactCenter.Agents",
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+                "CrestApps.OrchardCore.Telephony.SoftPhone",
+            ],
+            navigationOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.Contains(
             "Url.Action(\"Index\", \"AgentWorkspace\", new { area = ContactCenterConstants.Feature.Area }) ?? returnUrl",
             softPhoneWorkView,

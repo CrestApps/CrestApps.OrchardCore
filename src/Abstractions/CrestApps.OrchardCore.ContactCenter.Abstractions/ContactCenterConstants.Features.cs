@@ -59,11 +59,6 @@ public static partial class ContactCenterConstants
         public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
 
         /// <summary>
-        /// The identifier of the CRM-integrated agent desktop feature.
-        /// </summary>
-        public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";
-
-        /// <summary>
         /// The identifier of the real-time supervisor dashboard and monitoring feature.
         /// </summary>
         public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,10 +17,16 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 
 /// <summary>
-/// Serves the CRM-integrated agent desktop page where an agent spends the shift.
+/// Serves the CRM-integrated agent desktop page where an agent spends the shift. The workspace is
+/// integration glue that activates whenever the agents, real-time transport, voice, and Telephony
+/// soft-phone capabilities are all enabled, rather than a separately selectable feature.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.AgentDesktop)]
+[RequireFeatures(
+    ContactCenterConstants.Feature.Agents,
+    ContactCenterConstants.Feature.RealTime,
+    ContactCenterConstants.Feature.Voice,
+    TelephonyConstants.Feature.SoftPhone)]
 public sealed class AgentWorkspaceController : Controller
 {
     private readonly IAuthorizationService _authorizationService;

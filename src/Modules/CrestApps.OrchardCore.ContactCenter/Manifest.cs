@@ -79,6 +79,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Queues,
+        ContactCenterConstants.Feature.RealTime,
         TelephonyConstants.Feature.Area,
     ]
 )]
@@ -119,29 +120,14 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ContactCenterConstants.Feature.AgentDesktop,
-    Name = "Contact Center Agent Desktop",
-    Description = "Adds the full CRM-integrated real-time agent workspace for presence, offers, active interactions, and recent work. This is the complete-desktop tier; it surfaces the soft-phone call-state projection whenever the Telephony soft phone is enabled.",
-    Category = "Contact Center",
-    Dependencies =
-    [
-        ContactCenterConstants.Feature.Agents,
-        ContactCenterConstants.Feature.RealTime,
-        ContactCenterConstants.Feature.Voice,
-        TelephonyConstants.Feature.SoftPhone,
-        OmnichannelConstants.Features.Managements,
-    ]
-)]
-
-[assembly: Feature(
     Id = ContactCenterConstants.Feature.SecureCapture,
     Name = "Contact Center Secure Data Capture",
     Description = "Adds agent-assisted secure data capture: an agent sends a live customer to a dedicated secure page to enter sensitive data (such as a card number), which is tokenized at submission so the agent, the supervisor, and the recording never see the raw value.",
     Category = "Contact Center",
     Dependencies =
     [
-        ContactCenterConstants.Feature.AgentDesktop,
         ContactCenterConstants.Feature.Recording,
+        TelephonyConstants.Feature.SoftPhone,
     ]
 )]
 

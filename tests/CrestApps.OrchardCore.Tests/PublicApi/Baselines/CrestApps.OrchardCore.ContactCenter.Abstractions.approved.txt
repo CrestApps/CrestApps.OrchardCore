@@ -96,7 +96,6 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class Feature
         {
-            public const string AgentDesktop = "CrestApps.OrchardCore.ContactCenter.AgentDesktop";
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
             public const string Analytics = "CrestApps.OrchardCore.ContactCenter.Analytics";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";

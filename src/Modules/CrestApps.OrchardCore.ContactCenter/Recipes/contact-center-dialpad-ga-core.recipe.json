@@ -16,7 +16,7 @@
         "CrestApps.OrchardCore.ContactCenter.Agents",
         "CrestApps.OrchardCore.ContactCenter.Queues",
         "CrestApps.OrchardCore.ContactCenter.InboundVoice",
-        "CrestApps.OrchardCore.ContactCenter.AgentDesktop",
+        "CrestApps.OrchardCore.Telephony.SoftPhone",
         "CrestApps.OrchardCore.ContactCenter.Dialer",
         "CrestApps.OrchardCore.Dialpad",
         "CrestApps.OrchardCore.Dialpad.ContactCenterVoice"
