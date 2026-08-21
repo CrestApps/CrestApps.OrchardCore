@@ -1,14 +1,18 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services.Routers;
 using CrestApps.OrchardCore.Telephony.Sms.Handlers;
+using CrestApps.OrchardCore.Telephony.Sms.Hubs;
 using CrestApps.OrchardCore.Telephony.Sms.Indexes;
 using CrestApps.OrchardCore.Telephony.Sms.Migrations;
 using CrestApps.OrchardCore.Telephony.Sms.Notifications;
 using CrestApps.OrchardCore.Telephony.Sms.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -56,9 +60,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISmsInboundProcessor>(sp => sp.GetRequiredService<SmsInboundProcessor>());
         services.AddScoped<IOmnichannelEventHandler>(sp => sp.GetRequiredService<SmsInboundProcessor>());
 
-        // Pluggable defaults the portal features can override.
+        // Pluggable contact resolution (a phone-match resolver can override the no-op default).
         services.TryAddScoped<ISmsContactResolver, NullSmsContactResolver>();
-        services.TryAddScoped<ISmsRealTimeNotifier, NullSmsRealTimeNotifier>();
+
+        // Real-time messaging notifications over the SMS portal SignalR hub.
+        services.AddScoped<ISmsRealTimeNotifier, SmsRealTimeNotifier>();
 
         // Storage schema + indexes.
         services.AddIndexProvider<SmsConversationIndexProvider>();
@@ -70,5 +76,10 @@ public sealed class Startup : StartupBase
 
         // Redact customer/service addresses in logs, matching the other telephony modules.
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapHub<SmsPortalHub>(SignalRHubRoutes.GetHubPath<SmsPortalHub>());
     }
 }
