@@ -171,9 +171,14 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         {
             var greeting = await MarkVoicemailProjectionAsync(command, request, cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(greeting))
+            if (!string.IsNullOrWhiteSpace(greeting.Text))
             {
-                call.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey] = greeting;
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey] = greeting.Text;
+            }
+
+            if (!string.IsNullOrWhiteSpace(greeting.MediaUrl))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey] = greeting.MediaUrl;
             }
         }
 
@@ -182,21 +187,21 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         return ToVoiceProviderResult(command, request, result);
     }
 
-    private async Task<string> MarkVoicemailProjectionAsync(
+    private async Task<(string Text, string MediaUrl)> MarkVoicemailProjectionAsync(
         ProviderCommand command,
         ProviderCallActionCommandRequest request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(command.InteractionId))
         {
-            return null;
+            return default;
         }
 
         var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
 
         if (interaction is null)
         {
-            return null;
+            return default;
         }
 
         // While this flag is set the soft-phone projection renders the call as a terminal, missed call for the
@@ -213,21 +218,24 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
                 : null;
 
         string greetingText = null;
+        string greetingMediaUrl = null;
 
         if (!string.IsNullOrWhiteSpace(recipientAgentId))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey] = recipientAgentId;
 
-            // Resolve the recipient agent's per-agent greeting so the provider can speak it before recording. A
-            // missing agent or empty greeting falls back to the provider's default greeting.
+            // Resolve the recipient agent's per-agent greeting so the provider can play it before recording. A
+            // recorded/uploaded audio greeting overrides the text greeting; a missing agent or empty greeting falls
+            // back to the provider's default greeting.
             var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
             greetingText = recipientAgent?.VoicemailGreetingText;
+            greetingMediaUrl = recipientAgent?.VoicemailGreetingMediaUrl;
         }
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
 
-        return greetingText;
+        return (greetingText, greetingMediaUrl);
     }
 
     private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)

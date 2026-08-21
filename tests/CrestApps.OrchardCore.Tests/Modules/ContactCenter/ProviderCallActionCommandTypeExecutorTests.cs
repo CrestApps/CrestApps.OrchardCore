@@ -202,7 +202,12 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         var agentProfileManager = new Mock<IAgentProfileManager>(MockBehavior.Strict);
         agentProfileManager
             .Setup(manager => manager.FindByIdAsync("agent-9", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AgentProfile { ItemId = "agent-9", VoicemailGreetingText = "You have reached Jane. Leave a message." });
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "agent-9",
+                VoicemailGreetingText = "You have reached Jane. Leave a message.",
+                VoicemailGreetingMediaUrl = "https://media.example.com/greetings/jane.mp3",
+            });
 
         var executor = CreateExecutor(
             ProviderCommandType.SendToVoicemail,
@@ -232,6 +237,9 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal(
             "You have reached Jane. Leave a message.",
             capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey]);
+        Assert.Equal(
+            "https://media.example.com/greetings/jane.mp3",
+            capturedCall.Metadata[ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey]);
     }
 
     [Theory]

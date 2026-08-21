@@ -396,26 +396,48 @@ public sealed class TelnyxTelephonyProvider :
 
         await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);
 
-        // Speak the recipient agent's per-agent greeting when one is configured; otherwise fall back to a default.
-        var greeting = call.Metadata is not null &&
-            call.Metadata.TryGetValue(ContactCenterConstants.Voicemail.GreetingTextMetadataKey, out var greetingValue) &&
-            greetingValue is string greetingText &&
-            !string.IsNullOrWhiteSpace(greetingText)
-            ? greetingText
-            : S["Please leave your message after the tone, then hang up."].Value;
+        // Play the recipient agent's greeting before recording. A recorded/uploaded audio greeting (a publicly
+        // reachable URL) overrides the text greeting and is played with playback_start; otherwise the per-agent
+        // (or default) text greeting is spoken with text-to-speech.
+        var greetingMediaUrl = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey);
 
-        var speakBody = new Dictionary<string, object>
+        if (!string.IsNullOrWhiteSpace(greetingMediaUrl))
         {
-            ["payload"] = greeting,
-            ["payload_type"] = "text",
-            ["voice"] = "female",
-            ["language"] = "en-US",
-        };
+            var playbackBody = new Dictionary<string, object>
+            {
+                ["audio_url"] = greetingMediaUrl,
+            };
 
-        await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
+            await ExecuteActionAsync(callId, "playback_start", playbackBody, () => null, cancellationToken);
+        }
+        else
+        {
+            var greetingText = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingTextMetadataKey);
+            var greeting = !string.IsNullOrWhiteSpace(greetingText)
+                ? greetingText
+                : S["Please leave your message after the tone, then hang up."].Value;
+
+            var speakBody = new Dictionary<string, object>
+            {
+                ["payload"] = greeting,
+                ["payload_type"] = "text",
+                ["voice"] = "female",
+                ["language"] = "en-US",
+            };
+
+            await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
+        }
 
         return TelephonyResult.Success(BuildCall(callId, CallState.Connected, call.Metadata, CallDirection.Inbound));
     }
+
+    private static string TryGetMetadataString(IDictionary<string, object> metadata, string key)
+        => metadata is not null &&
+            metadata.TryGetValue(key, out var value) &&
+            value is string text &&
+            !string.IsNullOrWhiteSpace(text)
+            ? text
+            : null;
 
     // Hold, resume, mute, and unmute are executed by the browser media adapter (SIP re-INVITE and local track
     // toggling) because Telnyx delivers this call's audio to the browser, not to a server-side leg. The result

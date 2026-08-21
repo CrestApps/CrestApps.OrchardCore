@@ -50,6 +50,14 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string VoicemailGreetingText { get; set; }
 
     /// <summary>
+    /// Gets or sets the absolute URL of a recorded or uploaded audio greeting played to a caller who reaches this
+    /// agent's voicemail. When set it overrides <see cref="VoicemailGreetingText"/>: providers that support audio
+    /// playback (for example Telnyx) fetch and play this file instead of speaking the text. The URL must be
+    /// publicly reachable by the provider, so it is typically a media-library file served at an absolute URL.
+    /// </summary>
+    public string VoicemailGreetingMediaUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the current presence state of the agent.
     /// </summary>
     public AgentPresenceStatus PresenceStatus { get; set; }

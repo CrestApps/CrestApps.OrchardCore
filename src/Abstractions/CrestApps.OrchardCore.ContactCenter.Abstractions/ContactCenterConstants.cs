@@ -94,6 +94,13 @@ public static partial class ContactCenterConstants
         /// hard-coded default.
         /// </summary>
         public const string GreetingTextMetadataKey = "voicemailGreetingText";
+
+        /// <summary>
+        /// The command-metadata key that carries the absolute URL of the recipient agent's recorded/uploaded audio
+        /// greeting to the telephony provider. When present it overrides <see cref="GreetingTextMetadataKey"/>: the
+        /// provider plays the audio file before recording instead of speaking the text.
+        /// </summary>
+        public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
     }
 
     /// <summary>
