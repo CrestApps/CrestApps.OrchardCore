@@ -23,6 +23,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
     private readonly ITelephonyService _telephonyService;
     private readonly IInteractionManager _interactionManager;
+    private readonly IAgentProfileManager _agentProfileManager;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterWorkStateService _workStateService;
@@ -44,6 +45,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     protected ProviderCallActionCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -53,6 +55,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     {
         _telephonyService = telephonyServices.FirstOrDefault();
         _interactionManager = interactionManager;
+        _agentProfileManager = agentProfileManager;
         _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
         _workStateService = workStateService;
@@ -162,10 +165,16 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         // Sending a ringing call to voicemail answers the provider leg to record the caller's message. Flag the
         // interaction and project a missed call to the target agent's soft phone before that answer arrives, so the
-        // recording leg is never surfaced to the agent as a live "in call" state for a call they never took.
+        // recording leg is never surfaced to the agent as a live "in call" state for a call they never took. The
+        // recipient agent's per-agent greeting (when set) travels to the provider so it is spoken before recording.
         if (CommandType == ProviderCommandType.SendToVoicemail)
         {
-            await MarkVoicemailProjectionAsync(command, request, cancellationToken);
+            var greeting = await MarkVoicemailProjectionAsync(command, request, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(greeting))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey] = greeting;
+            }
         }
 
         var result = await ExecuteTelephonyAsync(_telephonyService, call, cancellationToken);
@@ -173,21 +182,21 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         return ToVoiceProviderResult(command, request, result);
     }
 
-    private async Task MarkVoicemailProjectionAsync(
+    private async Task<string> MarkVoicemailProjectionAsync(
         ProviderCommand command,
         ProviderCallActionCommandRequest request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(command.InteractionId))
         {
-            return;
+            return null;
         }
 
         var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
 
         if (interaction is null)
         {
-            return;
+            return null;
         }
 
         // While this flag is set the soft-phone projection renders the call as a terminal, missed call for the
@@ -203,13 +212,22 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
                 ? targetAgent?.ToString()
                 : null;
 
+        string greetingText = null;
+
         if (!string.IsNullOrWhiteSpace(recipientAgentId))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey] = recipientAgentId;
+
+            // Resolve the recipient agent's per-agent greeting so the provider can speak it before recording. A
+            // missing agent or empty greeting falls back to the provider's default greeting.
+            var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
+            greetingText = recipientAgent?.VoicemailGreetingText;
         }
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
+
+        return greetingText;
     }
 
     private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)

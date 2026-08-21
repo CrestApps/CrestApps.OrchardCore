@@ -24,6 +24,7 @@ public sealed class RejectProviderCommandTypeExecutor : ProviderCallActionComman
     public RejectProviderCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -33,6 +34,7 @@ public sealed class RejectProviderCommandTypeExecutor : ProviderCallActionComman
         : base(
             telephonyServices,
             interactionManager,
+            agentProfileManager,
             queueService,
             workStateService,
             activityWriter,

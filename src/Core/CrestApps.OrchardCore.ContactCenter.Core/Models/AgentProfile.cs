@@ -43,6 +43,13 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string OutboundCallerId { get; set; }
 
     /// <summary>
+    /// Gets or sets the text-to-speech greeting spoken to a caller who reaches this agent's voicemail. When empty,
+    /// a default greeting is used. Providers that support text-to-speech (for example Telnyx) speak this text
+    /// before recording the caller's message.
+    /// </summary>
+    public string VoicemailGreetingText { get; set; }
+
+    /// <summary>
     /// Gets or sets the current presence state of the agent.
     /// </summary>
     public AgentPresenceStatus PresenceStatus { get; set; }

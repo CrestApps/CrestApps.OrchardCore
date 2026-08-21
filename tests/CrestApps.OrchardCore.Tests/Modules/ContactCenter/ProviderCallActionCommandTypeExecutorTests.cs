@@ -165,6 +165,75 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal("interaction-1", publishedEvent.InteractionId);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_SendToVoicemail_PassesRecipientAgentGreetingToTheProvider()
+    {
+        // Arrange
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        CallReference? capturedCall = null;
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            call =>
+            {
+                capturedCall = call;
+                return TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" });
+            });
+
+        var interaction = new Interaction { ItemId = "interaction-1" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var agentProfileManager = new Mock<IAgentProfileManager>(MockBehavior.Strict);
+        agentProfileManager
+            .Setup(manager => manager.FindByIdAsync("agent-9", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "agent-9", VoicemailGreetingText = "You have reached Jane. Leave a message." });
+
+        var executor = CreateExecutor(
+            ProviderCommandType.SendToVoicemail,
+            telephonyService,
+            interactionManager,
+            publisher,
+            CreateClock(),
+            agentProfileManager: agentProfileManager);
+
+        var command = CreateCommand(
+            ProviderCommandType.SendToVoicemail,
+            requestPayload: JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+            {
+                ActivityItemId = "activity-1",
+                QueueId = "queue-1",
+                ProviderCallId = "call-1",
+                AgentId = "agent-9",
+                AgentUserId = "user-1",
+            }));
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(capturedCall);
+        Assert.Equal(
+            "You have reached Jane. Leave a message.",
+            capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey]);
+    }
+
     [Theory]
     [InlineData(ProviderCommandType.Reject)]
     [InlineData(ProviderCommandType.SendToVoicemail)]
@@ -613,10 +682,12 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Mock<IClock> clock,
         Mock<IActivityQueueService>? queueService = null,
         Mock<IOmnichannelActivityManager>? activityManager = null,
-        ICallControlAuthorizationService? callControlAuthorizationService = null)
+        ICallControlAuthorizationService? callControlAuthorizationService = null,
+        Mock<IAgentProfileManager>? agentProfileManager = null)
     {
         queueService ??= new Mock<IActivityQueueService>(MockBehavior.Loose);
         activityManager ??= new Mock<IOmnichannelActivityManager>(MockBehavior.Loose);
+        agentProfileManager ??= new Mock<IAgentProfileManager>(MockBehavior.Loose);
         callControlAuthorizationService ??= new FakeCallControlAuthorizationService();
         var workStateService = new FakeContactCenterWorkStateService(activityManager.Object);
         var activityWriter = new FakeContactCenterActivityWriter(activityManager.Object);
@@ -626,6 +697,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             ProviderCommandType.Reject => new RejectProviderCommandTypeExecutor(
                 [telephonyService.Object],
                 interactionManager.Object,
+                agentProfileManager.Object,
                 queueService.Object,
                 workStateService,
                 activityWriter,
@@ -635,6 +707,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             ProviderCommandType.SendToVoicemail => new SendToVoicemailProviderCommandTypeExecutor(
                 [telephonyService.Object],
                 interactionManager.Object,
+                agentProfileManager.Object,
                 queueService.Object,
                 workStateService,
                 activityWriter,

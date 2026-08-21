@@ -87,6 +87,13 @@ public static partial class ContactCenterConstants
         /// call session have released their agent association.
         /// </summary>
         public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
+
+        /// <summary>
+        /// The command-metadata key that carries the recipient agent's text-to-speech voicemail greeting to the
+        /// telephony provider, so the provider speaks the per-agent greeting before recording rather than a
+        /// hard-coded default.
+        /// </summary>
+        public const string GreetingTextMetadataKey = "voicemailGreetingText";
     }
 
     /// <summary>

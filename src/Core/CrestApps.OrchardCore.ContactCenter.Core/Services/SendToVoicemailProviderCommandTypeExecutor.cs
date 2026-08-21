@@ -24,6 +24,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
     public SendToVoicemailProviderCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -33,6 +34,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
         : base(
             telephonyServices,
             interactionManager,
+            agentProfileManager,
             queueService,
             workStateService,
             activityWriter,

@@ -137,6 +137,7 @@ public sealed class CallControlAuthorizationBoundaryTests
         return new RejectProviderCommandTypeExecutor(
             [(telephonyService ?? new Mock<ITelephonyService>(MockBehavior.Loose)).Object],
             interactionManager.Object,
+            Mock.Of<IAgentProfileManager>(),
             Mock.Of<IActivityQueueService>(),
             new FakeContactCenterWorkStateService(),
             Mock.Of<IContactCenterActivityWriter>(),
@@ -289,6 +290,7 @@ public sealed class CallControlAuthorizationBoundaryTests
             ProviderCommandType.Reject => new RejectProviderCommandTypeExecutor(
                 [telephonyService.Object],
                 interactionManager.Object,
+                Mock.Of<IAgentProfileManager>(),
                 Mock.Of<IActivityQueueService>(),
                 new FakeContactCenterWorkStateService(),
                 Mock.Of<IContactCenterActivityWriter>(),
@@ -298,6 +300,7 @@ public sealed class CallControlAuthorizationBoundaryTests
             ProviderCommandType.SendToVoicemail => new SendToVoicemailProviderCommandTypeExecutor(
                 [telephonyService.Object],
                 interactionManager.Object,
+                Mock.Of<IAgentProfileManager>(),
                 Mock.Of<IActivityQueueService>(),
                 new FakeContactCenterWorkStateService(),
                 Mock.Of<IContactCenterActivityWriter>(),

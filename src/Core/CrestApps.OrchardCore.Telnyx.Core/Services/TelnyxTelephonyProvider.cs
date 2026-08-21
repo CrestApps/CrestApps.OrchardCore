@@ -396,9 +396,17 @@ public sealed class TelnyxTelephonyProvider :
 
         await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);
 
+        // Speak the recipient agent's per-agent greeting when one is configured; otherwise fall back to a default.
+        var greeting = call.Metadata is not null &&
+            call.Metadata.TryGetValue(ContactCenterConstants.Voicemail.GreetingTextMetadataKey, out var greetingValue) &&
+            greetingValue is string greetingText &&
+            !string.IsNullOrWhiteSpace(greetingText)
+            ? greetingText
+            : S["Please leave your message after the tone, then hang up."].Value;
+
         var speakBody = new Dictionary<string, object>
         {
-            ["payload"] = S["Please leave your message after the tone, then hang up."].Value,
+            ["payload"] = greeting,
             ["payload_type"] = "text",
             ["voice"] = "female",
             ["language"] = "en-US",
