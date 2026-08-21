@@ -211,19 +211,20 @@
     }
 
     &__voicemail-play {
-        flex: 0 0 1.75rem;
-        width: 1.75rem;
-        height: 1.75rem;
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border: none;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         line-height: 1;
         color: #fff;
-        background-color: var(--telephony-accent, #2f6fed);
+        // Deliberately a distinct colour from the accent so the play glyph is not the same colour as its circle.
+        background-color: #d23f3f;
 
         &:hover {
             filter: brightness(0.95);
@@ -231,6 +232,76 @@
 
         &.is-playing {
             background-color: var(--bs-secondary-color, #6c757d);
+        }
+    }
+
+    &__call-btn {
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #fff;
+        background-color: #1f9d55;
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+    }
+
+    &__voicemail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    &__voicemail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border-radius: 0.5rem;
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+
+        &--unread .telephony-soft-phone__history-number {
+            font-weight: 700;
+
+            &::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: #d23f3f;
+                vertical-align: middle;
+            }
+        }
+    }
+
+    &__voicemail-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    &__voicemail-player {
+        padding: 0.35rem 0.5rem 0.5rem;
+
+        .telephony-soft-phone__voicemail-audio {
+            width: 100%;
+            height: 2.25rem;
         }
     }
 

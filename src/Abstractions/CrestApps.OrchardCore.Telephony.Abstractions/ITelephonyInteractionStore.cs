@@ -149,4 +149,13 @@ public interface ITelephonyInteractionStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated interaction, or <see langword="null"/> when no matching interaction exists.</returns>
     Task<TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, DateTime readUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks every unread voicemail for the given user as read.
+    /// </summary>
+    /// <param name="userId">The user identifier that owns the voicemails.</param>
+    /// <param name="readUtc">The time, in UTC, the voicemails were read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of voicemails that were marked read.</returns>
+    Task<int> MarkAllVoicemailsReadAsync(string userId, DateTime readUtc, CancellationToken cancellationToken = default);
 }

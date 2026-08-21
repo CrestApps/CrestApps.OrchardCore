@@ -306,4 +306,31 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
             },
             cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<int> MarkAllVoicemailsReadAsync(string userId, DateTime readUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return 0;
+        }
+
+        var interactions = await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x =>
+                x.UserId == userId &&
+                x.IsVoicemail &&
+                x.VoicemailReadUtc == null)
+            .ListAsync(cancellationToken);
+
+        var count = 0;
+
+        foreach (var interaction in interactions)
+        {
+            interaction.VoicemailReadUtc = readUtc;
+            await _session.SaveAsync(interaction, cancellationToken: cancellationToken);
+            count++;
+        }
+
+        return count;
+    }
 }

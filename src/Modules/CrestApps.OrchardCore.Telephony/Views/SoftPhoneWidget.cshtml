@@ -121,6 +121,9 @@
             ["pauseVoicemail"] = T["Pause voicemail"].Value,
             ["voicemailUnavailable"] = T["This voicemail is still processing. Try again in a moment."].Value,
             ["voicemailPlaybackFailed"] = T["The voicemail could not be played."].Value,
+            ["noVoicemails"] = T["No voicemails."].Value,
+            ["callBack"] = T["Call back"].Value,
+            ["call"] = T["Call"].Value,
             ["inProgress"] = T["In progress"].Value,
             ["completed"] = T["Completed"].Value,
             ["rejected"] = T["Rejected"].Value,
@@ -150,7 +153,6 @@
 
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <audio data-telephony-remote-audio autoplay></audio>
-        <audio data-telephony-voicemail-audio preload="none"></audio>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
             <span class="telephony-soft-phone__title">@T["Phone"]</span>
             @if (Model.HeaderActions != null)
@@ -271,6 +273,13 @@
                 <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
             </div>
 
+            <div class="telephony-soft-phone__view telephony-soft-phone__voicemail" data-telephony-view="voicemail" hidden>
+                <div class="telephony-soft-phone__voicemail-player" data-telephony-voicemail-player hidden>
+                    <audio class="telephony-soft-phone__voicemail-audio" data-telephony-voicemail-audio controls preload="none"></audio>
+                </div>
+                <div class="telephony-soft-phone__voicemail-list" data-telephony-voicemail-list></div>
+            </div>
+
             @if (Model.Views != null)
             {
                 @await DisplayAsync(Model.Views)
@@ -285,6 +294,10 @@
             <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="history" aria-selected="false">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
+            </button>
+            <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="voicemail" aria-selected="false">
+                <i class="fa-solid fa-voicemail"></i>
+                <span>@T["Voicemail"]</span>
                 <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread voicemails"]"></span>
             </button>
             @if (Model.Tabs != null)

@@ -383,6 +383,37 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     }
 
     /// <summary>
+    /// Marks all of the current user's voicemails as read (for example when they open the voicemail tab).
+    /// </summary>
+    /// <returns>The remaining unread voicemail count, which is zero on success.</returns>
+    public async Task<int> MarkAllVoicemailsRead()
+    {
+        var count = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("MarkAllVoicemailsRead");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            await store.MarkAllVoicemailsReadAsync(userId, DateTime.UtcNow, Context.ConnectionAborted);
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
+    }
+
+    /// <summary>
     /// Gets the current user's active call directly from the configured telephony provider.
     /// </summary>
     /// <returns>The provider-authoritative call lookup result.</returns>

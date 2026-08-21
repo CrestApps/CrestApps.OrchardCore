@@ -546,6 +546,23 @@ public sealed class TelephonyHubAuthorizationTests
 
             return Task.FromResult(interaction);
         }
+
+        public Task<int> MarkAllVoicemailsReadAsync(
+            string userId,
+            DateTime readUtc,
+            CancellationToken cancellationToken = default)
+        {
+            var count = 0;
+
+            foreach (var interaction in _interactions.Where(value =>
+                value.UserId == userId && value.IsVoicemail && value.VoicemailReadUtc is null))
+            {
+                interaction.VoicemailReadUtc = readUtc;
+                count++;
+            }
+
+            return Task.FromResult(count);
+        }
     }
 
     private sealed class AllowAuthorizationService : IAuthorizationService
