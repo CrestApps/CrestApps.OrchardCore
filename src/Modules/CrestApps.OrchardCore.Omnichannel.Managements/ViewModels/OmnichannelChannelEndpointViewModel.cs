@@ -29,6 +29,12 @@ public class OmnichannelChannelEndpointViewModel
     public string Value { get; set; }
 
     /// <summary>
+    /// Gets or sets the technical name of the provider that owns this number (for example "Twilio" or "Telnyx").
+    /// Leave empty to use the tenant-default provider.
+    /// </summary>
+    public string ProviderName { get; set; }
+
+    /// <summary>
     /// Gets or sets the channels.
     /// </summary>
     [BindNever]

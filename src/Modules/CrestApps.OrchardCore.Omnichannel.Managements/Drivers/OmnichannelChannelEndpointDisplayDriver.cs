@@ -41,6 +41,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
             model.Description = endpoint.Description;
             model.Channel = endpoint.Channel;
             model.Value = endpoint.Value;
+            model.ProviderName = endpoint.ProviderName;
             model.Channels =
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
@@ -60,6 +61,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         endpoint.Description = model.Description?.Trim();
         endpoint.Channel = model.Channel;
         endpoint.Value = model.Value?.Trim();
+        endpoint.ProviderName = model.ProviderName?.Trim();
 
         return Edit(endpoint, context);
     }

@@ -50,4 +50,43 @@ public sealed class OmnichannelMessage : Entity
     /// true = inbound (customer → service), false = outbound (service → customer).
     /// </summary>
     public bool IsInbound { get; set; }
+
+    // ---- SMS Communication Portal fields ----
+    // These extend the shared message/bubble in place (rather than introducing a separate SMS message entity)
+    // so the human portal and the existing inbound-persistence and automated-AI paths all read one record type.
+
+    /// <summary>
+    /// Gets or sets the identifier of the <c>SmsConversation</c> (thread) this message belongs to. Indexed so a
+    /// thread loads its bubbles by conversation. Null for messages not yet linked to a portal conversation.
+    /// </summary>
+    public string ConversationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent who composed an outbound message. Null for inbound and
+    /// automated (AI) messages.
+    /// </summary>
+    public string SentByAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the normalized delivery status of an outbound message, stored as the string name of the
+    /// portal's delivery-status enumeration. Null for inbound/automated messages, which carry no delivery
+    /// lifecycle.
+    /// </summary>
+    public string DeliveryStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's identifier for this message, used to correlate delivery receipts.
+    /// </summary>
+    public string ProviderMessageId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the internal references to any ingested MMS media for this message. Provider-hosted media
+    /// URLs are reference metadata only; the durable copies live in the encrypted media store.
+    /// </summary>
+    public IList<string> MediaReferences { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the provider error code when an outbound message failed.
+    /// </summary>
+    public string ErrorCode { get; set; }
 }

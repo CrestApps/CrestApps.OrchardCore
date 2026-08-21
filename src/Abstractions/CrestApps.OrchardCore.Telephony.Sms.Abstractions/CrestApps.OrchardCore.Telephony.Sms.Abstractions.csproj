@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Telephony.Sms</RootNamespace>
+    <Title>CrestApps OrchardCore SMS Portal Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provider-agnostic abstractions and shared vocabulary for the CrestApps OrchardCore SMS Communication
+      Portal: conversation, routing, and delivery enumerations, the per-number provider dispatch contract,
+      and the real-time messaging notification contracts.
+    </Description>
+    <PackageTags>$(PackageTags) Telephony SMS Portal Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
+  </ItemGroup>
+
+</Project>

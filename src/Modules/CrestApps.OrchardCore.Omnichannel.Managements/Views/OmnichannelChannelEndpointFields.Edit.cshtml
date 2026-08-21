@@ -29,6 +29,15 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label asp-for="ProviderName" class="ocat-label">@T["Provider"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProviderName" class="form-control" />
+        <span class="hint">@T["The technical name of the provider that owns this number (for example \"Twilio\" or \"Telnyx\"). Leave empty to use the tenant-default provider."]</span>
+        <span asp-validation-for="ProviderName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <label asp-for="Description" class="ocat-label">@T["Description"]</label>
     <div class="ocat-end">
         <textarea asp-for="Description" class="form-control"></textarea>

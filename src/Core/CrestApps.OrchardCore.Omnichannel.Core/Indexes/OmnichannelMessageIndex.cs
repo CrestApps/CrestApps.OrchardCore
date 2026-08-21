@@ -31,4 +31,10 @@ public sealed class OmnichannelMessageIndex : MapIndex
     /// Gets or sets a value indicating whether is inbound.
     /// </summary>
     public bool IsInbound { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the SMS portal conversation (thread) this message belongs to. Indexed so
+    /// a thread loads its message bubbles by conversation. Null for messages not linked to a portal conversation.
+    /// </summary>
+    public string ConversationId { get; set; }
 }
