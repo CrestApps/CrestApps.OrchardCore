@@ -500,7 +500,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Assert
         Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Voice"],
+            [
+                "CrestApps.OrchardCore.ContactCenter.Recording.Core",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Recording", recordingOwner.FeatureId);
     }

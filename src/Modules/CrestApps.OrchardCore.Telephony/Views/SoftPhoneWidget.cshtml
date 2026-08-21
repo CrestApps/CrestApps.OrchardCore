@@ -54,12 +54,15 @@
     // soft phone decoupled from that module: when Contact Center is not enabled the route does not resolve, the
     // template is null, and voicemail playback stays disabled.
     var voicemailMediaUrlTemplate = Url.RouteUrl("ContactCenterVoicemailMedia", new { interactionId = "__INTERACTION_ID__" });
+    var voicemailDeleteUrlTemplate = Url.RouteUrl("ContactCenterVoicemailDelete", new { interactionId = "__INTERACTION_ID__" });
 
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
         ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
         ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
+        ["voicemailDeleteEnabled"] = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
+        ["voicemailDeleteUrlTemplate"] = voicemailDeleteUrlTemplate ?? string.Empty,
         ["capabilities"] = capabilities,
         ["audioCapabilities"] = audioCapabilities,
         ["audioMode"] = audioMode,
@@ -121,6 +124,9 @@
             ["pauseVoicemail"] = T["Pause voicemail"].Value,
             ["voicemailUnavailable"] = T["This voicemail is still processing. Try again in a moment."].Value,
             ["voicemailPlaybackFailed"] = T["The voicemail could not be played."].Value,
+            ["voicemailDeleteFailed"] = T["The voicemail could not be deleted."].Value,
+            ["selectVoicemail"] = T["Select voicemail"].Value,
+            ["deleteSelected"] = T["Delete"].Value,
             ["noVoicemails"] = T["No voicemails."].Value,
             ["callBack"] = T["Call back"].Value,
             ["call"] = T["Call"].Value,
@@ -277,6 +283,9 @@
                 <div class="telephony-soft-phone__voicemail-player" data-telephony-voicemail-player hidden>
                     <div class="telephony-soft-phone__voicemail-player-info" data-telephony-voicemail-player-info></div>
                     <audio class="telephony-soft-phone__voicemail-audio" data-telephony-voicemail-audio controls preload="none"></audio>
+                </div>
+                <div class="telephony-soft-phone__voicemail-toolbar" data-telephony-voicemail-toolbar hidden>
+                    <button type="button" class="telephony-soft-phone__voicemail-delete" data-telephony-voicemail-delete disabled>@T["Delete"]</button>
                 </div>
                 <div class="telephony-soft-phone__voicemail-list" data-telephony-voicemail-list></div>
             </div>

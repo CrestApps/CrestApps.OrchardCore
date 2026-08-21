@@ -789,7 +789,9 @@
       voicemailBadge: rootElement.querySelector('[data-telephony-voicemail-badge]'),
       voicemailList: rootElement.querySelector('[data-telephony-voicemail-list]'),
       voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]'),
-      voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]')
+      voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]'),
+      voicemailToolbar: rootElement.querySelector('[data-telephony-voicemail-toolbar]'),
+      voicemailDelete: rootElement.querySelector('[data-telephony-voicemail-delete]')
     };
     var connection = null;
     var currentCall = null;
@@ -2677,10 +2679,40 @@
         renderVoicemails([]);
       });
     }
+    function voicemailDeleteEnabled() {
+      return config.voicemailDeleteEnabled === true && !!config.voicemailDeleteUrlTemplate && !!dom.voicemailDelete;
+    }
+    function buildVoicemailDeleteUrl(interactionId) {
+      if (!interactionId || !config.voicemailDeleteUrlTemplate) {
+        return null;
+      }
+      return config.voicemailDeleteUrlTemplate.replace('__INTERACTION_ID__', encodeURIComponent(interactionId));
+    }
+    function selectedVoicemailIds() {
+      if (!dom.voicemailList) {
+        return [];
+      }
+      return Array.prototype.slice.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]:checked')).map(function (checkbox) {
+        return checkbox.getAttribute('data-telephony-voicemail-id');
+      }).filter(function (id) {
+        return !!id;
+      });
+    }
+    function updateVoicemailDeleteButton() {
+      if (!dom.voicemailDelete) {
+        return;
+      }
+      dom.voicemailDelete.disabled = selectedVoicemailIds().length === 0;
+    }
     function renderVoicemails(items) {
       if (!dom.voicemailList) {
         return;
       }
+      var canDelete = voicemailDeleteEnabled();
+      if (dom.voicemailToolbar) {
+        dom.voicemailToolbar.hidden = !(canDelete && items.length);
+      }
+      updateVoicemailDeleteButton();
       if (!items.length) {
         dom.voicemailList.innerHTML = '<div class="telephony-soft-phone__history-empty">' + escapeHtml(strings.noVoicemails || 'No voicemails.') + '</div>';
         return;
@@ -2691,12 +2723,16 @@
         var time = formatTime(interaction.startedUtc);
         var unread = !interaction.voicemailReadUtc;
         var cls = 'telephony-soft-phone__voicemail-item' + (unread ? ' telephony-soft-phone__voicemail-item--unread' : '');
-        return '<div class="' + cls + '">' + '<button type="button" class="telephony-soft-phone__voicemail-play" data-telephony-voicemail-play ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '"><i class="fa-solid fa-play"></i></button>' + '<div class="telephony-soft-phone__voicemail-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' + '</div>' + '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' + '</div>';
+        var selectMarkup = canDelete ? '<input type="checkbox" class="telephony-soft-phone__voicemail-select" data-telephony-voicemail-select ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'aria-label="' + escapeHtml(strings.selectVoicemail || 'Select voicemail') + '">' : '';
+        return '<div class="' + cls + '">' + selectMarkup + '<button type="button" class="telephony-soft-phone__voicemail-play" data-telephony-voicemail-play ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '"><i class="fa-solid fa-play"></i></button>' + '<div class="telephony-soft-phone__voicemail-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' + '</div>' + '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' + '</div>';
       }).join('');
       Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-play]'), function (item) {
         item.addEventListener('click', function () {
           playVoicemail(item.getAttribute('data-telephony-voicemail-id'), item.getAttribute('data-telephony-voicemail-call'), item);
         });
+      });
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
+        checkbox.addEventListener('change', updateVoicemailDeleteButton);
       });
       Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {
@@ -2705,6 +2741,43 @@
             dialNumber(number);
           }
         });
+      });
+    }
+    function deleteSelectedVoicemails() {
+      if (!voicemailDeleteEnabled()) {
+        return;
+      }
+      var ids = selectedVoicemailIds();
+      if (!ids.length) {
+        return;
+      }
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.disabled = true;
+      }
+
+      // Stop any playback of a voicemail that is about to be deleted.
+      stopVoicemailPlayback();
+      var headers = {};
+      if (config.antiForgeryToken) {
+        headers['RequestVerificationToken'] = config.antiForgeryToken;
+      }
+      var deletions = ids.map(function (id) {
+        var url = buildVoicemailDeleteUrl(id);
+        if (!url) {
+          return Promise.resolve();
+        }
+        return fetch(url, {
+          method: 'POST',
+          headers: headers
+        });
+      });
+      Promise.all(deletions).then(function () {
+        loadVoicemails();
+        refreshVoicemailBadge();
+      }).catch(function () {
+        showError(strings.voicemailDeleteFailed || 'The voicemail could not be deleted.');
+        loadVoicemails();
+        refreshVoicemailBadge();
       });
     }
     function markAllVoicemailsRead() {
@@ -2933,6 +3006,9 @@
           setActiveTab(tab.getAttribute('data-telephony-tab'));
         });
       });
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.addEventListener('click', deleteSelectedVoicemails);
+      }
       if (dom.dial) {
         dom.dial.addEventListener('click', dial);
       }
