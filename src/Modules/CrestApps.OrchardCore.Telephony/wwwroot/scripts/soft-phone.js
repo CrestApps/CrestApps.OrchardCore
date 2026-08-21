@@ -2584,6 +2584,15 @@
 
     // ---- History ----
 
+    // Reloads whichever list tab is currently open so a just-ended call (a new recent call, or a new voicemail)
+    // appears without a manual refresh.
+    function reloadActiveListTab() {
+      if (activeTab === 'history') {
+        loadHistory();
+      } else if (activeTab === 'voicemail') {
+        loadVoicemails();
+      }
+    }
     function loadHistory() {
       if (!connection) {
         renderHistory([]);
@@ -2922,20 +2931,16 @@
           render();
           notifyBrowserAudio(call);
 
-          // A call that just ended may have been sent to voicemail, so refresh the unread badge and, when
-          // the voicemail tab is open, the list itself so a new voicemail appears without a manual refresh.
-          // The projection that creates the entry can land a moment after this terminal signal, so reload
-          // once now and once shortly after to catch that case.
+          // A call that just ended updates the recent calls and may have been sent to voicemail, so refresh
+          // the unread badge and reload whichever list tab is open (Recent or Voicemail) so the new entry
+          // appears without a manual refresh. The projection that creates the entry can land a moment after
+          // this terminal signal, so reload once now and once shortly after to catch that case.
           refreshVoicemailBadge();
-          if (activeTab === 'voicemail') {
-            loadVoicemails();
-            setTimeout(function () {
-              if (activeTab === 'voicemail') {
-                loadVoicemails();
-                refreshVoicemailBadge();
-              }
-            }, 2000);
-          }
+          reloadActiveListTab();
+          setTimeout(function () {
+            reloadActiveListTab();
+            refreshVoicemailBadge();
+          }, 2000);
           if (!getActiveCalls().length) {
             releaseBrowserAudio();
             clearActiveCallsRefresh();
