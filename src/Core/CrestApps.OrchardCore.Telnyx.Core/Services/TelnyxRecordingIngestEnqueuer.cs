@@ -20,6 +20,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IContactCenterEventPublisher _eventPublisher;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger<TelnyxRecordingIngestEnqueuer> _logger;
 
@@ -40,6 +41,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         IInteractionManager interactionManager,
         IEnumerable<IAgentProfileManager> agentProfileManagers,
         IContactCenterEventPublisher eventPublisher,
+        IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
         ILogger<TelnyxRecordingIngestEnqueuer> logger)
     {
@@ -47,6 +49,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         _interactionManager = interactionManager;
         _agentProfileManager = agentProfileManagers.FirstOrDefault();
         _eventPublisher = eventPublisher;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
     }
@@ -121,6 +124,12 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
                 TelnyxConstants.Recording.Format,
                 _clock.UtcNow,
                 cancellationToken);
+
+            // Download the recording into the encrypted media store immediately rather than waiting for the next
+            // scheduled ingest sweep, so a voicemail is playable within seconds of being left instead of up to a
+            // minute later. The periodic sweep remains the durable retry for any prompt attempt that fails.
+            _scopeExecutor.ScheduleAfterCommit<ITelnyxRecordingIngestService>(
+                ingestService => ingestService.ProcessDueAsync(CancellationToken.None));
 
             return true;
         }

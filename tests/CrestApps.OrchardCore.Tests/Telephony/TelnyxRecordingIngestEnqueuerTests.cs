@@ -39,6 +39,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             interactionManager.Object,
             [agentManager.Object],
             publisher.Object,
+            Mock.Of<IContactCenterScopeExecutor>(),
             clock.Object,
             NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
 
@@ -84,6 +85,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             interactionManager.Object,
             [agentManager.Object],
             publisher.Object,
+            Mock.Of<IContactCenterScopeExecutor>(),
             clock.Object,
             NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
 
