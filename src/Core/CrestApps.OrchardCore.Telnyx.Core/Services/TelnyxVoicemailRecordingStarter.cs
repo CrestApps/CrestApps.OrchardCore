@@ -67,7 +67,15 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 
             if (!response.IsSuccessStatusCode)
             {
-                var payload = await SafeReadAsync(response, cancellationToken);
+                string payload;
+                try
+                {
+                    payload = await response.Content.ReadAsStringAsync(cancellationToken);
+                }
+                catch
+                {
+                    payload = string.Empty;
+                }
 
                 // A 404 means the leg is already gone (the caller hung up during or right after the greeting), which
                 // is an expected race with nothing to record. Any other rejection is logged with the provider's
