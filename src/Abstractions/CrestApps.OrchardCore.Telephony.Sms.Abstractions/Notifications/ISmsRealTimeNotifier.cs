@@ -20,4 +20,11 @@ public interface ISmsRealTimeNotifier
     /// <param name="notification">The delivery-state change.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task MessageDeliveryUpdatedAsync(SmsDeliveryNotification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Announces that a conversation's assignment changed (claimed or assigned).
+    /// </summary>
+    /// <param name="notification">The assignment change.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task ConversationAssignedAsync(SmsAssignmentNotification notification, CancellationToken cancellationToken = default);
 }

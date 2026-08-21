@@ -50,6 +50,28 @@ public sealed class SmsInboundNotification
 }
 
 /// <summary>
+/// Notifies the portal that a conversation's assignment changed — so a claimed pooled message disappears from
+/// the other queue members' inboxes, and an assigned conversation appears in the target agent's inbox.
+/// </summary>
+public sealed class SmsAssignmentNotification
+{
+    /// <summary>
+    /// Gets or sets the identifier of the conversation whose assignment changed.
+    /// </summary>
+    public string ConversationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent the conversation is now assigned to.
+    /// </summary>
+    public string AssignedAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the queue the conversation belongs to, when queue-owned.
+    /// </summary>
+    public string OwnerQueueId { get; set; }
+}
+
+/// <summary>
 /// Notifies the portal that an outbound message's delivery state changed (the "Delivered"/"Failed" tick).
 /// </summary>
 public sealed class SmsDeliveryNotification

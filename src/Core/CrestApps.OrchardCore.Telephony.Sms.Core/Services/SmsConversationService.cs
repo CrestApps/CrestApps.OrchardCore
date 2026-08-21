@@ -199,6 +199,75 @@ public sealed class SmsConversationService : ISmsConversationService
         return true;
     }
 
+    /// <inheritdoc/>
+    public async Task<SmsSendResult> ClaimAsync(string conversationId, string actingAgentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(actingAgentId))
+        {
+            return SmsSendResult.Failed("An agent is required to claim a conversation.");
+        }
+
+        var conversation = await _conversationStore.FindByIdAsync(conversationId, cancellationToken);
+
+        if (conversation is null)
+        {
+            return SmsSendResult.Failed("The conversation was not found.");
+        }
+
+        if (conversation.AssignmentStatus == SmsConversationAssignmentStatus.Assigned &&
+            !string.IsNullOrEmpty(conversation.AssignedAgentId) &&
+            conversation.AssignedAgentId != actingAgentId)
+        {
+            return SmsSendResult.Failed("The conversation has already been claimed by another agent.");
+        }
+
+        return await AssignInternalAsync(conversation, actingAgentId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<SmsSendResult> AssignAsync(string conversationId, string targetAgentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(targetAgentId))
+        {
+            return SmsSendResult.Failed("A target agent is required.");
+        }
+
+        var conversation = await _conversationStore.FindByIdAsync(conversationId, cancellationToken);
+
+        if (conversation is null)
+        {
+            return SmsSendResult.Failed("The conversation was not found.");
+        }
+
+        return await AssignInternalAsync(conversation, targetAgentId, cancellationToken);
+    }
+
+    private async Task<SmsSendResult> AssignInternalAsync(SmsConversation conversation, string agentId, CancellationToken cancellationToken)
+    {
+        conversation.AssignedAgentId = agentId;
+        conversation.AssignmentStatus = SmsConversationAssignmentStatus.Assigned;
+
+        // A personal (non-queue) conversation follows its assignee as owner; a queue conversation keeps the
+        // queue as its owner so it stays discoverable to the department.
+        if (conversation.OwnerType == SmsConversationOwnerType.Personal)
+        {
+            conversation.OwnerId = agentId;
+        }
+
+        conversation.ModifiedUtc = _clock.UtcNow;
+
+        await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        await _notifier.ConversationAssignedAsync(new SmsAssignmentNotification
+        {
+            ConversationId = conversation.ItemId,
+            AssignedAgentId = conversation.AssignedAgentId,
+            OwnerQueueId = conversation.OwnerType == SmsConversationOwnerType.Queue ? conversation.OwnerId : null,
+        }, cancellationToken);
+
+        return new SmsSendResult { Succeeded = true };
+    }
+
     private static bool IsAuthorized(SmsConversation conversation, string actingAgentId)
     {
         // A queue (department) conversation is servable by queue members. Full queue-membership enforcement

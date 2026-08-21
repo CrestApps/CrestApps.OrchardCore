@@ -19,4 +19,11 @@ public interface ISmsPortalHubClient
     /// </summary>
     /// <param name="notification">The delivery-state change.</param>
     Task MessageDeliveryUpdated(SmsDeliveryNotification notification);
+
+    /// <summary>
+    /// Notifies the client that a conversation was claimed or assigned, so a claimed pooled message can
+    /// disappear from other inboxes.
+    /// </summary>
+    /// <param name="notification">The assignment change.</param>
+    Task ConversationAssigned(SmsAssignmentNotification notification);
 }

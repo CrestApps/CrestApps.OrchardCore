@@ -27,8 +27,20 @@ public sealed class SmsPortalAdminMenu : AdminNavigationProvider
                     .Action("Index", "SmsPortal", "CrestApps.OrchardCore.Telephony.Sms")
                     .Permission(TelephonySmsPermissions.UseSmsPortal)
                     .LocalNav())
+                .Add(S["All conversations"], "2", all => all
+                    .Action("All", "SmsPortal", "CrestApps.OrchardCore.Telephony.Sms")
+                    .Permission(TelephonySmsPermissions.ViewAllConversations)
+                    .LocalNav())
                 .Add(S["Number routes"], "5", routes => routes
                     .Action("Index", "SmsNumberRoutes", "CrestApps.OrchardCore.Telephony.Sms")
+                    .Permission(TelephonySmsPermissions.ManageSmsNumberRoutes)
+                    .LocalNav())
+                .Add(S["Settings"], "10", settings => settings
+                    .Action("Index", "Admin", new Dictionary<string, string>
+                    {
+                        { "area", "OrchardCore.Settings" },
+                        { "groupId", TelephonySmsConstants.Settings.GroupId },
+                    })
                     .Permission(TelephonySmsPermissions.ManageSmsNumberRoutes)
                     .LocalNav()));
 

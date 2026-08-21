@@ -16,4 +16,8 @@ public sealed class NullSmsRealTimeNotifier : ISmsRealTimeNotifier
     /// <inheritdoc/>
     public Task MessageDeliveryUpdatedAsync(SmsDeliveryNotification notification, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task ConversationAssignedAsync(SmsAssignmentNotification notification, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

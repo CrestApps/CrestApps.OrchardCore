@@ -77,6 +77,7 @@ public sealed class Startup : StartupBase
         // Admin surfaces.
         services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();
         services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
+        services.AddSiteDisplayDriver<SmsPortalSettingsDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();
 
         // Permissions.

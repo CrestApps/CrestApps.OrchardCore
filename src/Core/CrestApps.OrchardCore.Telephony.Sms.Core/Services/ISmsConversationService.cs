@@ -22,4 +22,23 @@ public interface ISmsConversationService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when a message was matched and updated.</returns>
     Task<bool> ApplyDeliveryReceiptAsync(SmsDeliveryReceipt receipt, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Claims a pooled or unassigned conversation for the acting agent (claim-to-own), so it disappears from
+    /// the other queue members' inboxes.
+    /// </summary>
+    /// <param name="conversationId">The conversation to claim.</param>
+    /// <param name="actingAgentId">The agent claiming the conversation.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result: fails when the conversation is already owned by another agent.</returns>
+    Task<SmsSendResult> ClaimAsync(string conversationId, string actingAgentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Assigns a conversation to a specific agent (a supervisor action or a transfer).
+    /// </summary>
+    /// <param name="conversationId">The conversation to assign.</param>
+    /// <param name="targetAgentId">The agent to assign the conversation to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result.</returns>
+    Task<SmsSendResult> AssignAsync(string conversationId, string targetAgentId, CancellationToken cancellationToken = default);
 }

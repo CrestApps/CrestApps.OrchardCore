@@ -117,6 +117,56 @@ public sealed class SmsPortalController : Controller
         });
     }
 
+    [Admin("sms/portal/all", "SmsPortalAll")]
+    public async Task<IActionResult> All()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.ViewAllConversations))
+        {
+            return Forbid();
+        }
+
+        var viewModel = new SmsInboxViewModel();
+
+        foreach (var conversation in (await _conversationStore.GetAllAsync()).OrderByDescending(c => c.LastMessageUtc))
+        {
+            viewModel.Rows.Add(new SmsInboxRow
+            {
+                Conversation = conversation,
+                Shape = await _displayManager.BuildDisplayAsync(conversation, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
+            });
+        }
+
+        return View(nameof(Index), viewModel);
+    }
+
+    [HttpPost]
+    [Admin("sms/portal/conversation/{id}/claim", "SmsPortalClaim")]
+    public async Task<IActionResult> Claim(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        var agent = await GetCurrentAgentAsync();
+
+        if (agent is null)
+        {
+            await _notifier.WarningAsync(H["You must have an agent profile to claim conversations."]);
+
+            return RedirectToAction(nameof(Conversation), new { id });
+        }
+
+        var result = await _conversationService.ClaimAsync(id, agent.ItemId);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.WarningAsync(H["The conversation could not be claimed: {0}", result.Error]);
+        }
+
+        return RedirectToAction(nameof(Conversation), new { id });
+    }
+
     [HttpPost]
     [Admin("sms/portal/conversation/{id}/send", "SmsPortalSend")]
     public async Task<IActionResult> Send(string id, string body)

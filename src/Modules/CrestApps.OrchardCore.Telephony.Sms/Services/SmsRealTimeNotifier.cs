@@ -37,6 +37,25 @@ public sealed class SmsRealTimeNotifier : ISmsRealTimeNotifier
     public Task MessageDeliveryUpdatedAsync(SmsDeliveryNotification notification, CancellationToken cancellationToken = default)
         => _hubContext.Clients.All.MessageDeliveryUpdated(notification);
 
+    /// <inheritdoc/>
+    public Task ConversationAssignedAsync(SmsAssignmentNotification notification, CancellationToken cancellationToken = default)
+    {
+        // Tell the assigned agent it landed in their inbox, and the owning queue so other members drop it.
+        var tasks = new List<Task>();
+
+        if (!string.IsNullOrEmpty(notification.AssignedAgentId))
+        {
+            tasks.Add(_hubContext.Clients.Group(ForGroup(SmsPortalHub.AgentGroup(notification.AssignedAgentId))).ConversationAssigned(notification));
+        }
+
+        if (!string.IsNullOrEmpty(notification.OwnerQueueId))
+        {
+            tasks.Add(_hubContext.Clients.Group(ForGroup(SmsPortalHub.QueueGroup(notification.OwnerQueueId))).ConversationAssigned(notification));
+        }
+
+        return Task.WhenAll(tasks);
+    }
+
     private ISmsPortalHubClient Target(string assignedAgentId, string ownerQueueId)
     {
         if (!string.IsNullOrEmpty(assignedAgentId))

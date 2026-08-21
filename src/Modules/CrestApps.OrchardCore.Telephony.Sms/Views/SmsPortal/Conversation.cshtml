@@ -34,6 +34,14 @@
     }
 </div>
 
+@if (Model.Conversation.AssignmentStatus != SmsConversationAssignmentStatus.Assigned)
+{
+    <form method="post" asp-route-action="Claim" asp-route-id="@Model.Conversation.ItemId" class="mb-2">
+        <button type="submit" class="btn btn-outline-primary btn-sm">@T["Claim this conversation"]</button>
+        <span class="text-muted small ms-1">@T["Claim to own it and remove it from the shared inbox."]</span>
+    </form>
+}
+
 @if (Model.Conversation.Status != SmsConversationStatus.Closed && Model.Conversation.Status != SmsConversationStatus.Spam)
 {
     <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="d-flex gap-2">

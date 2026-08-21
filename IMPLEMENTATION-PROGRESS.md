@@ -29,7 +29,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 
 ### Workstream: Provider dispatch (multi-provider)
 - [x] Extend `OmnichannelChannelEndpoint` with `ProviderName`
-- [ ] Tenant-default SMS provider setting (portal setting) + display driver
+- [x] Tenant-default SMS provider setting (portal setting) + display driver
 - [x] `ISmsDispatcher` (resolve From number ProviderName → tenant default → ISmsProvider) + impl
 
 ### Workstream: Telnyx SMS provider (in existing Telnyx module, new feature)
@@ -72,9 +72,9 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 ---
 
 ## Phase 2 — Departments & routing
-- [ ] Queue-backed numbers (SmsNumberRoute → ActivityQueue) + shared pool + claim/assign
+- [x] Queue-backed numbers (SmsNumberRoute → ActivityQueue) + shared pool + claim/assign
 - [ ] `Routed` mode via existing routing strategies + business hours (InteractionChannel.Sms)
-- [ ] Supervisor view of all conversations
+- [x] Supervisor view of all conversations
 - [ ] Presence gating ("available to text" via AgentProfile.PresenceStatus)
 - [ ] Azure ACS inbound (Event Grid) receiver
 
