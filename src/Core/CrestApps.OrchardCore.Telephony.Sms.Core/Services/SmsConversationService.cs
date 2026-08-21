@@ -242,6 +242,24 @@ public sealed class SmsConversationService : ISmsConversationService
         return await AssignInternalAsync(conversation, targetAgentId, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<SmsSendResult> SetStatusAsync(string conversationId, SmsConversationStatus status, CancellationToken cancellationToken = default)
+    {
+        var conversation = await _conversationStore.FindByIdAsync(conversationId, cancellationToken);
+
+        if (conversation is null)
+        {
+            return SmsSendResult.Failed("The conversation was not found.");
+        }
+
+        conversation.Status = status;
+        conversation.ModifiedUtc = _clock.UtcNow;
+
+        await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        return new SmsSendResult { Succeeded = true };
+    }
+
     private async Task<SmsSendResult> AssignInternalAsync(SmsConversation conversation, string agentId, CancellationToken cancellationToken)
     {
         conversation.AssignedAgentId = agentId;

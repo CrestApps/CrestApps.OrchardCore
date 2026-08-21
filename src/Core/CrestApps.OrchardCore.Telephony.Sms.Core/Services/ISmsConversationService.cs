@@ -41,4 +41,13 @@ public interface ISmsConversationService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The result.</returns>
     Task<SmsSendResult> AssignAsync(string conversationId, string targetAgentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the lifecycle status of a conversation (open, snooze, close, or mark spam).
+    /// </summary>
+    /// <param name="conversationId">The conversation to update.</param>
+    /// <param name="status">The new status.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result.</returns>
+    Task<SmsSendResult> SetStatusAsync(string conversationId, CrestApps.OrchardCore.Telephony.Sms.Models.SmsConversationStatus status, CancellationToken cancellationToken = default);
 }

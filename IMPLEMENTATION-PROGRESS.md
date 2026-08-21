@@ -81,8 +81,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 ## Phase 3 — Group & scale
 - [ ] `SmsBroadcast` broadcast (1:1 fan-out via IBackgroundTask) + group MMS threads
 - [ ] Templates / canned responses
-- [ ] Labels / spam
-- [ ] Assignment transfer
+- [x] Labels / spam
+- [x] Assignment transfer
 - [ ] Out-of-app push (INotifier bridge)  — deferred, optional
 - [ ] Analytics (reuse Contact Center reports infra)  — basic conversation metrics
 - [ ] Encrypted MMS media ingest (LocalEncryptedRecordingMediaStore, background task)

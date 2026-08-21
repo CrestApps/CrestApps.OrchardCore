@@ -193,6 +193,48 @@ public sealed class SmsPortalController : Controller
         return RedirectToAction(nameof(Conversation), new { id });
     }
 
+    [HttpPost]
+    [Admin("sms/portal/conversation/{id}/status", "SmsPortalStatus")]
+    public async Task<IActionResult> SetStatus(string id, SmsConversationStatus status)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        var result = await _conversationService.SetStatusAsync(id, status);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.WarningAsync(H["The conversation could not be updated: {0}", result.Error]);
+        }
+
+        return RedirectToAction(nameof(Conversation), new { id });
+    }
+
+    [HttpPost]
+    [Admin("sms/portal/conversation/{id}/transfer", "SmsPortalTransfer")]
+    public async Task<IActionResult> Transfer(string id, string targetAgentId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.ViewAllConversations))
+        {
+            return Forbid();
+        }
+
+        var result = await _conversationService.AssignAsync(id, targetAgentId);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.WarningAsync(H["The conversation could not be transferred: {0}", result.Error]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["The conversation was transferred."]);
+        }
+
+        return RedirectToAction(nameof(Conversation), new { id });
+    }
+
     private async Task<IReadOnlyList<OmnichannelMessage>> GetMessagesAsync(string conversationId)
     {
         var messages = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(

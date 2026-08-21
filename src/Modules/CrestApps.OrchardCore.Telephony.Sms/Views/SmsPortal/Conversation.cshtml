@@ -3,9 +3,31 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Conversation with {0}", Model.Conversation.CustomerAddress])</h1></zone>
 
-<div class="mb-2">
-    <a class="btn btn-sm btn-link" asp-route-action="Index">&laquo; @T["Back to inbox"]</a>
-    <span class="text-muted small ms-2">@T["on"] @Model.Conversation.ServiceAddress &middot; @Model.Conversation.Status.ToString()</span>
+<div class="mb-2 d-flex justify-content-between align-items-center">
+    <div>
+        <a class="btn btn-sm btn-link" asp-route-action="Index">&laquo; @T["Back to inbox"]</a>
+        <span class="text-muted small ms-2">@T["on"] @Model.Conversation.ServiceAddress &middot; @Model.Conversation.Status.ToString()</span>
+    </div>
+    <div class="btn-group">
+        @if (Model.Conversation.Status == SmsConversationStatus.Open)
+        {
+            <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Closed)" />
+                <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Close"]</button>
+            </form>
+            <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Spam)" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Mark spam"]</button>
+            </form>
+        }
+        else
+        {
+            <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Open)" />
+                <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reopen"]</button>
+            </form>
+        }
+    </div>
 </div>
 
 <div class="sms-thread border rounded p-3 mb-3" style="max-height: 60vh; overflow-y: auto; background: var(--bs-tertiary-bg);">
