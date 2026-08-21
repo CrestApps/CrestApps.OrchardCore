@@ -48,6 +48,14 @@ public static partial class ContactCenterConstants
         public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
 
         /// <summary>
+        /// The identifier of the shared Contact Center recording governance core. It carries the recording-access
+        /// governance and audit services that both the full call-recording feature and voicemail playback need,
+        /// so voicemail (a Voice capability) can be played and audited without enabling full call recording. It is
+        /// enabled by dependency only.
+        /// </summary>
+        public const string RecordingCore = "CrestApps.OrchardCore.ContactCenter.Recording.Core";
+
+        /// <summary>
         /// The identifier of the Contact Center recording orchestration feature.
         /// </summary>
         public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";

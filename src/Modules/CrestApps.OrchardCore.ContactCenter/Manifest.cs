@@ -81,6 +81,7 @@ using OrchardCore.Modules.Manifest;
     [
         ContactCenterConstants.Feature.Queues,
         ContactCenterConstants.Feature.RealTime,
+        ContactCenterConstants.Feature.RecordingCore,
         TelephonyConstants.Feature.Area,
     ]
 )]
@@ -110,6 +111,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.RecordingCore,
+    Name = "Contact Center Recording Governance",
+    Description = "Provides the shared recording-access governance and audit services used by both call recording and voicemail playback. Enabled automatically by the capabilities that need it.",
+    Category = "Contact Center",
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Recording,
     Name = "Contact Center Call Recording",
     Description = "Adds provider-gated call-recording orchestration, recording-state events, and recording settings for voice interactions.",
@@ -117,6 +130,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,
+        ContactCenterConstants.Feature.RecordingCore,
     ]
 )]
 

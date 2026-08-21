@@ -76,6 +76,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             [
                 "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Recording.Core",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);

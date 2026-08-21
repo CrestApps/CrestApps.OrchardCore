@@ -33,7 +33,8 @@ public sealed class RecordingStartup : StartupBase
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
         services.AddScoped<IAgentRecordingControlService, AgentRecordingControlService>();
         services.AddScoped<ISecurePauseAutoResumeService, SecurePauseAutoResumeService>();
-        services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
+        // IRecordingAccessGovernanceService is registered by the Recording.Core feature (a dependency of this
+        // feature), so voicemail playback can reuse the same governance without enabling full call recording.
         services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionHandler>();
         services.AddScoped<IRecordingErasureGuard, RecordingErasureGuard>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecurePauseAutoResumeBackgroundTask>());

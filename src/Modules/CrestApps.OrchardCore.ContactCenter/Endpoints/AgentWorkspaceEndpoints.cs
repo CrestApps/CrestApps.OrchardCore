@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -18,6 +19,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -363,12 +365,22 @@ internal static class AgentWorkspaceEndpoints
             return TypedResults.Forbid();
         }
 
+        // A voicemail that will not play returns 404 through several distinct branches; logging the specific reason
+        // turns an otherwise silent "nothing happens" into a diagnosable cause (a missing recording, a governance
+        // feature that is not enabled, media that has not finished ingesting, and so on).
+        var logger = httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("ContactCenterVoicemailMedia");
+
+        void LogNotAvailable(string reason) =>
+            logger?.LogDebug("Voicemail media for interaction {InteractionId} is unavailable: {Reason}.", interactionId.SanitizeLogValue(), reason);
+
         var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
 
         // Only a voicemail interaction is playable through this endpoint; a normal call recording is governed and
         // surfaced elsewhere, so this endpoint deliberately refuses to expose it.
         if (interaction is null || !IsVoicemailInteraction(interaction))
         {
+            LogNotAvailable(interaction is null ? "the interaction was not found" : "the interaction is not flagged as a voicemail");
+
             return TypedResults.NotFound();
         }
 
@@ -381,6 +393,10 @@ internal static class AgentWorkspaceEndpoints
 
         if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
         {
+            LogNotAvailable(recipientAgent is null
+                ? "the voicemail has no resolvable recipient agent"
+                : "the requesting user is not the voicemail recipient");
+
             return TypedResults.Forbid();
         }
 
@@ -391,6 +407,8 @@ internal static class AgentWorkspaceEndpoints
             !interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) ||
             storageReferenceValue?.ToString() is not { Length: > 0 } storageReference)
         {
+            LogNotAvailable("the interaction carries no recording storage reference yet");
+
             return TypedResults.NotFound();
         }
 
@@ -402,6 +420,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (recordingAccessGovernanceService is null)
         {
+            LogNotAvailable("the recording governance service is not registered (the Recording Governance feature is not enabled)");
+
             return TypedResults.NotFound();
         }
 
@@ -413,6 +433,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (!granted)
         {
+            LogNotAvailable("recording access was not granted by governance");
+
             return TypedResults.NotFound();
         }
 
@@ -420,6 +442,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (mediaStore is null)
         {
+            LogNotAvailable("no recording media store is registered");
+
             return TypedResults.NotFound();
         }
 
@@ -427,6 +451,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (stream is null)
         {
+            LogNotAvailable("the media store has no bytes for the recording storage reference");
+
             return TypedResults.NotFound();
         }
 
