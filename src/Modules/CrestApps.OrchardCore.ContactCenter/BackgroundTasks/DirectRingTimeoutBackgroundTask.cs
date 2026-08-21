@@ -32,11 +32,12 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
 {
     /// <summary>
-    /// How often the expiry and hold-timeout sweep runs within a single invocation. This bounds how long past
-    /// the configured ring window a caller can wait before voicemail; a few seconds is a good balance between
-    /// responsiveness and load.
+    /// How often the expiry and hold-timeout sweep runs within a single invocation. This bounds how long past the
+    /// configured ring window a caller can wait before voicemail. It is a balance: too frequent and it adds write
+    /// pressure the database (SQLite in particular) contends over; ~15 seconds still enforces a 30-second window
+    /// closely while keeping the sweep light.
     /// </summary>
-    private const int TickIntervalMilliseconds = 5_000;
+    private const int TickIntervalMilliseconds = 15_000;
 
     /// <summary>
     /// How long a single invocation keeps ticking. Kept just under the one-minute schedule so an invocation
