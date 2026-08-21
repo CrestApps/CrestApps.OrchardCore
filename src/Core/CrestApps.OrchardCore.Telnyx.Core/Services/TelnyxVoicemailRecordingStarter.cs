@@ -67,22 +67,24 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 
             if (!response.IsSuccessStatusCode)
             {
-                // A 404/422 here almost always means the caller hung up during or right after the greeting, so the
-                // leg was already gone by the time recording could start. That is an expected race, not an error --
-                // there is simply no message to record -- so log it quietly rather than as a failure.
-                if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.UnprocessableEntity)
+                var payload = await SafeReadAsync(response, cancellationToken);
+
+                // A 404 means the leg is already gone (the caller hung up during or right after the greeting), which
+                // is an expected race with nothing to record. Any other rejection is logged with the provider's
+                // response so the actual reason is visible.
+                if (response.StatusCode == HttpStatusCode.NotFound)
                 {
                     _logger.LogDebug(
-                        "Voicemail record_start for call {CallControlId} was not accepted ({StatusCode}); the caller likely hung up before leaving a message.",
-                        callControlId.SanitizeLogValue(),
-                        response.StatusCode);
+                        "Voicemail record_start for call {CallControlId} was not accepted (404); the caller likely hung up before leaving a message.",
+                        callControlId.SanitizeLogValue());
                 }
                 else
                 {
                     _logger.LogError(
-                        "Telnyx rejected the voicemail record_start for call {CallControlId} with status code {StatusCode}.",
+                        "Telnyx rejected the voicemail record_start for call {CallControlId} with status code {StatusCode}. Response: {Response}",
                         callControlId.SanitizeLogValue(),
-                        response.StatusCode);
+                        response.StatusCode,
+                        payload.SanitizeLogValue());
                 }
 
                 return false;
