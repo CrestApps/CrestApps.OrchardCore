@@ -66,10 +66,37 @@
 
 @if (Model.Conversation.Status != SmsConversationStatus.Closed && Model.Conversation.Status != SmsConversationStatus.Spam)
 {
-    <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="d-flex gap-2">
-        <input type="text" name="body" class="form-control" placeholder="@T["Type a message…"]" autofocus required />
+    @if (Model.Templates.Count > 0)
+    {
+        <div class="mb-2">
+            <select class="form-select form-select-sm" style="max-width: 24rem;" id="sms-template-picker" aria-label="@T["Insert a canned response"]">
+                <option value="">@T["Insert a canned response…"]</option>
+                @foreach (var template in Model.Templates)
+                {
+                    <option value="@template.Body">@template.Name</option>
+                }
+            </select>
+        </div>
+    }
+    <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="d-flex gap-2 align-items-end">
+        <textarea name="body" id="sms-composer-body" class="form-control" rows="2" placeholder="@T["Type a message…"]" autofocus required></textarea>
         <button type="submit" class="btn btn-primary">@T["Send"]</button>
     </form>
+    <script at="Foot">
+        (function () {
+            var picker = document.getElementById('sms-template-picker');
+            var body = document.getElementById('sms-composer-body');
+            if (picker && body) {
+                picker.addEventListener('change', function () {
+                    if (this.value) {
+                        body.value = body.value ? (body.value + '\n' + this.value) : this.value;
+                        body.focus();
+                        this.selectedIndex = 0;
+                    }
+                });
+            }
+        })();
+    </script>
 }
 else
 {

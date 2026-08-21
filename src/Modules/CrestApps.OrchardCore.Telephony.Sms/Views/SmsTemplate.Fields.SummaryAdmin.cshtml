@@ -1,0 +1,10 @@
+@model SmsTemplate
+
+<div>
+    <strong>@Model.Name</strong>
+    @if (!Model.Enabled)
+    {
+        <span class="badge bg-secondary ms-1">@T["Disabled"]</span>
+    }
+    <div class="text-muted small text-truncate" style="max-width: 40rem;">@Model.Body</div>
+</div>

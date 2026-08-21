@@ -73,6 +73,36 @@ internal sealed class SmsPortalMigrations : DataMigration
             collection: TelephonySmsStorage.CollectionName
         );
 
-        return 1;
+        await CreateTemplateTableAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the canned-response template index table.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateTemplateTableAsync();
+
+        return 2;
+    }
+
+    private async Task CreateTemplateTableAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<SmsTemplateIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<bool>("Enabled"),
+            collection: TelephonySmsStorage.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<SmsTemplateIndex>(table => table
+            .CreateIndex("IDX_SmsTemplateIndex_Name",
+                "DocumentId",
+                "Name",
+                "Enabled"),
+            collection: TelephonySmsStorage.CollectionName
+        );
     }
 }

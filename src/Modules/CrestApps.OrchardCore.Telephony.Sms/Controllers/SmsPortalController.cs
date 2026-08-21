@@ -29,6 +29,7 @@ public sealed class SmsPortalController : Controller
 {
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsConversationService _conversationService;
+    private readonly ISmsTemplateManager _templateManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<SmsConversation> _displayManager;
@@ -42,6 +43,7 @@ public sealed class SmsPortalController : Controller
     public SmsPortalController(
         ISmsConversationStore conversationStore,
         ISmsConversationService conversationService,
+        ISmsTemplateManager templateManager,
         IAgentProfileManager agentProfileManager,
         IAuthorizationService authorizationService,
         IDisplayManager<SmsConversation> displayManager,
@@ -53,6 +55,7 @@ public sealed class SmsPortalController : Controller
     {
         _conversationStore = conversationStore;
         _conversationService = conversationService;
+        _templateManager = templateManager;
         _agentProfileManager = agentProfileManager;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
@@ -114,6 +117,7 @@ public sealed class SmsPortalController : Controller
         {
             Conversation = conversation,
             Messages = await GetMessagesAsync(id),
+            Templates = (await _templateManager.GetEnabledAsync()).ToArray(),
         });
     }
 

@@ -51,4 +51,9 @@ public class SmsThreadViewModel
     /// Gets or sets the composer body.
     /// </summary>
     public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets the enabled canned-response templates offered in the composer.
+    /// </summary>
+    public IReadOnlyList<SmsTemplate> Templates { get; set; } = [];
 }

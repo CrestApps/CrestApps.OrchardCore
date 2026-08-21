@@ -80,7 +80,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 
 ## Phase 3 — Group & scale
 - [ ] `SmsBroadcast` broadcast (1:1 fan-out via IBackgroundTask) + group MMS threads
-- [ ] Templates / canned responses
+- [x] Templates / canned responses
 - [x] Labels / spam
 - [x] Assignment transfer
 - [ ] Out-of-app push (INotifier bridge)  — deferred, optional

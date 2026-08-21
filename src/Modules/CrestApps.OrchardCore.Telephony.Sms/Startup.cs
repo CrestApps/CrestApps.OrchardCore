@@ -46,6 +46,12 @@ public sealed class Startup : StartupBase
             .AddScoped<ISmsNumberRouteManager, SmsNumberRouteManager>()
             .AddScoped<ICatalogEntryHandler<SmsNumberRoute>, SmsNumberRouteHandler>();
 
+        // Canned-response template catalog.
+        services
+            .AddScoped<ISmsTemplateStore, SmsTemplateStore>()
+            .AddScoped<ISmsTemplateManager, SmsTemplateManager>()
+            .AddScoped<ICatalogEntryHandler<SmsTemplate>, SmsTemplateHandler>();
+
         // Provider dispatch and two-way send.
         services
             .AddScoped<ISmsDispatcher, SmsDispatcher>()
@@ -72,11 +78,13 @@ public sealed class Startup : StartupBase
         // Storage schema + indexes.
         services.AddIndexProvider<SmsConversationIndexProvider>();
         services.AddIndexProvider<SmsNumberRouteIndexProvider>();
+        services.AddIndexProvider<SmsTemplateIndexProvider>();
         services.AddDataMigration<SmsPortalMigrations>();
 
         // Admin surfaces.
         services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();
         services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
+        services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
         services.AddSiteDisplayDriver<SmsPortalSettingsDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();
 

@@ -35,6 +35,10 @@ public sealed class SmsPortalAdminMenu : AdminNavigationProvider
                     .Action("Index", "SmsNumberRoutes", "CrestApps.OrchardCore.Telephony.Sms")
                     .Permission(TelephonySmsPermissions.ManageSmsNumberRoutes)
                     .LocalNav())
+                .Add(S["Templates"], "7", templates => templates
+                    .Action("Index", "SmsTemplates", "CrestApps.OrchardCore.Telephony.Sms")
+                    .Permission(TelephonySmsPermissions.ManageSmsNumberRoutes)
+                    .LocalNav())
                 .Add(S["Settings"], "10", settings => settings
                     .Action("Index", "Admin", new Dictionary<string, string>
                     {
