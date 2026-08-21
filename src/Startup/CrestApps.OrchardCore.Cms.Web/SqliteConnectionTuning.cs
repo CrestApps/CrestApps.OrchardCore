@@ -49,7 +49,16 @@ internal sealed class SqliteConnectionTuningTenantEvents : ModularTenantEvents
 /// </summary>
 internal sealed class SqlitePragmaConnectionFactory : IConnectionFactory
 {
-    private const string TuningPragmas = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=NORMAL;";
+    // Run each pragma as its own statement. busy_timeout is set FIRST -- and separately -- so it is guaranteed to
+    // apply (a single multi-statement command whose first statement, journal_mode, returns a result row does not
+    // reliably execute the later statements), and so the journal_mode change itself waits for the lock rather than
+    // failing when another connection is mid-write.
+    private static readonly string[] TuningPragmas =
+    [
+        "PRAGMA busy_timeout=10000;",
+        "PRAGMA journal_mode=WAL;",
+        "PRAGMA synchronous=NORMAL;",
+    ];
 
     private readonly IConnectionFactory _inner;
 
@@ -75,8 +84,11 @@ internal sealed class SqlitePragmaConnectionFactory : IConnectionFactory
             return;
         }
 
-        using var command = connection.CreateCommand();
-        command.CommandText = TuningPragmas;
-        command.ExecuteNonQuery();
+        foreach (var pragma in TuningPragmas)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = pragma;
+            command.ExecuteNonQuery();
+        }
     }
 }
