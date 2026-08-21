@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Cms.Web;
 using CrestApps.OrchardCore.ContactCenter;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Logging;
-using OrchardCore.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +11,7 @@ builder.Services
     .AddOrchardCms(orchardCoreBuilder => orchardCoreBuilder
         // Enable WAL + a busy timeout on every SQLite connection so the app's concurrent writers do not fail
         // with "database is locked". Applied to all tenants; a no-op on non-SQLite providers.
-        .ConfigureServices(services =>
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<IModularTenantEvents, SqliteConnectionTuningTenantEvents>())));
+        .AddSqliteConnectionTuning());
 
 var app = builder.Build();
 
