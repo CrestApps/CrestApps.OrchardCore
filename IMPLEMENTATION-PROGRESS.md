@@ -7,10 +7,10 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 
 ## New projects (module layout)
 
-- [ ] `src/Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions` — contracts, enums, notifications
-- [ ] `src/Core/CrestApps.OrchardCore.Telephony.Sms.Core` — models, stores, indexes, routing, services
-- [ ] `src/Modules/CrestApps.OrchardCore.Telephony.Sms` — drivers, controllers, hub, views, admin
-- [ ] Add all three to `CrestApps.OrchardCore.slnx`
+- [x] `src/Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions` — contracts, enums, notifications
+- [x] `src/Core/CrestApps.OrchardCore.Telephony.Sms.Core` — models, stores, indexes, routing, services
+- [x] `src/Modules/CrestApps.OrchardCore.Telephony.Sms` — drivers, controllers, hub, views, admin
+- [x] Add all three to `CrestApps.OrchardCore.slnx`
 - [ ] New test project `tests/CrestApps.OrchardCore.Telephony.Sms.Tests` (or reuse existing per convention)
 
 ---
@@ -18,38 +18,38 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 ## Phase 1 — Human 1:1 two-way (MVP)
 
 ### Workstream: Domain model & storage
-- [ ] Enums (Abstractions): OwnerType, AssignmentStatus, ConversationStatus, NumberRoute TargetType,
+- [x] Enums (Abstractions): OwnerType, AssignmentStatus, ConversationStatus, NumberRoute TargetType,
       DistributionMode, DeliveryStatus
-- [ ] `SmsConversation` (Core, CatalogItem + ICatalog<> document) + index + index provider + migration
-- [ ] Extend `OmnichannelMessage` in place: ConversationId, SentByAgentId, DeliveryStatus, ProviderMessageId,
+- [x] `SmsConversation` (Core, CatalogItem + ICatalog<> document) + index + index provider + migration
+- [x] Extend `OmnichannelMessage` in place: ConversationId, SentByAgentId, DeliveryStatus, ProviderMessageId,
       MediaReferences, ErrorCode
-- [ ] Extend `OmnichannelMessageIndex` + provider + migration with `ConversationId` (indexed)
-- [ ] `SmsNumberRoute` (Core, Agent target for phase 1) + index + provider + migration
-- [ ] Stores + managers for SmsConversation and SmsNumberRoute (copy EntryPoint store/manager pattern)
+- [x] Extend `OmnichannelMessageIndex` + provider + migration with `ConversationId` (indexed)
+- [x] `SmsNumberRoute` (Core, Agent target for phase 1) + index + provider + migration
+- [x] Stores + managers for SmsConversation and SmsNumberRoute (copy EntryPoint store/manager pattern)
 
 ### Workstream: Provider dispatch (multi-provider)
-- [ ] Extend `OmnichannelChannelEndpoint` with `ProviderName`
+- [x] Extend `OmnichannelChannelEndpoint` with `ProviderName`
 - [ ] Tenant-default SMS provider setting (portal setting) + display driver
-- [ ] `ISmsDispatcher` (resolve From number ProviderName → tenant default → ISmsProvider) + impl
+- [x] `ISmsDispatcher` (resolve From number ProviderName → tenant default → ISmsProvider) + impl
 
 ### Workstream: Telnyx SMS provider (in existing Telnyx module, new feature)
-- [ ] `TelnyxSmsProvider : OrchardCore.Sms.ISmsProvider` named "Telnyx" (SendAsync → /v2/messages)
-- [ ] `TelnyxSmsWebhookEndpoint` — inbound (message.received) + delivery (message.sent/finalized)
-- [ ] Telnyx Ed25519 signature verification helper (differs from voice webhook validator)
-- [ ] `[Feature] "Telnyx SMS"` manifest + Startup (TryAdd pattern)
+- [x] `TelnyxSmsProvider : OrchardCore.Sms.ISmsProvider` named "Telnyx" (SendAsync → /v2/messages)
+- [x] `TelnyxSmsWebhookEndpoint` — inbound (message.received) + delivery (message.sent/finalized)
+- [x] Telnyx Ed25519 signature verification helper (differs from voice webhook validator)
+- [x] `[Feature] "Telnyx SMS"` manifest + Startup (TryAdd pattern)
 
 ### Workstream: Inbound routing pipeline
-- [ ] `ISmsInboundRouter` chain contract + ordered registration (TryAdd precedence)
-- [ ] `ExistingConversationRouter` (append to open human conversation, keep assignment)
-- [ ] `NumberRouteRouter` (SmsNumberRoute → Agent personal inbox; Queue phase 2)
-- [ ] `FallbackRouter` (unassigned inbox / spam bucket — no silent drop)
-- [ ] `ISmsInboundProcessor` orchestration: normalize → OmnichannelMessage → resolve contact →
+- [x] `ISmsInboundRouter` chain contract + ordered registration (TryAdd precedence)
+- [x] `ExistingConversationRouter` (append to open human conversation, keep assignment)
+- [x] `NumberRouteRouter` (SmsNumberRoute → Agent personal inbox; Queue phase 2)
+- [x] `FallbackRouter` (unassigned inbox / spam bucket — no silent drop)
+- [x] `ISmsInboundProcessor` orchestration: normalize → OmnichannelMessage → resolve contact →
       find-or-create SmsConversation → router chain → persist + bump unread → raise event → notify
-- [ ] Twilio inbound rewired to the conversation pipeline (feed new pipeline, keep AI path)
+- [x] Twilio inbound rewired to the conversation pipeline (feed new pipeline, keep AI path)
 
 ### Workstream: Send path
-- [ ] `ISmsConversationService.SendAsync(...)` — authorize, DoNotSms + window checks, dispatch, persist Queued
-- [ ] Delivery-webhook update of DeliveryStatus + notify
+- [x] `ISmsConversationService.SendAsync(...)` — authorize, DoNotSms + window checks, dispatch, persist Queued
+- [x] Delivery-webhook update of DeliveryStatus + notify
 
 ### Workstream: Portal UI (Orchard Core display management)
 - [ ] `SmsPortalController` + admin menu (mirror AgentWorkspaceController) — conversation list scaffolding
@@ -63,11 +63,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 - [ ] NewInboundMessage, MessageDelivered/Failed wiring (Assigned/Claimed groundwork)
 
 ### Workstream: Permissions / compliance / security
-- [ ] `TelephonySmsPermissions` (copy ContactCenterPermissions): ManageSmsNumberRoutes, UseSmsPortal,
+- [x] `TelephonySmsPermissions` (copy ContactCenterPermissions): ManageSmsNumberRoutes, UseSmsPortal,
       SendGroupSms, ViewAllConversations
-- [ ] Enforce DoNotSms on every send; honor STOP/opt-out (OmnichannelSmsComplianceHelper) → DoNotSms + auto-close
-- [ ] Redact addresses/PII in logs (IRedactorProvider, LogDataClassifications.AddressSet)
-- [ ] Per-provider webhook auth (Telnyx Ed25519)
+- [x] Enforce DoNotSms on every send; honor STOP/opt-out (OmnichannelSmsComplianceHelper) → DoNotSms + auto-close
+- [x] Redact addresses/PII in logs (IRedactorProvider, LogDataClassifications.AddressSet)
+- [x] Per-provider webhook auth (Telnyx Ed25519)
 
 ---
 
@@ -93,5 +93,21 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 _Appended as provider paths are completed. These are covered by mocked-provider unit tests; the human must
 verify the real round trip._
 
-(none yet)
+### Telnyx SMS two-way (Phase 1)
+The full Telnyx code path (send via `POST /v2/messages`, inbound + delivery webhook with Ed25519
+verification) is implemented and covered by mocked-provider unit tests (`TelnyxSmsWebhookParserTests`,
+`SmsDispatcherTests`, `SmsConversationServiceTests`, `SmsInboundProcessorTests`). A human must verify the real
+round trip:
+1. Enable features: **Telnyx**, **Telnyx SMS**, **SMS Communication Portal** (pulls in Omnichannel Managements
+   + Contact Center Agents/Work Distribution/Real-Time + OrchardCore.Sms/SignalR).
+2. In Telnyx settings, set the account **API key** and **webhook public key** (both are reused from the Telnyx
+   provider settings). Optionally set `TelnyxSmsSettings.MessagingProfileId` (no editor yet — via recipe) if
+   the number is not directly bound to a messaging profile.
+3. Register a Telnyx **messaging profile webhook** pointing at `https://<public-host>/api/telnyx/webhook/sms`.
+4. Add the Telnyx DID as an `OmnichannelChannelEndpoint` (Channel=SMS, ProviderName=`Telnyx`) and create an
+   `SmsNumberRoute` binding that DID to an agent.
+5. Text the DID from a mobile → expect a new conversation in the agent inbox; reply from the portal → expect
+   delivery on the handset and the delivery tick to advance to Delivered.
+   Expected result: inbound creates/append a conversation (no silent drop), outbound persists with
+   DeliveryStatus and reconciles on the `message.finalized` receipt.
 </content>

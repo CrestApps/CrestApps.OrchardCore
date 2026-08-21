@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.Telephony.Sms.Indexes;
 using CrestApps.OrchardCore.Telephony.Sms.Migrations;
 using CrestApps.OrchardCore.Telephony.Sms.Notifications;
 using CrestApps.OrchardCore.Telephony.Sms.Services;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -65,5 +67,8 @@ public sealed class Startup : StartupBase
 
         // Permissions.
         services.AddPermissionProvider<TelephonySmsPermissionProvider>();
+
+        // Redact customer/service addresses in logs, matching the other telephony modules.
+        services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
     }
 }
