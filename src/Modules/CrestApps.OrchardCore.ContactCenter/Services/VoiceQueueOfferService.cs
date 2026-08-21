@@ -165,6 +165,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         string activityItemId,
         string queueId,
         string agentId,
+        int? ringTimeoutSeconds = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
@@ -178,10 +179,21 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
             return null;
         }
 
-        var reservation = await _assignmentService.AssignSpecificAsync(activityItemId, queueId, agentId, cancellationToken);
+        var reservation = await _assignmentService.AssignSpecificAsync(activityItemId, queueId, agentId, ringTimeoutSeconds, cancellationToken);
 
         if (reservation is null)
         {
+            // A direct offer fails closed when the named agent is not present/Available, has no live session, or
+            // is already on a call. Log it so a direct-to-agent entry point that never rings is diagnosable from
+            // the application log instead of only from a live agent session.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "A direct-to-agent offer for activity '{ActivityItemId}' could not be placed because agent '{AgentId}' is not available to take the call.",
+                    activityItemId.SanitizeLogValue(),
+                    agentId.SanitizeLogValue());
+            }
+
             return null;
         }
 

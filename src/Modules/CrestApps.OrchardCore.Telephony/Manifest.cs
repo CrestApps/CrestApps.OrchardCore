@@ -26,11 +26,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = TelephonyConstants.Feature.SoftPhone,
     Name = "Telephony Soft Phone",
-    Description = "Injects the floating soft phone experience into the admin dashboard, front end, or both.",
+    Description = "Adds the floating soft phone to the admin dashboard, and provides a Soft Phone widget to place it on the front end.",
     Category = "Telephony",
     Dependencies =
     [
         TelephonyConstants.Feature.Area,
         "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Widgets",
     ]
 )]

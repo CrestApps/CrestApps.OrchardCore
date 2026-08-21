@@ -139,6 +139,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         string activityItemId,
         string queueId,
         string agentId,
+        int? ringTimeoutSeconds = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
@@ -164,11 +165,33 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         await using var acquiredLock = locker;
 
-        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+        // A direct-to-agent (personal line) offer is carried under the synthetic direct-routing queue, which has
+        // no persisted queue row: there is nothing to look up or enable, availability is evaluated directly
+        // against the named agent (no queue entitlement or sign-in), and the reservation uses the direct-routing
+        // timeout. A real-queue offer keeps the queue lookup and queue-scoped availability.
+        var isDirect = ContactCenterConstants.IsDirectRoutingQueue(queueId);
+        int timeout;
 
-        if (queue is null || !queue.Enabled)
+        if (isDirect)
         {
-            return null;
+            // The direct offer rings the agent for the entry point's configured ring window (falling back to the
+            // default when unspecified), after which the reservation expires and the caller is sent to voicemail.
+            timeout = ringTimeoutSeconds is > 0
+                ? ringTimeoutSeconds.Value
+                : ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
+        }
+        else
+        {
+            var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+
+            if (queue is null || !queue.Enabled)
+            {
+                return null;
+            }
+
+            timeout = queue.ReservationTimeoutSeconds > 0
+                ? queue.ReservationTimeoutSeconds
+                : 30;
         }
 
         var queueItem = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
@@ -180,18 +203,17 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        // The availability service returns null when the named agent is not entitled, opted in, live,
-        // available, and within capacity for the queue, so a direct offer fails closed to the queue fallback.
-        var availability = await _availabilityService.GetAsync(agentId, queueId, cancellationToken);
+        // The availability service returns null when the named agent cannot take the call. For a direct offer
+        // that means not present/Available, no live session, or at capacity; for a queue offer it additionally
+        // means not entitled to or signed into the queue.
+        var availability = isDirect
+            ? await _availabilityService.GetForDirectAsync(agentId, cancellationToken)
+            : await _availabilityService.GetAsync(agentId, queueId, cancellationToken);
 
         if (availability?.Agent is null)
         {
             return null;
         }
-
-        var timeout = queue.ReservationTimeoutSeconds > 0
-            ? queue.ReservationTimeoutSeconds
-            : 30;
 
         var reservation = await _reservationService.ReserveAsync(queueItem, availability.Agent, timeout, cancellationToken);
 

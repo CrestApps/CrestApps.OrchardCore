@@ -36,7 +36,7 @@
             <option value="@EntryPointTargetType.Agent">@T["Specific agent"]</option>
         </select>
         <span asp-validation-for="TargetType" class="text-danger"></span>
-        <span class="hint">@T["Route calls to a queue, or directly to a specific agent (a personal line) with the queue below as the fallback when the agent is unavailable."]</span>
+        <span class="hint">@T["Route calls to a queue, or directly to a specific agent (a personal line). A specific agent rings that person directly, with no queue fallback."]</span>
     </div>
 </div>
 
@@ -51,6 +51,25 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="VoicemailEnabled" data-entry-point-agent-field>
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="VoicemailEnabled" class="form-check-input" data-entry-point-voicemail-toggle />
+            <label asp-for="VoicemailEnabled" class="form-check-label">@T["Send unanswered calls to voicemail"]</label>
+        </div>
+        <span class="hint dashed">@T["When off, the caller keeps ringing and is held for the agent until answered or they hang up."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="RingTimeoutSeconds" data-entry-point-agent-field data-entry-point-ringwindow-field>
+    <label asp-for="RingTimeoutSeconds" class="ocat-label">@T["Ring window (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="RingTimeoutSeconds" type="number" min="5" max="300" class="form-control" />
+        <span asp-validation-for="RingTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long the caller rings and is held for the agent before going to voicemail. Default 30 seconds."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="TargetQueueId" data-entry-point-queue-field>
     <label asp-for="TargetQueueId" class="ocat-label">@T["Target queue"]</label>
     <div class="ocat-end">
@@ -58,7 +77,7 @@
             <option value="">@T["No queue"]</option>
         </select>
         <span asp-validation-for="TargetQueueId" class="text-danger"></span>
-        <span class="hint">@T["The queue calls route to. For an agent target this is the fallback used when the agent is unavailable."]</span>
+        <span class="hint">@T["The queue calls route to."]</span>
     </div>
 </div>
 
@@ -141,20 +160,35 @@
 <script at="Foot" depends-on="bootstrap-select">
     (function () {
         var typeSelect = document.querySelector('[data-entry-point-target-type]');
-        var agentField = document.querySelector('[data-entry-point-agent-field]');
+        var agentFields = document.querySelectorAll('[data-entry-point-agent-field]');
+        var queueFields = document.querySelectorAll('[data-entry-point-queue-field]');
+        var voicemailToggle = document.querySelector('[data-entry-point-voicemail-toggle]');
+        var ringWindowField = document.querySelector('[data-entry-point-ringwindow-field]');
 
-        if (!typeSelect || !agentField) {
+        if (!typeSelect || agentFields.length === 0 || queueFields.length === 0) {
             return;
         }
 
-        // Show the "Target agent" field only when routing to a specific agent. The "Target queue" field stays
-        // visible for both targets: it is the primary queue for a queue target and the fallback for an agent
-        // target.
+        // An entry point routes to a specific agent or a queue, never both. Show the agent-only fields only for
+        // a specific-agent target and the queue field only for a queue target. The ring window is shown only
+        // when routing to an agent AND voicemail is enabled.
         function apply() {
-            agentField.style.display = typeSelect.value === '@EntryPointTargetType.Agent' ? '' : 'none';
+            var isAgent = typeSelect.value === '@EntryPointTargetType.Agent';
+            agentFields.forEach(function (field) { field.style.display = isAgent ? '' : 'none'; });
+            queueFields.forEach(function (field) { field.style.display = isAgent ? 'none' : ''; });
+
+            if (ringWindowField) {
+                var voicemailOn = !voicemailToggle || voicemailToggle.checked;
+                ringWindowField.style.display = (isAgent && voicemailOn) ? '' : 'none';
+            }
         }
 
         typeSelect.addEventListener('change', apply);
+
+        if (voicemailToggle) {
+            voicemailToggle.addEventListener('change', apply);
+        }
+
         apply();
     })();
 </script>

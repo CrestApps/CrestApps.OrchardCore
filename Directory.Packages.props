@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19110</OrchardCoreVersion>
+    <OrchardCoreVersion>4.0.0-preview-19118</OrchardCoreVersion>
     <CrestAppsCoreVersion>1.3.0-preview.219</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>

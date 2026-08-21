@@ -51,6 +51,11 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(ReservationStatus.Pending, reservation.Status);
         Assert.Equal(QueueItemStatus.Reserved, item.Status);
         Assert.Equal(AgentPresenceStatus.Reserved, agent.PresenceStatus);
+
+        // The Available agent's return state is captured, so when this reservation ends they go back to
+        // Available -- even with no queue membership (a direct-to-agent / personal line agent), instead of being
+        // signed out by the queue-membership-based default.
+        Assert.Equal(AgentPresenceStatus.Available, agent.RequestedPresenceStatus);
         publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 

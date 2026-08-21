@@ -23,6 +23,8 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private const string RoutingTerminalReasonMetadataKey = "routing_terminal_reason";
     private const string ClosedVoicemailReasonCode = "entry_point_closed_voicemail";
     private const string ClosedRejectReasonCode = "entry_point_closed_reject";
+    private const string DirectAgentHeldReasonCode = "direct_agent_held";
+    private const string DirectAgentTimeoutVoicemailReasonCode = "direct_agent_timeout_voicemail";
     private const string TargetQueueMissingReasonCode = "target_queue_missing";
     private const string TargetQueueDisabledReasonCode = "target_queue_disabled";
     private const string InboundQueueUnavailableReasonCode = "inbound_queue_unavailable";
@@ -226,9 +228,14 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         ActivityQueue queue = null;
         string unavailableQueueReasonCode = null;
 
+        // A specific-agent entry point rings the named agent directly (a personal line). The call is carried
+        // under the synthetic direct-routing queue rather than a real queue, so there is nothing to resolve or
+        // validate here and it is never offered to anyone other than the named agent.
+        var isDirect = plan is { RouteToAgent: true } && !string.IsNullOrEmpty(plan.TargetAgentId);
+
         if (plan is not null)
         {
-            if (plan.ShouldQueue)
+            if (!isDirect && plan.ShouldQueue)
             {
                 if (string.IsNullOrEmpty(plan.TargetQueueId))
                 {
@@ -260,10 +267,23 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             }
         }
 
+        // The queue identifier the call is enqueued and offered under: a real queue for a queue route, the
+        // synthetic direct-routing queue for a personal line, or null when there is no destination.
+        var effectiveQueueId = isDirect
+            ? ContactCenterConstants.DirectRouting.QueueId
+            : queue?.ItemId;
+
         var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now);
         result.ActivityItemId = activity.ItemId;
 
-        var interaction = await CreateInteractionAsync(inboundEvent, activity, queue, fromAddress, serviceAddress);
+        var interaction = await CreateInteractionAsync(
+            inboundEvent,
+            activity,
+            effectiveQueueId,
+            fromAddress,
+            serviceAddress,
+            isDirect ? plan.TargetAgentId : null,
+            isDirect ? plan.RingTimeoutSeconds : (int?)null);
         result.InteractionId = interaction.ItemId;
 
         if (plan is not null && !plan.ShouldQueue)
@@ -290,7 +310,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             return result;
         }
 
-        if (queue is null)
+        if (!isDirect && queue is null)
         {
             result.Reason = unavailableQueueReasonCode switch
             {
@@ -313,24 +333,40 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             return result;
         }
 
-        result.QueueId = queue.ItemId;
+        result.QueueId = effectiveQueueId;
 
         var priority = plan is not null ? plan.Priority : (InteractionPriority?)null;
 
-        await _queueService.EnqueueAsync(activity.ItemId, queue.ItemId, priority, cancellationToken);
+        await _queueService.EnqueueAsync(activity.ItemId, effectiveQueueId, priority, cancellationToken);
         result.Queued = true;
 
-        // Agent-target entry points offer the call directly to the named agent first; when that agent is
-        // unavailable the offer falls through to the queue's normal routing so the personal line degrades to
-        // ordinary queue handling instead of stranding the caller.
-        string agentUserId = null;
-
-        if (plan is not null && plan.RouteToAgent && !string.IsNullOrEmpty(plan.TargetAgentId))
+        if (isDirect)
         {
-            agentUserId = await _offerService.OfferToAgentAsync(activity.ItemId, queue.ItemId, plan.TargetAgentId, cancellationToken);
+            // A specific-agent entry point rings the named agent only. There is no queue fallback: the call is
+            // never offered to anyone else.
+            var directAgentUserId = await _offerService.OfferToAgentAsync(activity.ItemId, effectiveQueueId, plan.TargetAgentId, plan.RingTimeoutSeconds, cancellationToken);
+
+            if (string.IsNullOrEmpty(directAgentUserId))
+            {
+                // The named agent cannot take the call right now (not present/Available, no live session, or
+                // already on a call). Hold the call waiting under the direct-routing queue, tagged for that
+                // agent, so it is re-offered to them the moment they become available instead of being
+                // stranded or handed to anyone else.
+                result.Reason = "The direct-to-agent target is unavailable; the call is held for that agent.";
+                result.ReasonCode = DirectAgentHeldReasonCode;
+
+                return result;
+            }
+
+            result.Routed = true;
+            result.Queued = false;
+            result.AgentUserId = directAgentUserId;
+            result.Reason = "Offered to the direct-to-agent target.";
+
+            return result;
         }
 
-        agentUserId ??= await _offerService.OfferNextAsync(queue.ItemId, cancellationToken);
+        var agentUserId = await _offerService.OfferNextAsync(effectiveQueueId, cancellationToken);
 
         if (string.IsNullOrEmpty(agentUserId))
         {
@@ -345,6 +381,50 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         result.Reason = "Offered to an available agent.";
 
         return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> TimeoutDirectHoldAsync(string activityItemId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+
+        var queueItem = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        // Only a still-waiting held direct call can be timed out. If it was already offered/reserved (the agent
+        // became available), the reservation timeout governs instead and voicemail is applied on its expiry.
+        if (queueItem is null ||
+            queueItem.Status != QueueItemStatus.Waiting ||
+            !ContactCenterConstants.IsDirectRoutingQueue(queueItem.QueueId))
+        {
+            return false;
+        }
+
+        var activity = await _activityManager.FindByIdAsync(activityItemId, cancellationToken);
+        var interaction = await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        if (activity is null || interaction is null)
+        {
+            return false;
+        }
+
+        // Remove the held item from the synthetic direct-routing queue, then send the caller to the agent's
+        // voicemail. When the provider cannot take voicemail the command layer reports the failure.
+        if (queueItem.CanTransitionTo(QueueItemStatus.Removed))
+        {
+            await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
+        }
+
+        await TerminalizeInboundAsync(
+            activity,
+            interaction,
+            ActivityStatus.Completed,
+            InteractionStatus.Ended,
+            DirectAgentTimeoutVoicemailReasonCode,
+            ProviderCommandType.SendToVoicemail,
+            _clock.UtcNow,
+            cancellationToken);
+
+        return true;
     }
 
     private async Task TerminalizeInboundAsync(
@@ -517,9 +597,11 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private async Task<Core.Models.Interaction> CreateInteractionAsync(
         InboundVoiceEvent inboundEvent,
         OmnichannelActivity activity,
-        ActivityQueue queue,
+        string queueId,
         string fromAddress,
-        string serviceAddress)
+        string serviceAddress,
+        string directTargetAgentId,
+        int? directRingTimeoutSeconds)
     {
         var interaction = await _interactionManager.NewAsync();
         interaction.Channel = InteractionChannel.Voice;
@@ -528,11 +610,25 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         interaction.ProviderName = inboundEvent.ProviderName;
         interaction.ProviderInteractionId = inboundEvent.ProviderCallId;
         interaction.CustomerAddress = fromAddress;
-        interaction.QueueId = queue?.ItemId;
+        interaction.QueueId = queueId;
 
         if (!string.IsNullOrEmpty(serviceAddress))
         {
             interaction.TechnicalMetadata[ServiceAddressMetadataKey] = serviceAddress;
+        }
+
+        // Record the direct target and ring window so a personal-line call held while the agent is unavailable
+        // can be re-offered to that same agent when they become available, and timed out to voicemail if no one
+        // ever answers.
+        if (!string.IsNullOrEmpty(directTargetAgentId))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = directTargetAgentId;
+        }
+
+        // Stored for every direct call, including 0 which means voicemail is disabled for this entry point.
+        if (directRingTimeoutSeconds.HasValue)
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.RingTimeoutMetadataKey] = directRingTimeoutSeconds.Value;
         }
 
         foreach (var entry in inboundEvent.Metadata)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -55,6 +56,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             TargetAgentId = entryPoint.TargetAgentId,
             TargetQueueId = entryPoint.TargetQueueId,
             Priority = entryPoint.Priority,
+            VoicemailEnabled = entryPoint.VoicemailEnabled,
+            RingTimeoutSeconds = entryPoint.RingTimeoutSeconds,
             BusinessHoursCalendarId = entryPoint.BusinessHoursCalendarId,
             ClosedAction = entryPoint.ClosedAction,
             OverflowQueueId = entryPoint.OverflowQueueId,
@@ -77,6 +80,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.TargetQueueId = viewModel.TargetQueueId;
             model.TargetQueueOptions = viewModel.TargetQueueOptions;
             model.Priority = viewModel.Priority;
+            model.VoicemailEnabled = viewModel.VoicemailEnabled;
+            model.RingTimeoutSeconds = viewModel.RingTimeoutSeconds;
             model.BusinessHoursCalendarId = viewModel.BusinessHoursCalendarId;
             model.BusinessHoursCalendarOptions = viewModel.BusinessHoursCalendarOptions;
             model.ClosedAction = viewModel.ClosedAction;
@@ -96,15 +101,51 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
 
+        var isAgentTarget = model.TargetType == CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType.Agent;
+
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();
         entryPoint.DialedNumbers = ParseLines(model.DialedNumbersText);
         entryPoint.TargetType = model.TargetType;
-        entryPoint.TargetAgentId = model.TargetType == CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType.Agent && !string.IsNullOrWhiteSpace(model.TargetAgentId)
+
+        // An entry point routes to a specific agent or a queue, never both: a specific-agent target rings that
+        // agent directly and keeps no fallback queue, so the queue selection is cleared for an agent target and
+        // the agent selection is cleared for a queue target.
+        entryPoint.TargetAgentId = isAgentTarget && !string.IsNullOrWhiteSpace(model.TargetAgentId)
             ? model.TargetAgentId.Trim()
             : null;
-        entryPoint.TargetQueueId = string.IsNullOrWhiteSpace(model.TargetQueueId) ? null : model.TargetQueueId.Trim();
+        entryPoint.TargetQueueId = !isAgentTarget && !string.IsNullOrWhiteSpace(model.TargetQueueId)
+            ? model.TargetQueueId.Trim()
+            : null;
+
+        if (isAgentTarget && string.IsNullOrEmpty(entryPoint.TargetAgentId))
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(EntryPointViewModel.TargetAgentId),
+                S["Select the agent this entry point routes calls to."]);
+        }
+
+        if (!isAgentTarget && string.IsNullOrEmpty(entryPoint.TargetQueueId))
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(EntryPointViewModel.TargetQueueId),
+                S["Select the queue this entry point routes calls to."]);
+        }
+
         entryPoint.Priority = model.Priority;
+
+        // Whether an unanswered specific-agent call goes to voicemail, and the ring window that governs it. The
+        // window is always stored as a valid positive value; the checkbox controls whether it is used.
+        entryPoint.VoicemailEnabled = model.VoicemailEnabled;
+        entryPoint.RingTimeoutSeconds = model.RingTimeoutSeconds <= 0
+            ? ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds
+            : Math.Clamp(
+                model.RingTimeoutSeconds,
+                ContactCenterConstants.DirectRouting.MinimumRingTimeoutSeconds,
+                ContactCenterConstants.DirectRouting.MaximumRingTimeoutSeconds);
+
         entryPoint.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId) ? null : model.BusinessHoursCalendarId.Trim();
         entryPoint.ClosedAction = model.ClosedAction;
         entryPoint.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) ? null : model.OverflowQueueId.Trim();

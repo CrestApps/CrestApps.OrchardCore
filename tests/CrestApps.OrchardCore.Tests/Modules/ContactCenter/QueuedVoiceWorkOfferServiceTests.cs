@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -123,16 +124,77 @@ public sealed class QueuedVoiceWorkOfferServiceTests
         inboundVoiceService.Verify(voice => voice.OfferNextAsync("q1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task OfferForAgentAsync_WhenHeldDirectCallTargetsAgent_OffersItEvenWithoutQueueMembership()
+    {
+        // Arrange: a direct-only agent with no queue membership, and a call held under the synthetic
+        // direct-routing queue tagged for that agent.
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [],
+            });
+
+        var heldInteraction = new Interaction();
+        heldInteraction.TechnicalMetadata[ContactCenterConstants.DirectRouting.TargetAgentMetadataKey] = "a1";
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldInteraction);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.GetWaitingAsync(ContactCenterConstants.DirectRouting.QueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new QueueItem { ItemId = "qi-1", ActivityItemId = "act-1", QueueId = ContactCenterConstants.DirectRouting.QueueId }]);
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        inboundVoiceService
+            .Setup(service => service.OfferToAgentAsync("act-1", ContactCenterConstants.DirectRouting.QueueId, "a1", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("user-1");
+
+        var service = CreateService(agentManager, healer, inboundVoiceService, new Mock<ISession>(), queueItemManager, interactionManager);
+
+        // Act
+        var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, offered);
+        inboundVoiceService.Verify(
+            voice => voice.OfferToAgentAsync("act-1", ContactCenterConstants.DirectRouting.QueueId, "a1", It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // The held direct call was taken; the agent (with no queue membership) is never pulled from a queue.
+        inboundVoiceService.Verify(voice => voice.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static QueuedVoiceWorkOfferService CreateService(
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentWorkStateHealingService> healer,
         Mock<IInboundVoiceService> inboundVoiceService,
-        Mock<ISession> session)
+        Mock<ISession> session,
+        Mock<IQueueItemManager> queueItemManager = null,
+        Mock<IInteractionManager> interactionManager = null)
     {
+        if (queueItemManager is null)
+        {
+            // Default to no held direct calls so tests that do not exercise that path behave as before. Only
+            // applied when the caller did not supply its own mock, to avoid clobbering an explicit setup.
+            queueItemManager = new Mock<IQueueItemManager>();
+            queueItemManager
+                .Setup(manager => manager.GetWaitingAsync(ContactCenterConstants.DirectRouting.QueueId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync([]);
+        }
+
         return new QueuedVoiceWorkOfferService(
             agentManager.Object,
             [healer.Object],
             inboundVoiceService.Object,
+            queueItemManager.Object,
+            (interactionManager ?? new Mock<IInteractionManager>()).Object,
             session.Object,
             Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());
     }

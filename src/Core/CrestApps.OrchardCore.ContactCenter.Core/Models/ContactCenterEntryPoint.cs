@@ -32,14 +32,16 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
 
     /// <summary>
     /// Gets or sets the identifier of the agent profile calls route directly to when
-    /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Agent"/>. When that agent is
-    /// unavailable, the call falls back to <see cref="TargetQueueId"/>.
+    /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Agent"/>. The call rings that agent
+    /// directly (a personal line); there is no queue fallback. When the agent cannot take the call it is sent
+    /// to that agent's voicemail.
     /// </summary>
     public string TargetAgentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the queue calls route to while the entry point is open. For an
-    /// agent-target entry point this is the fallback queue used when the agent is unavailable.
+    /// Gets or sets the identifier of the queue calls route to while the entry point is open, when
+    /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Queue"/>. It is not used for an
+    /// agent-target entry point.
     /// </summary>
     public string TargetQueueId { get; set; }
 
@@ -47,6 +49,21 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     /// Gets or sets the priority assigned to calls entering through this entry point.
     /// </summary>
     public InteractionPriority Priority { get; set; } = InteractionPriority.Normal;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an unanswered direct-to-agent call is sent to the agent's
+    /// voicemail. When disabled the caller keeps ringing and is held for the agent until answered or they hang
+    /// up. Only applies when <see cref="TargetType"/> is <see cref="EntryPointTargetType.Agent"/>.
+    /// </summary>
+    public bool VoicemailEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the ring window, in seconds, for a direct-to-agent target: how long the caller rings and is
+    /// held waiting for the named agent before being sent to that agent's voicemail. Only applies when
+    /// <see cref="TargetType"/> is <see cref="EntryPointTargetType.Agent"/> and <see cref="VoicemailEnabled"/>
+    /// is <see langword="true"/>.
+    /// </summary>
+    public int RingTimeoutSeconds { get; set; } = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
 
     /// <summary>
     /// Gets or sets the identifier of the business-hours calendar that gates when the entry point is open.

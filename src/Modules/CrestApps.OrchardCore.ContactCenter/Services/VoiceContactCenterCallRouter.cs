@@ -70,6 +70,17 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     }
 
     /// <inheritdoc/>
+    public Task<string> OfferToAgentAsync(
+        string activityItemId,
+        string queueId,
+        string agentId,
+        int? ringTimeoutSeconds = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _offerService.OfferToAgentAsync(activityItemId, queueId, agentId, ringTimeoutSeconds, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<ContactCenterVoiceProviderResult> RouteOutboundAsync(
         ContactCenterDialRequest request,
         string providerName = null,

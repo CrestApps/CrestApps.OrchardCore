@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -756,7 +755,7 @@ public sealed class DialpadTelephonyProviderTests
             CreateResolvedOptions(settings, dataProtectionProvider));
     }
 
-    private static IOptionsMonitor<DialpadOptions> CreateResolvedOptions(
+    private static TestOptionsMonitor<DialpadOptions> CreateResolvedOptions(
         DialpadSettings settings,
         IDataProtectionProvider dataProtectionProvider)
     {

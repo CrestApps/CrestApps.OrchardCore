@@ -85,6 +85,51 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
     }
 
     /// <inheritdoc/>
+    public async Task<AgentAvailability> GetForDirectAsync(
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        // A direct-to-agent (personal line) offer deliberately skips queue entitlement and queue sign-in: the
+        // agent is named on the entry point, so the only questions are whether they are present and set to
+        // Available, have a live session, and are within capacity.
+        if (agent is null ||
+            agent.PresenceStatus != AgentPresenceStatus.Available)
+        {
+            return null;
+        }
+
+        var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
+        var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
+
+        if (session is null ||
+            !session.IsOnline ||
+            session.ConnectionIds.Count == 0 ||
+            !session.LastHeartbeatUtc.HasValue ||
+            session.LastHeartbeatUtc.Value < liveAfter)
+        {
+            return null;
+        }
+
+        var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(agentId, cancellationToken);
+
+        if (activeInteractionCount >= Math.Max(1, agent.MaxConcurrentInteractions))
+        {
+            return null;
+        }
+
+        return new AgentAvailability
+        {
+            Agent = agent,
+            LastHeartbeatUtc = session.LastHeartbeatUtc.Value,
+            ActiveInteractionCount = activeInteractionCount,
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<AgentAvailability>> GetForQueueAsync(
         string queueId,
         CancellationToken cancellationToken = default)

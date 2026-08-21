@@ -57,6 +57,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         }
 
         var reservationService = serviceProvider.GetRequiredService<IActivityReservationService>();
+        var directHoldTimeoutService = serviceProvider.GetService<IDirectHoldTimeoutService>();
         var assignmentService = serviceProvider.GetRequiredService<IActivityAssignmentService>();
         var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
         var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
@@ -79,6 +80,14 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         try
         {
             await reservationService.ExpireDueAsync(runToken);
+
+            // Bound how long direct-to-agent (personal line) calls are held: send elapsed ring windows to
+            // voicemail, and re-offer voicemail-disabled holds to their agent when available.
+            if (directHoldTimeoutService is not null)
+            {
+                await directHoldTimeoutService.ProcessDueAsync(runToken);
+            }
+
             queues = await queueManager.GetEnabledAsync(runToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

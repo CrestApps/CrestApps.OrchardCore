@@ -129,20 +129,19 @@ new default is chosen.
 ## Soft phone widget
 
 Enable the **Telephony Soft Phone** feature
-(`CrestApps.OrchardCore.Telephony.SoftPhone`) to inject a floating soft phone into the site.
-Configure where it appears on the **Soft Phone** tab of the telephony settings:
+(`CrestApps.OrchardCore.Telephony.SoftPhone`) to add a floating soft phone to the site. The feature
+adds the phone to the admin dashboard automatically, and provides a **Soft Phone** widget you can place
+on the front end. Configure it on the **Soft Phone** tab of the telephony settings:
 
 - **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
-  by default.
-- **Show the soft phone on the front end** displays the widget on the website.
-- **Recent calls to display** controls how many interactions appear on the **Recent** tab (default `30`, maximum `200`).
+  by default. To show the phone on the front end, add the **Soft Phone** widget from **Design → Widgets**
+  (see [Adding the soft phone to the website](#adding-the-soft-phone-to-the-website)).
 - **Default country** selects the country the phone number input uses by default so a national number is normalized to E.164 before it is dialed or screened. Leave it on **Automatic** to derive the country from the current request culture; when the culture does not identify a region, the widget falls back to the browser's locale and finally to the United States, so a country is always selected and national numbers can still be normalized.
 - **Accent color** controls the widget's button and control colors.
-- **Recent calls count** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
+- **Recent calls to display** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
 
-You can enable the soft phone on the admin, the front end, or both. The widget is rendered when its
-surface is enabled and the current user has the `Use the telephony soft phone` permission, so the
-soft phone only appears for authorized users.
+The widget is rendered only for users who have the `Use the telephony soft phone` permission, so the
+soft phone appears for authorized users regardless of where it is placed.
 
 The keypad's phone number field is a country-aware input backed by the [intl-tel-input](https://intl-tel-input.com/) library (provided by `CrestApps.OrchardCore.Resources`). Agents can pick a country from the flag selector, and a national number typed on the keypad is converted to canonical E.164 (for example `7024993350` with the United States selected becomes `+17024993350`) before it is dialed. Only valid phone numbers are normalized this way; other non-number entries are dialed exactly as typed instead of being turned into an invalid international number. This lets outbound compliance screening (do-not-call and calling-window checks) canonicalize a real destination reliably instead of rejecting a bare national number.
 
@@ -263,21 +262,27 @@ the caller's phone number and to drive its reservation lifecycle.
 
 ## Adding the soft phone to the website
 
-There are two ways to add the soft phone to your site:
+The **admin dashboard** shows the soft phone automatically when **Show the soft phone on the admin
+dashboard** is enabled — the widget is injected into the layout's `Footer` zone for authorized users.
 
-- **Automatically** – turn on **Show the soft phone on the front end** (and/or the admin) on the
-  telephony settings. The widget is injected into the layout's `Footer` zone for authorized users.
-- **Manually** – render the `SoftPhoneWidget` shape wherever you want it (for example in a theme
-  layout or a template) and register its resources. This shows the base phone controls. If you need
-  contributed Display Management tabs, build the widget through `IDisplayManager<SoftPhoneWidget>` the
-  same way the automatic filter does.
+For the **front end**, add the soft phone as a widget:
+
+- Go to **Design → Widgets**.
+- Add the **Soft Phone** widget to a zone (and, if you use layers, to the layers where you want the
+  phone available — for example an *Authenticated* layer). The phone floats over the page wherever it
+  is placed, and only renders for users who have the `Use the telephony soft phone` permission.
+
+The styles and scripts the phone needs are registered automatically for authorized users, so you do not
+need to reference any resources yourself.
+
+If you would rather render the phone directly in a theme layout or template instead of placing a widget,
+render the `SoftPhoneWidget` shape through `IDisplayManager<SoftPhoneWidget>` (the same way the admin
+filter and the Soft Phone widget do) and register its resources:
 
   ```html
   <style asp-name="telephony-soft-phone" at="Head"></style>
   <script asp-name="telephony-soft-phone" at="Foot"></script>
   <script asp-name="telephony-phone-field" at="Foot"></script>
-
-  @await DisplayAsync(await New.SoftPhoneWidget())
   ```
 
 The `telephony-soft-phone` script depends on the `signalr` script, which the SignalR module adds

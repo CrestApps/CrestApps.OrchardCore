@@ -103,6 +103,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
+            .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())

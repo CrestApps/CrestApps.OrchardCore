@@ -379,6 +379,20 @@
     });
   }
 
+  // Determines whether a Telnyx WebRTC error is a benign hang-up failure. When the local side ends a call
+  // the SDK tries to send a SIP BYE; if the socket or the remote leg has already gone away that send fails
+  // with BYE_SEND_FAILED ("Failed to hang up cleanly"). The call is ending regardless, so this is noise
+  // rather than a fault the agent needs to see.
+  function isBenignHangupError(error) {
+    if (!error) {
+      return false;
+    }
+    var code = error.code || error.name || '';
+    var message = error.message || error.error || (typeof error === 'string' ? error : '');
+    var haystack = (String(code) + ' ' + String(message)).toUpperCase();
+    return haystack.indexOf('BYE_SEND_FAILED') !== -1 || haystack.indexOf('HANG UP CLEANLY') !== -1;
+  }
+
   // Maps a Telnyx WebRTC SDK call state (call.state) to the soft-phone outbound state names the
   // originate() callback expects: 'Ringing', 'Connected', or 'Disconnected'. Returns null for
   // transient states that should not change the UI.
@@ -489,6 +503,14 @@
       }
     });
     client.on('telnyx.error', function (error) {
+      // A failed BYE while hanging up is expected when the call is already tearing down; surfacing it as
+      // an error is misleading, so swallow it and keep only a diagnostic trace.
+      if (isBenignHangupError(error)) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Ignored benign Telnyx hang-up error.', error);
+        }
+        return;
+      }
       context.showError(error && (error.error || error.message) || 'Telnyx WebRTC error.');
     });
 
@@ -1702,7 +1724,7 @@
       show(dom.transfer, liveMedia && has(CAPABILITIES.Transfer) && (!currentIsConference || selectedConferenceCallIds.length === 1));
       show(dom.merge, selectedConferenceCallIds.length >= 2 && has(CAPABILITIES.Merge));
       if (dom.number) {
-        var numberDisabled = !canDial || !!activeCommand || (pendingDial && !currentCall);
+        var numberDisabled = !canDial || !!activeCommand || pendingDial && !currentCall;
         if (telInput && typeof telInput.setDisabled === 'function') {
           telInput.setDisabled(numberDisabled);
         } else {
@@ -2124,8 +2146,20 @@
         dom.incomingQueue.hidden = !queueText;
       }
       show(dom.incomingVoicemail, has(CAPABILITIES.Voicemail));
+
+      // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
+      // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.
+      setIncomingControlsBusy(incomingAcceptPending);
       renderIncomingCards();
       scheduleIncomingExpiry();
+    }
+    function setIncomingControlsBusy(busy) {
+      [dom.incomingAnswer, dom.incomingVoicemail, dom.incomingIgnore].forEach(function (button) {
+        if (button) {
+          button.disabled = busy;
+          button.classList.toggle('is-busy', busy);
+        }
+      });
     }
     function clearIncomingExpiryTimer() {
       if (incomingExpiryTimer) {
@@ -2207,7 +2241,8 @@
       var actions = '';
       if (card.url) {
         var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
-        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
+        var answerBusy = incomingAcceptPending ? ' disabled' : '';
+        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
         actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(strings.open || 'Open') + '</a>';
       }
       return '<div class="telephony-incoming__card">' + icon + '<div class="telephony-incoming__card-body">' + body + '</div>' + (actions ? '<div class="telephony-incoming__card-actions">' + actions + '</div>' : '') + '</div>';
@@ -2258,6 +2293,12 @@
     }
     function answerIncoming(openUrl) {
       var id = currentCallId();
+
+      // Accepting a Contact Center offer is a server round-trip; ignore repeat clicks while one is in
+      // flight so the reservation is never accepted twice.
+      if (incomingAcceptPending) {
+        return;
+      }
       if (isBrowserAudioEnabled() && !browserAudioSession) {
         ensureBrowserAudio().then(function () {
           answerIncoming(openUrl);
@@ -2286,6 +2327,10 @@
       // connect the media) before the device answers, so the same live call is never answered here
       // while it is being re-offered to another agent.
       incomingAcceptPending = true;
+
+      // Reflect the pending accept immediately so the offer controls disable while the accept round-trips,
+      // instead of appearing clickable until the next server status update arrives.
+      render();
       postLifecycle('acceptUrl').then(function (result) {
         if (!result || result.succeeded === false) {
           showError(strings.offerUnavailable || 'This call is no longer available.');

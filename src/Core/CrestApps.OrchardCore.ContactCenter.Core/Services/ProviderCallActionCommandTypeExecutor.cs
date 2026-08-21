@@ -154,6 +154,11 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         call.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = claim.CommandId;
         call.Metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
         call.Metadata[OwnerMetadataKey] = claim.OwnerToken;
+
+        if (!string.IsNullOrWhiteSpace(request.InteractionId))
+        {
+            call.Metadata[ContactCenterConstants.CommandMetadata.InteractionId] = request.InteractionId;
+        }
         var result = await ExecuteTelephonyAsync(_telephonyService, call, cancellationToken);
 
         return ToVoiceProviderResult(command, request, result);

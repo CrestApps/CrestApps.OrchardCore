@@ -19,4 +19,14 @@ public interface IInboundVoiceCallProcessor
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The inbound routing result.</returns>
     Task<InboundVoiceRoutingResult> RouteInboundAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Times out a held direct-to-agent (personal line) call that has waited past its ring window: removes it
+    /// from the synthetic direct-routing queue and sends the caller to the target agent's voicemail. Only
+    /// affects a still-waiting held call; once offered/reserved the reservation timeout governs instead.
+    /// </summary>
+    /// <param name="activityItemId">The activity whose held call is timed out.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when a held call was timed out; otherwise <see langword="false"/>.</returns>
+    Task<bool> TimeoutDirectHoldAsync(string activityItemId, CancellationToken cancellationToken = default);
 }

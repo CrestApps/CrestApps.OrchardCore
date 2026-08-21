@@ -1,4 +1,10 @@
 .telephony-soft-phone {
+  --bs-body-bg: #fff;
+  --bs-body-color: #212529;
+  --bs-secondary-color: #6c757d;
+  --bs-tertiary-bg: #f8f9fa;
+  --bs-secondary-bg: #e9ecef;
+  --bs-border-color: #dee2e6;
   --telephony-accent: #2f6fed;
   --telephony-view-height: 18rem;
   position: fixed;
@@ -6,6 +12,14 @@
   bottom: 1.5rem;
   z-index: 1080;
   font-size: 0.9rem;
+}
+[data-bs-theme=dark] .telephony-soft-phone {
+  --bs-body-bg: #1e2126;
+  --bs-body-color: #e9ecef;
+  --bs-secondary-color: #adb5bd;
+  --bs-tertiary-bg: #2b3035;
+  --bs-secondary-bg: #343a40;
+  --bs-border-color: #495057;
 }
 .telephony-soft-phone__toggle {
   width: 3.25rem;

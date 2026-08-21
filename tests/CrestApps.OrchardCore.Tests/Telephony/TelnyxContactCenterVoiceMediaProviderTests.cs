@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.WebSockets;
 using CrestApps.OrchardCore.WebSockets.Services;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
 
@@ -206,7 +205,7 @@ public sealed class TelnyxContactCenterVoiceMediaProviderTests
     }
 
     private static StubHttpMessageHandler CreateConnectingHandler(
-        IWebSocketConnectionRegistry registry,
+        InMemoryWebSocketConnectionRegistry registry,
         FakeWebSocket socket,
         out string token)
     {

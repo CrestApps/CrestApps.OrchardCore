@@ -152,7 +152,12 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
         // owner. The locks carry a fixed expiration and are never renewed, so the length of this section is
         // what decides how often it outruns its lease; what makes that survivable is the version check the
         // commit below runs under, not the lease.
-        var availability = await _availabilityService.GetAsync(agent.ItemId, queueItem.QueueId, cancellationToken);
+        // A direct-to-agent (personal line) reservation is carried under the synthetic direct-routing queue,
+        // which has no queue membership to check. Its availability is evaluated directly against the named
+        // agent so the offer does not require the agent to be entitled to, or signed into, any queue.
+        var availability = ContactCenterConstants.IsDirectRoutingQueue(queueItem.QueueId)
+            ? await _availabilityService.GetForDirectAsync(agent.ItemId, cancellationToken)
+            : await _availabilityService.GetAsync(agent.ItemId, queueItem.QueueId, cancellationToken);
 
         if (availability?.Agent is null)
         {
@@ -183,8 +188,14 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
         queueItem.AgentId = agent.ItemId;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
+        // Remember the state to return the agent to when this reservation ends. Available is captured
+        // explicitly (rather than left to the post-call default) so an agent who takes a call returns to
+        // Available even when they belong to no queue -- a direct-to-agent (personal line) agent. Without this,
+        // the queue-membership-based default signs a queueless agent out after every direct call. The transient
+        // in-call states are still not captured, so a second concurrent reservation cannot overwrite the real
+        // return state.
         if (!agent.RequestedPresenceStatus.HasValue &&
-            agent.PresenceStatus is not AgentPresenceStatus.Available and not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp)
+            agent.PresenceStatus is not AgentPresenceStatus.Reserved and not AgentPresenceStatus.Busy and not AgentPresenceStatus.WrapUp)
         {
             agent.RequestedPresenceStatus = agent.PresenceStatus == AgentPresenceStatus.RequestBreak
                 ? AgentPresenceStatus.Break
@@ -636,9 +647,20 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
             : null;
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
         var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
-        var configuredUnansweredAction = status == ReservationStatus.Expired
-            ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
-            : UnansweredOfferAction.Requeue;
+        // A direct-to-agent (personal line) offer has no queue to requeue into: when the named agent lets the
+        // offer expire or declines it, the caller is sent to that agent's voicemail rather than stranded --
+        // unless the entry point disabled voicemail (ring window 0), in which case the held call is requeued so
+        // it can be re-offered when the agent is next available. A cancel (for example the caller hanging up
+        // while it rings) keeps the shared release behavior.
+        var isDirect = ContactCenterConstants.IsDirectRoutingQueue(reservation.QueueId);
+        var directVoicemailEnabled = isDirect && IsDirectVoicemailEnabled(interaction);
+        var configuredUnansweredAction = isDirect
+            ? directVoicemailEnabled && status is ReservationStatus.Expired or ReservationStatus.Rejected
+                ? UnansweredOfferAction.Voicemail
+                : UnansweredOfferAction.Requeue
+            : status == ReservationStatus.Expired
+                ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
+                : UnansweredOfferAction.Requeue;
         var unansweredAction = configuredUnansweredAction;
         ProviderCommandRegistration providerCommand = null;
 
@@ -798,6 +820,21 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
 
             throw;
         }
+    }
+
+    private static bool IsDirectVoicemailEnabled(Interaction interaction)
+    {
+        // Voicemail is enabled for a direct-to-agent call unless the entry point explicitly set its ring window
+        // to 0. Absent metadata (older data) defaults to enabled.
+        if (interaction is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.DirectRouting.RingTimeoutMetadataKey, out var value) &&
+            value is not null &&
+            int.TryParse(value.ToString(), out var seconds))
+        {
+            return seconds > 0;
+        }
+
+        return true;
     }
 
     private static Dictionary<string, object> BuildOfferTimeoutMetadata(ActivityQueue queue, AgentProfile agent)

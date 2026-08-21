@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
@@ -28,6 +29,7 @@ public sealed class TelnyxTelephonyProvider :
     ITelephonyAttendedTransferProvider,
     ITelephonyConferenceProvider,
     ITelephonyDtmfProvider,
+    ITelephonyVoicemailProvider,
     ITelephonyAudioProvider,
     ITelephonySoftPhoneCredentialsProvider,
     ITelephonyCallStateProvider
@@ -79,6 +81,7 @@ public sealed class TelnyxTelephonyProvider :
             TelephonyCapabilities.AttendedTransfer |
             TelephonyCapabilities.Merge |
             TelephonyCapabilities.SendDigits |
+            TelephonyCapabilities.Voicemail |
             TelephonyCapabilities.ReceiveCalls;
 
     /// <inheritdoc/>
@@ -348,6 +351,63 @@ public sealed class TelnyxTelephonyProvider :
             () => BuildCall(call?.CallId, CallState.Disconnected, call?.Metadata, CallDirection.Inbound),
             cancellationToken,
             succeedWhenMissing: true);
+
+    /// <inheritdoc/>
+    public async Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+    {
+        var callId = call?.CallId;
+        var invalid = RequireCallId(callId, S["A call id is required to send the call to voicemail."].Value);
+
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+
+        if (!_options.IsConfigured)
+        {
+            return NotConfigured();
+        }
+
+        // Answer the ringing inbound call so a greeting can be played and the caller's message recorded. The
+        // answer must succeed before any media command is meaningful.
+        var answered = await ExecuteActionAsync(callId, "answer", body: null, () => null, cancellationToken, succeedWhenMissing: true);
+
+        if (!answered.Succeeded)
+        {
+            return answered;
+        }
+
+        // Record the caller's message, correlated to the interaction (via client_state) so the
+        // call.recording.saved webhook ingests it as this call's voicemail. Best-effort: a recording or greeting
+        // hiccup must not fail the overall action, which has already answered the call.
+        var recordBody = new Dictionary<string, object>
+        {
+            ["format"] = TelnyxConstants.Recording.Format,
+            ["channels"] = "single",
+        };
+
+        if (call.Metadata is not null &&
+            call.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.InteractionId, out var interactionId) &&
+            interactionId is string interactionIdText &&
+            !string.IsNullOrWhiteSpace(interactionIdText))
+        {
+            recordBody["client_state"] = TelnyxRecordingClientState.ForInteraction(interactionIdText).ToClientState();
+        }
+
+        await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);
+
+        var speakBody = new Dictionary<string, object>
+        {
+            ["payload"] = S["Please leave your message after the tone, then hang up."].Value,
+            ["payload_type"] = "text",
+            ["voice"] = "female",
+            ["language"] = "en-US",
+        };
+
+        await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
+
+        return TelephonyResult.Success(BuildCall(callId, CallState.Connected, call.Metadata, CallDirection.Inbound));
+    }
 
     // Hold, resume, mute, and unmute are executed by the browser media adapter (SIP re-INVITE and local track
     // toggling) because Telnyx delivers this call's audio to the browser, not to a server-side leg. The result

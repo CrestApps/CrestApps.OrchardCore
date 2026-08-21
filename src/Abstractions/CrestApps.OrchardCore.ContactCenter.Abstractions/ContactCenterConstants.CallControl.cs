@@ -16,6 +16,12 @@ public static partial class ContactCenterConstants
         /// Identifies the monotonic fence token for the current provider-command claim.
         /// </summary>
         public const string FenceToken = "providerCommandFence";
+
+        /// <summary>
+        /// Identifies the interaction a provider command acts on. Providers use it to correlate side effects
+        /// (for example a voicemail recording) back to the owning interaction.
+        /// </summary>
+        public const string InteractionId = "providerCommandInteractionId";
     }
 
     /// <summary>

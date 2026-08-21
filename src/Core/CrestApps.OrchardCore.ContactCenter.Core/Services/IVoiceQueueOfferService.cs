@@ -24,11 +24,13 @@ public interface IVoiceQueueOfferService
     /// <param name="activityItemId">The activity whose queued call is offered.</param>
     /// <param name="queueId">The queue the call is waiting in.</param>
     /// <param name="agentId">The agent profile the call is offered to.</param>
+    /// <param name="ringTimeoutSeconds">The ring window, in seconds, for a direct-to-agent offer. When null the direct-routing default is used.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The identifier of the user the call was offered to, or <see langword="null"/> when the agent is unavailable.</returns>
     Task<string> OfferToAgentAsync(
         string activityItemId,
         string queueId,
         string agentId,
+        int? ringTimeoutSeconds = null,
         CancellationToken cancellationToken = default);
 }

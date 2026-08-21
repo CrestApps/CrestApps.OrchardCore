@@ -62,6 +62,18 @@ public class EntryPointViewModel
     public InteractionPriority Priority { get; set; } = InteractionPriority.Normal;
 
     /// <summary>
+    /// Gets or sets a value indicating whether an unanswered specific-agent call goes to voicemail. When off,
+    /// the caller keeps ringing and is held for the agent.
+    /// </summary>
+    public bool VoicemailEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the ring window, in seconds, for a specific-agent target: how long the caller rings and is
+    /// held for the agent before going to voicemail. Only used when <see cref="VoicemailEnabled"/> is on.
+    /// </summary>
+    public int RingTimeoutSeconds { get; set; } = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
+
+    /// <summary>
     /// Gets or sets the business-hours calendar identifier.
     /// </summary>
     public string BusinessHoursCalendarId { get; set; }

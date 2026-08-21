@@ -19,6 +19,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -135,25 +137,9 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
+        // The OAuth connect/callback/disconnect endpoints are attribute-routed on TelephonyOAuthController
+        // (their named routes are preserved), so only the SignalR hub is mapped here.
         routes.MapHub<TelephonyHub>(SignalRHubRoutes.GetHubPath<TelephonyHub>());
-
-        routes.MapAreaControllerRoute(
-            name: TelephonyConstants.RouteNames.OAuthConnect,
-            areaName: TelephonyConstants.Feature.Area,
-            pattern: "Telephony/Connect",
-            defaults: new { controller = "TelephonyOAuth", action = "Connect" });
-
-        routes.MapAreaControllerRoute(
-            name: TelephonyConstants.RouteNames.OAuthCallback,
-            areaName: TelephonyConstants.Feature.Area,
-            pattern: "Telephony/Connect/Callback",
-            defaults: new { controller = "TelephonyOAuth", action = "Callback" });
-
-        routes.MapAreaControllerRoute(
-            name: TelephonyConstants.RouteNames.OAuthDisconnect,
-            areaName: TelephonyConstants.Feature.Area,
-            pattern: "Telephony/Disconnect",
-            defaults: new { controller = "TelephonyOAuth", action = "Disconnect" });
     }
 }
 
@@ -167,9 +153,26 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
     {
         services.AddSiteDisplayDriver<SoftPhoneWidgetSettingsDisplayDriver>();
 
+        services.AddScoped<ISoftPhoneWidgetPresenter, SoftPhoneWidgetPresenter>();
+
+        services
+            .AddContentPart<SoftPhonePart>()
+            .UseDisplayDriver<SoftPhonePartDisplayDriver>();
+
         services.Configure<MvcOptions>(options =>
         {
             options.Filters.Add<SoftPhoneWidgetFilter>();
         });
+    }
+}
+
+[RequireFeatures("OrchardCore.Contents")]
+public sealed class ContentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The Soft Phone widget content type lets an operator place the floating phone on the front end
+        // through Design > Widgets, instead of it being auto-injected there.
+        services.AddDataMigration<SoftPhoneWidgetMigrations>();
     }
 }

@@ -31,11 +31,13 @@ public interface IActivityAssignmentService
     /// <param name="activityItemId">The activity whose queue item is reserved.</param>
     /// <param name="queueId">The queue the item is waiting in.</param>
     /// <param name="agentId">The agent profile to reserve the item for.</param>
+    /// <param name="ringTimeoutSeconds">The ring window, in seconds, for a direct-to-agent offer. When null the direct-routing default is used. Ignored for a real queue (the queue's own reservation timeout applies).</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The created reservation, or <see langword="null"/> when the agent or item is unavailable.</returns>
     Task<ActivityReservation> AssignSpecificAsync(
         string activityItemId,
         string queueId,
         string agentId,
+        int? ringTimeoutSeconds = null,
         CancellationToken cancellationToken = default);
 }

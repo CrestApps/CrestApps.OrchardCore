@@ -1,4 +1,15 @@
 .telephony-soft-phone {
+    // Pin the Bootstrap surface variables the widget paints with, scoped to the widget itself, so it
+    // renders identically under any host theme. The front-end (TheTheme) and admin (TheAdmin) define these
+    // to slightly different values, which made the keypad, footer, borders and inputs look inconsistent
+    // between the two. Everything inside the widget reads these, so pinning them here keeps one look
+    // everywhere; the dark override below keeps dark mode working with the widget's own consistent palette.
+    --bs-body-bg: #fff;
+    --bs-body-color: #212529;
+    --bs-secondary-color: #6c757d;
+    --bs-tertiary-bg: #f8f9fa;
+    --bs-secondary-bg: #e9ecef;
+    --bs-border-color: #dee2e6;
     --telephony-accent: #2f6fed;
     --telephony-view-height: 18rem;
     position: fixed;
@@ -578,6 +589,17 @@
             border-radius: 999px;
         }
     }
+}
+
+// Keep dark mode consistent across host themes: the widget uses its own dark palette rather than each
+// theme's, so it looks the same in the admin and on the front end when a dark theme is active.
+[data-bs-theme="dark"] .telephony-soft-phone {
+    --bs-body-bg: #1e2126;
+    --bs-body-color: #e9ecef;
+    --bs-secondary-color: #adb5bd;
+    --bs-tertiary-bg: #2b3035;
+    --bs-secondary-bg: #343a40;
+    --bs-border-color: #495057;
 }
 
 .telephony-phone-dial-btn {

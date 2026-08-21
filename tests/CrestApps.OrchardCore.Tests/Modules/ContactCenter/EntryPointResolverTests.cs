@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -56,6 +57,142 @@ public sealed class EntryPointResolverTests
         // Assert
         Assert.False(plan.ShouldQueue);
         Assert.Null(plan.TargetQueueId);
+    }
+
+    [Fact]
+    public void CreatePlan_WhenOpenWithAgentTarget_RoutesDirectlyToAgentWithNoQueueFallback()
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = "agent1",
+            TargetQueueId = "q1",
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: true);
+
+        // Assert
+        Assert.True(plan.ShouldQueue);
+        Assert.True(plan.RouteToAgent);
+        Assert.Equal("agent1", plan.TargetAgentId);
+
+        // The call is carried under the synthetic direct-routing queue, never the (now unused) TargetQueueId.
+        Assert.Equal(ContactCenterConstants.DirectRouting.QueueId, plan.TargetQueueId);
+    }
+
+    [Theory]
+    [InlineData(45, 45)]   // configured window is honored
+    [InlineData(0, 30)]    // non-positive window falls back to the default
+    [InlineData(1000, 300)] // above the maximum is clamped
+    [InlineData(1, 5)]     // below the minimum is clamped up
+    public void CreatePlan_WhenAgentTargetWithVoicemail_UsesConfiguredRingWindow(int configured, int expected)
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = "agent1",
+            VoicemailEnabled = true,
+            RingTimeoutSeconds = configured,
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: true);
+
+        // Assert
+        Assert.True(plan.RouteToAgent);
+        Assert.Equal(expected, plan.RingTimeoutSeconds);
+    }
+
+    [Fact]
+    public void CreatePlan_WhenAgentTargetWithVoicemailDisabled_UsesZeroRingWindow()
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = "agent1",
+            VoicemailEnabled = false,
+            RingTimeoutSeconds = 45,
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: true);
+
+        // Assert: 0 signals "no voicemail" downstream — the caller keeps ringing and is held for the agent.
+        Assert.True(plan.RouteToAgent);
+        Assert.Equal(0, plan.RingTimeoutSeconds);
+    }
+
+    [Fact]
+    public void CreatePlan_WhenAgentTargetHasNoAgent_FallsBackToQueueRouting()
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = null,
+            TargetQueueId = "q1",
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: true);
+
+        // Assert
+        Assert.True(plan.ShouldQueue);
+        Assert.False(plan.RouteToAgent);
+        Assert.Equal("q1", plan.TargetQueueId);
+    }
+
+    [Theory]
+    [InlineData(EntryPointClosedAction.HoldInQueue)]
+    [InlineData(EntryPointClosedAction.Overflow)]
+    [InlineData(EntryPointClosedAction.Voicemail)]
+    public void CreatePlan_WhenClosedWithAgentTarget_SendsToVoicemail(EntryPointClosedAction action)
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = "agent1",
+            ClosedAction = action,
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: false);
+
+        // Assert
+        Assert.False(plan.ShouldQueue);
+        Assert.Null(plan.TargetQueueId);
+        Assert.Equal(EntryPointClosedAction.Voicemail, plan.ClosedAction);
+    }
+
+    [Fact]
+    public void CreatePlan_WhenClosedWithAgentTargetAndReject_Rejects()
+    {
+        // Arrange
+        var entryPoint = new ContactCenterEntryPoint
+        {
+            ItemId = "e1",
+            TargetType = EntryPointTargetType.Agent,
+            TargetAgentId = "agent1",
+            ClosedAction = EntryPointClosedAction.Reject,
+        };
+
+        // Act
+        var plan = EntryPointRoutingPlanner.CreatePlan(entryPoint, isOpen: false);
+
+        // Assert
+        Assert.False(plan.ShouldQueue);
+        Assert.Null(plan.TargetQueueId);
+        Assert.Equal(EntryPointClosedAction.Reject, plan.ClosedAction);
     }
 
     [Fact]

@@ -20,6 +20,19 @@ public interface IAgentAvailabilityService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the canonical availability of the specified agent for a direct-to-agent (personal line) offer.
+    /// Unlike <see cref="GetAsync"/> this does not require the agent to be entitled to, or signed into, any
+    /// queue: a specific-agent entry point rings the person directly. The agent must still be present and set
+    /// to <see cref="AgentPresenceStatus.Available"/>, have a live session, and be within capacity.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The availability projection, or <see langword="null"/> when the agent cannot take a direct call.</returns>
+    Task<AgentAvailability> GetForDirectAsync(
+        string agentId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists agents that are entitled, opted in, live, available, and within capacity for the specified queue.
     /// </summary>
     /// <param name="queueId">The queue identifier.</param>

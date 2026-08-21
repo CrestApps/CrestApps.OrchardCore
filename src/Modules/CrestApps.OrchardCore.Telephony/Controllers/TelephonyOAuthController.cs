@@ -45,6 +45,8 @@ public sealed class TelephonyOAuthController : Controller
     /// </summary>
     /// <param name="returnUrl">An optional local URL to return to when the flow completes outside a popup.</param>
     /// <returns>A redirect to the provider authorization endpoint, or a completion page on failure.</returns>
+    [HttpGet]
+    [Route("Telephony/Connect", Name = TelephonyConstants.RouteNames.OAuthConnect)]
     public async Task<IActionResult> Connect(string returnUrl = null)
     {
         if (!await CanConnectAsync())
@@ -87,6 +89,8 @@ public sealed class TelephonyOAuthController : Controller
     /// <param name="state">The state value returned by the provider.</param>
     /// <param name="error">The error returned by the provider, when the user denied access.</param>
     /// <returns>A completion page that closes the popup or redirects back.</returns>
+    [HttpGet]
+    [Route("Telephony/Connect/Callback", Name = TelephonyConstants.RouteNames.OAuthCallback)]
     public async Task<IActionResult> Callback(string code = null, string state = null, string error = null)
     {
         if (!await CanConnectAsync())
@@ -173,7 +177,7 @@ public sealed class TelephonyOAuthController : Controller
     /// A success result when the remote grant was revoked, or an accepted result carrying a warning when
     /// the local connection was cleared but the remote grant may still be active.
     /// </returns>
-    [HttpPost]
+    [HttpPost("Telephony/Disconnect", Name = TelephonyConstants.RouteNames.OAuthDisconnect)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Disconnect()
     {
