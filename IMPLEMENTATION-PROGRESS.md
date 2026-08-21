@@ -52,15 +52,15 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 - [x] Delivery-webhook update of DeliveryStatus + notify
 
 ### Workstream: Portal UI (Orchard Core display management)
-- [ ] `SmsPortalController` + admin menu (mirror AgentWorkspaceController) — conversation list scaffolding
-- [ ] Conversation list (SummaryAdmin display type, filters) via DisplayDriver<SmsConversation>
-- [ ] Thread view — message bubbles via DisplayDriver<OmnichannelMessage> (SMS display type) + composer
+- [x] `SmsPortalController` + admin menu (mirror AgentWorkspaceController) — conversation list scaffolding
+- [x] Conversation list (SummaryAdmin display type, filters) via DisplayDriver<SmsConversation>
+- [x] Thread view — message bubbles via DisplayDriver<OmnichannelMessage> (SMS display type) + composer
 - [ ] Contact profile pane (OmnichannelContactPart display + placement zone)
-- [ ] `SmsNumberRoute` admin catalog controllers + drivers (copy EntryPointsController + driver)
+- [x] `SmsNumberRoute` admin catalog controllers + drivers (copy EntryPointsController + driver)
 
 ### Workstream: Real-time notifications
-- [ ] `ISmsRealTimeNotifier` + `SmsPortalHub` (mirror ContactCenterHub / IContactCenterHubClient)
-- [ ] NewInboundMessage, MessageDelivered/Failed wiring (Assigned/Claimed groundwork)
+- [x] `ISmsRealTimeNotifier` + `SmsPortalHub` (mirror ContactCenterHub / IContactCenterHubClient)
+- [x] NewInboundMessage, MessageDelivered/Failed wiring (Assigned/Claimed groundwork)
 
 ### Workstream: Permissions / compliance / security
 - [x] `TelephonySmsPermissions` (copy ContactCenterPermissions): ManageSmsNumberRoutes, UseSmsPortal,

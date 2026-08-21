@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Telephony.Sms.Models
+@model SmsThreadViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Conversation with {0}", Model.Conversation.CustomerAddress])</h1></zone>
+
+<div class="mb-2">
+    <a class="btn btn-sm btn-link" asp-route-action="Index">&laquo; @T["Back to inbox"]</a>
+    <span class="text-muted small ms-2">@T["on"] @Model.Conversation.ServiceAddress &middot; @Model.Conversation.Status.ToString()</span>
+</div>
+
+<div class="sms-thread border rounded p-3 mb-3" style="max-height: 60vh; overflow-y: auto; background: var(--bs-tertiary-bg);">
+    @if (Model.Messages.Count == 0)
+    {
+        <div class="text-muted">@T["No messages yet."]</div>
+    }
+    else
+    {
+        foreach (var message in Model.Messages)
+        {
+            var outbound = !message.IsInbound;
+            <div class="d-flex mb-2 @(outbound ? "justify-content-end" : "justify-content-start")">
+                <div class="p-2 rounded-3 @(outbound ? "bg-primary text-white" : "bg-white border")" style="max-width: 75%;">
+                    <div>@message.Content</div>
+                    <div class="small @(outbound ? "text-white-50" : "text-muted")">
+                        @message.CreatedUtc.ToString("g")
+                        @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
+                        {
+                            <text>&middot; @message.DeliveryStatus</text>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (Model.Conversation.Status != SmsConversationStatus.Closed && Model.Conversation.Status != SmsConversationStatus.Spam)
+{
+    <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="d-flex gap-2">
+        <input type="text" name="body" class="form-control" placeholder="@T["Type a message…"]" autofocus required />
+        <button type="submit" class="btn btn-primary">@T["Send"]</button>
+    </form>
+}
+else
+{
+    <div class="alert alert-secondary">@T["This conversation is {0} and cannot be replied to.", Model.Conversation.Status.ToString().ToLowerInvariant()]</div>
+}

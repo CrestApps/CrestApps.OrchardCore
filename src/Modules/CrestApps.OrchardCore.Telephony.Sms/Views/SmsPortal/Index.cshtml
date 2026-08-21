@@ -1,0 +1,20 @@
+@model SmsInboxViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["SMS Inbox"])</h1></zone>
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-info">@T["Your inbox is empty. Inbound messages on the numbers you serve will appear here."]</div>
+}
+else
+{
+    <div class="list-group" id="sms-inbox-list">
+        @foreach (var row in Model.Rows)
+        {
+            <a class="list-group-item list-group-item-action" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
+               data-conversation-id="@row.Conversation.ItemId">
+                @await DisplayAsync(row.Shape)
+            </a>
+        }
+    </div>
+}

@@ -1,0 +1,32 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<SmsNumberRoute>>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["SMS number routes"])</h1></zone>
+
+<div class="mb-3">
+    <a class="btn btn-primary" asp-route-action="Create">@T["Add number route"]</a>
+</div>
+
+@if (Model.Models.Count == 0)
+{
+    <div class="alert alert-info">@T["No SMS number routes have been configured yet. Add one to route inbound SMS on a number to an agent or a queue."]</div>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var entry in Model.Models)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>@await DisplayAsync(entry.Shape)</div>
+                <div class="btn-group">
+                    <a class="btn btn-sm btn-secondary" asp-route-action="Edit" asp-route-id="@entry.Model.ItemId">@T["Edit"]</a>
+                    <form asp-route-action="Delete" asp-route-id="@entry.Model.ItemId" method="post"
+                          onsubmit="return confirm('@T["Are you sure you want to delete this number route?"]');">
+                        <button type="submit" class="btn btn-sm btn-danger">@T["Delete"]</button>
+                    </form>
+                </div>
+            </li>
+        }
+    </ul>
+
+    @await DisplayAsync(Model.Pager)
+}

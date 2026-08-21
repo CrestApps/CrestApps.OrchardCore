@@ -1,0 +1,17 @@
+@model SmsNumberRoute
+
+<div>
+    <strong>@(string.IsNullOrEmpty(Model.Name) ? Model.DialedNumber : Model.Name)</strong>
+    @if (!Model.Enabled)
+    {
+        <span class="badge bg-secondary ms-1">@T["Disabled"]</span>
+    }
+    <div class="text-muted small">
+        @T["Number:"] @Model.DialedNumber
+        &middot; @T["Routes to {0}", Model.TargetType.ToString()]
+        @if (Model.TargetType == CrestApps.OrchardCore.Telephony.Sms.Models.SmsNumberRouteTargetType.Queue)
+        {
+            <text> &middot; @Model.DistributionMode.ToString()</text>
+        }
+    </div>
+</div>

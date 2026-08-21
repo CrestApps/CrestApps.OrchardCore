@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services.Routers;
+using CrestApps.OrchardCore.Telephony.Sms.Drivers;
 using CrestApps.OrchardCore.Telephony.Sms.Handlers;
 using CrestApps.OrchardCore.Telephony.Sms.Hubs;
 using CrestApps.OrchardCore.Telephony.Sms.Indexes;
@@ -18,7 +19,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Telephony.Sms;
@@ -70,6 +73,11 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<SmsConversationIndexProvider>();
         services.AddIndexProvider<SmsNumberRouteIndexProvider>();
         services.AddDataMigration<SmsPortalMigrations>();
+
+        // Admin surfaces.
+        services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();
+        services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
+        services.AddNavigationProvider<SmsPortalAdminMenu>();
 
         // Permissions.
         services.AddPermissionProvider<TelephonySmsPermissionProvider>();
