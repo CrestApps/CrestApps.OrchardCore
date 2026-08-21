@@ -265,6 +265,7 @@
   width: 100%;
   max-width: 15rem;
   height: 1.85rem;
+  align-self: center;
 }
 .telephony-soft-phone__history-dir {
   flex: 0 0 1.15rem;

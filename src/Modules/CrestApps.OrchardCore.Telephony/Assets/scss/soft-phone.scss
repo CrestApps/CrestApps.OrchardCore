@@ -314,6 +314,8 @@
             width: 100%;
             max-width: 15rem;
             height: 1.85rem;
+            // Center the compact player under the full-width caller info line above it.
+            align-self: center;
         }
     }
 
