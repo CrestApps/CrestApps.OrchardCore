@@ -308,11 +308,29 @@
 
     &__voicemail-select {
         flex: 0 0 auto;
-        width: 1.1rem;
-        height: 1.1rem;
+        width: 0.9rem;
+        height: 0.9rem;
         margin: 0;
         cursor: pointer;
         accent-color: var(--telephony-accent, #2f6fed);
+    }
+
+    &__voicemail-toolbar-select {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-right: auto;
+        font-size: 0.78rem;
+        color: var(--bs-secondary-color, #6c757d);
+        cursor: pointer;
+
+        input {
+            width: 0.9rem;
+            height: 0.9rem;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--telephony-accent, #2f6fed);
+        }
     }
 
     &__voicemail-item {

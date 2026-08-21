@@ -791,7 +791,8 @@
       voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]'),
       voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]'),
       voicemailToolbar: rootElement.querySelector('[data-telephony-voicemail-toolbar]'),
-      voicemailDelete: rootElement.querySelector('[data-telephony-voicemail-delete]')
+      voicemailDelete: rootElement.querySelector('[data-telephony-voicemail-delete]'),
+      voicemailSelectAll: rootElement.querySelector('[data-telephony-voicemail-select-all]')
     };
     var connection = null;
     var currentCall = null;
@@ -2699,10 +2700,28 @@
       });
     }
     function updateVoicemailDeleteButton() {
-      if (!dom.voicemailDelete) {
+      var checkboxes = dom.voicemailList ? dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]') : [];
+      var selectedCount = selectedVoicemailIds().length;
+      if (dom.voicemailDelete) {
+        dom.voicemailDelete.disabled = selectedCount === 0;
+      }
+
+      // Keep the header "select all" box in sync: checked when every row is selected, a dash (indeterminate)
+      // when only some are.
+      if (dom.voicemailSelectAll) {
+        dom.voicemailSelectAll.checked = checkboxes.length > 0 && selectedCount === checkboxes.length;
+        dom.voicemailSelectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+      }
+    }
+    function toggleSelectAllVoicemails() {
+      if (!dom.voicemailList || !dom.voicemailSelectAll) {
         return;
       }
-      dom.voicemailDelete.disabled = selectedVoicemailIds().length === 0;
+      var checked = dom.voicemailSelectAll.checked;
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
+        checkbox.checked = checked;
+      });
+      updateVoicemailDeleteButton();
     }
     function renderVoicemails(items) {
       if (!dom.voicemailList) {
@@ -3008,6 +3027,9 @@
       });
       if (dom.voicemailDelete) {
         dom.voicemailDelete.addEventListener('click', deleteSelectedVoicemails);
+      }
+      if (dom.voicemailSelectAll) {
+        dom.voicemailSelectAll.addEventListener('change', toggleSelectAllVoicemails);
       }
       if (dom.dial) {
         dom.dial.addEventListener('click', dial);
