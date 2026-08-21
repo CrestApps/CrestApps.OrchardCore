@@ -74,8 +74,9 @@ internal sealed class SmsPortalMigrations : DataMigration
         );
 
         await CreateTemplateTableAsync();
+        await CreateBroadcastTableAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -86,6 +87,33 @@ internal sealed class SmsPortalMigrations : DataMigration
         await CreateTemplateTableAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the broadcast index table.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateBroadcastTableAsync();
+
+        return 3;
+    }
+
+    private async Task CreateBroadcastTableAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<SmsBroadcastIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("Status", column => column.WithLength(32)),
+            collection: TelephonySmsStorage.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<SmsBroadcastIndex>(table => table
+            .CreateIndex("IDX_SmsBroadcastIndex_Status",
+                "DocumentId",
+                "Status"),
+            collection: TelephonySmsStorage.CollectionName
+        );
     }
 
     private async Task CreateTemplateTableAsync()

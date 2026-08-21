@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telephony.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -52,6 +54,13 @@ public sealed class Startup : StartupBase
             .AddScoped<ISmsTemplateManager, SmsTemplateManager>()
             .AddScoped<ICatalogEntryHandler<SmsTemplate>, SmsTemplateHandler>();
 
+        // Broadcast catalog + fan-out.
+        services
+            .AddScoped<ISmsBroadcastStore, SmsBroadcastStore>()
+            .AddScoped<ISmsBroadcastManager, SmsBroadcastManager>()
+            .AddScoped<ISmsBroadcastService, SmsBroadcastService>()
+            .AddScoped<ICatalogEntryHandler<SmsBroadcast>, SmsBroadcastHandler>();
+
         // Provider dispatch and two-way send.
         services
             .AddScoped<ISmsDispatcher, SmsDispatcher>()
@@ -79,7 +88,11 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<SmsConversationIndexProvider>();
         services.AddIndexProvider<SmsNumberRouteIndexProvider>();
         services.AddIndexProvider<SmsTemplateIndexProvider>();
+        services.AddIndexProvider<SmsBroadcastIndexProvider>();
         services.AddDataMigration<SmsPortalMigrations>();
+
+        // Background fan-out for queued broadcasts.
+        services.AddSingleton<IBackgroundTask, SmsBroadcastBackgroundTask>();
 
         // Admin surfaces.
         services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();

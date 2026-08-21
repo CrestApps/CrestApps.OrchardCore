@@ -79,7 +79,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 - [ ] Azure ACS inbound (Event Grid) receiver
 
 ## Phase 3 — Group & scale
-- [ ] `SmsBroadcast` broadcast (1:1 fan-out via IBackgroundTask) + group MMS threads
+- [~] `SmsBroadcast` broadcast (1:1 fan-out via IBackgroundTask) done; group MMS threads pending
 - [x] Templates / canned responses
 - [x] Labels / spam
 - [x] Assignment transfer

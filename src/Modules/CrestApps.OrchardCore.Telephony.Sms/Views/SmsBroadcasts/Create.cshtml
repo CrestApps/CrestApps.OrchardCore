@@ -1,0 +1,41 @@
+@model SmsBroadcastCreateViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["New SMS broadcast"])</h1></zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EndpointId" class="form-label">@T["Send from (number)"]</label>
+        <select asp-for="EndpointId" class="form-select" asp-items="Model.Endpoints">
+            <option value="">@T["Select an SMS number"]</option>
+        </select>
+        <span asp-validation-for="EndpointId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Body" class="form-label">@T["Message"]</label>
+        <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="RecipientsText" class="form-label">@T["Recipients"]</label>
+        <textarea asp-for="RecipientsText" class="form-control" rows="5" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
+        <span class="hint">@T["Each recipient gets their own 1:1 thread; they cannot see each other."]</span>
+        <span asp-validation-for="RecipientsText" class="text-danger"></span>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Queue broadcast"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

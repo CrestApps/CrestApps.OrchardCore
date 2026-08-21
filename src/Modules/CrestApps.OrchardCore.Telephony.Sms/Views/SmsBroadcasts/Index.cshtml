@@ -1,0 +1,42 @@
+@model SmsBroadcastListViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["SMS broadcasts"])</h1></zone>
+
+<div class="mb-3">
+    <a class="btn btn-primary" asp-route-action="Create">@T["New broadcast"]</a>
+</div>
+
+@if (Model.Broadcasts.Count == 0)
+{
+    <div class="alert alert-info">@T["No broadcasts yet. A broadcast sends one message to many recipients as individual 1:1 threads."]</div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>@T["Name"]</th>
+                <th>@T["From"]</th>
+                <th>@T["Status"]</th>
+                <th>@T["Recipients"]</th>
+                <th>@T["Sent"]</th>
+                <th>@T["Failed"]</th>
+                <th>@T["Created"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var broadcast in Model.Broadcasts)
+            {
+                <tr>
+                    <td>@broadcast.Name</td>
+                    <td>@broadcast.FromNumber</td>
+                    <td>@broadcast.Status.ToString()</td>
+                    <td>@broadcast.Recipients.Count</td>
+                    <td>@broadcast.SentCount</td>
+                    <td>@broadcast.FailedCount</td>
+                    <td>@broadcast.CreatedUtc.ToString("g")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

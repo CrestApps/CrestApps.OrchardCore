@@ -16,6 +16,19 @@ public interface ISmsConversationService
     Task<SmsSendResult> SendAsync(SmsSendRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sends an outbound message on the conversation for a number pair, creating a personal conversation owned
+    /// by the acting agent when none exists (used to start new threads and to fan out a broadcast). Enforces the
+    /// contact opt-out and dispatches through the number's provider.
+    /// </summary>
+    /// <param name="fromNumber">The sending DID (E.164).</param>
+    /// <param name="toNumber">The recipient number (E.164).</param>
+    /// <param name="body">The message body.</param>
+    /// <param name="actingAgentId">The agent the new thread is owned by; null for a system send.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The send outcome.</returns>
+    Task<SmsSendResult> SendDirectAsync(string fromNumber, string toNumber, string body, string actingAgentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Applies a provider delivery receipt to the matching outbound message and notifies the portal.
     /// </summary>
     /// <param name="receipt">The normalized delivery receipt.</param>

@@ -148,6 +148,101 @@ public sealed class SmsConversationService : ISmsConversationService
     }
 
     /// <inheritdoc/>
+    public async Task<SmsSendResult> SendDirectAsync(string fromNumber, string toNumber, string body, string actingAgentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fromNumber) || string.IsNullOrWhiteSpace(toNumber))
+        {
+            return SmsSendResult.Failed("Both a sending number and a recipient are required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return SmsSendResult.Failed("The message body is required.");
+        }
+
+        var serviceAddress = fromNumber.GetCleanedPhoneNumber();
+        var customerAddress = toNumber.GetCleanedPhoneNumber();
+
+        var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, customerAddress, cancellationToken);
+        var isNew = conversation is null;
+
+        if (isNew)
+        {
+            conversation = new SmsConversation
+            {
+                ItemId = UniqueId.GenerateId(),
+                Channel = OmnichannelConstants.Channels.Sms,
+                ServiceAddress = serviceAddress,
+                CustomerAddress = customerAddress,
+                Status = SmsConversationStatus.Open,
+                OwnerType = SmsConversationOwnerType.Personal,
+                OwnerId = actingAgentId,
+                AssignedAgentId = actingAgentId,
+                AssignmentStatus = string.IsNullOrEmpty(actingAgentId)
+                    ? SmsConversationAssignmentStatus.Unassigned
+                    : SmsConversationAssignmentStatus.Assigned,
+                CreatedUtc = _clock.UtcNow,
+            };
+        }
+
+        if (await IsOptedOutAsync(conversation, cancellationToken))
+        {
+            return SmsSendResult.Failed("The contact has opted out of SMS (Do not SMS).");
+        }
+
+        var message = new OmnichannelMessage
+        {
+            Id = UniqueId.GenerateId(),
+            Channel = OmnichannelConstants.Channels.Sms,
+            CustomerAddress = conversation.CustomerAddress,
+            ServiceAddress = conversation.ServiceAddress,
+            Content = body,
+            CreatedUtc = _clock.UtcNow,
+            IsInbound = false,
+            ConversationId = conversation.ItemId,
+            SentByAgentId = actingAgentId,
+            DeliveryStatus = SmsDeliveryStatus.Queued.ToString(),
+        };
+
+        var dispatch = await _dispatcher.SendAsync(new SmsMessage
+        {
+            From = conversation.ServiceAddress,
+            To = conversation.CustomerAddress,
+            Body = body,
+        }, cancellationToken);
+
+        message.DeliveryStatus = dispatch.Succeeded ? SmsDeliveryStatus.Sent.ToString() : SmsDeliveryStatus.Failed.ToString();
+
+        if (!dispatch.Succeeded)
+        {
+            message.ErrorCode = string.Join("; ", dispatch.Errors.Select(e => e.Message.Value));
+        }
+
+        await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+
+        conversation.LastMessageUtc = message.CreatedUtc;
+        conversation.LastMessagePreview = BuildPreview(body);
+        conversation.IsRead = true;
+        conversation.ModifiedUtc = _clock.UtcNow;
+
+        if (isNew)
+        {
+            await _conversationStore.CreateAsync(conversation, cancellationToken);
+        }
+        else
+        {
+            await _conversationStore.UpdateAsync(conversation, cancellationToken);
+        }
+
+        return new SmsSendResult
+        {
+            Succeeded = dispatch.Succeeded,
+            Message = message,
+            Error = dispatch.Succeeded ? null : message.ErrorCode,
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> ApplyDeliveryReceiptAsync(SmsDeliveryReceipt receipt, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(receipt);
