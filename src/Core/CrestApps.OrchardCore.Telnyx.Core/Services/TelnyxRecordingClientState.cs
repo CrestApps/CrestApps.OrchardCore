@@ -75,18 +75,48 @@ public sealed class TelnyxRecordingClientState
         };
 
     /// <summary>
+    /// Creates the client state attached to the voicemail greeting (the <c>speak</c>/<c>playback_start</c> that
+    /// plays "leave your message"). Telnyx echoes it on the greeting's ended webhook, which is the signal to begin
+    /// the beep-and-record, so the greeting itself is never captured inside the caller's message.
+    /// </summary>
+    /// <param name="interactionId">The interaction the voicemail belongs to.</param>
+    /// <param name="recipientUserId">The user identifier of the agent the voicemail was left for, when known.</param>
+    public static TelnyxRecordingClientState ForVoicemailGreeting(string interactionId, string recipientUserId)
+        => new()
+        {
+            Intent = TelnyxConstants.Recording.VoicemailGreetingClientStateIntent,
+            InteractionId = interactionId,
+            IsVoicemail = true,
+            RecipientUserId = recipientUserId,
+        };
+
+    /// <summary>
     /// Serializes the state to the base64 form Telnyx expects for a <c>client_state</c> value.
     /// </summary>
     public string ToClientState()
         => Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this, _options)));
 
     /// <summary>
-    /// Attempts to parse a decoded client-state string into a <see cref="TelnyxRecordingClientState"/>.
+    /// Attempts to parse a decoded client-state string into a recording <see cref="TelnyxRecordingClientState"/>
+    /// (the state set when recording started).
     /// </summary>
     /// <param name="decodedClientState">The already base64-decoded client-state JSON.</param>
     /// <param name="state">The parsed state when successful.</param>
     /// <returns><see langword="true"/> when the value is a recording client state carrying an interaction id.</returns>
     public static bool TryParse(string decodedClientState, out TelnyxRecordingClientState state)
+        => TryParse(decodedClientState, TelnyxConstants.Recording.ClientStateIntent, out state);
+
+    /// <summary>
+    /// Attempts to parse a decoded client-state string into a voicemail-greeting client state (the state echoed on
+    /// the greeting's ended webhook that signals it is time to start recording).
+    /// </summary>
+    /// <param name="decodedClientState">The already base64-decoded client-state JSON.</param>
+    /// <param name="state">The parsed state when successful.</param>
+    /// <returns><see langword="true"/> when the value is a voicemail-greeting client state carrying an interaction id.</returns>
+    public static bool TryParseGreeting(string decodedClientState, out TelnyxRecordingClientState state)
+        => TryParse(decodedClientState, TelnyxConstants.Recording.VoicemailGreetingClientStateIntent, out state);
+
+    private static bool TryParse(string decodedClientState, string expectedIntent, out TelnyxRecordingClientState state)
     {
         state = null;
 
@@ -100,7 +130,7 @@ public sealed class TelnyxRecordingClientState
             var parsed = JsonSerializer.Deserialize<TelnyxRecordingClientState>(decodedClientState, _options);
 
             if (parsed is null ||
-                parsed.Intent != TelnyxConstants.Recording.ClientStateIntent ||
+                parsed.Intent != expectedIntent ||
                 string.IsNullOrWhiteSpace(parsed.InteractionId))
             {
                 return false;

@@ -255,10 +255,28 @@
         }
     }
 
+    // The voicemail view element is itself the tab panel (it carries the `hidden` attribute), so bound its height
+    // and let only the list scroll -- the player bar stays pinned above it -- matching the Recent tab's behavior.
+    // `display` is guarded with :not([hidden]) so it never overrides the `hidden` attribute that hides the panel.
+    &__voicemail {
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
+
+        &:not([hidden]) {
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
     &__voicemail-list {
         display: flex;
         flex-direction: column;
         gap: 0.15rem;
+        // Fill the remaining height under the player and scroll when the voicemails overflow, like the Recent tab.
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 0.5rem 0.5rem;
     }
 
     &__voicemail-item {

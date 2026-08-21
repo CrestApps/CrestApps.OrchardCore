@@ -15,6 +15,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
+    private readonly ITelnyxVoicemailRecordingStarter _voicemailRecordingStarter;
     private readonly IClock _clock;
 
     /// <summary>
@@ -27,18 +28,21 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     /// The optional handlers for finished recordings. When Contact Center Voice is enabled a handler ingests the
     /// recording into the encrypted media store; when none are registered, saved-recording events are ignored.
     /// </param>
+    /// <param name="voicemailRecordingStarter">Starts the voicemail recording once its greeting has finished.</param>
     /// <param name="clock">The clock used to stamp event times.</param>
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         ITelnyxInboundCallRouter inboundCallRouter,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
+        ITelnyxVoicemailRecordingStarter voicemailRecordingStarter,
         IClock clock)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
+        _voicemailRecordingStarter = voicemailRecordingStarter;
         _clock = clock;
     }
 
@@ -70,6 +74,26 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
             }
 
             return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
+        }
+
+        // The voicemail greeting has finished playing. Its client_state (set on the speak/playback_start command)
+        // is echoed here, which is the signal to start the beep-and-record so the greeting is never captured inside
+        // the caller's message. Only a greeting-tagged ended event triggers this; any other speak/playback simply
+        // falls through and is ignored below.
+        var eventType = callEvent.EventType?.Trim();
+
+        if ((string.Equals(eventType, TelnyxConstants.Recording.SpeakEndedEventType, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(eventType, TelnyxConstants.Recording.PlaybackEndedEventType, StringComparison.OrdinalIgnoreCase)) &&
+            !string.IsNullOrEmpty(callEvent.CallControlId) &&
+            TelnyxRecordingClientState.TryParseGreeting(callEvent.ClientState, out var greetingState))
+        {
+            var started = await _voicemailRecordingStarter.StartAsync(
+                callEvent.CallControlId,
+                greetingState.InteractionId,
+                greetingState.RecipientUserId,
+                cancellationToken);
+
+            return started ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
         }
 
         if (string.IsNullOrEmpty(callEvent.CallControlId) || !TryMapState(callEvent, out var state))

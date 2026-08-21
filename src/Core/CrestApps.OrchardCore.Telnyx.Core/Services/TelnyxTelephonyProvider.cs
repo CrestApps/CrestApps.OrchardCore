@@ -377,36 +377,45 @@ public sealed class TelnyxTelephonyProvider :
             return answered;
         }
 
-        // Record the caller's message, correlated to the interaction (via client_state) so the
-        // call.recording.saved webhook ingests it as this call's voicemail. Best-effort: a recording or greeting
-        // hiccup must not fail the overall action, which has already answered the call.
-        var recordBody = new Dictionary<string, object>
-        {
-            ["format"] = TelnyxConstants.Recording.Format,
-            ["channels"] = "single",
-        };
-
-        // Correlate the recording to its interaction. The routing engine carries the interaction id under the
+        // Correlate the voicemail to its interaction. The routing engine carries the interaction id under the
         // provider-command metadata key; an agent-initiated "send to voicemail" from the soft phone carries it
-        // under the incoming-call metadata key, so accept either. Tagging the recording as a voicemail lets the
-        // saved-recording handler surface it in the recipient agent's voicemail inbox for both paths.
+        // under the incoming-call metadata key, so accept either.
         var voicemailInteractionId =
             TryGetMetadataString(call.Metadata, ContactCenterConstants.CommandMetadata.InteractionId)
             ?? TryGetMetadataString(call.Metadata, "interactionId");
+        var recipientUserId = TryGetMetadataString(call.Metadata, "voicemailRecipientUserId");
 
-        if (!string.IsNullOrWhiteSpace(voicemailInteractionId))
+        // Play the recipient agent's greeting BEFORE recording, and only start recording once the greeting has
+        // finished. The greeting carries a voicemail-greeting client_state; Telnyx echoes it on the greeting's
+        // call.speak.ended / call.playback.ended webhook, which the webhook pipeline turns into a record_start with
+        // a leading beep (TelnyxVoicemailRecordingStarter). This keeps the spoken greeting out of the caller's
+        // recorded message and gives the caller the "after the beep" tone the greeting promises. A recorded/uploaded
+        // audio greeting (a publicly reachable URL) is played with playback_start; otherwise the per-agent (or
+        // default) text greeting is spoken with text-to-speech.
+        //
+        // Best-effort: a greeting hiccup must not fail the overall action, which has already answered the call.
+        var greetingClientState = string.IsNullOrWhiteSpace(voicemailInteractionId)
+            ? null
+            : TelnyxRecordingClientState.ForVoicemailGreeting(voicemailInteractionId, recipientUserId).ToClientState();
+
+        // Without an interaction id there is nothing to correlate the eventual recording to and no client_state to
+        // ride the greeting-ended webhook, so fall back to recording immediately (uncorrelated, best-effort) rather
+        // than losing the message entirely.
+        if (greetingClientState is null)
         {
-            var recipientUserId = TryGetMetadataString(call.Metadata, "voicemailRecipientUserId");
-            recordBody["client_state"] = TelnyxRecordingClientState
-                .ForVoicemail(voicemailInteractionId, recipientUserId)
-                .ToClientState();
+            await ExecuteActionAsync(
+                callId,
+                "record_start",
+                new Dictionary<string, object>
+                {
+                    ["format"] = TelnyxConstants.Recording.Format,
+                    ["channels"] = "single",
+                    ["play_beep"] = true,
+                },
+                () => null,
+                cancellationToken);
         }
 
-        await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);
-
-        // Play the recipient agent's greeting before recording. A recorded/uploaded audio greeting (a publicly
-        // reachable URL) overrides the text greeting and is played with playback_start; otherwise the per-agent
-        // (or default) text greeting is spoken with text-to-speech.
         var greetingMediaUrl = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey);
 
         if (!string.IsNullOrWhiteSpace(greetingMediaUrl))
@@ -415,6 +424,11 @@ public sealed class TelnyxTelephonyProvider :
             {
                 ["audio_url"] = greetingMediaUrl,
             };
+
+            if (greetingClientState is not null)
+            {
+                playbackBody["client_state"] = greetingClientState;
+            }
 
             await ExecuteActionAsync(callId, "playback_start", playbackBody, () => null, cancellationToken);
         }
@@ -432,6 +446,11 @@ public sealed class TelnyxTelephonyProvider :
                 ["voice"] = "female",
                 ["language"] = "en-US",
             };
+
+            if (greetingClientState is not null)
+            {
+                speakBody["client_state"] = greetingClientState;
+            }
 
             await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
         }
