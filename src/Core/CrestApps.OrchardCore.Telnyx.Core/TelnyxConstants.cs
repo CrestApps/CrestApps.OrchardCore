@@ -166,6 +166,39 @@ public static class TelnyxConstants
     }
 
     /// <summary>
+    /// The relative path of the Telnyx messaging (SMS/MMS) webhook endpoint exposed by the Telnyx SMS feature.
+    /// It receives inbound messages and outbound delivery receipts, and is registered against a Telnyx
+    /// messaging profile in the Telnyx portal.
+    /// </summary>
+    public const string SmsWebhookPath = "api/telnyx/webhook/sms";
+
+    /// <summary>
+    /// The relative path (against the v2 API base) of the Telnyx Messaging API used to send outbound messages.
+    /// </summary>
+    public const string MessagesPath = "messages";
+
+    /// <summary>
+    /// Contains the Telnyx messaging (SMS/MMS) webhook event types.
+    /// </summary>
+    public static class SmsEvents
+    {
+        /// <summary>
+        /// Raised when an inbound message is received.
+        /// </summary>
+        public const string MessageReceived = "message.received";
+
+        /// <summary>
+        /// Raised as an outbound message progresses toward the carrier.
+        /// </summary>
+        public const string MessageSent = "message.sent";
+
+        /// <summary>
+        /// Raised when an outbound message reaches a terminal delivery state.
+        /// </summary>
+        public const string MessageFinalized = "message.finalized";
+    }
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Telnyx module.
     /// </summary>
     public static class Feature
@@ -174,5 +207,11 @@ public static class TelnyxConstants
         /// The identifier of the Telnyx provider feature.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Telnyx";
+
+        /// <summary>
+        /// The identifier of the Telnyx SMS provider feature: the outbound SMS/MMS provider and the inbound
+        /// and delivery-receipt messaging webhook.
+        /// </summary>
+        public const string Sms = "CrestApps.OrchardCore.Telnyx.Sms";
     }
 }

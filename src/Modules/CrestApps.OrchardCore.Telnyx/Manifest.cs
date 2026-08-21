@@ -24,3 +24,15 @@ using OrchardCore.Modules.Manifest;
         WebSocketsConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = TelnyxConstants.Feature.Sms,
+    Name = "Telnyx SMS",
+    Description = "Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text messages through the SMS Communication Portal. Reuses the Telnyx account API key and webhook public key from the Telnyx provider settings.",
+    Category = "Telephony",
+    Dependencies =
+    [
+        TelnyxConstants.Feature.Area,
+        "OrchardCore.Sms",
+    ]
+)]
