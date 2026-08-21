@@ -130,4 +130,23 @@ public interface ITelephonyInteractionStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The most recent interactions.</returns>
     Task<IReadOnlyList<TelephonyInteraction>> GetRecentAsync(string userId, int count, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the given user's unread voicemails (voicemail interactions that have not yet been listened to).
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of unread voicemails.</returns>
+    Task<int> GetUnreadVoicemailCountAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks the voicemail identified by its provider call id as read for the given user. Marking an already-read
+    /// (or non-voicemail) interaction is a no-op.
+    /// </summary>
+    /// <param name="userId">The user identifier that owns the voicemail.</param>
+    /// <param name="callId">The provider call id of the voicemail interaction.</param>
+    /// <param name="readUtc">The time, in UTC, the voicemail was read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The updated interaction, or <see langword="null"/> when no matching interaction exists.</returns>
+    Task<TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, DateTime readUtc, CancellationToken cancellationToken = default);
 }

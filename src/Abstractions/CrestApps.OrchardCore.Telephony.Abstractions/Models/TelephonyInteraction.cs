@@ -72,4 +72,18 @@ public sealed class TelephonyInteraction : Entity
     /// Gets or sets the duration of the call, in seconds.
     /// </summary>
     public double DurationSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this interaction is a voicemail left for the owning user (the
+    /// caller was sent to voicemail and recorded a message). The soft phone surfaces these as playable voicemail
+    /// entries in the history rather than plain missed calls.
+    /// </summary>
+    public bool IsVoicemail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time, in UTC, when the owning user first listened to (or dismissed) this voicemail. A
+    /// value of <see langword="null"/> marks the voicemail as unread and counts toward the soft phone's unread
+    /// voicemail badge.
+    /// </summary>
+    public DateTime? VoicemailReadUtc { get; set; }
 }

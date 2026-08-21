@@ -287,6 +287,7 @@ public sealed class ContactCenterSoftPhoneEventHandlerTests
         // Assert
         Assert.NotNull(createdInteraction);
         Assert.Equal(CallOutcome.Missed, createdInteraction.Outcome);
+        Assert.True(createdInteraction.IsVoicemail);
         Assert.NotNull(createdInteraction.EndedUtc);
 
         client.Verify(

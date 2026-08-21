@@ -197,6 +197,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
                 Direction = call.Direction,
                 StartedUtc = startedUtc,
                 Outcome = outcome,
+                IsVoicemail = isVoicemail,
             };
 
             ApplyTerminalState(existing, call.State, endedUtc);
@@ -214,6 +215,11 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         existing.Direction = call.Direction;
         existing.StartedUtc = existing.StartedUtc == default ? startedUtc : existing.StartedUtc;
         existing.Outcome = outcome;
+
+        if (isVoicemail)
+        {
+            existing.IsVoicemail = true;
+        }
 
         ApplyTerminalState(existing, call.State, endedUtc);
         await _telephonyInteractionStore.UpdateAsync(existing, cancellationToken);

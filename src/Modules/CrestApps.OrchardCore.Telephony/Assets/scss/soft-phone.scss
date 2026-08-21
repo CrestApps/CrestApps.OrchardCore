@@ -177,6 +177,61 @@
         &--active .telephony-soft-phone__history-dir {
             color: #1f9d55;
         }
+
+        &--voicemail {
+            cursor: default;
+
+            .telephony-soft-phone__history-body {
+                flex: 1 1 auto;
+                border: none;
+                background: transparent;
+                text-align: left;
+                padding: 0;
+                cursor: pointer;
+                color: inherit;
+            }
+        }
+
+        &--unread {
+            .telephony-soft-phone__history-number {
+                font-weight: 700;
+            }
+
+            .telephony-soft-phone__history-number::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: var(--telephony-accent, #2f6fed);
+                vertical-align: middle;
+            }
+        }
+    }
+
+    &__voicemail-play {
+        flex: 0 0 1.75rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        line-height: 1;
+        color: #fff;
+        background-color: var(--telephony-accent, #2f6fed);
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+
+        &.is-playing {
+            background-color: var(--bs-secondary-color, #6c757d);
+        }
     }
 
     &__history-dir {
@@ -219,6 +274,7 @@
     }
 
     &__tab {
+        position: relative;
         flex: 1 1 0;
         border: none;
         background: transparent;
@@ -244,6 +300,23 @@
             box-shadow: inset 0 -2px 0 var(--telephony-accent);
             font-weight: 600;
         }
+    }
+
+    &__tab-badge {
+        position: absolute;
+        top: 0.2rem;
+        right: 50%;
+        transform: translateX(1.1rem);
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.25rem;
+        border-radius: 999px;
+        background-color: #d23f3f;
+        color: #fff;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1rem;
+        text-align: center;
     }
 
     &--dragging {

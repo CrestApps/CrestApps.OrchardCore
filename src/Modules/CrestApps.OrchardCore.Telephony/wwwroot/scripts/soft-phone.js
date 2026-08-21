@@ -784,7 +784,9 @@
       incomingAnswer: rootElement.querySelector('[data-telephony-incoming-answer]'),
       incomingVoicemail: rootElement.querySelector('[data-telephony-incoming-voicemail]'),
       incomingIgnore: rootElement.querySelector('[data-telephony-incoming-ignore]'),
-      remoteAudio: rootElement.querySelector('[data-telephony-remote-audio]')
+      remoteAudio: rootElement.querySelector('[data-telephony-remote-audio]'),
+      voicemailAudio: rootElement.querySelector('[data-telephony-voicemail-audio]'),
+      voicemailBadge: rootElement.querySelector('[data-telephony-voicemail-badge]')
     };
     var connection = null;
     var currentCall = null;
@@ -2583,12 +2585,91 @@
       }).catch(function () {
         renderHistory([]);
       });
+      refreshVoicemailBadge();
     }
     function isInbound(interaction) {
       return interaction.direction === 1 || interaction.direction === 'Inbound';
     }
     function isMissed(interaction) {
       return interaction.outcome === 2 || interaction.outcome === 'Missed' || interaction.outcome === 3 || interaction.outcome === 'Rejected';
+    }
+    function isVoicemail(interaction) {
+      return interaction.isVoicemail === true;
+    }
+    function voicemailPlaybackEnabled() {
+      return config.voicemailPlaybackEnabled === true && !!config.voicemailMediaUrlTemplate && !!dom.voicemailAudio;
+    }
+    function buildVoicemailUrl(interactionId) {
+      if (!interactionId || !config.voicemailMediaUrlTemplate) {
+        return null;
+      }
+      return config.voicemailMediaUrlTemplate.replace('__INTERACTION_ID__', encodeURIComponent(interactionId));
+    }
+    var playingVoicemailButton = null;
+    function stopVoicemailPlayback() {
+      if (dom.voicemailAudio) {
+        try {
+          dom.voicemailAudio.pause();
+        } catch (e) {/* ignore */}
+      }
+      if (playingVoicemailButton) {
+        playingVoicemailButton.classList.remove('is-playing');
+        playingVoicemailButton = null;
+      }
+    }
+    function playVoicemail(interactionId, callId, button) {
+      if (!voicemailPlaybackEnabled()) {
+        return;
+      }
+
+      // Clicking the currently-playing voicemail toggles it off.
+      if (playingVoicemailButton === button && !dom.voicemailAudio.paused) {
+        stopVoicemailPlayback();
+        return;
+      }
+      var url = buildVoicemailUrl(interactionId);
+      if (!url) {
+        return;
+      }
+      stopVoicemailPlayback();
+      dom.voicemailAudio.src = url;
+      playingVoicemailButton = button;
+      if (button) {
+        button.classList.add('is-playing');
+      }
+      Promise.resolve(dom.voicemailAudio.play()).then(function () {
+        // A successful play means the recipient listened to it; mark it read and refresh the badge.
+        if (callId && connection) {
+          connection.invoke('MarkVoicemailRead', callId).then(function (remaining) {
+            updateVoicemailBadge(remaining);
+          }).catch(function () {});
+        }
+      }).catch(function () {
+        stopVoicemailPlayback();
+        // A 404 means the recording has not finished ingesting yet; anything else is a playback failure.
+        showError(dom.voicemailAudio && dom.voicemailAudio.error && dom.voicemailAudio.error.code === 4 ? strings.voicemailUnavailable || 'This voicemail is still processing. Try again in a moment.' : strings.voicemailPlaybackFailed || 'The voicemail could not be played.');
+      });
+    }
+    function updateVoicemailBadge(count) {
+      if (!dom.voicemailBadge) {
+        return;
+      }
+      var value = typeof count === 'number' && count > 0 ? count : 0;
+      if (value > 0) {
+        dom.voicemailBadge.textContent = value > 99 ? '99+' : String(value);
+        dom.voicemailBadge.hidden = false;
+      } else {
+        dom.voicemailBadge.textContent = '';
+        dom.voicemailBadge.hidden = true;
+      }
+    }
+    function refreshVoicemailBadge() {
+      if (!connection || !dom.voicemailBadge) {
+        return;
+      }
+      connection.invoke('GetUnreadVoicemailCount').then(function (count) {
+        updateVoicemailBadge(count);
+      }).catch(function () {});
     }
     function isInProgress(interaction) {
       return interaction.outcome === 0 || interaction.outcome === 'InProgress';
@@ -2615,18 +2696,26 @@
         dom.historyList.innerHTML = '<div class="telephony-soft-phone__history-empty">' + escapeHtml(strings.noInteractions || 'No recent calls.') + '</div>';
         return;
       }
+      var playbackEnabled = voicemailPlaybackEnabled();
       dom.historyList.innerHTML = items.map(function (interaction) {
         var inbound = isInbound(interaction);
         var missed = isMissed(interaction);
         var inProgress = isInProgress(interaction);
+        var voicemail = isVoicemail(interaction) && playbackEnabled;
         var directionGlyph = inbound ? '\u2199' : '\u2197';
         var number = inbound ? interaction.from || '' : interaction.to || '';
         var formattedNumber = formatPhoneNumber(number);
-        var label = missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
+        var unread = voicemail && !interaction.voicemailReadUtc;
+        var label = voicemail ? strings.voicemailLabel || 'Voicemail' : missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
         var time = formatTime(interaction.startedUtc);
-        var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
         var meta = escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
-        return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || label) + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
+        var displayNumber = escapeHtml(formattedNumber || number || label);
+        if (voicemail) {
+          var vmCls = 'telephony-soft-phone__history-item telephony-soft-phone__history-item--voicemail' + (unread ? ' telephony-soft-phone__history-item--unread' : '');
+          return '<div class="' + vmCls + '">' + '<button type="button" class="telephony-soft-phone__voicemail-play" ' + 'data-telephony-voicemail-play data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '">\u25b6</button>' + '<button type="button" class="telephony-soft-phone__history-body" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-number">' + displayNumber + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</button></div>';
+        }
+        var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
+        return '<button type="button" class="' + cls + '" data-telephony-history-number="' + escapeHtml(number) + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<span class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + displayNumber + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</span></button>';
       }).join('');
       Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {
@@ -2634,6 +2723,11 @@
           if (number) {
             dialNumber(number);
           }
+        });
+      });
+      Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-voicemail-play]'), function (item) {
+        item.addEventListener('click', function () {
+          playVoicemail(item.getAttribute('data-telephony-voicemail-id'), item.getAttribute('data-telephony-voicemail-call'), item);
         });
       });
     }
@@ -2676,6 +2770,9 @@
           }
           render();
           notifyBrowserAudio(call);
+
+          // A call that just ended may have been sent to voicemail, so refresh the unread badge.
+          refreshVoicemailBadge();
           if (!getActiveCalls().length) {
             releaseBrowserAudio();
             clearActiveCallsRefresh();
@@ -2733,6 +2830,7 @@
         if (activeTab === 'history') {
           loadHistory();
         }
+        refreshVoicemailBadge();
         render();
       }).catch(function (error) {
         showError(error && error.message ? error.message : String(error));
@@ -2823,6 +2921,9 @@
       }
       if (dom.incomingVoicemail) {
         dom.incomingVoicemail.addEventListener('click', voicemailIncoming);
+      }
+      if (dom.voicemailAudio) {
+        dom.voicemailAudio.addEventListener('ended', stopVoicemailPlayback);
       }
       if (dom.incomingIgnore) {
         dom.incomingIgnore.addEventListener('click', ignoreIncoming);

@@ -260,4 +260,50 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
 
         return interactions.ToList();
     }
+
+    /// <inheritdoc/>
+    public async Task<int> GetUnreadVoicemailCountAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return 0;
+        }
+
+        return await _session
+            .QueryIndex<TelephonyInteractionIndex>(x =>
+                x.UserId == userId &&
+                x.IsVoicemail &&
+                x.VoicemailReadUtc == null)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TelephonyInteraction> MarkVoicemailReadAsync(
+        string userId,
+        string callId,
+        DateTime readUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        ArgumentException.ThrowIfNullOrEmpty(callId);
+
+        return MutateWithRetryAsync(
+            session => session
+                .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.UserId == userId && x.CallId == callId)
+                .FirstOrDefaultAsync(cancellationToken),
+            interaction =>
+            {
+                // Only a voicemail that has not already been marked read needs a write; anything else is a no-op so
+                // repeated marks (for example re-opening the history panel) do not churn the store or move the time.
+                if (!interaction.IsVoicemail || interaction.VoicemailReadUtc is not null)
+                {
+                    return false;
+                }
+
+                interaction.VoicemailReadUtc = readUtc;
+
+                return true;
+            },
+            cancellationToken);
+    }
 }

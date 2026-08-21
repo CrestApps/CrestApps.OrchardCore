@@ -316,6 +316,73 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     }
 
     /// <summary>
+    /// Gets the number of the current user's unread voicemails, for the soft phone's voicemail badge.
+    /// </summary>
+    /// <returns>The unread voicemail count.</returns>
+    public async Task<int> GetUnreadVoicemailCount()
+    {
+        var count = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetUnreadVoicemailCount");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
+    }
+
+    /// <summary>
+    /// Marks the voicemail identified by its provider call id as read for the current user.
+    /// </summary>
+    /// <param name="callId">The provider call id of the voicemail.</param>
+    /// <returns>The remaining unread voicemail count after the mark.</returns>
+    public async Task<int> MarkVoicemailRead(string callId)
+    {
+        var count = 0;
+
+        if (string.IsNullOrEmpty(callId))
+        {
+            return count;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("MarkVoicemailRead");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            await store.MarkVoicemailReadAsync(userId, callId, DateTime.UtcNow, Context.ConnectionAborted);
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
+    }
+
+    /// <summary>
     /// Gets the current user's active call directly from the configured telephony provider.
     /// </summary>
     /// <returns>The provider-authoritative call lookup result.</returns>

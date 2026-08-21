@@ -50,9 +50,16 @@
 
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
+    // The voicemail media endpoint is owned by the Contact Center module. Resolving its route by name keeps the
+    // soft phone decoupled from that module: when Contact Center is not enabled the route does not resolve, the
+    // template is null, and voicemail playback stays disabled.
+    var voicemailMediaUrlTemplate = Url.RouteUrl("ContactCenterVoicemailMedia", new { interactionId = "__INTERACTION_ID__" });
+
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
+        ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
+        ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
         ["capabilities"] = capabilities,
         ["audioCapabilities"] = audioCapabilities,
         ["audioMode"] = audioMode,
@@ -109,6 +116,11 @@
             ["incoming"] = T["Incoming"].Value,
             ["outgoing"] = T["Outgoing"].Value,
             ["missed"] = T["Missed"].Value,
+            ["voicemailLabel"] = T["Voicemail"].Value,
+            ["playVoicemail"] = T["Play voicemail"].Value,
+            ["pauseVoicemail"] = T["Pause voicemail"].Value,
+            ["voicemailUnavailable"] = T["This voicemail is still processing. Try again in a moment."].Value,
+            ["voicemailPlaybackFailed"] = T["The voicemail could not be played."].Value,
             ["inProgress"] = T["In progress"].Value,
             ["completed"] = T["Completed"].Value,
             ["rejected"] = T["Rejected"].Value,
@@ -138,6 +150,7 @@
 
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <audio data-telephony-remote-audio autoplay></audio>
+        <audio data-telephony-voicemail-audio preload="none"></audio>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
             <span class="telephony-soft-phone__title">@T["Phone"]</span>
             @if (Model.HeaderActions != null)
@@ -272,6 +285,7 @@
             <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="history" aria-selected="false">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
+                <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread voicemails"]"></span>
             </button>
             @if (Model.Tabs != null)
             {

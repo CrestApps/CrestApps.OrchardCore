@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -31,9 +33,13 @@ internal static class AgentWorkspaceEndpoints
     public const string CompleteRouteName = "ContactCenterAgentWorkspaceComplete";
     public const string PauseRecordingRouteName = "ContactCenterAgentWorkspacePauseRecording";
     public const string ResumeRecordingRouteName = "ContactCenterAgentWorkspaceResumeRecording";
+    public const string VoicemailMediaRouteName = "ContactCenterVoicemailMedia";
 
     public static IEndpointRouteBuilder AddAgentWorkspaceEndpoints(this IEndpointRouteBuilder builder)
     {
+        builder.MapGet("Admin/contact-center/voicemail/{interactionId}/media", HandleVoicemailMediaAsync)
+            .WithName(VoicemailMediaRouteName);
+
         builder.MapGet("Admin/contact-center/workspace/state", HandleStateAsync)
             .WithName(StateRouteName);
 
@@ -332,6 +338,110 @@ internal static class AgentWorkspaceEndpoints
             result.Reason,
             result.IsPaused,
         });
+    }
+
+    /// <summary>
+    /// Streams a voicemail recording to the agent it was left for. The recipient check restricts playback to the
+    /// owning agent, and every grant is routed through the recording-access governance service so it is authorized
+    /// and written to the recording-access audit trail before any media is opened.
+    /// </summary>
+    internal static async Task<IResult> HandleVoicemailMediaAsync(
+        string interactionId,
+        IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
+        IRecordingAccessGovernanceService recordingAccessGovernanceService,
+        HttpContext httpContext)
+    {
+        if (httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            return TypedResults.Challenge();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))
+        {
+            return TypedResults.Forbid();
+        }
+
+        var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
+
+        // Only a voicemail interaction is playable through this endpoint; a normal call recording is governed and
+        // surfaced elsewhere, so this endpoint deliberately refuses to expose it.
+        if (interaction is null || !IsVoicemailInteraction(interaction))
+        {
+            return TypedResults.NotFound();
+        }
+
+        // The voicemail may be played only by the agent it was left for. The recipient's agent-profile id is stamped
+        // on the interaction when it is sent to voicemail, so resolve it and compare the owning user.
+        var recipientAgentId = ResolveVoicemailRecipientAgentId(interaction);
+        var recipientAgent = string.IsNullOrEmpty(recipientAgentId)
+            ? null
+            : await agentProfileManager.FindByIdAsync(recipientAgentId, httpContext.RequestAborted);
+
+        if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
+        {
+            return TypedResults.Forbid();
+        }
+
+        // The recording may not have finished ingesting yet (the caller just hung up, or the durable ingest job has
+        // not run). Treat that as "not yet available" rather than an error.
+        if (string.IsNullOrEmpty(interaction.RecordingReference) ||
+            interaction.TechnicalMetadata is null ||
+            !interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) ||
+            storageReferenceValue?.ToString() is not { Length: > 0 } storageReference)
+        {
+            return TypedResults.NotFound();
+        }
+
+        // Gate and audit the access. RecordAccessAsync writes the RecordingAccessed audit event and returns false
+        // when there is no recording to access, so playback shares the same governance trail as any other recording.
+        var granted = await recordingAccessGovernanceService.RecordAccessAsync(
+            interactionId,
+            userId,
+            "voicemail-playback",
+            httpContext.RequestAborted);
+
+        if (!granted)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var mediaStore = httpContext.RequestServices.GetService<IRecordingMediaStore>();
+
+        if (mediaStore is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var stream = await mediaStore.OpenReadAsync(storageReference, httpContext.RequestAborted);
+
+        if (stream is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return Results.Stream(stream, "audio/mpeg");
+    }
+
+    private static bool IsVoicemailInteraction(Interaction interaction)
+    {
+        return interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.ProjectionMetadataKey, out var value) &&
+            (value is bool boolean ? boolean : bool.TryParse(value?.ToString(), out var parsed) && parsed);
+    }
+
+    private static string ResolveVoicemailRecipientAgentId(Interaction interaction)
+    {
+        if (interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.RecipientAgentMetadataKey, out var recipient) &&
+            recipient?.ToString() is { Length: > 0 } recipientAgentId)
+        {
+            return recipientAgentId;
+        }
+
+        return interaction.AgentId;
     }
 
     private static async Task<WorkspaceOfferViewModel> BuildOfferAsync(

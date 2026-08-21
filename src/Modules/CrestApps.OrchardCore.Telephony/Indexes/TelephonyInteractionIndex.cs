@@ -47,6 +47,16 @@ public sealed class TelephonyInteractionIndex : MapIndex
     /// Gets or sets the time, in UTC, when the call started.
     /// </summary>
     public DateTime StartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the interaction is a voicemail.
+    /// </summary>
+    public bool IsVoicemail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time, in UTC, when the voicemail was read. Null while the voicemail is unread.
+    /// </summary>
+    public DateTime? VoicemailReadUtc { get; set; }
 }
 
 /// <summary>
@@ -67,6 +77,8 @@ public sealed class TelephonyInteractionIndexProvider : IndexProvider<TelephonyI
                 Direction = interaction.Direction,
                 Outcome = interaction.Outcome,
                 StartedUtc = interaction.StartedUtc,
+                IsVoicemail = interaction.IsVoicemail,
+                VoicemailReadUtc = interaction.VoicemailReadUtc,
             });
     }
 }
