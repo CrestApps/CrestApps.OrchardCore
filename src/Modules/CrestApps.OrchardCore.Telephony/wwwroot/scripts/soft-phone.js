@@ -788,7 +788,8 @@
       voicemailAudio: rootElement.querySelector('[data-telephony-voicemail-audio]'),
       voicemailBadge: rootElement.querySelector('[data-telephony-voicemail-badge]'),
       voicemailList: rootElement.querySelector('[data-telephony-voicemail-list]'),
-      voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]')
+      voicemailPlayer: rootElement.querySelector('[data-telephony-voicemail-player]'),
+      voicemailPlayerInfo: rootElement.querySelector('[data-telephony-voicemail-player-info]')
     };
     var connection = null;
     var currentCall = null;
@@ -2640,6 +2641,15 @@
       showError(null);
       if (dom.voicemailPlayer) {
         dom.voicemailPlayer.hidden = false;
+      }
+
+      // Surface which voicemail is playing in the player bar, so the caller's number and time stay visible
+      // while the native audio controls drive playback (the audio element itself shows neither).
+      if (dom.voicemailPlayerInfo) {
+        var row = button ? button.closest('.telephony-soft-phone__voicemail-item') : null;
+        var numberText = row ? row.querySelector('.telephony-soft-phone__history-number') : null;
+        var metaText = row ? row.querySelector('.telephony-soft-phone__history-meta') : null;
+        dom.voicemailPlayerInfo.innerHTML = '<span class="telephony-soft-phone__history-number">' + escapeHtml(numberText ? numberText.textContent : strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(metaText ? metaText.textContent : '') + '</span>';
       }
       dom.voicemailAudio.src = url;
       playingVoicemailButton = button;

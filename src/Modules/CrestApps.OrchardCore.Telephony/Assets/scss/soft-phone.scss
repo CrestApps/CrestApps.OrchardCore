@@ -297,11 +297,23 @@
     }
 
     &__voicemail-player {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
         padding: 0.35rem 0.5rem 0.5rem;
+
+        .telephony-soft-phone__voicemail-player-info {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            min-width: 0;
+        }
 
         .telephony-soft-phone__voicemail-audio {
             width: 100%;
-            height: 2.25rem;
+            max-width: 15rem;
+            height: 1.85rem;
         }
     }
 
@@ -323,6 +335,8 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        // Grow to fill the row so the trailing Call button is pushed hard-right, matching the voicemail rows.
+        flex: 1 1 auto;
     }
 
     &__history-number {

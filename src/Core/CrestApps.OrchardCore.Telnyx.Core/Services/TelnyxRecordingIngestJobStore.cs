@@ -36,27 +36,36 @@ public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobSto
     {
         ArgumentException.ThrowIfNullOrEmpty(recordingId);
 
+        // Enqueue is idempotent per recording: Telnyx can redeliver the saved webhook, and the unique recording id
+        // means a second enqueue must not create a duplicate job or reset the progress of an in-flight ingestion.
+        // This dedup read runs in its OWN session that is fully disposed before the write session opens. That
+        // separation is what keeps the enqueue reliable under load: under SQLite WAL a busy_timeout lets a writer
+        // WAIT for the single write lock, but only if the connection is not already holding a read snapshot it must
+        // promote to a write -- two connections that each hold a read snapshot and then both try to promote
+        // deadlock, and SQLite breaks that deadlock by returning "database is locked" IMMEDIATELY, ignoring the
+        // busy_timeout. By reading here and writing on a fresh, read-free connection below, the write connection has
+        // no snapshot to promote, so it queues on the write lock (honoring busy_timeout) instead of failing at once.
+        await using (var readSession = _store.CreateSession())
+        {
+            var existing = await readSession
+                .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                    index.RecordingId == recordingId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existing is not null)
+            {
+                return;
+            }
+        }
+
         // Losing this enqueue means the recording is never ingested and the voicemail can never be played, so a
-        // transient database lock (SQLite serialises writers) must not drop it. Each attempt uses a fresh isolated
+        // transient database lock (SQLite serialises writers) must not drop it. Each attempt uses a fresh write-only
         // session and the operation is idempotent per recording, so retrying is safe.
         for (var attempt = 1; ; attempt++)
         {
             try
             {
                 await using var session = _store.CreateSession();
-
-                // Enqueue is idempotent per recording: Telnyx can redeliver the saved webhook, and the unique
-                // recording id means a second enqueue must not create a duplicate job or reset the progress of an
-                // in-flight ingestion.
-                var existing = await session
-                    .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
-                        index.RecordingId == recordingId)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (existing is not null)
-                {
-                    return;
-                }
 
                 await session.SaveAsync(new TelnyxRecordingIngestJob
                 {
