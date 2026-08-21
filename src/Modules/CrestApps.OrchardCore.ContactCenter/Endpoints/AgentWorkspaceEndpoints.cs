@@ -349,7 +349,6 @@ internal static class AgentWorkspaceEndpoints
         string interactionId,
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
-        IRecordingAccessGovernanceService recordingAccessGovernanceService,
         HttpContext httpContext)
     {
         if (httpContext.User.Identity?.IsAuthenticated != true)
@@ -397,6 +396,15 @@ internal static class AgentWorkspaceEndpoints
 
         // Gate and audit the access. RecordAccessAsync writes the RecordingAccessed audit event and returns false
         // when there is no recording to access, so playback shares the same governance trail as any other recording.
+        // The governance service and the media store are owned by the recording feature; when it is not enabled
+        // there is nothing to play, so treat a missing service as "not available" rather than failing hard.
+        var recordingAccessGovernanceService = httpContext.RequestServices.GetService<IRecordingAccessGovernanceService>();
+
+        if (recordingAccessGovernanceService is null)
+        {
+            return TypedResults.NotFound();
+        }
+
         var granted = await recordingAccessGovernanceService.RecordAccessAsync(
             interactionId,
             userId,

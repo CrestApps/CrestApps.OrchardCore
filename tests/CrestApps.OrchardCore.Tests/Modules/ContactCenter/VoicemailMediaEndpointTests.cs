@@ -24,8 +24,7 @@ public sealed class VoicemailMediaEndpointTests
             "interaction-1",
             interactionManager.Object,
             agentManager.Object,
-            governance.Object,
-            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object));
+            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object, governance.Object));
 
         Assert.IsType<NotFound>(result);
         governance.Verify(g => g.RecordAccessAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -42,8 +41,7 @@ public sealed class VoicemailMediaEndpointTests
             "interaction-1",
             interactionManager.Object,
             agentManager.Object,
-            governance.Object,
-            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object));
+            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object, governance.Object));
 
         Assert.IsType<ForbidHttpResult>(result);
         governance.Verify(g => g.RecordAccessAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -67,8 +65,7 @@ public sealed class VoicemailMediaEndpointTests
             "interaction-1",
             interactionManager.Object,
             agentManager.Object,
-            governance.Object,
-            CreateHttpContext("user-1", mediaStore.Object));
+            CreateHttpContext("user-1", mediaStore.Object, governance.Object));
 
         var fileResult = Assert.IsType<FileStreamHttpResult>(result);
         Assert.Equal("audio/mpeg", fileResult.ContentType);
@@ -86,8 +83,7 @@ public sealed class VoicemailMediaEndpointTests
             "interaction-1",
             interactionManager.Object,
             agentManager.Object,
-            governance.Object,
-            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object));
+            CreateHttpContext("user-1", new Mock<IRecordingMediaStore>().Object, governance.Object));
 
         Assert.IsType<NotFound>(result);
         governance.Verify(g => g.RecordAccessAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -138,10 +134,14 @@ public sealed class VoicemailMediaEndpointTests
         };
     }
 
-    private static DefaultHttpContext CreateHttpContext(string userId, IRecordingMediaStore mediaStore)
+    private static DefaultHttpContext CreateHttpContext(
+        string userId,
+        IRecordingMediaStore mediaStore,
+        IRecordingAccessGovernanceService governance)
     {
         var services = new ServiceCollection();
         services.AddSingleton(mediaStore);
+        services.AddSingleton(governance);
 
         return new DefaultHttpContext
         {
