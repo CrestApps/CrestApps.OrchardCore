@@ -18,6 +18,9 @@ using CrestApps.OrchardCore.Subscriptions.Reports;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
 using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Wizard;
+using CrestApps.OrchardCore.Wizard.Core.Services;
+using CrestApps.OrchardCore.Wizard.Handlers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -89,6 +92,11 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<ISubscriptionTaxService, NullSubscriptionTaxService>();
 
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
+        services.AddScoped<WizardSessionStore>();
+        services.AddScoped<SubscriptionWizardFlowFactory>();
+        services.AddScoped<IWizardSessionStore, SubscriptionWizardSessionStore>();
+        services.AddScoped<IWizardHandler, SubscriptionWizardHandler>();
+        services.AddScoped<IDisplayDriver<WizardFlow>, SubscriptionWizardFlowDisplayDriver>();
 
         services.AddScoped<SubscriptionPaymentSession>();
 

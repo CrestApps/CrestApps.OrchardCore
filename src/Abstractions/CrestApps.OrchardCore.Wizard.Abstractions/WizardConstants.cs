@@ -29,6 +29,12 @@ public static class WizardConstants
     public const string StepTemplateDataKey = "Template";
 
     /// <summary>
+    /// The session property key that suppresses the default wizard chrome so a feature can render its own
+    /// stepper and navigation UI while still reusing the shared wizard controller and engine.
+    /// </summary>
+    public const string SuppressDefaultChromePropertyKey = "CrestApps.OrchardCore.Wizard.SuppressDefaultChrome";
+
+    /// <summary>
     /// The feature identifiers exposed by the wizard module.
     /// </summary>
     public static class Features

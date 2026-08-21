@@ -35,7 +35,7 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
     private readonly IShapeFactory _shapeFactory;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
-    private readonly YesSql.ISession _session;
+    private readonly global::YesSql.ISession _session;
     private readonly PagerOptions _pagerOptions;
 
     /// <summary>
@@ -58,7 +58,7 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
         IShapeFactory shapeFactory,
         IClock clock,
         ILocalClock localClock,
-        YesSql.ISession session,
+        global::YesSql.ISession session,
         IOptions<PagerOptions> pagerOptions)
     {
         _httpContextAccessor = httpContextAccessor;

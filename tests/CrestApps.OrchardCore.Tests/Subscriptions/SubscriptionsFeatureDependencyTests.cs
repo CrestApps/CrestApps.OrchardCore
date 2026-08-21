@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
+using CrestApps.OrchardCore.Wizard;
 using OrchardCore.Modules.Manifest;
 using Xunit;
 
@@ -47,6 +48,15 @@ public class SubscriptionsFeatureDependencyTests
 
         Assert.NotNull(featureAttribute);
         Assert.Contains(CheckoutConstants.Features.Area, featureAttribute.Dependencies);
+    }
+
+    [Fact]
+    public void SubscriptionsFeature_DependsOnWizard()
+    {
+        var featureAttribute = GetSubscriptionsAreaFeature();
+
+        Assert.NotNull(featureAttribute);
+        Assert.Contains(WizardConstants.Features.Area, featureAttribute.Dependencies);
     }
 
     [Fact]

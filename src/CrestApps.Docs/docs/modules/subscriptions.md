@@ -10,9 +10,9 @@ description: Sell recurring subscriptions and onboard tenants in Orchard Core, w
 | **Feature Name** | Subscriptions |
 | **Feature ID** | `CrestApps.OrchardCore.Subscriptions` |
 | **Category** | Subscriptions |
-| **Dependencies** | `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Title`, `CrestApps.OrchardCore.Products`, `CrestApps.OrchardCore.Checkout` |
+| **Dependencies** | `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Title`, `CrestApps.OrchardCore.Products`, `CrestApps.OrchardCore.Checkout`, `CrestApps.OrchardCore.Wizard` |
 
-The **Subscriptions** module lets you sell recurring plans built on ordinary Orchard Core content items. It adds a **`SubscriptionPart`** that turns a content type into a billable plan, a multi-step checkout flow, a subscriber dashboard, and an admin console for managing subscriptions — all on top of the provider-agnostic [Payments](payments) framework so you can charge through Stripe today and add other gateways later.
+The **Subscriptions** module lets you sell recurring plans built on ordinary Orchard Core content items. It adds a **`SubscriptionPart`** that turns a content type into a billable plan, a multi-step checkout flow hosted by the shared [Wizard](wizard) feature, a subscriber dashboard, and an admin console for managing subscriptions — all on top of the provider-agnostic [Payments](payments) framework so you can charge through Stripe today and add other gateways later.
 
 ## Features
 
@@ -20,7 +20,7 @@ The module ships several composable features:
 
 | Feature | Feature ID | Description |
 | --- | --- | --- |
-| Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Core subscription plans, checkout flow, subscriber dashboard, and admin management. Depends on the [Checkout](checkout) framework. |
+| Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Core subscription plans, checkout flow, subscriber dashboard, and admin management. Depends on the [Checkout](checkout) and [Wizard](wizard) frameworks. |
 | Subscriptions - reCaptcha | `CrestApps.OrchardCore.Subscriptions.ReCaptcha` | Adds Google reCaptcha protection to the subscription process. |
 | Subscriptions - Tenant Onboarding | `CrestApps.OrchardCore.Subscriptions.TenantOnboarding` | Provisions a new Orchard Core tenant as part of a subscription (default tenant only). |
 
@@ -54,7 +54,7 @@ Subscribing runs through an extensible, server-driven **subscription flow** comp
 3. **Tenant Onboarding** — provisions a dedicated tenant (only with the *Tenant Onboarding* feature).
 4. **Payment** — selects a payment method and collects payment.
 
-Each step is a display driver against the `SubscriptionFlow`, and the server tracks progress in a `SubscriptionSession` persisted through `ISubscriptionSessionStore`. Amounts are always derived from the server-side invoice, never from client-submitted values.
+Each step is still authored as a display driver against the `SubscriptionFlow`, and the server still persists subscription-specific state in `SubscriptionSession` through `ISubscriptionSessionStore`. The public host, navigation, completion locking, and resume behavior now come from the shared `CrestApps.OrchardCore.Wizard` feature, so subscriptions reuses the common wizard controller and engine instead of duplicating that infrastructure. Amounts are always derived from the server-side invoice, never from client-submitted values.
 
 The invoice currency comes from the subscribed product itself: the flow resolves the product through `IProductSnapshotResolver` and bills in the product-owned currency. A product that declares no currency at all (neither its own nor its content type's default) is not sellable, so the flow fails closed rather than billing it in a guessed currency; the site subscription currency applies only when the flow content item is not a product. Prices are never converted between currencies — when Stripe price synchronization is asked for a currency that differs from the product's own currency, that price is skipped and a warning is logged rather than silently relabeled.
 

@@ -18,6 +18,11 @@ public sealed class DefaultWizardFlowDisplayDriver : DisplayDriver<WizardFlow>
     /// <returns>The display result that renders the confirmation view.</returns>
     public override Task<IDisplayResult> DisplayAsync(WizardFlow model, BuildDisplayContext context)
     {
+        if (ShouldSuppressDefaultChrome(model))
+        {
+            return Task.FromResult<IDisplayResult>(null);
+        }
+
         return CombineAsync(
             View("WizardFlowStepper", model).Location("Confirmation", "Steps"),
             View("WizardConfirmation", model).Location("Confirmation", "Content")
@@ -32,6 +37,11 @@ public sealed class DefaultWizardFlowDisplayDriver : DisplayDriver<WizardFlow>
     /// <returns>The display result that renders the editor chrome.</returns>
     public override Task<IDisplayResult> EditAsync(WizardFlow model, BuildEditorContext context)
     {
+        if (ShouldSuppressDefaultChrome(model))
+        {
+            return Task.FromResult<IDisplayResult>(null);
+        }
+
         return CombineAsync(
             View("WizardFlowStepper", model).Location("Steps"),
 
@@ -45,4 +55,8 @@ public sealed class DefaultWizardFlowDisplayDriver : DisplayDriver<WizardFlow>
             }).Location("Actions")
         );
     }
+
+    private static bool ShouldSuppressDefaultChrome(WizardFlow model)
+        => model?.Session?.Properties.TryGetPropertyValue(WizardConstants.SuppressDefaultChromePropertyKey, out var value) == true &&
+        value?.GetValue<bool>() == true;
 }

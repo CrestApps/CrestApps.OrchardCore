@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Wizard;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -24,6 +25,7 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
         "OrchardCore.Title",
         "CrestApps.OrchardCore.Users",
+        WizardConstants.Features.Area,
         ProductConstants.Feature.ModuleId,
         CheckoutConstants.Features.Area,
         ReceiptsConstants.Feature.Area,

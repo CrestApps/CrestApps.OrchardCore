@@ -16,6 +16,11 @@ public static class SubscriptionConstants
     public const string SubscriptionSummaryWidgetType = "SubscriptionSummaryWidget";
 
     /// <summary>
+    /// The wizard type used when the subscription signup flow is hosted by the shared wizard module.
+    /// </summary>
+    public const string WizardType = "Subscription";
+
+    /// <summary>
     /// The payment processor key used for pay-later subscription flows.
     /// </summary>
     public const string PayLaterProcessorKey = "PayLater";
@@ -117,5 +122,17 @@ public static class SubscriptionConstants
         /// The step key for payment.
         /// </summary>
         public const string Payment = "Payment";
+    }
+
+    /// <summary>
+    /// Defines well-known keys stored in the shared step data bag.
+    /// </summary>
+    public static class StepDataKey
+    {
+        /// <summary>
+        /// The step data key used to preserve the subscription billing items when a subscription flow is
+        /// projected onto the shared wizard session model.
+        /// </summary>
+        public const string BillingItems = "BillingItems";
     }
 }
