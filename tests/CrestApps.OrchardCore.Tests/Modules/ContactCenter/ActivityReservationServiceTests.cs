@@ -754,7 +754,8 @@ public sealed class ActivityReservationServiceTests
         Assert.Equal(ReservationStatus.Expired, reservation.Status);
         Assert.Equal(QueueItemStatus.Reserved, queueItem.Status);
         Assert.Equal("r-new", queueItem.ReservationId);
-        Assert.Equal(AgentPresenceStatus.Offline, agent.PresenceStatus);
+        // A reserved agent whose offer expires returns to a ready state (Available), never auto-signed-off.
+        Assert.Equal(AgentPresenceStatus.Available, agent.PresenceStatus);
         Assert.Null(agent.ActiveReservationId);
         agentManager.Verify(
             manager => manager.UpdateAsync(
@@ -885,7 +886,7 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"], PresenceStatus = AgentPresenceStatus.Reserved };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         agentManager
@@ -1053,7 +1054,7 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"], PresenceStatus = AgentPresenceStatus.Reserved };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         agentManager
@@ -1210,7 +1211,7 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"], PresenceStatus = AgentPresenceStatus.Reserved };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         var queueManager = new Mock<IActivityQueueManager>();
@@ -1287,7 +1288,7 @@ public sealed class ActivityReservationServiceTests
         var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"] };
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1", UserName = "agent", DisplayName = "Agent", QueueIds = ["q1"], PresenceStatus = AgentPresenceStatus.Reserved };
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         var queueManager = new Mock<IActivityQueueManager>();

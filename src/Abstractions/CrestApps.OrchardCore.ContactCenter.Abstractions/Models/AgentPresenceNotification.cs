@@ -27,6 +27,12 @@ public sealed class AgentPresenceNotification
     public string Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the requested (pending) presence status name, when the agent has requested a status that has
+    /// not been applied yet (for example a break requested while on a call). Null when nothing is pending.
+    /// </summary>
+    public string RequestedStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional reason code associated with the current presence status.
     /// </summary>
     public string Reason { get; set; }

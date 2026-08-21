@@ -354,8 +354,11 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
-        if (profile.PresenceStatus == AgentPresenceStatus.WrapUp &&
-            string.IsNullOrWhiteSpace(profile.ActiveReservationId))
+        // Wrap-up (after-call work) only applies once an agent has actually handled a call, which is exactly when
+        // they are Busy. An agent who was merely offered a call they never accepted -- an unanswered or expired
+        // offer -- is Reserved (or already back in a ready state), never Busy; forcing them into wrap-up would
+        // strand them there because there is no accepted call to disposition and nothing to move them back out.
+        if (profile.PresenceStatus != AgentPresenceStatus.Busy)
         {
             return profile;
         }

@@ -166,6 +166,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             AgentId = profile.ItemId,
             DisplayName = await GetAgentDisplayNameAsync(profile, userManager, displayNameProvider, cancellationToken),
             Status = profile.PresenceStatus.ToString(),
+            RequestedStatus = profile.RequestedPresenceStatus?.ToString(),
             Reason = profile.PresenceReason,
             QueueIds = [.. profile.QueueIds],
             ChangedUtc = profile.PresenceChangedUtc ?? interactionEvent.OccurredUtc,

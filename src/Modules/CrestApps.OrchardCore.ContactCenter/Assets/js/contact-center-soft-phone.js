@@ -584,6 +584,21 @@
         bindPresenceForms(root, api, client);
 
         if (client && client.connection) {
+            // Reflect server-driven presence changes (e.g. entering wrap-up after a call, or returning to
+            // Available after the activity is dispositioned) on the soft phone in real time, not just when the
+            // agent changes their own status.
+            client.connection.on('PresenceChanged', function (notification) {
+                if (!notification) {
+                    return;
+                }
+
+                updatePresenceUi({
+                    presenceStatus: notification.status,
+                    presenceReason: notification.reason,
+                    requestedPresenceStatus: notification.requestedStatus
+                });
+            });
+
             client.connection.on('OfferReceived', function (notification) {
                 openAssignedDialerActivity(root, notification);
                 recoverSoftPhoneState(root, api, client);
