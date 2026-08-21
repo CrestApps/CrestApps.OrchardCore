@@ -3500,8 +3500,21 @@
                     render();
                     notifyBrowserAudio(call);
 
-                    // A call that just ended may have been sent to voicemail, so refresh the unread badge.
+                    // A call that just ended may have been sent to voicemail, so refresh the unread badge and, when
+                    // the voicemail tab is open, the list itself so a new voicemail appears without a manual refresh.
+                    // The projection that creates the entry can land a moment after this terminal signal, so reload
+                    // once now and once shortly after to catch that case.
                     refreshVoicemailBadge();
+
+                    if (activeTab === 'voicemail') {
+                        loadVoicemails();
+                        setTimeout(function () {
+                            if (activeTab === 'voicemail') {
+                                loadVoicemails();
+                                refreshVoicemailBadge();
+                            }
+                        }, 2000);
+                    }
 
                     if (!getActiveCalls().length) {
                         releaseBrowserAudio();
