@@ -112,6 +112,7 @@ public sealed class QueuesStartup : StartupBase
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());
     }
 }
 
