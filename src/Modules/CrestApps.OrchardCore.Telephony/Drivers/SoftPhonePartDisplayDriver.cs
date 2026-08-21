@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Telephony.Drivers;
@@ -17,6 +19,8 @@ namespace CrestApps.OrchardCore.Telephony.Drivers;
 public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPhonePart>
 {
     private readonly ISoftPhoneWidgetPresenter _presenter;
+    private readonly IDisplayManager<SoftPhoneWidget> _softPhoneDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -24,14 +28,20 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
     /// Initializes a new instance of the <see cref="SoftPhonePartDisplayDriver"/> class.
     /// </summary>
     /// <param name="presenter">The soft phone widget presenter.</param>
+    /// <param name="softPhoneDisplayManager">The soft phone widget display manager.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     public SoftPhonePartDisplayDriver(
         ISoftPhoneWidgetPresenter presenter,
+        IDisplayManager<SoftPhoneWidget> softPhoneDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor)
     {
         _presenter = presenter;
+        _softPhoneDisplayManager = softPhoneDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
     }
@@ -46,17 +56,24 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
             return null;
         }
 
-        var widget = await _presenter.CreateWidgetAsync();
-
-        return Initialize<SoftPhoneWidget>("SoftPhoneWidget", model =>
+        // Build the soft phone shape exactly the way the admin filter does, through the SoftPhoneWidget display
+        // manager, so it is a real dynamic shape whose HeaderActions/Views/Tabs extension zones are populated by
+        // any contributing driver (and are simply null otherwise). Building a strongly-typed shape instead makes
+        // those extension-zone reads throw, because the model does not declare them.
+        return Factory("SoftPhoneWidget", async _ =>
         {
-            model.AccentColor = widget.AccentColor;
-            model.Capabilities = widget.Capabilities;
-            model.AudioCapabilities = widget.AudioCapabilities;
-            model.AudioMode = widget.AudioMode;
-            model.BrowserMediaAdapterName = widget.BrowserMediaAdapterName;
-            model.RecentCallsCount = widget.RecentCallsCount;
-            model.DefaultCountryCode = widget.DefaultCountryCode;
+            var widget = await _presenter.CreateWidgetAsync();
+            var shape = await _softPhoneDisplayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");
+
+            shape.Properties["AccentColor"] = widget.AccentColor;
+            shape.Properties["Capabilities"] = (int)widget.Capabilities;
+            shape.Properties["AudioCapabilities"] = (int)widget.AudioCapabilities;
+            shape.Properties["AudioMode"] = (int)widget.AudioMode;
+            shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
+            shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
+            shape.Properties["DefaultCountryCode"] = widget.DefaultCountryCode;
+
+            return shape;
         }).Location("Detail", "Content:5");
     }
 }
