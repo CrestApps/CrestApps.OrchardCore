@@ -3,6 +3,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Telephony.Sms.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services.Routers;
@@ -85,6 +86,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISmsRealTimeNotifier, SmsRealTimeNotifier>();
 
         // Storage schema + indexes.
+        // The SMS portal stores its catalog documents in a dedicated YesSql collection. Registering it makes
+        // OrchardCore initialize the collection's "{prefix}_Document" table for the tenant.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TelephonySmsStorage.CollectionName));
+
         services.AddIndexProvider<SmsConversationIndexProvider>();
         services.AddIndexProvider<SmsNumberRouteIndexProvider>();
         services.AddIndexProvider<SmsTemplateIndexProvider>();
