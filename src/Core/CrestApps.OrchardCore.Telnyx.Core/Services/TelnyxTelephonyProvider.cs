@@ -386,12 +386,20 @@ public sealed class TelnyxTelephonyProvider :
             ["channels"] = "single",
         };
 
-        if (call.Metadata is not null &&
-            call.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.InteractionId, out var interactionId) &&
-            interactionId is string interactionIdText &&
-            !string.IsNullOrWhiteSpace(interactionIdText))
+        // Correlate the recording to its interaction. The routing engine carries the interaction id under the
+        // provider-command metadata key; an agent-initiated "send to voicemail" from the soft phone carries it
+        // under the incoming-call metadata key, so accept either. Tagging the recording as a voicemail lets the
+        // saved-recording handler surface it in the recipient agent's voicemail inbox for both paths.
+        var voicemailInteractionId =
+            TryGetMetadataString(call.Metadata, ContactCenterConstants.CommandMetadata.InteractionId)
+            ?? TryGetMetadataString(call.Metadata, "interactionId");
+
+        if (!string.IsNullOrWhiteSpace(voicemailInteractionId))
         {
-            recordBody["client_state"] = TelnyxRecordingClientState.ForInteraction(interactionIdText).ToClientState();
+            var recipientUserId = TryGetMetadataString(call.Metadata, "voicemailRecipientUserId");
+            recordBody["client_state"] = TelnyxRecordingClientState
+                .ForVoicemail(voicemailInteractionId, recipientUserId)
+                .ToClientState();
         }
 
         await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);

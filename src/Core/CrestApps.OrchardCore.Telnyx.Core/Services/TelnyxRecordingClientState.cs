@@ -27,6 +27,23 @@ public sealed class TelnyxRecordingClientState
     [JsonPropertyName("x")]
     public string InteractionId { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this recording is a voicemail (the caller left a message after
+    /// being sent to voicemail). When set, the saved-recording handler flags the interaction as a voicemail so it
+    /// surfaces in the recipient agent's voicemail inbox, whether the caller was sent to voicemail by the routing
+    /// engine or by the agent's manual "send to voicemail" action.
+    /// </summary>
+    [JsonPropertyName("v")]
+    public bool IsVoicemail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user identifier of the agent the voicemail was left for, when known. It lets the
+    /// saved-recording handler resolve the recipient for an agent-initiated voicemail, whose interaction may no
+    /// longer carry an agent association.
+    /// </summary>
+    [JsonPropertyName("u")]
+    public string RecipientUserId { get; set; }
+
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -41,6 +58,20 @@ public sealed class TelnyxRecordingClientState
         {
             Intent = TelnyxConstants.Recording.ClientStateIntent,
             InteractionId = interactionId,
+        };
+
+    /// <summary>
+    /// Creates a recording client state for a voicemail left on the supplied interaction.
+    /// </summary>
+    /// <param name="interactionId">The interaction the voicemail belongs to.</param>
+    /// <param name="recipientUserId">The user identifier of the agent the voicemail was left for, when known.</param>
+    public static TelnyxRecordingClientState ForVoicemail(string interactionId, string recipientUserId)
+        => new()
+        {
+            Intent = TelnyxConstants.Recording.ClientStateIntent,
+            InteractionId = interactionId,
+            IsVoicemail = true,
+            RecipientUserId = recipientUserId,
         };
 
     /// <summary>
