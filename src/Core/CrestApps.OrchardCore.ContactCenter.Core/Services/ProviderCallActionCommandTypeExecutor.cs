@@ -159,9 +159,78 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         {
             call.Metadata[ContactCenterConstants.CommandMetadata.InteractionId] = request.InteractionId;
         }
+
+        // Sending a ringing call to voicemail answers the provider leg to record the caller's message. Flag the
+        // interaction and project a missed call to the target agent's soft phone before that answer arrives, so the
+        // recording leg is never surfaced to the agent as a live "in call" state for a call they never took.
+        if (CommandType == ProviderCommandType.SendToVoicemail)
+        {
+            await MarkVoicemailProjectionAsync(command, request, cancellationToken);
+        }
+
         var result = await ExecuteTelephonyAsync(_telephonyService, call, cancellationToken);
 
         return ToVoiceProviderResult(command, request, result);
+    }
+
+    private async Task MarkVoicemailProjectionAsync(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            return;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return;
+        }
+
+        // While this flag is set the soft-phone projection renders the call as a terminal, missed call for the
+        // recipient agent rather than a live call, and the platform-answered recording leg never reactivates it.
+        interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true;
+
+        // The reservation and call session release their agent association when the offer is released, so record the
+        // recipient agent explicitly. The offer-timeout path carries the agent on the request; the direct-to-agent
+        // path carries the target agent in interaction metadata.
+        var recipientAgentId = !string.IsNullOrWhiteSpace(request.AgentId)
+            ? request.AgentId
+            : interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.DirectRouting.TargetAgentMetadataKey, out var targetAgent)
+                ? targetAgent?.ToString()
+                : null;
+
+        if (!string.IsNullOrWhiteSpace(recipientAgentId))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey] = recipientAgentId;
+        }
+
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
+    }
+
+    private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)
+    {
+        return new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallSentToVoicemail,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(Interaction),
+            AggregateId = interaction.ItemId,
+            CorrelationId = interaction.CorrelationId,
+            CausationId = command.CommandId,
+            ActorId = string.IsNullOrWhiteSpace(command.ProviderName)
+                ? ContactCenterConstants.SystemActor
+                : command.ProviderName,
+            SourceComponent = ContactCenterConstants.Components.CallSessions,
+            OccurredUtc = _clock.UtcNow,
+            IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(
+                command.CommandId,
+                ContactCenterConstants.Events.CallSentToVoicemail),
+        };
     }
 
     /// <inheritdoc/>

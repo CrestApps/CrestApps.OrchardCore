@@ -79,7 +79,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         }
 
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
-        var agentId = session?.AgentId ?? interaction.AgentId;
+        var isVoicemail = IsVoicemailProjection(interaction);
+        var agentId = ResolveAgentId(interaction, session, isVoicemail);
 
         if (string.IsNullOrEmpty(agentId))
         {
@@ -95,10 +96,48 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
 
         var call = BuildCall(interaction, session);
 
-        await UpsertTelephonyInteractionAsync(agent, interaction, session, call, cancellationToken);
+        if (isVoicemail)
+        {
+            // The platform answered the provider leg only to record a voicemail. The target agent never took the
+            // call, so surface it as a terminal, missed call rather than a live one -- and mark it terminal so the
+            // recording leg's provider events cannot reactivate the soft phone.
+            call.State = CallState.Disconnected;
+        }
+
+        await UpsertTelephonyInteractionAsync(agent, interaction, session, call, isVoicemail, cancellationToken);
         await _hubContext.Clients
             .Group(TenantSignalRGroupName.ForUser(_tenantName, agent.UserId))
             .CallStateChanged(call);
+    }
+
+    private static bool IsVoicemailProjection(Interaction interaction)
+    {
+        return interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.ProjectionMetadataKey, out var value) &&
+            IsTrue(value);
+    }
+
+    private static bool IsTrue(object value)
+    {
+        return value switch
+        {
+            bool boolean => boolean,
+            _ => bool.TryParse(value?.ToString(), out var parsed) && parsed,
+        };
+    }
+
+    private static string ResolveAgentId(Interaction interaction, CallSession session, bool isVoicemail)
+    {
+        if (isVoicemail &&
+            interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.RecipientAgentMetadataKey, out var recipient) &&
+            recipient is not null &&
+            !string.IsNullOrWhiteSpace(recipient.ToString()))
+        {
+            return recipient.ToString();
+        }
+
+        return session?.AgentId ?? interaction.AgentId;
     }
 
     private static bool ShouldHandle(string eventType)
@@ -115,7 +154,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             eventType == ContactCenterConstants.Events.RecordingPaused ||
             eventType == ContactCenterConstants.Events.RecordingResumed ||
             eventType == ContactCenterConstants.Events.RecordingStopped ||
-            eventType == ContactCenterConstants.Events.CallEnded;
+            eventType == ContactCenterConstants.Events.CallEnded ||
+            eventType == ContactCenterConstants.Events.CallSentToVoicemail;
     }
 
     private static string ResolveInteractionId(InteractionEvent interactionEvent)
@@ -130,6 +170,7 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         Interaction interaction,
         CallSession session,
         TelephonyCall call,
+        bool isVoicemail,
         CancellationToken cancellationToken)
     {
         var existing = await _telephonyInteractionStore.FindByCallIdAsync(agent.UserId, call.CallId, cancellationToken);
@@ -138,7 +179,9 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             interaction.StartedUtc ??
             interaction.CreatedUtc;
         var endedUtc = session?.EndedUtc ?? interaction.EndedUtc;
-        var outcome = ResolveOutcome(session?.State, call.State, interaction.Direction);
+        var outcome = isVoicemail
+            ? CallOutcome.Missed
+            : ResolveOutcome(session?.State, call.State, interaction.Direction);
 
         if (existing is null)
         {

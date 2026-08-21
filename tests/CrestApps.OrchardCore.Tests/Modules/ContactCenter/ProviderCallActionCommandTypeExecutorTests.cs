@@ -37,11 +37,12 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             });
         });
 
+        var (interactionManager, publisher) = CreateExecuteDependencies(commandType);
         var executor = CreateExecutor(
             commandType,
             telephonyService,
-            new Mock<IInteractionManager>(MockBehavior.Strict),
-            new Mock<IContactCenterEventPublisher>(MockBehavior.Strict),
+            interactionManager,
+            publisher,
             CreateClock());
 
         var command = CreateCommand(
@@ -81,11 +82,12 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
         SetupTelephonyUnknown(telephonyService, commandType);
 
+        var (interactionManager, publisher) = CreateExecuteDependencies(commandType);
         var executor = CreateExecutor(
             commandType,
             telephonyService,
-            new Mock<IInteractionManager>(MockBehavior.Strict),
-            new Mock<IContactCenterEventPublisher>(MockBehavior.Strict),
+            interactionManager,
+            publisher,
             CreateClock());
 
         var command = CreateCommand(commandType);
@@ -100,6 +102,67 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal("ProviderA", result.ProviderName);
         Assert.Equal($"{ActionPrefix(commandType)}_outcome_unknown", result.ErrorCode);
         Assert.Equal("The provider could not prove the outcome.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SendToVoicemail_FlagsInteractionAndPublishesSentToVoicemailEvent()
+    {
+        // Arrange
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            _ => TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" }));
+
+        var interaction = new Interaction { ItemId = "interaction-1" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        InteractionEvent? publishedEvent = null;
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvent = interactionEvent)
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(
+            ProviderCommandType.SendToVoicemail,
+            telephonyService,
+            interactionManager,
+            publisher,
+            CreateClock());
+
+        var command = CreateCommand(
+            ProviderCommandType.SendToVoicemail,
+            requestPayload: JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+            {
+                ActivityItemId = "activity-1",
+                QueueId = "queue-1",
+                ProviderCallId = "call-1",
+                AgentId = "agent-9",
+                AgentUserId = "user-1",
+            }));
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True((bool)interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey]);
+        Assert.Equal("agent-9", interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey]);
+        Assert.NotNull(publishedEvent);
+        Assert.Equal(ContactCenterConstants.Events.CallSentToVoicemail, publishedEvent!.EventType);
+        Assert.Equal("interaction-1", publishedEvent.InteractionId);
     }
 
     [Theory]
@@ -512,6 +575,34 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         clock.SetupGet(value => value.UtcNow).Returns(_now);
 
         return clock;
+    }
+
+    private static (Mock<IInteractionManager> InteractionManager, Mock<IContactCenterEventPublisher> Publisher) CreateExecuteDependencies(
+        ProviderCommandType commandType)
+    {
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+
+        // Sending a call to voicemail flags the interaction and publishes a CallSentToVoicemail event before the
+        // provider leg is answered, so the platform-answered recording leg is never surfaced to the target agent
+        // as a live call. The other actions leave the interaction untouched during execution.
+        if (commandType == ProviderCommandType.SendToVoicemail)
+        {
+            interactionManager
+                .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Interaction { ItemId = "interaction-1" }.RestorePersistedStatus(InteractionStatus.Ringing));
+            interactionManager
+                .Setup(manager => manager.UpdateAsync(
+                    It.IsAny<Interaction>(),
+                    It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(ValueTask.CompletedTask);
+            publisher
+                .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+        }
+
+        return (interactionManager, publisher);
     }
 
     private static ProviderCallActionCommandTypeExecutor CreateExecutor(

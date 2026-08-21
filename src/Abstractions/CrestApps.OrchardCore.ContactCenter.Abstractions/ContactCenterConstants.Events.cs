@@ -214,6 +214,13 @@ public static partial class ContactCenterConstants
         public const string CallEnded = "CallEnded";
 
         /// <summary>
+        /// Raised when a ringing call is sent to an agent's voicemail. The platform answers the provider leg to
+        /// record the caller's message; this event lets the soft-phone projection mark the call as a missed call
+        /// for the target agent before that answer arrives, so the recording leg never surfaces as a live call.
+        /// </summary>
+        public const string CallSentToVoicemail = "CallSentToVoicemail";
+
+        /// <summary>
         /// Raised when an agent accepts an offered interaction.
         /// </summary>
         public const string OfferAccepted = "OfferAccepted";

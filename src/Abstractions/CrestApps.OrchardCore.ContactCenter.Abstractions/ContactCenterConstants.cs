@@ -66,6 +66,30 @@ public static partial class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains the well-known values used to project a call that is being sent to an agent's voicemail back onto
+    /// that agent's soft phone. When a call rings an agent and is then sent to voicemail (the agent let the offer
+    /// expire, the entry point was closed, or a held direct call timed out), the provider leg is answered by the
+    /// platform to record the message. That answer must not surface on the target agent's soft phone as a live
+    /// "in call" state: the agent never took the call, so it is a missed call.
+    /// </summary>
+    public static class Voicemail
+    {
+        /// <summary>
+        /// The interaction technical-metadata key that flags an interaction as being sent to voicemail. While set,
+        /// the soft-phone projection renders the call to the recipient agent as a terminal, missed call rather than
+        /// a live call, and the platform-answered recording leg never reactivates the agent's soft phone.
+        /// </summary>
+        public const string ProjectionMetadataKey = "agentVoicemailProjection";
+
+        /// <summary>
+        /// The interaction technical-metadata key that records the agent-profile identifier of the voicemail
+        /// recipient, so the soft-phone projection can resolve the target agent even after the live reservation and
+        /// call session have released their agent association.
+        /// </summary>
+        public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
+    }
+
+    /// <summary>
     /// Contains the stable <c>AggregateType</c> discriminators that are not derived from a public domain-model
     /// type name. These values are emitted on published <c>InteractionEvent</c> instances and therefore form
     /// part of the module's public event contract that webhook and workflow consumers may inspect.
