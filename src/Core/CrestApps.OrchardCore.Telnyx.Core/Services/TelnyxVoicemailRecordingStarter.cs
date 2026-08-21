@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrestApps.Core.Support;
@@ -66,10 +67,23 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError(
-                    "Telnyx rejected the voicemail record_start for call {CallControlId} with status code {StatusCode}.",
-                    callControlId.SanitizeLogValue(),
-                    response.StatusCode);
+                // A 404/422 here almost always means the caller hung up during or right after the greeting, so the
+                // leg was already gone by the time recording could start. That is an expected race, not an error --
+                // there is simply no message to record -- so log it quietly rather than as a failure.
+                if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.UnprocessableEntity)
+                {
+                    _logger.LogDebug(
+                        "Voicemail record_start for call {CallControlId} was not accepted ({StatusCode}); the caller likely hung up before leaving a message.",
+                        callControlId.SanitizeLogValue(),
+                        response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogError(
+                        "Telnyx rejected the voicemail record_start for call {CallControlId} with status code {StatusCode}.",
+                        callControlId.SanitizeLogValue(),
+                        response.StatusCode);
+                }
 
                 return false;
             }

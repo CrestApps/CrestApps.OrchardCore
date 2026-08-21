@@ -101,6 +101,14 @@ public static partial class ContactCenterConstants
         /// provider plays the audio file before recording instead of speaking the text.
         /// </summary>
         public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
+
+        /// <summary>
+        /// The command-metadata key that carries the provider-hosted media reference (for Telnyx, the Media Storage
+        /// <c>media_name</c>) of the recipient agent's recorded/uploaded audio greeting. When present it is preferred
+        /// over both <see cref="GreetingMediaUrlMetadataKey"/> and <see cref="GreetingTextMetadataKey"/>: the provider
+        /// plays its own hosted copy before recording, so no publicly reachable URL of ours is required.
+        /// </summary>
+        public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
     }
 
     /// <summary>

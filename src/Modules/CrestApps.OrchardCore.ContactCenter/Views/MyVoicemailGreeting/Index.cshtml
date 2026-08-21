@@ -1,0 +1,155 @@
+@model MyVoicemailGreetingViewModel
+@{
+    ViewLayout = "Layout";
+    var saveAudioUrl = Url.Action("SaveAudio", "MyVoicemailGreeting", new { area = "CrestApps.OrchardCore.ContactCenter" });
+    var clearUrl = Url.Action("Clear", "MyVoicemailGreeting", new { area = "CrestApps.OrchardCore.ContactCenter" });
+    var saveTextUrl = Url.Action("SaveText", "MyVoicemailGreeting", new { area = "CrestApps.OrchardCore.ContactCenter" });
+}
+
+<h1>@T["My Voicemail Greeting"]</h1>
+<p class="text-muted">@T["Record or upload the greeting callers hear before leaving you a voicemail. If you don't set one, the queue or system default is used."]</p>
+
+<div class="card mb-3" data-vm-greeting>
+    <div class="card-header">@T["Recorded greeting"]</div>
+    <div class="card-body">
+        @if (Model.HasAudioGreeting)
+        {
+            <p class="alert alert-info py-2">@T["You currently have a recorded greeting. Record or upload a new one to replace it, or remove it to fall back to the default."]</p>
+        }
+
+        <div class="mb-3">
+            <label class="form-label d-block">@T["Record with your microphone"]</label>
+            <button type="button" class="btn btn-danger" data-vm-record>@T["Record"]</button>
+            <button type="button" class="btn btn-secondary" data-vm-stop disabled>@T["Stop"]</button>
+            <span class="ms-2 text-muted" data-vm-record-status></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label d-block" for="vm-upload">@T["…or upload an audio file (mp3 or wav)"]</label>
+            <input type="file" class="form-control" id="vm-upload" accept="audio/*" data-vm-file style="max-width: 30rem;">
+        </div>
+
+        <div class="mb-3" data-vm-preview-wrapper hidden>
+            <label class="form-label d-block">@T["Preview"]</label>
+            <audio controls data-vm-preview style="max-width: 30rem;"></audio>
+        </div>
+
+        <button type="button" class="btn btn-primary" data-vm-save disabled>@T["Save greeting"]</button>
+        <span class="ms-2" data-vm-save-status></span>
+
+        @if (Model.HasAudioGreeting)
+        {
+            <form method="post" action="@clearUrl" class="d-inline ms-2" onsubmit="return confirm('@T["Remove your recorded greeting?"]');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger">@T["Remove greeting"]</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Spoken greeting (fallback)"]</div>
+    <div class="card-body">
+        <p class="text-muted">@T["Optional. When you have no recorded greeting, this text is read to the caller by text-to-speech. Leave blank to use the queue or system default."]</p>
+        <form method="post" action="@saveTextUrl">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <textarea name="greetingText" class="form-control" rows="3" maxlength="1000" style="max-width: 40rem;">@Model.GreetingText</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["Save spoken greeting"]</button>
+        </form>
+    </div>
+</div>
+
+<script at="Foot" depends-on="jQuery">
+(function () {
+    var root = document.querySelector('[data-vm-greeting]');
+    if (!root) { return; }
+
+    var recordBtn = root.querySelector('[data-vm-record]');
+    var stopBtn = root.querySelector('[data-vm-stop]');
+    var recordStatus = root.querySelector('[data-vm-record-status]');
+    var fileInput = root.querySelector('[data-vm-file]');
+    var previewWrapper = root.querySelector('[data-vm-preview-wrapper]');
+    var preview = root.querySelector('[data-vm-preview]');
+    var saveBtn = root.querySelector('[data-vm-save]');
+    var saveStatus = root.querySelector('[data-vm-save-status]');
+
+    var saveUrl = '@Html.Raw(saveAudioUrl)';
+    var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value;
+
+    var pendingBlob = null;
+    var mediaRecorder = null;
+    var chunks = [];
+
+    function setPreview(blob) {
+        pendingBlob = blob;
+        preview.src = URL.createObjectURL(blob);
+        previewWrapper.hidden = false;
+        saveBtn.disabled = false;
+    }
+
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+        recordBtn.disabled = true;
+        recordStatus.textContent = '@T["Recording is not supported by this browser; upload a file instead."]';
+    }
+
+    recordBtn.addEventListener('click', function () {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+            chunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size) { chunks.push(e.data); } };
+            mediaRecorder.onstop = function () {
+                stream.getTracks().forEach(function (t) { t.stop(); });
+                setPreview(new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' }));
+                recordStatus.textContent = '@T["Recorded. Review it below, then Save."]';
+            };
+            mediaRecorder.start();
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+            recordStatus.textContent = '@T["Recording…"]';
+        }).catch(function () {
+            recordStatus.textContent = '@T["Could not access the microphone."]';
+        });
+    });
+
+    stopBtn.addEventListener('click', function () {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); }
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+    });
+
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) {
+            setPreview(fileInput.files[0]);
+            recordStatus.textContent = '';
+        }
+    });
+
+    saveBtn.addEventListener('click', function () {
+        if (!pendingBlob) { return; }
+        saveBtn.disabled = true;
+        saveStatus.textContent = '@T["Saving…"]';
+
+        var form = new FormData();
+        var name = pendingBlob.name || ('greeting.' + ((pendingBlob.type || '').indexOf('wav') >= 0 ? 'wav' : (pendingBlob.type || '').indexOf('mpeg') >= 0 ? 'mp3' : 'webm'));
+        form.append('audio', pendingBlob, name);
+        if (token) { form.append('__RequestVerificationToken', token); }
+
+        fetch(saveUrl, { method: 'POST', body: form }).then(function (resp) {
+            if (resp.ok) {
+                saveStatus.textContent = '@T["Saved."]';
+                window.location.reload();
+            } else {
+                return resp.text().then(function (t) {
+                    saveStatus.textContent = t || '@T["The greeting could not be saved."]';
+                    saveBtn.disabled = false;
+                });
+            }
+        }).catch(function () {
+            saveStatus.textContent = '@T["The greeting could not be saved."]';
+            saveBtn.disabled = false;
+        });
+    });
+})();
+</script>

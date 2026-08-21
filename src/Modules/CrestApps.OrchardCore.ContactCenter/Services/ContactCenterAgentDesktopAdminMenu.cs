@@ -33,6 +33,13 @@ public sealed class ContactCenterAgentDesktopAdminMenu : AdminNavigationProvider
                     .Action("Index", "AgentWorkspace", "CrestApps.OrchardCore.ContactCenter")
                     .Permission(ContactCenterPermissions.SignIntoQueues)
                     .LocalNav()
+                )
+                .Add(S["My voicemail greeting"], "-1", greeting => greeting
+                    .AddClass("contact-center-my-voicemail-greeting")
+                    .Id("contactCenterMyVoicemailGreeting")
+                    .Action("Index", "MyVoicemailGreeting", "CrestApps.OrchardCore.ContactCenter")
+                    .Permission(ContactCenterPermissions.SignIntoQueues)
+                    .LocalNav()
                 ),
                 priority: 2);
 

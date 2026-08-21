@@ -416,14 +416,23 @@ public sealed class TelnyxTelephonyProvider :
                 cancellationToken);
         }
 
+        // Prefer a Telnyx-hosted greeting (media_name in Telnyx Media Storage) the agent recorded or uploaded, then a
+        // hosted audio URL, then spoken text. The media_name path needs no publicly reachable URL of ours.
+        var greetingMediaName = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey);
         var greetingMediaUrl = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey);
 
-        if (!string.IsNullOrWhiteSpace(greetingMediaUrl))
+        if (!string.IsNullOrWhiteSpace(greetingMediaName) || !string.IsNullOrWhiteSpace(greetingMediaUrl))
         {
-            var playbackBody = new Dictionary<string, object>
+            var playbackBody = new Dictionary<string, object>();
+
+            if (!string.IsNullOrWhiteSpace(greetingMediaName))
             {
-                ["audio_url"] = greetingMediaUrl,
-            };
+                playbackBody["media_name"] = greetingMediaName;
+            }
+            else
+            {
+                playbackBody["audio_url"] = greetingMediaUrl;
+            }
 
             if (greetingClientState is not null)
             {
