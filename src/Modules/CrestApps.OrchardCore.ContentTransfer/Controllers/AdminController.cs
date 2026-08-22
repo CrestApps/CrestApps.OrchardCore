@@ -57,6 +57,8 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IContentTransferChunkFileUploadService _chunkFileUploadService;
     private readonly IContentTransferFileFormatProvider[] _formatProviders;
     private readonly IContentTransferEntryManager _contentTransferEntryManager;
+    private readonly IDisplayManager<ExportRequest> _exportRequestDisplayManager;
+    private readonly IContentTransferEntryAdminListFilterParser _entriesAdminListFilterParser;
     private readonly ContentImportOptions _contentImportOptions;
 
     internal readonly IStringLocalizer S;
@@ -83,6 +85,8 @@ public sealed class AdminController : Controller, IUpdateModel
         IContentTransferChunkFileUploadService chunkFileUploadService,
         IEnumerable<IContentTransferFileFormatProvider> formatProviders,
         IContentTransferEntryManager contentTransferEntryManager,
+        IDisplayManager<ExportRequest> exportRequestDisplayManager,
+        IContentTransferEntryAdminListFilterParser entriesAdminListFilterParser,
         IOptions<ContentImportOptions> contentImportOptions,
         IClock clock)
     {
@@ -106,6 +110,8 @@ public sealed class AdminController : Controller, IUpdateModel
             .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         _contentTransferEntryManager = contentTransferEntryManager;
+        _exportRequestDisplayManager = exportRequestDisplayManager;
+        _entriesAdminListFilterParser = entriesAdminListFilterParser;
         _contentImportOptions = contentImportOptions.Value;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
@@ -481,24 +487,60 @@ public sealed class AdminController : Controller, IUpdateModel
             return BadRequest(S["No file formats are currently enabled for bulk export."]);
         }
 
-        if (totalCount > threshold)
+        // Build the queued-export entry up front so contributed export options can be persisted onto it.
+        var entry = new ContentTransferEntry()
         {
-            // Queue the export for background processing.
-            var fileName = $"{contentTypeDefinition.Name}_Export_{Guid.NewGuid():N}{formatProvider.FileExtension}";
+            EntryId = IdGenerator.GenerateId(),
+            ContentType = contentTypeId,
+            Owner = CurrentUserId(),
+            Author = User.Identity.Name,
+            UploadedFileName = $"{contentTypeDefinition.Name}_Export{formatProvider.FileExtension}",
+            StoredFileName = $"{contentTypeDefinition.Name}_Export_{Guid.NewGuid():N}{formatProvider.FileExtension}",
+            Status = ContentTransferEntryStatus.New,
+            Direction = ContentTransferDirection.Export,
+            CreatedUtc = _clock.UtcNow,
+        };
 
-            var entry = new ContentTransferEntry()
+        // Let modules read back their contributed export options and persist them onto the entry. A driver
+        // may set RequiresQueue when its options depend on the persisted entry being read by the background
+        // task (for example, CRM last-activity columns).
+        var exportRequest = new ExportRequest
+        {
+            ContentType = contentTypeId,
+            ContentTypeDefinition = contentTypeDefinition,
+            Entry = entry,
+        };
+
+        // Use the same updater the drivers write validation errors to, so a required-option error (for
+        // example, a missing subject) is actually detected here.
+        var updater = _updateModelAccessor.ModelUpdater;
+        var errorsBeforeOptions = updater.ModelState.ErrorCount;
+
+        var optionsShape = await _exportRequestDisplayManager.UpdateEditorAsync(
+            exportRequest,
+            updater,
+            isNew: false,
+            string.Empty,
+            string.Empty);
+
+        // A contributed export option failed validation (for example, a missing subject). Re-render the
+        // export page so the driver's editor shows the inline validation error next to its field, instead
+        // of losing it to a redirect. (Pre-existing binding state does not block the export.)
+        if (updater.ModelState.ErrorCount > errorsBeforeOptions)
+        {
+            var listOptions = new ListContentTransferEntryOptions
             {
-                EntryId = IdGenerator.GenerateId(),
-                ContentType = contentTypeId,
-                Owner = CurrentUserId(),
-                Author = User.Identity.Name,
-                UploadedFileName = $"{contentTypeDefinition.Name}_Export{formatProvider.FileExtension}",
-                StoredFileName = fileName,
-                Status = ContentTransferEntryStatus.New,
-                Direction = ContentTransferDirection.Export,
-                CreatedUtc = _clock.UtcNow,
+                FilterResult = _entriesAdminListFilterParser.Parse(string.Empty),
             };
+            await PopulateListOptionsAsync(listOptions, ContentTransferDirection.Export, CurrentUserId());
 
+            var invalidModel = await BuildBulkExportViewModelAsync(listOptions, new PagerParameters(), contentTypeId, optionsShape);
+
+            return View(nameof(Export), invalidModel);
+        }
+
+        if (totalCount > threshold || exportRequest.RequiresQueue)
+        {
             // Store the filters so the background task can apply them.
             if (partialExport)
             {
@@ -519,7 +561,7 @@ public sealed class AdminController : Controller, IUpdateModel
             await _session.SaveChangesAsync();
             TriggerExportProcessing(entry.EntryId);
 
-            await _notifier.InformationAsync(H["The export contains {0} records and has been queued for background processing. You can download it from Bulk Export when it is ready.", totalCount]);
+            await _notifier.InformationAsync(H["The export has been queued for background processing. You can download it from Bulk Export when it is ready."]);
 
             return RedirectToAction(nameof(Export));
         }
@@ -555,6 +597,14 @@ public sealed class AdminController : Controller, IUpdateModel
                         break;
                     }
 
+                    // Let handlers pre-load per-page data in a single pass before mapping rows.
+                    await _contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
+                    {
+                        ContentItems = items,
+                        ContentTypeDefinition = contentTypeDefinition,
+                        Entry = entry,
+                    });
+
                     // Create a temporary DataTable for this batch only.
                     using var dataTable = new DataTable();
 
@@ -573,6 +623,12 @@ public sealed class AdminController : Controller, IUpdateModel
                         };
 
                         await _contentImportManager.ExportAsync(mapContext);
+
+                        // A handler may exclude a content item from the output (for example, a contributed filter).
+                        if (mapContext.Exclude)
+                        {
+                            continue;
+                        }
 
                         var rowValues = new List<string>(columnNames.Count);
                         foreach (var colName in columnNames)
@@ -830,11 +886,11 @@ public sealed class AdminController : Controller, IUpdateModel
 
     private async Task PopulateListOptionsAsync(ListContentTransferEntryOptions options, ContentTransferDirection direction, string owner = null)
     {
-        options.SearchText = options.FilterResult.ToString();
+        options.SearchText = options.FilterResult?.ToString();
         options.OriginalSearchText = options.SearchText;
         options.Direction = direction;
         options.Owner = owner;
-        options.RouteValues.TryAdd("q", options.FilterResult.ToString());
+        options.RouteValues.TryAdd("q", options.FilterResult?.ToString());
 
         options.Statuses =
         [
@@ -927,23 +983,51 @@ public sealed class AdminController : Controller, IUpdateModel
         });
     }
 
-    private ContentExporterViewModel BuildContentExporterViewModel(IList<SelectListItem> exportableTypes)
+    private async Task<ContentExporterViewModel> BuildContentExporterViewModelAsync(
+        IList<SelectListItem> exportableTypes,
+        string selectedContentTypeId = null,
+        IShape optionsShape = null)
     {
         var formats = BuildFileFormatSelectList();
+
+        // Let modules contribute additional export option shapes (for example, CRM last-activity columns).
+        // The content type is not known until the form is submitted, so drivers gate their own visibility.
+        // When re-rendering after a validation error, reuse the shape from the update so it shows the errors.
+        optionsShape ??= await _exportRequestDisplayManager.BuildEditorAsync(
+            new ExportRequest(),
+            _updateModelAccessor.ModelUpdater,
+            isNew: true,
+            string.Empty,
+            string.Empty);
+
+        // Preselect the content type so a re-render keeps the selection (and any content-type-gated options).
+        if (!string.IsNullOrEmpty(selectedContentTypeId) && exportableTypes is not null)
+        {
+            foreach (var item in exportableTypes)
+            {
+                item.Selected = string.Equals(item.Value, selectedContentTypeId, StringComparison.OrdinalIgnoreCase);
+            }
+        }
 
         return new()
         {
             ContentTypes = exportableTypes,
+            ContentTypeId = selectedContentTypeId,
             Extensions = formats,
             Extension = formats.Count > 0 ? formats[0].Value : null,
+            Content = optionsShape,
         };
     }
 
-    private async Task<BulkExportViewModel> BuildBulkExportViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
+    private async Task<BulkExportViewModel> BuildBulkExportViewModelAsync(
+        ListContentTransferEntryOptions options,
+        PagerParameters pagerParameters,
+        string selectedContentTypeId = null,
+        IShape optionsShape = null)
     {
         return new BulkExportViewModel()
         {
-            Exporter = BuildContentExporterViewModel(options.ExportableTypes),
+            Exporter = await BuildContentExporterViewModelAsync(options.ExportableTypes, selectedContentTypeId, optionsShape),
             List = await BuildListViewModelAsync(options, pagerParameters),
         };
     }
@@ -959,7 +1043,7 @@ public sealed class AdminController : Controller, IUpdateModel
         }
 
         await _entryOptionsDisplayManager.UpdateEditorAsync(options, this, false, string.Empty, string.Empty);
-        options.RouteValues.TryAdd("q", options.FilterResult.ToString());
+        options.RouteValues.TryAdd("q", options.FilterResult?.ToString());
 
         return RedirectToAction(actionName, options.RouteValues);
     }

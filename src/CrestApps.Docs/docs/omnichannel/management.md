@@ -247,6 +247,25 @@ The screencast below shows both directions. It first exports the existing contac
   <source src="/img/docs/omni-contact-import-export.mp4" type="video/mp4" />
 </video>
 
+#### Export contacts with their last activity
+
+When you export a contact content type through **Content** -> **Export**, the form shows a **CRM last activity** section. It lets you enrich each exported contact with their most recent completed activity, so you can hand off a single file that combines contact details with the latest interaction and its subject data.
+
+- **Include last completed activity information** — turn this on to append the last-activity columns to the export.
+- **Subject** — required once the option is on. Choose which subject's last completed activity to export. Each contact is matched to its most recent **completed** activity of this subject.
+- **Include only contacts with a last activity record** — optional. When enabled, contacts that have no completed activity of the selected subject are omitted from the file. When left off, every contact is exported and the last-activity columns are simply blank for contacts without one.
+
+With the option enabled, the export appends these export-only columns to each contact row:
+
+- **`LastActivityNote`** — the agent note recorded on the activity.
+- **`LastActivityCompletedUtc`** — the completion date and time, in UTC.
+- **`LastActivityCompletedBy`** — the full name of the user who completed the activity (resolved through the display-name provider).
+- **`LastActivityDisposition`** — the disposition selected when the activity was completed.
+- **`LastActivitySubject`** — the subject's title (falls back to the subject content type's title).
+- **One column per subject field** — every exportable field of the selected subject content type, taken from that activity's subject, keeping the field's own column name (type-specific fields are already prefixed with the subject content type name; the generic content-item metadata columns are omitted). If a subject field's name would collide with a contact column, it is prefixed with `Subject` to stay unique.
+
+Choosing this option always runs the export through the background queue (so progress is tracked and larger sets are handled reliably), and you download the finished file from the **Bulk Export** list. The activities are loaded in the same batches the contacts page in, so enriching a large contact list stays efficient. This feature builds on Content Transfer's export-option extension point; see [Contributing export options](../modules/content-transfer#contributing-export-options) to add options of your own.
+
 ### 3) Create your Subject content type
 
 1. Go to `Content` → `Content Definition` → `Content Types`.
